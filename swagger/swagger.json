@@ -1,0 +1,378 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "beego Test API",
+        "description": "beego has a very cool tools to autogenerate documents for your API",
+        "version": "1.0.0",
+        "termsOfService": "http://beego.me/",
+        "contact": {
+            "email": "astaxie@gmail.com"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        }
+    },
+    "basePath": "/v1",
+    "paths": {
+        "/l/adduser": {
+            "post": {
+                "tags": [
+                    "l"
+                ],
+                "description": "Add user",
+                "operationId": "LoginController.AddUser",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "username",
+                        "description": "The username for register format",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "query",
+                        "name": "password",
+                        "description": "The password for register",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "user already exist"
+                    }
+                }
+            }
+        },
+        "/l/login": {
+            "post": {
+                "tags": [
+                    "l"
+                ],
+                "description": "User login",
+                "operationId": "LoginController.Login",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Credentials",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/Credential"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{string} success !"
+                    },
+                    "402": {
+                        "description": "user already connected"
+                    },
+                    "403": {
+                        "description": "user does not exist"
+                    }
+                }
+            }
+        },
+        "/l/logout": {
+            "post": {
+                "tags": [
+                    "l"
+                ],
+                "description": "Logs user",
+                "operationId": "LoginController.Logout",
+                "responses": {
+                    "200": {
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "user not exist"
+                    }
+                }
+            }
+        },
+        "/s/": {
+            "get": {
+                "tags": [
+                    "s"
+                ],
+                "description": "get list table",
+                "operationId": "SchemaController.GetTable",
+                "responses": {
+                    "200": {
+                        "description": "{string} success !"
+                    },
+                    "403": {
+                        "description": "no table"
+                    }
+                }
+            }
+        },
+        "/s/{table}": {
+            "get": {
+                "tags": [
+                    "s"
+                ],
+                "description": "get table schema",
+                "operationId": "SchemaController.GetSchema",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "table",
+                        "description": "Name of the table",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "success !"
+                    },
+                    "403": {
+                        "description": "no table"
+                    }
+                }
+            }
+        },
+        "/t/{table}": {
+            "get": {
+                "tags": [
+                    "t"
+                ],
+                "description": "get all Datas",
+                "operationId": "TableController.GetAllTable",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "table",
+                        "description": "Name of the table",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{string} success !"
+                    },
+                    "403": {
+                        "description": "no table"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "t"
+                ],
+                "description": "delete the data in table",
+                "operationId": "TableController.Delete",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "table",
+                        "description": "Name of the table",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "body for data content (Json format)",
+                        "schema": {
+                            "$ref": "#/definitions/true"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{string} delete success!"
+                    },
+                    "403": {
+                        "description": "delete issue"
+                    }
+                }
+            }
+        },
+        "/t/{table}/{columns}": {
+            "get": {
+                "tags": [
+                    "t"
+                ],
+                "description": "get all Datas",
+                "operationId": "TableController.GetAllTableColumn",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "table",
+                        "description": "Name of the table",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "columns",
+                        "description": "Name of the columns (separate with a comma)",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{string} success !"
+                    },
+                    "403": {
+                        "description": "no table"
+                    }
+                }
+            }
+        },
+        "/t/{table}/{columns}/{restriction}": {
+            "get": {
+                "tags": [
+                    "t"
+                ],
+                "description": "get all Datas",
+                "operationId": "TableController.GetAllTableColumnRestriction",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "table",
+                        "description": "Name of the table",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "columns",
+                        "description": "Name of the columns (separate with a comma)",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "restriction",
+                        "description": "SQL restriction",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{string} success !"
+                    },
+                    "403": {
+                        "description": "no table"
+                    }
+                }
+            }
+        },
+        "/t/{table}/{columns}/{restriction}/{sortkeys}": {
+            "get": {
+                "tags": [
+                    "t"
+                ],
+                "description": "get all Datas",
+                "operationId": "TableController.GetAllTableColumnRestrictionSortkeys",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "table",
+                        "description": "Name of the table",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "columns",
+                        "description": "Name of the columns (separate with a comma)",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "restriction",
+                        "description": "SQL restriction",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{string} success !"
+                    },
+                    "403": {
+                        "description": "no table"
+                    }
+                }
+            }
+        },
+        "/t/{table}/{columns}/{restriction}/{sortkeys}/{dir}": {
+            "get": {
+                "tags": [
+                    "t"
+                ],
+                "description": "get all Datas",
+                "operationId": "TableController.GetAllTableColumnRestrictionSortkeysDir",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "table",
+                        "description": "Name of the table",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "columns",
+                        "description": "Name of the columns (separate with a comma)",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "restriction",
+                        "description": "SQL restriction",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{string} success !"
+                    },
+                    "403": {
+                        "description": "no table"
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "Credential": {
+            "title": "Credential",
+            "type": "object"
+        },
+        "true": {
+            "title": "true",
+            "type": "object"
+        }
+    },
+    "tags": [
+        {
+            "name": "t",
+            "description": "Operations about table\n"
+        },
+        {
+            "name": "s",
+            "description": "Operations about schema\n"
+        },
+        {
+            "name": "l",
+            "description": "Operations about login\n"
+        }
+    ]
+}
