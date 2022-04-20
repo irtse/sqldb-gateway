@@ -109,6 +109,28 @@ paths:
           description: '{string} success !'
         "403":
           description: no table
+    post:
+      tags:
+      - t
+      description: get all Datas
+      operationId: TableController.TablePost
+      parameters:
+      - in: path
+        name: table
+        description: Name of the table
+        required: true
+        type: string
+      - in: body
+        name: body
+        description: TableQuery
+        required: true
+        schema:
+          $ref: '#/definitions/TableQuery'
+      responses:
+        "200":
+          description: '{string} success !'
+        "403":
+          description: no table
     delete:
       tags:
       - t
@@ -236,6 +258,9 @@ paths:
 definitions:
   Credential:
     title: Credential
+    type: object
+  TableQuery:
+    title: TableQuery
     type: object
   "true":
     title: "true"

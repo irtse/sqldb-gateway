@@ -8,7 +8,6 @@
 package routers
 
 import (
-	"net/http"
 	"sqldb-ws/controllers"
 
 	beego "github.com/beego/beego/v2/server/web"
@@ -19,11 +18,11 @@ func init() {
 
 	var FilterUser = func(ctx *context.Context) {
 		//session := ctx.Input.Session("user_id")
-		_, ok := ctx.Input.Session("user_id").(string)
-		if !ok {
-			ctx.Output.SetStatus(http.StatusUnauthorized)
-			ctx.Redirect(302, "/v1/l")
-		}
+		/*		_, ok := ctx.Input.Session("user_id").(string)
+				if !ok {
+					ctx.Output.SetStatus(http.StatusUnauthorized)
+					ctx.Redirect(302, "/v1/l")
+				}*/
 	}
 
 	ns := beego.NewNamespace("/v1",

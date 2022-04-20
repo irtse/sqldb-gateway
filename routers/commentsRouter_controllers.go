@@ -72,6 +72,15 @@ func init() {
 
     beego.GlobalControllerRouter["sqldb-ws/controllers:TableController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:TableController"],
         beego.ControllerComments{
+            Method: "TablePost",
+            Router: "/:table",
+            AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["sqldb-ws/controllers:TableController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:TableController"],
+        beego.ControllerComments{
             Method: "GetAllTableColumn",
             Router: "/:table/:columns",
             AllowHTTPMethods: []string{"get"},
