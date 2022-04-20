@@ -18,15 +18,23 @@ type TableController struct {
 	beego.Controller
 }
 
-// @Title Post
-// @Description post data in table
+type TableQuery struct {
+	Table       string `json:"table,omitempty"`
+	Columns     string `json:"columns,omitempty"`
+	Restriction string `json:"restriction,omitempty"`
+	Sortkeys    string `json:"sortkeys,omitempty"`
+	Direction   string `json:"direction,omitempty"`
+}
+
+// @Title Put data in table
+// @Description put data in table
 // @Param	table		path 	string	true		"Name of the table"
 // @Param	data		body 	json	true		"body for data content (Json format)"
 // @Success 200 {string} success
-// @Failure 403 post issue
-// @router /:table [post]
+// @Failure 403 :table put issue
+// @router /:table [put]
 
-func (t *TableController) Post() {
+func (t *TableController) Put() {
 	// var FilterUserPost = func(ctx *context.Context) {
 
 	// if strings.HasPrefix(ctx, "/") {
@@ -205,6 +213,28 @@ func (t *TableController) GetAllTableColumnRestrictionSortkeysDir() {
 	sortkeys := strings.Split(t.GetString(":sortkeys"), ",")
 	dir := t.GetString(":dir")
 	data, err := db.Table(table).GetAssociativeArray(columns, restriction, sortkeys, dir)
+	if err != nil {
+		log.Error().Msg(err.Error())
+	}
+	t.Data["json"] = data
+	t.ServeJSON()
+	db.Close()
+}
+
+// @Title TablePost
+// @Description get all Datas
+// @Param	table			path 	string	true		"Name of the table"
+// @Param	body		body 	TableQuery	true		"TableQuery"
+// @Success 200 {string} success !
+// @Failure 403 no table
+// @router /:table [post]
+func (t *TableController) TablePost() {
+	table := t.GetString(":table")
+	var request TableQuery
+	json.Unmarshal(t.Ctx.Input.RequestBody, &request)
+
+	db := sqldb.Open(os.Getenv("driverdb"), os.Getenv("paramsdb"))
+	data, err := db.Table(table).GetAssociativeArray(strings.Split(request.Columns, ","), request.Restriction, strings.Split(request.Sortkeys, ","), request.Direction)
 	if err != nil {
 		log.Error().Msg(err.Error())
 	}
