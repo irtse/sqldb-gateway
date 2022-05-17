@@ -33,7 +33,6 @@ type TableQuery struct {
 // @Success 200 {string} success
 // @Failure 403 :table put issue
 // @router /:table [put]
-
 func (t *TableController) Put() {
 	// var FilterUserPost = func(ctx *context.Context) {
 

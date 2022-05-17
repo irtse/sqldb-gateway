@@ -164,6 +164,39 @@
                     }
                 }
             },
+            "put": {
+                "tags": [
+                    "t"
+                ],
+                "description": "put data in table",
+                "operationId": "TableController.Put data in table",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "table",
+                        "description": "Name of the table",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "body",
+                        "name": "data",
+                        "description": "body for data content (Json format)",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/json"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{string} success"
+                    },
+                    "403": {
+                        "description": ":table put issue"
+                    }
+                }
+            },
             "post": {
                 "tags": [
                     "t"
@@ -391,6 +424,10 @@
         },
         "TableQuery": {
             "title": "TableQuery",
+            "type": "object"
+        },
+        "json": {
+            "title": "json",
             "type": "object"
         },
         "true": {
