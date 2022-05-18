@@ -55,9 +55,11 @@ func (t *TableController) Put() {
 	uid, err := db.Table(table).UpdateOrInsert(data)
 	if err != nil {
 		log.Error().Msg(err.Error())
+		t.Ctx.Output.SetStatus(http.StatusBadRequest)
+	} else {
+		t.Ctx.Output.SetStatus(http.StatusOK)
 	}
 	t.Data["json"] = map[string]int{"uid": uid}
-	t.Ctx.Output.SetStatus(http.StatusOK)
 	t.ServeJSON()
 }
 
