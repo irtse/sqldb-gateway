@@ -238,8 +238,10 @@ func (t *TableController) TablePost() {
 	data, err := db.Table(table).GetAssociativeArray(strings.Split(request.Columns, ","), request.Restriction, strings.Split(request.Sortkeys, ","), request.Direction)
 	if err != nil {
 		log.Error().Msg(err.Error())
+		t.Ctx.Output.SetStatus(http.StatusBadRequest)
 	}
 	t.Data["json"] = data
+	t.Ctx.Output.SetStatus(http.StatusOK)
 	t.ServeJSON()
 	db.Close()
 }
