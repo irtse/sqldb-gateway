@@ -104,12 +104,21 @@ func (t *TableController) GetAllTable() {
 	data, err := db.Table(table).GetAssociativeArray(columns, restriction, sortkeys, dir)
 	if err != nil {
 		log.Error().Msg(err.Error())
-		t.Data["json"] = map[string]string{"error": err.Error()}
+		t.Ctx.Output.SetStatus(http.StatusBadRequest)
 	} else {
 		t.Data["json"] = data
 	}
-	t.ServeJSON()
+	str, err := json.Marshal(data)
+	if err != nil {
+		log.Error().Msg(err.Error())
+		t.Ctx.Output.SetStatus(http.StatusBadRequest)
+	}
+	strToByte := []byte(strings.ReplaceAll(string(str), "\"\\u003cnil\\u003e\"", "null"))
+	t.Ctx.Output.Header("Content-Type", "application/json")
+	t.Ctx.Output.Body(strToByte)
+	t.Ctx.Output.SetStatus(http.StatusOK)
 	db.Close()
+	t.Ctx.Output.Body(strToByte)
 }
 
 // @Title GetAllTableColumn
