@@ -5,7 +5,7 @@ go 1.16
 require github.com/beego/beego/v2 v2.0.2
 
 require (
-	forge.redroom.link/yves/sqldb v0.0.0-20220519084919-d99db639408a
+	forge.redroom.link/yves/sqldb v0.0.0-20220520131204-4e17758e157e
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/lib/pq v1.10.6
 	github.com/matthewhartstonge/argon2 v0.2.1
@@ -19,7 +19,7 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/viper v1.11.0
 	golang.org/x/crypto v0.0.0-20220518034528-6f7dac969898 // indirect
-	golang.org/x/net v0.0.0-20220517181318-183a9ca12b87 // indirect
-	golang.org/x/sys v0.0.0-20220517195934-5e4e11fc645e // indirect
+	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2 // indirect
+	golang.org/x/sys v0.0.0-20220519141025-dcacdad47464 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20220512140231-539c8e751b99 // indirect
 )
