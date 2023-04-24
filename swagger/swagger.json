@@ -2,7 +2,7 @@
     "swagger": "2.0",
     "info": {
         "title": "beego Test API",
-        "description": "beego has a very cool tools to autogenerate documents for your API",
+        "description": "beego has a very cool tools to autogenerate documents for your API\n",
         "version": "1.0.0",
         "termsOfService": "http://beego.me/",
         "contact": {
@@ -20,7 +20,7 @@
                 "tags": [
                     "l"
                 ],
-                "description": "Add user",
+                "description": "Add user\n\u003cbr\u003e",
                 "operationId": "LoginController.AddUser",
                 "parameters": [
                     {
@@ -53,7 +53,7 @@
                 "tags": [
                     "l"
                 ],
-                "description": "User login",
+                "description": "User login\n\u003cbr\u003e",
                 "operationId": "LoginController.Login",
                 "parameters": [
                     {
@@ -84,7 +84,7 @@
                 "tags": [
                     "l"
                 ],
-                "description": "Logs user",
+                "description": "Logs user\n\u003cbr\u003e",
                 "operationId": "LoginController.Logout",
                 "responses": {
                     "200": {
@@ -101,14 +101,14 @@
                 "tags": [
                     "s"
                 ],
-                "description": "get list table",
-                "operationId": "SchemaController.GetTable",
+                "description": "Get database tables list\n\u003cbr\u003e",
+                "operationId": "SchemaController.GetTablesList",
                 "responses": {
                     "200": {
                         "description": "{string} success !"
                     },
-                    "403": {
-                        "description": "no table"
+                    "500": {
+                        "description": "query error"
                     }
                 }
             }
@@ -118,7 +118,7 @@
                 "tags": [
                     "s"
                 ],
-                "description": "get table schema",
+                "description": "Get table schema\n\u003cbr\u003e",
                 "operationId": "SchemaController.GetSchema",
                 "parameters": [
                     {
@@ -133,7 +133,7 @@
                     "200": {
                         "description": "success !"
                     },
-                    "403": {
+                    "204": {
                         "description": "no table"
                     }
                 }
@@ -144,7 +144,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "get all Datas",
+                "description": "get all Datas\n\u003cbr\u003e",
                 "operationId": "TableController.GetAllTable",
                 "parameters": [
                     {
@@ -168,7 +168,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "put data in table",
+                "description": "put data in table\n\u003cbr\u003e",
                 "operationId": "TableController.Put data in table",
                 "parameters": [
                     {
@@ -201,7 +201,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "get all Datas",
+                "description": "get all Datas\n\u003cbr\u003e",
                 "operationId": "TableController.TablePost",
                 "parameters": [
                     {
@@ -234,7 +234,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "delete the data in table",
+                "description": "delete the data in table\n\u003cbr\u003e",
                 "operationId": "TableController.Delete",
                 "parameters": [
                     {
@@ -268,7 +268,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "get all Datas",
+                "description": "get all Datas\n\u003cbr\u003e",
                 "operationId": "TableController.GetAllTableColumn",
                 "parameters": [
                     {
@@ -301,7 +301,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "get all Datas",
+                "description": "get all Datas\n\u003cbr\u003e",
                 "operationId": "TableController.GetAllTableColumnRestriction",
                 "parameters": [
                     {
@@ -341,7 +341,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "get all Datas",
+                "description": "get all Datas\n\u003cbr\u003e",
                 "operationId": "TableController.GetAllTableColumnRestrictionSortkeys",
                 "parameters": [
                     {
@@ -381,7 +381,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "get all Datas",
+                "description": "get all Datas\n\u003cbr\u003e",
                 "operationId": "TableController.GetAllTableColumnRestrictionSortkeysDir",
                 "parameters": [
                     {

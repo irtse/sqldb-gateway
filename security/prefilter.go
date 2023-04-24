@@ -7,7 +7,7 @@ import (
 
 func CheckSelect(dbuser_id string, table *string, columns *string, restriction *string) {
 
-	//fmt.Println(dbuser_id, fmt.Sprintf("%v", table), fmt.Sprintf("%v", columns), fmt.Sprintf("%v", restriction))
+	fmt.Println(dbuser_id, fmt.Sprintf("%v", table), fmt.Sprintf("%v", columns), fmt.Sprintf("%v", restriction))
 }
 
 func removeLastChar(s string) string {

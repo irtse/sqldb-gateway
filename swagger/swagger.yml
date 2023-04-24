@@ -1,7 +1,8 @@
 swagger: "2.0"
 info:
   title: beego Test API
-  description: beego has a very cool tools to autogenerate documents for your API
+  description: |
+    beego has a very cool tools to autogenerate documents for your API
   version: 1.0.0
   termsOfService: http://beego.me/
   contact:
@@ -15,7 +16,9 @@ paths:
     post:
       tags:
       - l
-      description: Add user
+      description: |-
+        Add user
+        <br>
       operationId: LoginController.AddUser
       parameters:
       - in: query
@@ -37,7 +40,9 @@ paths:
     post:
       tags:
       - l
-      description: User login
+      description: |-
+        User login
+        <br>
       operationId: LoginController.Login
       parameters:
       - in: body
@@ -57,7 +62,9 @@ paths:
     post:
       tags:
       - l
-      description: Logs user
+      description: |-
+        Logs user
+        <br>
       operationId: LoginController.Logout
       responses:
         "200":
@@ -68,18 +75,22 @@ paths:
     get:
       tags:
       - s
-      description: get list table
-      operationId: SchemaController.GetTable
+      description: |-
+        Get database tables list
+        <br>
+      operationId: SchemaController.GetTablesList
       responses:
         "200":
           description: '{string} success !'
-        "403":
-          description: no table
+        "500":
+          description: query error
   /s/{table}:
     get:
       tags:
       - s
-      description: get table schema
+      description: |-
+        Get table schema
+        <br>
       operationId: SchemaController.GetSchema
       parameters:
       - in: path
@@ -90,13 +101,15 @@ paths:
       responses:
         "200":
           description: success !
-        "403":
+        "204":
           description: no table
   /t/{table}:
     get:
       tags:
       - t
-      description: get all Datas
+      description: |-
+        get all Datas
+        <br>
       operationId: TableController.GetAllTable
       parameters:
       - in: path
@@ -112,7 +125,9 @@ paths:
     put:
       tags:
       - t
-      description: put data in table
+      description: |-
+        put data in table
+        <br>
       operationId: TableController.Put data in table
       parameters:
       - in: path
@@ -134,7 +149,9 @@ paths:
     post:
       tags:
       - t
-      description: get all Datas
+      description: |-
+        get all Datas
+        <br>
       operationId: TableController.TablePost
       parameters:
       - in: path
@@ -156,7 +173,9 @@ paths:
     delete:
       tags:
       - t
-      description: delete the data in table
+      description: |-
+        delete the data in table
+        <br>
       operationId: TableController.Delete
       parameters:
       - in: path
@@ -178,7 +197,9 @@ paths:
     get:
       tags:
       - t
-      description: get all Datas
+      description: |-
+        get all Datas
+        <br>
       operationId: TableController.GetAllTableColumn
       parameters:
       - in: path
@@ -200,7 +221,9 @@ paths:
     get:
       tags:
       - t
-      description: get all Datas
+      description: |-
+        get all Datas
+        <br>
       operationId: TableController.GetAllTableColumnRestriction
       parameters:
       - in: path
@@ -227,7 +250,9 @@ paths:
     get:
       tags:
       - t
-      description: get all Datas
+      description: |-
+        get all Datas
+        <br>
       operationId: TableController.GetAllTableColumnRestrictionSortkeys
       parameters:
       - in: path
@@ -254,7 +279,9 @@ paths:
     get:
       tags:
       - t
-      description: get all Datas
+      description: |-
+        get all Datas
+        <br>
       operationId: TableController.GetAllTableColumnRestrictionSortkeysDir
       parameters:
       - in: path
