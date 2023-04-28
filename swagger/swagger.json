@@ -364,6 +364,13 @@
                         "description": "SQL restriction",
                         "required": true,
                         "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "sortkeys",
+                        "description": "Order by: columns names (separate with a comma)",
+                        "required": true,
+                        "type": "string"
                     }
                 ],
                 "responses": {
@@ -402,6 +409,20 @@
                         "in": "path",
                         "name": "restriction",
                         "description": "SQL restriction",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "sortkeys",
+                        "description": "Order by: columns names (separate with a comma)",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "dir",
+                        "description": "asc or desc",
                         "required": true,
                         "type": "string"
                     }
