@@ -8,7 +8,8 @@ before doing go mod tidy.
 
 Installing bee command
 ----------------------
-> go get github.com/beego/bee/v2
+> go install github.com/beego/bee/v2
+check $PATH in ~/.bachrc for $HOME/go/bin
 
 Running in debug mode
 ---------------------

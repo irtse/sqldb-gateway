@@ -43,7 +43,7 @@
                         "description": ""
                     },
                     "403": {
-                        "description": "user already exist"
+                        "description": "user already exists"
                     }
                 }
             }
@@ -91,7 +91,7 @@
                         "description": ""
                     },
                     "403": {
-                        "description": "user not exist"
+                        "description": "user does not exist"
                     }
                 }
             }
@@ -281,7 +281,7 @@
                     {
                         "in": "path",
                         "name": "columns",
-                        "description": "Name of the columns (separate with a comma)",
+                        "description": "Columns names (separate with a comma)",
                         "required": true,
                         "type": "string"
                     }
@@ -314,7 +314,7 @@
                     {
                         "in": "path",
                         "name": "columns",
-                        "description": "Name of the columns (separate with a comma)",
+                        "description": "Columns names (separated with a comma)",
                         "required": true,
                         "type": "string"
                     },
@@ -354,7 +354,7 @@
                     {
                         "in": "path",
                         "name": "columns",
-                        "description": "Name of the columns (separate with a comma)",
+                        "description": "Columns names (separated with a comma)",
                         "required": true,
                         "type": "string"
                     },
@@ -368,7 +368,7 @@
                     {
                         "in": "path",
                         "name": "sortkeys",
-                        "description": "Order by: columns names (separate with a comma)",
+                        "description": "Order by: columns names (separated with a comma)",
                         "required": true,
                         "type": "string"
                     }
@@ -401,7 +401,7 @@
                     {
                         "in": "path",
                         "name": "columns",
-                        "description": "Name of the columns (separate with a comma)",
+                        "description": "Columns names (separated with a comma)",
                         "required": true,
                         "type": "string"
                     },
@@ -415,7 +415,7 @@
                     {
                         "in": "path",
                         "name": "sortkeys",
-                        "description": "Order by: columns names (separate with a comma)",
+                        "description": "Order by: columns names (separated with a comma)",
                         "required": true,
                         "type": "string"
                     },
