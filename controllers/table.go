@@ -185,7 +185,7 @@ func (t *TableController) GetAllTableColumnRestriction() {
 // @Param	table			path 	string	true		"Name of the table"
 // @Param	columns			path 	string	true		"Name of the columns (separate with a comma)"
 // @Param	restriction		path 	string	true		"SQL restriction"
-// @param	sortkeys		path	string	true		"column name"
+// @Param	sortkeys		path	string	true		"Order by: columns names (separate with a comma)"
 // @Success 200 {string} success !
 // @Failure 403 no table
 // @router /:table/:columns/:restriction/:sortkeys [get]
@@ -210,8 +210,8 @@ func (t *TableController) GetAllTableColumnRestrictionSortkeys() {
 // @Param	table			path 	string	true		"Name of the table"
 // @Param	columns			path 	string	true		"Name of the columns (separate with a comma)"
 // @Param	restriction		path 	string	true		"SQL restriction"
-// @param	sortkeys		path	string	true		"column name"
-// @param	dir				path	string	true		"asc or desc"
+// @Param	sortkeys		path	string	true		"Order by: columns names (separate with a comma)"
+// @Param	dir				path	string	true		"asc or desc"
 // @Success 200 {string} success !
 // @Failure 403 no table
 // @router /:table/:columns/:restriction/:sortkeys/:dir [get]

@@ -1,8 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "title": "SqlDB WS API",
-        "description": "Generic database access API\n",
+        "title": "beego Test API",
+        "description": "beego has a very cool tools to autogenerate documents for your API\n",
         "version": "1.0.0",
         "termsOfService": "https://www.irt-saintexupery.com/",
         "contact": {
@@ -43,7 +43,7 @@
                         "description": ""
                     },
                     "403": {
-                        "description": "user already exist"
+                        "description": "user already exists"
                     }
                 }
             }
@@ -91,7 +91,7 @@
                         "description": ""
                     },
                     "403": {
-                        "description": "user not exist"
+                        "description": "user does not exist"
                     }
                 }
             }
@@ -101,14 +101,14 @@
                 "tags": [
                     "s"
                 ],
-                "description": "get list table\n\u003cbr\u003e",
-                "operationId": "SchemaController.GetTable",
+                "description": "Get database tables list\n\u003cbr\u003e",
+                "operationId": "SchemaController.GetTablesList",
                 "responses": {
                     "200": {
                         "description": "{string} success !"
                     },
-                    "403": {
-                        "description": "no table"
+                    "500": {
+                        "description": "query error"
                     }
                 }
             }
@@ -118,7 +118,7 @@
                 "tags": [
                     "s"
                 ],
-                "description": "get table schema\n\u003cbr\u003e",
+                "description": "Get table schema\n\u003cbr\u003e",
                 "operationId": "SchemaController.GetSchema",
                 "parameters": [
                     {
@@ -133,7 +133,7 @@
                     "200": {
                         "description": "success !"
                     },
-                    "403": {
+                    "204": {
                         "description": "no table"
                     }
                 }
@@ -281,7 +281,7 @@
                     {
                         "in": "path",
                         "name": "columns",
-                        "description": "Name of the columns (separate with a comma)",
+                        "description": "Columns names (separate with a comma)",
                         "required": true,
                         "type": "string"
                     }
@@ -314,7 +314,7 @@
                     {
                         "in": "path",
                         "name": "columns",
-                        "description": "Name of the columns (separate with a comma)",
+                        "description": "Columns names (separated with a comma)",
                         "required": true,
                         "type": "string"
                     },
@@ -354,7 +354,7 @@
                     {
                         "in": "path",
                         "name": "columns",
-                        "description": "Name of the columns (separate with a comma)",
+                        "description": "Columns names (separated with a comma)",
                         "required": true,
                         "type": "string"
                     },
@@ -362,6 +362,13 @@
                         "in": "path",
                         "name": "restriction",
                         "description": "SQL restriction",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "sortkeys",
+                        "description": "Order by: columns names (separated with a comma)",
                         "required": true,
                         "type": "string"
                     }
@@ -394,7 +401,7 @@
                     {
                         "in": "path",
                         "name": "columns",
-                        "description": "Name of the columns (separate with a comma)",
+                        "description": "Columns names (separated with a comma)",
                         "required": true,
                         "type": "string"
                     },
@@ -402,6 +409,20 @@
                         "in": "path",
                         "name": "restriction",
                         "description": "SQL restriction",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "sortkeys",
+                        "description": "Order by: columns names (separated with a comma)",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "dir",
+                        "description": "asc or desc",
                         "required": true,
                         "type": "string"
                     }

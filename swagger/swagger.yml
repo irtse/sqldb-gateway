@@ -1,8 +1,8 @@
 swagger: "2.0"
 info:
-  title: SqlDB WS API
+  title: beego Test API
   description: |
-    Generic database access API
+    beego has a very cool tools to autogenerate documents for your API
   version: 1.0.0
   termsOfService: https://www.irt-saintexupery.com/
   contact:
@@ -76,20 +76,20 @@ paths:
       tags:
       - s
       description: |-
-        get list table
+        Get database tables list
         <br>
-      operationId: SchemaController.GetTable
+      operationId: SchemaController.GetTablesList
       responses:
         "200":
           description: '{string} success !'
-        "403":
-          description: no table
+        "500":
+          description: query error
   /s/{table}:
     get:
       tags:
       - s
       description: |-
-        get table schema
+        Get table schema
         <br>
       operationId: SchemaController.GetSchema
       parameters:
@@ -101,7 +101,7 @@ paths:
       responses:
         "200":
           description: success !
-        "403":
+        "204":
           description: no table
   /t/{table}:
     get:
@@ -270,6 +270,11 @@ paths:
         description: SQL restriction
         required: true
         type: string
+      - in: path
+        name: sortkeys
+        description: 'Order by: columns names (separate with a comma)'
+        required: true
+        type: string
       responses:
         "200":
           description: '{string} success !'
@@ -297,6 +302,16 @@ paths:
       - in: path
         name: restriction
         description: SQL restriction
+        required: true
+        type: string
+      - in: path
+        name: sortkeys
+        description: 'Order by: columns names (separate with a comma)'
+        required: true
+        type: string
+      - in: path
+        name: dir
+        description: asc or desc
         required: true
         type: string
       responses:
