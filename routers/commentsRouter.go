@@ -36,7 +36,7 @@ func init() {
 
     beego.GlobalControllerRouter["sqldb-ws/controllers:SchemaController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:SchemaController"],
         beego.ControllerComments{
-            Method: "GetTable",
+            Method: "GetTablesList",
             Router: `/`,
             AllowHTTPMethods: []string{"get"},
             MethodParams: param.Make(),

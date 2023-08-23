@@ -1,8 +1,8 @@
 swagger: "2.0"
 info:
-  title: beego Test API
+  title: SqlDB WS API
   description: |
-    beego has a very cool tools to autogenerate documents for your API
+    Generic database access API
   version: 1.0.0
   termsOfService: https://www.irt-saintexupery.com/
   contact:

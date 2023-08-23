@@ -1,8 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "title": "beego Test API",
-        "description": "beego has a very cool tools to autogenerate documents for your API\n",
+        "title": "SqlDB WS API",
+        "description": "Generic database access API\n",
         "version": "1.0.0",
         "termsOfService": "https://www.irt-saintexupery.com/",
         "contact": {
@@ -43,7 +43,7 @@
                         "description": ""
                     },
                     "403": {
-                        "description": "user already exists"
+                        "description": "user already exist"
                     }
                 }
             }
@@ -91,7 +91,7 @@
                         "description": ""
                     },
                     "403": {
-                        "description": "user does not exist"
+                        "description": "user not exist"
                     }
                 }
             }
@@ -281,7 +281,7 @@
                     {
                         "in": "path",
                         "name": "columns",
-                        "description": "Columns names (separate with a comma)",
+                        "description": "Name of the columns (separate with a comma)",
                         "required": true,
                         "type": "string"
                     }
@@ -314,7 +314,7 @@
                     {
                         "in": "path",
                         "name": "columns",
-                        "description": "Columns names (separated with a comma)",
+                        "description": "Name of the columns (separate with a comma)",
                         "required": true,
                         "type": "string"
                     },
@@ -354,7 +354,7 @@
                     {
                         "in": "path",
                         "name": "columns",
-                        "description": "Columns names (separated with a comma)",
+                        "description": "Name of the columns (separate with a comma)",
                         "required": true,
                         "type": "string"
                     },
@@ -368,7 +368,7 @@
                     {
                         "in": "path",
                         "name": "sortkeys",
-                        "description": "Order by: columns names (separated with a comma)",
+                        "description": "Order by: columns names (separate with a comma)",
                         "required": true,
                         "type": "string"
                     }
@@ -401,7 +401,7 @@
                     {
                         "in": "path",
                         "name": "columns",
-                        "description": "Columns names (separated with a comma)",
+                        "description": "Name of the columns (separate with a comma)",
                         "required": true,
                         "type": "string"
                     },
@@ -415,7 +415,7 @@
                     {
                         "in": "path",
                         "name": "sortkeys",
-                        "description": "Order by: columns names (separated with a comma)",
+                        "description": "Order by: columns names (separate with a comma)",
                         "required": true,
                         "type": "string"
                     },
