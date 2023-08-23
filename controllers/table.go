@@ -59,7 +59,7 @@ func (t *TableController) Put() {
 	} else {
 		t.Ctx.Output.SetStatus(http.StatusOK)
 	}
-	t.Data["json"] = map[string]int{"uid": uid}
+	t.Data["json"] = map[string]int64{"uid": uid}
 	t.ServeJSON()
 }
 

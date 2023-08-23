@@ -1,11 +1,12 @@
 swagger: "2.0"
 info:
-  title: beego Test API
-  description: beego has a very cool tools to autogenerate documents for your API
+  title: SqlDB WS API
+  description: |
+    Generic database access API
   version: 1.0.0
-  termsOfService: http://beego.me/
+  termsOfService: https://www.irt-saintexupery.com/
   contact:
-    email: astaxie@gmail.com
+    email: yves.cerezal@irt-saintexupery.com
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -15,7 +16,9 @@ paths:
     post:
       tags:
       - l
-      description: Add user
+      description: |-
+        Add user
+        <br>
       operationId: LoginController.AddUser
       parameters:
       - in: query
@@ -37,7 +40,9 @@ paths:
     post:
       tags:
       - l
-      description: User login
+      description: |-
+        User login
+        <br>
       operationId: LoginController.Login
       parameters:
       - in: body
@@ -57,7 +62,9 @@ paths:
     post:
       tags:
       - l
-      description: Logs user
+      description: |-
+        Logs user
+        <br>
       operationId: LoginController.Logout
       responses:
         "200":
@@ -68,7 +75,9 @@ paths:
     get:
       tags:
       - s
-      description: get list table
+      description: |-
+        get list table
+        <br>
       operationId: SchemaController.GetTable
       responses:
         "200":
@@ -79,7 +88,9 @@ paths:
     get:
       tags:
       - s
-      description: get table schema
+      description: |-
+        get table schema
+        <br>
       operationId: SchemaController.GetSchema
       parameters:
       - in: path
@@ -96,7 +107,9 @@ paths:
     get:
       tags:
       - t
-      description: get all Datas
+      description: |-
+        get all Datas
+        <br>
       operationId: TableController.GetAllTable
       parameters:
       - in: path
@@ -112,7 +125,9 @@ paths:
     put:
       tags:
       - t
-      description: put data in table
+      description: |-
+        put data in table
+        <br>
       operationId: TableController.Put data in table
       parameters:
       - in: path
@@ -134,7 +149,9 @@ paths:
     post:
       tags:
       - t
-      description: get all Datas
+      description: |-
+        get all Datas
+        <br>
       operationId: TableController.TablePost
       parameters:
       - in: path
@@ -156,7 +173,9 @@ paths:
     delete:
       tags:
       - t
-      description: delete the data in table
+      description: |-
+        delete the data in table
+        <br>
       operationId: TableController.Delete
       parameters:
       - in: path
@@ -178,7 +197,9 @@ paths:
     get:
       tags:
       - t
-      description: get all Datas
+      description: |-
+        get all Datas
+        <br>
       operationId: TableController.GetAllTableColumn
       parameters:
       - in: path
@@ -200,7 +221,9 @@ paths:
     get:
       tags:
       - t
-      description: get all Datas
+      description: |-
+        get all Datas
+        <br>
       operationId: TableController.GetAllTableColumnRestriction
       parameters:
       - in: path
@@ -227,7 +250,9 @@ paths:
     get:
       tags:
       - t
-      description: get all Datas
+      description: |-
+        get all Datas
+        <br>
       operationId: TableController.GetAllTableColumnRestrictionSortkeys
       parameters:
       - in: path
@@ -254,7 +279,9 @@ paths:
     get:
       tags:
       - t
-      description: get all Datas
+      description: |-
+        get all Datas
+        <br>
       operationId: TableController.GetAllTableColumnRestrictionSortkeysDir
       parameters:
       - in: path
@@ -277,12 +304,82 @@ paths:
           description: '{string} success !'
         "403":
           description: no table
+  /ui/{fid}:
+    get:
+      tags:
+      - ui
+      description: |-
+        create access form
+        <br>
+      operationId: UiController.form
+      parameters:
+      - in: path
+        name: fid
+        description: The fid of the form
+        required: true
+        type: string
+      responses:
+        "200":
+          description: json form
+        "403":
+          description: body is empty
+  /ui/{fid}/{uid}:
+    get:
+      tags:
+      - ui
+      description: |-
+        create access form
+        <br>
+      operationId: UiController.form
+      parameters:
+      - in: path
+        name: fid
+        description: The fid of the form
+        required: true
+        type: string
+      - in: path
+        name: uid
+        description: The uid you want to edit
+        required: true
+        type: string
+      responses:
+        "200":
+          description: json form
+        "403":
+          description: body is empty
+  /ui/{uid}:
+    post:
+      tags:
+      - ui
+      description: |-
+        insert access
+        <br>
+      operationId: UiController.Access form data post
+      parameters:
+      - in: path
+        name: uid
+        description: The uid you want to edit
+        required: true
+        type: string
+      - in: body
+        name: body
+        description: body of jsonform data
+        schema:
+          $ref: '#/definitions/form'
+      responses:
+        "200":
+          description: json
+        "403":
+          description: body is empty
 definitions:
   Credential:
     title: Credential
     type: object
   TableQuery:
     title: TableQuery
+    type: object
+  form:
+    title: form
     type: object
   json:
     title: json
@@ -300,3 +397,6 @@ tags:
 - name: l
   description: |
     Operations about login
+- name: ui
+  description: |
+    Operations about table

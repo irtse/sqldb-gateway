@@ -6,6 +6,8 @@ Some special tables can be used for defining database access restrictions based 
 > export GOPRIVATE=forge.redroom.link
 before doing go mod tidy.
 
+bee generate routers
+
 Running in debug mode
 ---------------------
 > bee run -downdoc=true -gendoc=true

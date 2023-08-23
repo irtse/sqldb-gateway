@@ -1,12 +1,12 @@
 {
     "swagger": "2.0",
     "info": {
-        "title": "beego Test API",
-        "description": "beego has a very cool tools to autogenerate documents for your API",
+        "title": "SqlDB WS API",
+        "description": "Generic database access API\n",
         "version": "1.0.0",
-        "termsOfService": "http://beego.me/",
+        "termsOfService": "https://www.irt-saintexupery.com/",
         "contact": {
-            "email": "astaxie@gmail.com"
+            "email": "yves.cerezal@irt-saintexupery.com"
         },
         "license": {
             "name": "Apache 2.0",
@@ -20,7 +20,7 @@
                 "tags": [
                     "l"
                 ],
-                "description": "Add user",
+                "description": "Add user\n\u003cbr\u003e",
                 "operationId": "LoginController.AddUser",
                 "parameters": [
                     {
@@ -53,7 +53,7 @@
                 "tags": [
                     "l"
                 ],
-                "description": "User login",
+                "description": "User login\n\u003cbr\u003e",
                 "operationId": "LoginController.Login",
                 "parameters": [
                     {
@@ -84,7 +84,7 @@
                 "tags": [
                     "l"
                 ],
-                "description": "Logs user",
+                "description": "Logs user\n\u003cbr\u003e",
                 "operationId": "LoginController.Logout",
                 "responses": {
                     "200": {
@@ -101,7 +101,7 @@
                 "tags": [
                     "s"
                 ],
-                "description": "get list table",
+                "description": "get list table\n\u003cbr\u003e",
                 "operationId": "SchemaController.GetTable",
                 "responses": {
                     "200": {
@@ -118,7 +118,7 @@
                 "tags": [
                     "s"
                 ],
-                "description": "get table schema",
+                "description": "get table schema\n\u003cbr\u003e",
                 "operationId": "SchemaController.GetSchema",
                 "parameters": [
                     {
@@ -144,7 +144,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "get all Datas",
+                "description": "get all Datas\n\u003cbr\u003e",
                 "operationId": "TableController.GetAllTable",
                 "parameters": [
                     {
@@ -168,7 +168,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "put data in table",
+                "description": "put data in table\n\u003cbr\u003e",
                 "operationId": "TableController.Put data in table",
                 "parameters": [
                     {
@@ -201,7 +201,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "get all Datas",
+                "description": "get all Datas\n\u003cbr\u003e",
                 "operationId": "TableController.TablePost",
                 "parameters": [
                     {
@@ -234,7 +234,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "delete the data in table",
+                "description": "delete the data in table\n\u003cbr\u003e",
                 "operationId": "TableController.Delete",
                 "parameters": [
                     {
@@ -268,7 +268,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "get all Datas",
+                "description": "get all Datas\n\u003cbr\u003e",
                 "operationId": "TableController.GetAllTableColumn",
                 "parameters": [
                     {
@@ -301,7 +301,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "get all Datas",
+                "description": "get all Datas\n\u003cbr\u003e",
                 "operationId": "TableController.GetAllTableColumnRestriction",
                 "parameters": [
                     {
@@ -341,7 +341,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "get all Datas",
+                "description": "get all Datas\n\u003cbr\u003e",
                 "operationId": "TableController.GetAllTableColumnRestrictionSortkeys",
                 "parameters": [
                     {
@@ -381,7 +381,7 @@
                 "tags": [
                     "t"
                 ],
-                "description": "get all Datas",
+                "description": "get all Datas\n\u003cbr\u003e",
                 "operationId": "TableController.GetAllTableColumnRestrictionSortkeysDir",
                 "parameters": [
                     {
@@ -415,6 +415,99 @@
                     }
                 }
             }
+        },
+        "/ui/{fid}": {
+            "get": {
+                "tags": [
+                    "ui"
+                ],
+                "description": "create access form\n\u003cbr\u003e",
+                "operationId": "UiController.form",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "fid",
+                        "description": "The fid of the form",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "json form"
+                    },
+                    "403": {
+                        "description": "body is empty"
+                    }
+                }
+            }
+        },
+        "/ui/{fid}/{uid}": {
+            "get": {
+                "tags": [
+                    "ui"
+                ],
+                "description": "create access form\n\u003cbr\u003e",
+                "operationId": "UiController.form",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "fid",
+                        "description": "The fid of the form",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "uid",
+                        "description": "The uid you want to edit",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "json form"
+                    },
+                    "403": {
+                        "description": "body is empty"
+                    }
+                }
+            }
+        },
+        "/ui/{uid}": {
+            "post": {
+                "tags": [
+                    "ui"
+                ],
+                "description": "insert access\n\u003cbr\u003e",
+                "operationId": "UiController.Access form data post",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "uid",
+                        "description": "The uid you want to edit",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "body of jsonform data",
+                        "schema": {
+                            "$ref": "#/definitions/form"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "json"
+                    },
+                    "403": {
+                        "description": "body is empty"
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -424,6 +517,10 @@
         },
         "TableQuery": {
             "title": "TableQuery",
+            "type": "object"
+        },
+        "form": {
+            "title": "form",
             "type": "object"
         },
         "json": {
@@ -447,6 +544,10 @@
         {
             "name": "l",
             "description": "Operations about login\n"
+        },
+        {
+            "name": "ui",
+            "description": "Operations about table\n"
         }
     ]
 }
