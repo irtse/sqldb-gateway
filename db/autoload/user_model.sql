@@ -2,7 +2,6 @@
 -- Please log an issue at https://redmine.postgresql.org/projects/pgadmin4/issues/new if you find any bugs, including reproduction steps.
 BEGIN;
 
-
 CREATE TABLE IF NOT EXISTS public.axis
 (
     id SERIAL,
@@ -10,7 +9,6 @@ CREATE TABLE IF NOT EXISTS public.axis
     entity_id integer,
     PRIMARY KEY (id)
 );  
-
 
 CREATE TABLE IF NOT EXISTS public.employee
 (
@@ -52,19 +50,63 @@ CREATE TABLE IF NOT EXISTS public.project
     PRIMARY KEY (id)
 );
 
+CREATE TABLE IF NOT EXISTS public.metric
+(
+    id SERIAL,
+    name character varying(255),
+    entity_id integer,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.metricvalue
+(
+    id SERIAL,
+    measuredate date,
+    intvalue integer,
+    floatvalue float,
+    metric_id integer,
+    PRIMARY KEY (id)
+);
+
+
+CREATE TABLE IF NOT EXISTS public.position
+(
+    id SERIAL,
+    reference character varying(255),
+    label character varying(255),
+    latitude float,
+    longitude float,
+    metric_id integer,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.action
+(
+    id SERIAL,
+    status character varying(255),
+    position_id integer,
+    machine_id integer,
+    description	character varying(255),
+    priority integer,
+    driver_dbuser_id integer,
+    actor_dbuser_id integer, 
+    creationdate date,
+    planneddate date,
+    closingdate date,
+    comment character varying(1000),
+    verified boolean,
+    PRIMARY KEY (id)
+);
+
 ALTER TABLE public.axis
     ADD FOREIGN KEY (entity_id)
     REFERENCES public.entity (id)
     NOT VALID;
 
-
-
-
 ALTER TABLE public.employee
     ADD FOREIGN KEY (dbuser_id)
     REFERENCES public.dbuser (id)
     NOT VALID;
-
 
 ALTER TABLE public.project
     ADD FOREIGN KEY (entity_id)

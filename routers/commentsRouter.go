@@ -7,6 +7,33 @@ import (
 
 func init() {
 
+    beego.GlobalControllerRouter["sqldb-ws/controllers:HelperController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:HelperController"],
+        beego.ControllerComments{
+            Method: "CreateTable",
+            Router: `/create`,
+            AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["sqldb-ws/controllers:HelperController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:HelperController"],
+        beego.ControllerComments{
+            Method: "ParseHeader",
+            Router: `/header`,
+            AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["sqldb-ws/controllers:HelperController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:HelperController"],
+        beego.ControllerComments{
+            Method: "Import",
+            Router: `/import/:table`,
+            AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
     beego.GlobalControllerRouter["sqldb-ws/controllers:LoginController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:LoginController"],
         beego.ControllerComments{
             Method: "AddUser",
@@ -127,7 +154,7 @@ func init() {
     beego.GlobalControllerRouter["sqldb-ws/controllers:UiController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:UiController"],
         beego.ControllerComments{
             Method: "GetEmptyForm",
-            Router: `/:fid`,
+            Router: `/form/:fid`,
             AllowHTTPMethods: []string{"get"},
             MethodParams: param.Make(),
             Filters: nil,
@@ -136,7 +163,7 @@ func init() {
     beego.GlobalControllerRouter["sqldb-ws/controllers:UiController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:UiController"],
         beego.ControllerComments{
             Method: "GetEditForm",
-            Router: `/:fid/:uid`,
+            Router: `/form/:fid/:uid`,
             AllowHTTPMethods: []string{"get"},
             MethodParams: param.Make(),
             Filters: nil,
@@ -145,8 +172,17 @@ func init() {
     beego.GlobalControllerRouter["sqldb-ws/controllers:UiController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:UiController"],
         beego.ControllerComments{
             Method: "PostAccessForm",
-            Router: `/:uid`,
+            Router: `/form/:fid/:uid`,
             AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["sqldb-ws/controllers:UiController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:UiController"],
+        beego.ControllerComments{
+            Method: "GetListView",
+            Router: `/tableview/:tvid`,
+            AllowHTTPMethods: []string{"get"},
             MethodParams: param.Make(),
             Filters: nil,
             Params: nil})

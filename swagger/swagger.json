@@ -15,6 +15,87 @@
     },
     "basePath": "/v1",
     "paths": {
+        "/helper/create": {
+            "post": {
+                "tags": [
+                    "helper"
+                ],
+                "description": "Post raw header\n\u003cbr\u003e",
+                "operationId": "HelperController.CreateTable",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "body of jsonform data",
+                        "schema": {
+                            "$ref": "#/definitions/form"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{string} success !"
+                    },
+                    "500": {
+                        "description": "query error"
+                    }
+                }
+            }
+        },
+        "/helper/header": {
+            "post": {
+                "tags": [
+                    "helper"
+                ],
+                "description": "Post raw header\n\u003cbr\u003e",
+                "operationId": "HelperController.ParseHeader",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "body of jsonform data",
+                        "schema": {
+                            "$ref": "#/definitions/form"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{string} success !"
+                    },
+                    "500": {
+                        "description": "query error"
+                    }
+                }
+            }
+        },
+        "/helper/import/{table}": {
+            "post": {
+                "tags": [
+                    "helper"
+                ],
+                "description": "Post raw header\n\u003cbr\u003e",
+                "operationId": "HelperController.Import",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "body of jsonform data",
+                        "schema": {
+                            "$ref": "#/definitions/form"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{string} success !"
+                    },
+                    "500": {
+                        "description": "query error"
+                    }
+                }
+            }
+        },
         "/l/adduser": {
             "post": {
                 "tags": [
@@ -437,7 +518,7 @@
                 }
             }
         },
-        "/ui/{fid}": {
+        "/ui/form/{fid}": {
             "get": {
                 "tags": [
                     "ui"
@@ -463,7 +544,7 @@
                 }
             }
         },
-        "/ui/{fid}/{uid}": {
+        "/ui/form/{fid}/{uid}": {
             "get": {
                 "tags": [
                     "ui"
@@ -494,9 +575,7 @@
                         "description": "body is empty"
                     }
                 }
-            }
-        },
-        "/ui/{uid}": {
+            },
             "post": {
                 "tags": [
                     "ui"
@@ -504,6 +583,13 @@
                 "description": "insert access\n\u003cbr\u003e",
                 "operationId": "UiController.Access form data post",
                 "parameters": [
+                    {
+                        "in": "path",
+                        "name": "fid",
+                        "description": "The fid of the form",
+                        "required": true,
+                        "type": "string"
+                    },
                     {
                         "in": "path",
                         "name": "uid",
@@ -523,6 +609,32 @@
                 "responses": {
                     "200": {
                         "description": "json"
+                    },
+                    "403": {
+                        "description": "body is empty"
+                    }
+                }
+            }
+        },
+        "/ui/tableview/{tvid}": {
+            "get": {
+                "tags": [
+                    "ui"
+                ],
+                "description": "Get table view\n\u003cbr\u003e",
+                "operationId": "UiController.Tableview",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "tvid",
+                        "description": "The id of the tableview",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "json form"
                     },
                     "403": {
                         "description": "body is empty"
@@ -569,6 +681,10 @@
         {
             "name": "ui",
             "description": "Operations about table\n"
+        },
+        {
+            "name": "helper",
+            "description": "Operations about schema\n"
         }
     ]
 }

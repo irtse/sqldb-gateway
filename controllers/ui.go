@@ -23,7 +23,7 @@ type UiController struct {
 // @Param	uid		path 	string	true		"The uid you want to edit"
 // @Success 200 json form
 // @Failure 403 body is empty
-// @router /:fid/:uid [get]
+// @router /form/:fid/:uid [get]
 func (u *UiController) GetEditForm() {
 	fid := u.Ctx.Input.Query(":fid")
 	uid := u.Ctx.Input.Query(":uid")
@@ -36,7 +36,7 @@ func (u *UiController) GetEditForm() {
 // @Param	fid		path 	string	true		"The fid of the form"
 // @Success 200 json form
 // @Failure 403 body is empty
-// @router /:fid [get]
+// @router /form/:fid [get]
 func (u *UiController) GetEmptyForm() {
 	fid := u.Ctx.Input.Query(":fid")
 	u.buildForm(fid, "")
@@ -142,46 +142,84 @@ func (u *UiController) buildForm(fid string, uid string) {
 
 // @Title Access form data post
 // @Description insert access
+// @Param	fid		path 	string	true		"The fid of the form"
 // @Param	uid		path 	string	true		"The uid you want to edit"
 // @Param	body		body 	form data		"body of jsonform data"
 // @Success 200 json
 // @Failure 403 body is empty
-// @router /:uid [post]
+// @router /form/:fid/:uid [post]
 func (u *UiController) PostAccessForm() {
 	var err error
+	fid := u.Ctx.Input.Query(":uid")
 	uid := u.Ctx.Input.Query(":uid")
 	var formdata map[string]interface{}
 	json.Unmarshal(u.Ctx.Input.RequestBody, &formdata)
 	db := sqldb.Open(os.Getenv("driverdb"), os.Getenv("paramsdb"))
-	accesslist := formdata["fields"].([]interface{})
-	switcheslist := accesslist[:len(accesslist)-3]
-	families := []string{}
-	for _, accessif := range switcheslist {
-		access := accessif.(map[string]interface{})
-		basefamily := fmt.Sprint(access["key"].(float64))
-		if access["value"].(bool) {
-			_, err = db.QueryAssociativeArray("insert ignore into user_basefamily(user_id, family_id) values(" + uid + "," + basefamily + ")")
-			if err != nil {
-				log.Error().Msg(err.Error())
-				u.Ctx.Output.SetStatus(http.StatusBadRequest)
-			}
-			families = append(families, basefamily)
-		} else {
-			// remove off
-			_, err = db.QueryAssociativeArray("delete from user_basefamily where user_id=" + uid + " and family_id=" + basefamily)
-			if err != nil {
-				log.Error().Msg(err.Error())
-				u.Ctx.Output.SetStatus(http.StatusBadRequest)
-			}
-		}
-
+	formdesc, err := getFormDesc(db, fid)
+	table := formdesc[0]["tablename"]
+	print(table, uid)
+	updateJson := map[string]interface{}{}
+	fields := formdata["fields"].([]map[string]interface{})
+	for _, f := range fields {
+		// todo manage types
+		updateJson[f["key"].(string)] = f["value"]
 	}
-
+	// todo send update
 	if err != nil {
 		log.Error().Msg(err.Error())
 		u.Ctx.Output.SetStatus(http.StatusBadRequest)
 	} else {
 		u.Data["json"] = "ok"
+	}
+	u.ServeJSON()
+}
+
+// @Title Tableview
+// @Description Get table view
+// @Param	tvid		path 	string	true		"The id of the tableview"
+// @Success 200 json form
+// @Failure 403 body is empty
+// @router /tableview/:tvid [get]
+func (u *UiController) GetListView() {
+	lvid := u.Ctx.Input.Query(":tvid")
+	tvdata := map[string]interface{}{}
+	db := sqldb.Open(os.Getenv("driverdb"), os.Getenv("paramsdb"))
+	lv, err := getTableView(db, lvid)
+	if err != nil {
+		log.Error().Msg(err.Error())
+		u.Ctx.Output.SetStatus(http.StatusBadRequest)
+	}
+	tvdata["title"] = lv[0]["title"].(string)
+	tvdata["header"] = lv[0]["header"].(string)
+	tvdata["form_id"] = lv[0]["form_id"].(int64)
+	if lv[0]["tablerestriction"] == nil {
+		tvdata["tablerestriction"] = ""
+	} else {
+		tvdata["tablerestriction"] = lv[0]["tablerestriction"].(string)
+	}
+	if lv[0]["tableorder"] == nil {
+		tvdata["tableorder"] = ""
+	} else {
+		tvdata["tableorder"] = lv[0]["tableorder"].(string)
+	}
+	if lv[0]["tableorderdir"] == nil {
+		tvdata["tableorderdir"] = ""
+	} else {
+		tvdata["tableorderdir"] = lv[0]["tableorderdir"].(string)
+	}
+	schema, err := db.Table(lv[0]["tablename"].(string)).GetSchema()
+	if err != nil {
+		log.Error().Msg(err.Error())
+		u.Ctx.Output.SetStatus(http.StatusBadRequest)
+	}
+	tvdata["columns"] = schema.Columns
+	data, err := db.Table(lv[0]["tablename"].(string)).GetAssociativeArray(strings.Split("id,"+lv[0]["tablecolumns"].(string), ","), tvdata["tablerestriction"].(string), strings.Split(tvdata["tableorder"].(string), ","), tvdata["tableorderdir"].(string))
+	tvdata["items"] = data
+	if err != nil {
+		log.Error().Msg(err.Error())
+		u.Ctx.Output.SetStatus(http.StatusBadRequest)
+	} else {
+		u.Data["json"] = tvdata
 	}
 	u.ServeJSON()
 }
@@ -207,4 +245,12 @@ func getData(db *sqldb.Db, table string, columns []string, uid string) ([]sqldb.
 	sortkeys := []string{}
 	dir := ""
 	return db.Table(table).GetAssociativeArray(columns, restriction, sortkeys, dir)
+}
+
+func getTableView(db *sqldb.Db, lvid string) ([]sqldb.AssRow, error) {
+	columns := []string{"*"}
+	restriction := "id=" + lvid
+	sortkeys := []string{}
+	dir := ""
+	return db.Table("dbtableview").GetAssociativeArray(columns, restriction, sortkeys, dir)
 }

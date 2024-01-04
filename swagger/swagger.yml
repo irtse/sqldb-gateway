@@ -12,6 +12,63 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 basePath: /v1
 paths:
+  /helper/create:
+    post:
+      tags:
+      - helper
+      description: |-
+        Post raw header
+        <br>
+      operationId: HelperController.CreateTable
+      parameters:
+      - in: body
+        name: body
+        description: body of jsonform data
+        schema:
+          $ref: '#/definitions/form'
+      responses:
+        "200":
+          description: '{string} success !'
+        "500":
+          description: query error
+  /helper/header:
+    post:
+      tags:
+      - helper
+      description: |-
+        Post raw header
+        <br>
+      operationId: HelperController.ParseHeader
+      parameters:
+      - in: body
+        name: body
+        description: body of jsonform data
+        schema:
+          $ref: '#/definitions/form'
+      responses:
+        "200":
+          description: '{string} success !'
+        "500":
+          description: query error
+  /helper/import/{table}:
+    post:
+      tags:
+      - helper
+      description: |-
+        Post raw header
+        <br>
+      operationId: HelperController.Import
+      parameters:
+      - in: body
+        name: body
+        description: body of jsonform data
+        schema:
+          $ref: '#/definitions/form'
+      responses:
+        "200":
+          description: '{string} success !'
+        "500":
+          description: query error
   /l/adduser:
     post:
       tags:
@@ -319,7 +376,7 @@ paths:
           description: '{string} success !'
         "403":
           description: no table
-  /ui/{fid}:
+  /ui/form/{fid}:
     get:
       tags:
       - ui
@@ -338,7 +395,7 @@ paths:
           description: json form
         "403":
           description: body is empty
-  /ui/{fid}/{uid}:
+  /ui/form/{fid}/{uid}:
     get:
       tags:
       - ui
@@ -362,7 +419,6 @@ paths:
           description: json form
         "403":
           description: body is empty
-  /ui/{uid}:
     post:
       tags:
       - ui
@@ -371,6 +427,11 @@ paths:
         <br>
       operationId: UiController.Access form data post
       parameters:
+      - in: path
+        name: fid
+        description: The fid of the form
+        required: true
+        type: string
       - in: path
         name: uid
         description: The uid you want to edit
@@ -384,6 +445,25 @@ paths:
       responses:
         "200":
           description: json
+        "403":
+          description: body is empty
+  /ui/tableview/{tvid}:
+    get:
+      tags:
+      - ui
+      description: |-
+        Get table view
+        <br>
+      operationId: UiController.Tableview
+      parameters:
+      - in: path
+        name: tvid
+        description: The id of the tableview
+        required: true
+        type: string
+      responses:
+        "200":
+          description: json form
         "403":
           description: body is empty
 definitions:
@@ -415,3 +495,6 @@ tags:
 - name: ui
   description: |
     Operations about table
+- name: helper
+  description: |
+    Operations about schema

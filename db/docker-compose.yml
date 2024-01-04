@@ -7,6 +7,7 @@ services:
     restart: always
     volumes:
       - ./autoload:/docker-entrypoint-initdb.d
+      - /opt/data/containers/sqldb/pgdata:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: test
       POSTGRES_USER: test
@@ -19,3 +20,16 @@ services:
     restart: always
     ports:
       - 8888:8080
+
+  grafana:
+    image: grafana/grafana:9.5.12
+    restart: always
+    environment:
+      GF_SMTP_ENABLED: "true"
+      GF_SMTP_HOST: "smtp.example.com"
+    ports:
+      - "3000:3000"
+    volumes:
+      - /opt/data/containers/sqldb/grafana:/var/lib/grafana
+    depends_on:
+      - pg

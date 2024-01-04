@@ -9,6 +9,7 @@ CREATE SEQUENCE sq_dbuserrole;
 CREATE SEQUENCE sq_dbentity;
 CREATE SEQUENCE sq_dbform;
 CREATE SEQUENCE sq_dbformfields;
+CREATE SEQUENCE sq_dbtableview;
 
 CREATE TABLE IF NOT EXISTS public.dbrole
 (
@@ -60,6 +61,7 @@ CREATE TABLE IF NOT EXISTS public.dbform
 (
     id integer NOT NULL DEFAULT nextval('sq_dbform'),
     tablename character varying(255),
+    formtype character varying(255),
     formname character varying(255),
     title character varying(255),
     header character varying(2000),
@@ -76,12 +78,31 @@ CREATE TABLE IF NOT EXISTS public.dbformfields
     label character varying(255),
     placeholder character varying(255),
     defaultvalue character varying(255),
-    linkcolumns character varying(255),
+    linkcolumns character varying(1000),
     linkrestriction character varying(255),
     linkorder character varying(255),
     required bool,
     description text,
+    readonly bool,
     PRIMARY KEY (id)
 );
+
+CREATE TABLE IF NOT EXISTS public.dbtableview
+(
+    id integer NOT NULL DEFAULT nextval('sq_dbtableview'),
+    form_id integer,
+    tablename character varying(255),
+    tableviewtype character varying(255),
+    title character varying(255),
+    header character varying(2000),
+    tablecolumns character varying(2000),
+    tablerestriction character varying(255),
+    tableorder character varying(255),
+    tableorderdir character varying(255),
+    required bool,
+    description text,
+    PRIMARY KEY (id)
+);
+
 
 END;

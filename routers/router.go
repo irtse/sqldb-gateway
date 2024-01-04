@@ -47,6 +47,11 @@ func init() {
 				&controllers.UiController{},
 			),
 		),
+		beego.NSNamespace("/helper",
+			beego.NSInclude(
+				&controllers.HelperController{},
+			),
+		),
 	)
 	beego.AddNamespace(ns)
 
