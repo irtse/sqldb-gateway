@@ -1,0 +1,190 @@
+package service
+
+import (
+    "os"
+	"errors"
+	"strings"
+	"encoding/json"
+	"github.com/lib/pq"
+	tool "sqldb-ws/lib"
+	"github.com/rs/zerolog/log"
+	_ "github.com/go-sql-driver/mysql"
+	"sqldb-ws/lib/infrastructure/entities"
+	conn "sqldb-ws/lib/infrastructure/connector"
+)
+// Table is a table structure description
+type TableColumnInfo struct { 
+	perms      	*PermissionInfo
+	Row 		*TableRowInfo
+	InfraService 
+}
+
+func (t *TableColumnInfo) Template() (interface{}, error) { return t.Get() }
+
+func (t *TableColumnInfo) Get() (tool.Results, error) {
+	t.db = conn.ToFilter(t.Name, t.Params, t.db)
+	t.restrition()
+	d, err := t.db.SelectResults(t.Name)
+	t.Results = d
+	if err != nil { return DBError(nil, err) }
+	return t.Results, nil
+}
+
+func (t *TableColumnInfo) Verify(name string) (string, bool) {
+	empty := EmptyTable(t.Name)
+	if empty == nil { return "", false }
+	empty.db.SQLView=name
+	scheme, err := empty.Get()
+	if err != nil { return "", false }
+	typ := ""
+	if len(scheme) > 0 { 
+		typ = strings.Split(scheme[0]["columns"].(map[string]string)[name], "|")[0] 
+	}
+	return typ, typ != "" 
+}
+func (t *TableColumnInfo) Create() (tool.Results, error) {
+	v := Validator[entities.TableColumnEntity]()
+	v.data = entities.TableColumnEntity{}
+	tcce, err := v.ValidateStruct(t.Record)
+	if err != nil { return nil, errors.New("Not a proper struct to create a column - expect <entities.TableColumnEntity> Scheme " + err.Error()) }
+	query := "ALTER TABLE " + t.Name + " ADD " + tcce.Name + " " + tcce.Type
+	if t.db.Driver == conn.MySQLDriver {
+		if strings.TrimSpace(tcce.Comment) != "" { query += " COMMENT " + pq.QuoteLiteral(tcce.Comment) }
+	}
+	rows, err := t.db.Query(query)
+	if err != nil { return DBError(nil, err) }
+	defer rows.Close()
+	err = t.update(tcce)
+	if err != nil { return DBError(nil, err) }
+	rec := map[string]interface{}{ entities.NAMEATTR : tcce.Name }
+	for k, v := range t.Record { rec[k] = v }
+	t.Results = append(t.Results, rec)
+	if len(t.Name) > 1 && !strings.Contains(t.Name[:2], "db") {
+		t.PermService.SpecializedFill(t.Params, 
+			                          tool.Record{ "name" : t.Name, 
+									               "results" : t.Results, 
+												   "info" : tcce.Name }, 
+									  t.Method)
+		t.PermService.CreateOrUpdate()
+	}
+	return t.Results, err
+}
+
+func (t *TableColumnInfo) Update() (tool.Results, error) {
+	v := Validator[entities.TableColumnEntity]()
+	v.data = entities.TableColumnEntity{}
+	tcue, err := v.ValidateStruct(t.Record)
+	if err != nil { return nil, errors.New("Not a proper struct to update a column - expect <entities.TableColumnEntity> Scheme " + err.Error()) }
+	if strings.TrimSpace(tcue.NewName) != "" {
+		if strings.Contains(t.Name, "db") { return nil, errors.New("can't rename protected root db columns.") }
+		query := "ALTER TABLE " + t.Name + " RENAME COLUMN " + tcue.Name + " TO " + tcue.NewName + ";"
+		rows, err := t.db.Query(query)
+		if err != nil { return DBError(nil, err) }
+		defer rows.Close()
+	}
+	err = t.update(tcue)
+	if err != nil { return DBError(nil, err) }
+    t.Results = append(t.Results, map[string]interface{}{ entities.NAMEATTR : tcue.Name, "new_name" : tcue.NewName })
+	if len(t.Name) > 1 && !strings.Contains(t.Name[:2], "db") {
+		t.PermService.SpecializedFill(t.Params, 
+									  tool.Record{ "name" : t.Name, 
+												   "results" : t.Results, 
+												   "info" : tcue.Name }, 
+									  t.Method)
+		t.PermService.CreateOrUpdate()
+	}
+	return t.Results, err
+}
+func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
+	if strings.TrimSpace(tcce.Constraint) != "" {
+		query := "ALTER TABLE " + t.Name + "DROP CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + ";"
+		t.db.Query(query)
+		query = "ALTER TABLE " + t.Name + "  ADD CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + " " + strings.ToUpper(tcce.Constraint) + "(" + tcce.Name + ");"
+		_, err := t.db.Query(query)
+		if err != nil { return err }
+	}
+	if strings.TrimSpace(tcce.Constraint) != "" {
+		query := "ALTER TABLE " + t.Name + "DROP CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + ";"
+		t.db.Query(query)
+		query = "ALTER TABLE " + t.Name + "  ADD CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + " " + strings.ToUpper(tcce.Constraint) + "(" + tcce.Name + ");"
+		_, err := t.db.Query(query)
+		if err != nil { return err }
+	}
+	if strings.TrimSpace(tcce.ForeignTable) != "" {
+		query := "ALTER TABLE " + t.Name + "  ADD CONSTRAINT FOREIGN KEY (" + tcce.Name  + ") REFERENCES " + tcce.ForeignTable + " (id);"
+        _, err := t.db.Query(query)
+		if err != nil { return err }
+	}
+	if tcce.Default != "" {
+		query := "ALTER TABLE " + t.Name + "  ALTER " + tcce.Name  + " SET DEFAULT " + conn.FormatForSQL(tcce.Type, tcce.Default) + ";"
+        _, err := t.db.Query(query)
+		if err != nil { return err } // then iterate on field to update value if null
+		params := tool.Params{ tool.RootSQLFilterParam : tcce.Name + " IS NULL" }
+		record := tool.Record{ tcce.Name : tcce.Default }
+		t.Row.SpecializedFill(params, record, tool.UPDATE)
+		t.Row.CreateOrUpdate()
+	}
+	if tcce.NotNull {
+		query := "ALTER TABLE " + t.Name + "  ALTER COLUMN " + tcce.Name + " SET NOT NULL;"
+        _, err := t.db.Query(query)
+		if err != nil { return err }
+	}
+	if t.db.Driver == conn.PostgresDriver { // PG COMMENT
+		if strings.TrimSpace(tcce.Comment) != "" {
+			query := "COMMENT ON COLUMN " + t.Name + "." + tcce.Name + " IS '" + tcce.Comment + "'"
+			_, err := t.db.Query(query)
+			if err != nil { return err }
+		}
+	}
+	return nil
+}
+
+func (t *TableColumnInfo) CreateOrUpdate() (tool.Results, error) {
+	var err error
+	if col, ok:= t.Record[entities.NAMEATTR]; ok {
+		if _, ok := t.Verify(col.(string)); ok { _, err = t.Update() 
+		} else { _, err = t.Create() }
+		if err != nil { return nil, err }
+	}
+	return t.Results, err
+}
+
+func (t *TableColumnInfo) Delete() (tool.Results, error) {
+	if strings.Contains(t.Name, "db") { log.Error().Msg("can't delete protected root db columns.") }
+	for _, col := range strings.Split(t.Params[tool.RootColumnsParam], ",") {
+		query := "ALTER TABLE " + t.Name + " DROP " + col
+		rows, err := t.db.Query(query)
+		if err != nil { return DBError(nil, err) }
+		defer rows.Close()
+		t.Results = append(t.Results, tool.Record{ entities.NAMEATTR : col })
+		t.PermService.SpecializedFill(t.Params, 
+			tool.Record{ "name" : t.Name, 
+						 "results" : t.Results, 
+						 "info" : col }, 
+			t.Method)
+		t.PermService.Delete()
+	}
+	return t.Results, nil
+}
+
+func (t *TableColumnInfo) Add() (tool.Results, error) { 
+	return nil, errors.New("not implemented...")
+}
+
+func (t *TableColumnInfo) Remove() (tool.Results, error) { 
+	return nil, errors.New("not implemented...")
+}
+
+func (t *TableColumnInfo) Import(filename string) (tool.Results, error) {
+	var jsonSource []TableColumnInfo
+	byteValue, _ := os.ReadFile(filename)
+	err := json.Unmarshal([]byte(byteValue), &jsonSource)
+	if err != nil { return DBError(nil, err) }
+	for _, col := range jsonSource {
+		col.db = t.db
+		if t.Method == tool.DELETE { _, err = col.Delete() 
+		} else { _, err = col.CreateOrUpdate() }
+		if err != nil { log.Error().Msg(err.Error()) }
+	}
+	return t.Results, nil
+}

@@ -1,500 +1,342 @@
-swagger: "2.0"
+basePath: /v1
+definitions:
+  json:
+    title: json
+    type: object
 info:
-  title: SqlDB WS API
-  description: |
-    Generic database access API
-  version: 1.0.0
-  termsOfService: https://www.irt-saintexupery.com/
   contact:
     email: yves.cerezal@irt-saintexupery.com
+  description: |
+    Generic database access API
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-basePath: /v1
+  termsOfService: https://www.irt-saintexupery.com/
+  title: SqlDB WS API
+  version: 1.0.0
 paths:
-  /helper/create:
+  /auth/login:
     post:
-      tags:
-      - helper
       description: |-
-        Post raw header
+        Login Datas
         <br>
-      operationId: HelperController.CreateTable
+      operationId: AuthController.Login
       parameters:
-      - in: body
-        name: body
-        description: body of jsonform data
-        schema:
-          $ref: '#/definitions/form'
-      responses:
-        "200":
-          description: '{string} success !'
-        "500":
-          description: query error
-  /helper/header:
-    post:
-      tags:
-      - helper
-      description: |-
-        Post raw header
-        <br>
-      operationId: HelperController.ParseHeader
-      parameters:
-      - in: body
-        name: body
-        description: body of jsonform data
-        schema:
-          $ref: '#/definitions/form'
-      responses:
-        "200":
-          description: '{string} success !'
-        "500":
-          description: query error
-  /helper/import/{table}:
-    post:
-      tags:
-      - helper
-      description: |-
-        Post raw header
-        <br>
-      operationId: HelperController.Import
-      parameters:
-      - in: body
-        name: body
-        description: body of jsonform data
-        schema:
-          $ref: '#/definitions/form'
-      responses:
-        "200":
-          description: '{string} success !'
-        "500":
-          description: query error
-  /l/adduser:
-    post:
-      tags:
-      - l
-      description: |-
-        Add user
-        <br>
-      operationId: LoginController.AddUser
-      parameters:
-      - in: query
-        name: username
-        description: The username for register format
-        required: true
+      - description: 'Authorization Token HEADER '
+        in: header
+        name: Authorization
         type: string
-      - in: query
-        name: password
-        description: The password for register
-        required: true
-        type: string
-      responses:
-        "200":
-          description: ""
-        "403":
-          description: user already exist
-  /l/login:
-    post:
-      tags:
-      - l
-      description: |-
-        User login
-        <br>
-      operationId: LoginController.Login
-      parameters:
-      - in: body
-        name: body
-        description: Credentials
-        required: true
-        schema:
-          $ref: '#/definitions/Credential'
-      responses:
-        "200":
-          description: '{string} success !'
-        "402":
-          description: user already connected
-        "403":
-          description: user does not exist
-  /l/logout:
-    post:
-      tags:
-      - l
-      description: |-
-        Logs user
-        <br>
-      operationId: LoginController.Logout
-      responses:
-        "200":
-          description: ""
-        "403":
-          description: user not exist
-  /s/:
-    get:
-      tags:
-      - s
-      description: |-
-        Get database tables list
-        <br>
-      operationId: SchemaController.GetTablesList
-      responses:
-        "200":
-          description: '{string} success !'
-        "500":
-          description: query error
-  /s/{table}:
-    get:
-      tags:
-      - s
-      description: |-
-        Get table schema
-        <br>
-      operationId: SchemaController.GetSchema
-      parameters:
-      - in: path
-        name: table
-        description: Name of the table
-        required: true
-        type: string
-      responses:
-        "200":
-          description: success !
-        "204":
-          description: no table
-  /t/{table}:
-    get:
-      tags:
-      - t
-      description: |-
-        get all Datas
-        <br>
-      operationId: TableController.GetAllTable
-      parameters:
-      - in: path
-        name: table
-        description: Name of the table
-        required: true
-        type: string
-      responses:
-        "200":
-          description: '{string} success !'
-        "403":
-          description: no table
-    put:
-      tags:
-      - t
-      description: |-
-        put data in table
-        <br>
-      operationId: TableController.Put data in table
-      parameters:
-      - in: path
-        name: table
-        description: Name of the table
-        required: true
-        type: string
-      - in: body
+      - description: 'Request body '
+        in: body
         name: data
-        description: body for data content (Json format)
         required: true
         schema:
           $ref: '#/definitions/json'
       responses:
         "200":
-          description: '{string} success'
+          description: '{string} success !'
         "403":
-          description: :table put issue
-    post:
+          description: no table
       tags:
-      - t
+      - auth
+  /auth/logout:
+    get:
       description: |-
-        get all Datas
+        Logout Datas
         <br>
-      operationId: TableController.TablePost
+      operationId: AuthController.Logout
       parameters:
-      - in: path
-        name: table
-        description: Name of the table
-        required: true
+      - description: 'Authorization Token HEADER '
+        in: header
+        name: Authorization
         type: string
-      - in: body
-        name: body
-        description: TableQuery
-        required: true
-        schema:
-          $ref: '#/definitions/TableQuery'
       responses:
         "200":
           description: '{string} success !'
         "403":
           description: no table
+      tags:
+      - auth
+  /generic/{table}:
     delete:
-      tags:
-      - t
       description: |-
-        delete the data in table
+        Delete Datas
         <br>
-      operationId: TableController.Delete
+      operationId: GenericController.Delete
       parameters:
-      - in: path
+      - description: Value of the table
+        in: path
         name: table
-        description: Name of the table
         required: true
         type: string
-      - in: body
-        name: body
-        description: body for data content (Json format)
-        schema:
-          $ref: '#/definitions/true'
-      responses:
-        "200":
-          description: '{string} delete success!'
-        "403":
-          description: delete issue
-  /t/{table}/{columns}:
-    get:
-      tags:
-      - t
-      description: |-
-        get all Datas
-        <br>
-      operationId: TableController.GetAllTableColumn
-      parameters:
-      - in: path
-        name: table
-        description: Name of the table
-        required: true
+      - description: (Optionnal) Value of rows
+        in: query
+        name: rows
         type: string
-      - in: path
+      - description: (Optionnal) Value of columns
+        in: query
         name: columns
-        description: Name of the columns (separate with a comma)
-        required: true
         type: string
-      responses:
-        "200":
-          description: '{string} success !'
-        "403":
-          description: no table
-  /t/{table}/{columns}/{restriction}:
-    get:
-      tags:
-      - t
-      description: |-
-        get all Datas
-        <br>
-      operationId: TableController.GetAllTableColumnRestriction
-      parameters:
-      - in: path
-        name: table
-        description: Name of the table
-        required: true
+      - description: (Optionnal) Value of orderby
+        in: query
+        name: orderby
         type: string
-      - in: path
-        name: columns
-        description: Name of the columns (separate with a comma)
-        required: true
-        type: string
-      - in: path
-        name: restriction
-        description: SQL restriction
-        required: true
-        type: string
-      responses:
-        "200":
-          description: '{string} success !'
-        "403":
-          description: no table
-  /t/{table}/{columns}/{restriction}/{sortkeys}:
-    get:
-      tags:
-      - t
-      description: |-
-        get all Datas
-        <br>
-      operationId: TableController.GetAllTableColumnRestrictionSortkeys
-      parameters:
-      - in: path
-        name: table
-        description: Name of the table
-        required: true
-        type: string
-      - in: path
-        name: columns
-        description: Name of the columns (separate with a comma)
-        required: true
-        type: string
-      - in: path
-        name: restriction
-        description: SQL restriction
-        required: true
-        type: string
-      - in: path
-        name: sortkeys
-        description: 'Order by: columns names (separate with a comma)'
-        required: true
-        type: string
-      responses:
-        "200":
-          description: '{string} success !'
-        "403":
-          description: no table
-  /t/{table}/{columns}/{restriction}/{sortkeys}/{dir}:
-    get:
-      tags:
-      - t
-      description: |-
-        get all Datas
-        <br>
-      operationId: TableController.GetAllTableColumnRestrictionSortkeysDir
-      parameters:
-      - in: path
-        name: table
-        description: Name of the table
-        required: true
-        type: string
-      - in: path
-        name: columns
-        description: Name of the columns (separate with a comma)
-        required: true
-        type: string
-      - in: path
-        name: restriction
-        description: SQL restriction
-        required: true
-        type: string
-      - in: path
-        name: sortkeys
-        description: 'Order by: columns names (separate with a comma)'
-        required: true
-        type: string
-      - in: path
+      - description: (Optionnal) Value of dir
+        in: query
         name: dir
-        description: asc or desc
-        required: true
+        type: string
+      - description: (Optionnal) Value of sqlfilter
+        in: query
+        name: sqlfilter
+        type: string
+      - description: 'Authorization Token HEADER '
+        in: header
+        name: Authorization
         type: string
       responses:
         "200":
           description: '{string} success !'
         "403":
           description: no table
-  /ui/form/{fid}:
-    get:
       tags:
-      - ui
+      - generic
+    get:
       description: |-
-        create access form
+        Get Datas
         <br>
-      operationId: UiController.form
+      operationId: GenericController.Get
       parameters:
-      - in: path
-        name: fid
-        description: The fid of the form
+      - description: Value of the table
+        in: path
+        name: table
         required: true
+        type: string
+      - description: (Optionnal) Value of rows
+        in: query
+        name: rows
+        type: string
+      - description: (Optionnal) Value of columns
+        in: query
+        name: columns
+        type: string
+      - description: (Optionnal) Value of orderby
+        in: query
+        name: orderby
+        type: string
+      - description: (Optionnal) Value of dir
+        in: query
+        name: dir
+        type: string
+      - description: (Optionnal) Value of sqlfilter
+        in: query
+        name: sqlfilter
+        type: string
+      - description: 'Authorization Token HEADER '
+        in: header
+        name: Authorization
         type: string
       responses:
         "200":
-          description: json form
+          description: '{string} success !'
         "403":
-          description: body is empty
-  /ui/form/{fid}/{uid}:
-    get:
+          description: no table
       tags:
-      - ui
-      description: |-
-        create access form
-        <br>
-      operationId: UiController.form
-      parameters:
-      - in: path
-        name: fid
-        description: The fid of the form
-        required: true
-        type: string
-      - in: path
-        name: uid
-        description: The uid you want to edit
-        required: true
-        type: string
-      responses:
-        "200":
-          description: json form
-        "403":
-          description: body is empty
+      - generic
     post:
-      tags:
-      - ui
       description: |-
-        insert access
+        Post Datas
         <br>
-      operationId: UiController.Access form data post
+      operationId: GenericController.Post
       parameters:
-      - in: path
-        name: fid
-        description: The fid of the form
+      - description: Value of the table
+        in: path
+        name: table
         required: true
         type: string
-      - in: path
-        name: uid
-        description: The uid you want to edit
-        required: true
+      - description: (Optionnal) Value of rows
+        in: query
+        name: rows
         type: string
-      - in: body
-        name: body
-        description: body of jsonform data
+      - description: (Optionnal) Value of columns
+        in: query
+        name: columns
+        type: string
+      - description: (Optionnal) Value of orderby
+        in: query
+        name: orderby
+        type: string
+      - description: (Optionnal) Value of dir
+        in: query
+        name: dir
+        type: string
+      - description: (Optionnal) Value of sqlfilter
+        in: query
+        name: sqlfilter
+        type: string
+      - description: 'Authorization Token HEADER '
+        in: header
+        name: Authorization
+        type: string
+      - description: 'Request body '
+        in: body
+        name: data
+        required: true
         schema:
-          $ref: '#/definitions/form'
+          $ref: '#/definitions/json'
       responses:
         "200":
-          description: json
+          description: '{string} success !'
         "403":
-          description: body is empty
-  /ui/tableview/{tvid}:
-    get:
+          description: no table
       tags:
-      - ui
+      - generic
+    put:
       description: |-
-        Get table view
+        Put Datas
         <br>
-      operationId: UiController.Tableview
+      operationId: GenericController.Put
       parameters:
-      - in: path
-        name: tvid
-        description: The id of the tableview
+      - description: Value of the table
+        in: path
+        name: table
         required: true
+        type: string
+      - description: (Optionnal) Value of rows
+        in: query
+        name: rows
+        type: string
+      - description: (Optionnal) Value of columns
+        in: query
+        name: columns
+        type: string
+      - description: (Optionnal) Value of orderby
+        in: query
+        name: orderby
+        type: string
+      - description: (Optionnal) Value of dir
+        in: query
+        name: dir
+        type: string
+      - description: (Optionnal) Value of sqlfilter
+        in: query
+        name: sqlfilter
+        type: string
+      - description: 'Authorization Token HEADER '
+        in: header
+        name: Authorization
+        type: string
+      - description: 'Request body '
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/json'
+      responses:
+        "200":
+          description: '{string} success !'
+        "403":
+          description: no table
+      tags:
+      - generic
+  /generic/{table}/import/{filename}:
+    delete:
+      description: |-
+        NotImportated Datas
+        <br>
+      operationId: GenericController.NotImportated
+      parameters:
+      - description: Value of the table
+        in: path
+        name: table
+        required: true
+        type: string
+      - description: Value of the filename
+        in: path
+        name: filename
+        required: true
+        type: string
+      - description: (Optionnal) Value of rows
+        in: query
+        name: rows
+        type: string
+      - description: (Optionnal) Value of columns
+        in: query
+        name: columns
+        type: string
+      - description: (Optionnal) Value of orderby
+        in: query
+        name: orderby
+        type: string
+      - description: (Optionnal) Value of dir
+        in: query
+        name: dir
+        type: string
+      - description: (Optionnal) Value of sqlfilter
+        in: query
+        name: sqlfilter
+        type: string
+      - description: 'Authorization Token HEADER '
+        in: header
+        name: Authorization
         type: string
       responses:
         "200":
-          description: json form
+          description: '{string} success !'
         "403":
-          description: body is empty
-definitions:
-  Credential:
-    title: Credential
-    type: object
-  TableQuery:
-    title: TableQuery
-    type: object
-  form:
-    title: form
-    type: object
-  json:
-    title: json
-    type: object
-  "true":
-    title: "true"
-    type: object
-tags:
-- name: t
-  description: |
-    Operations about table
-- name: s
-  description: |
-    Operations about schema
-- name: l
-  description: |
-    Operations about login
-- name: ui
-  description: |
-    Operations about table
-- name: helper
-  description: |
-    Operations about schema
+          description: no table
+      tags:
+      - generic
+    post:
+      description: |-
+        Importated Datas
+        <br>
+      operationId: GenericController.Importated
+      parameters:
+      - description: Value of the table
+        in: path
+        name: table
+        required: true
+        type: string
+      - description: Value of the filename
+        in: path
+        name: filename
+        required: true
+        type: string
+      - description: (Optionnal) Value of rows
+        in: query
+        name: rows
+        type: string
+      - description: (Optionnal) Value of columns
+        in: query
+        name: columns
+        type: string
+      - description: (Optionnal) Value of orderby
+        in: query
+        name: orderby
+        type: string
+      - description: (Optionnal) Value of dir
+        in: query
+        name: dir
+        type: string
+      - description: (Optionnal) Value of sqlfilter
+        in: query
+        name: sqlfilter
+        type: string
+      - description: 'Authorization Token HEADER '
+        in: header
+        name: Authorization
+        type: string
+      - description: 'Request body '
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/json'
+      responses:
+        "200":
+          description: '{string} success !'
+        "403":
+          description: no table
+      tags:
+      - generic
+swagger: "2.0"

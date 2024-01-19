@@ -10,7 +10,7 @@ func CheckSelect(dbuser_id string, table *string, columns *string, restriction *
 	fmt.Println(dbuser_id, fmt.Sprintf("%v", table), fmt.Sprintf("%v", columns), fmt.Sprintf("%v", restriction))
 }
 
-func removeLastChar(s string) string {
+func RemoveLastChar((s string) string {
 	r := []rune(s)
 	return string(r[:len(r)-1])
 }

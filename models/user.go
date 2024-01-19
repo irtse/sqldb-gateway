@@ -31,7 +31,7 @@ func Init() {
 	var UserId, EntityId, RoleId int
 	var Restrictions, Password, Login string
 
-	for _, element := range query {
+	for _, element := range query.(Results) {
 		for key, element := range element {
 			if key == "login" {
 				Login = fmt.Sprintf("%v", element)

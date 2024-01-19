@@ -9,51 +9,22 @@ package routers
 
 import (
 	"sqldb-ws/controllers"
-
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/beego/beego/v2/server/web/context"
 )
-
+var namespaceV1 = map[string]beego.ControllerInterface {
+	"auth" : &controllers.AuthController{},
+	"generic" : &controllers.GenericController{},
+}
 func init() {
-
-	var FilterUser = func(ctx *context.Context) {
-		//session := ctx.Input.Session("user_id")
-		/*		_, ok := ctx.Input.Session("user_id").(string)
-				if !ok {
-					ctx.Output.SetStatus(http.StatusUnauthorized)
-					ctx.Redirect(302, "/v1/l")
-				}*/
-	}
-
-	ns := beego.NewNamespace("/v1",
-		beego.NSNamespace("/t",
+	var FilterUser = func(ctx *context.Context) {}
+	v1 := []beego.LinkNamespace{}
+	for key, val := range namespaceV1 {
+			v1 = append(v1, beego.NSNamespace("/" + key,
 			beego.NSBefore(FilterUser),
-			beego.NSInclude(
-				&controllers.TableController{},
-			),
-		),
-		beego.NSNamespace("/s",
-			beego.NSInclude(
-				&controllers.SchemaController{},
-			),
-		),
-		beego.NSNamespace("/l",
-			beego.NSInclude(
-				&controllers.LoginController{},
-			),
-		),
-		beego.NSNamespace("/ui",
-			beego.NSInclude(
-				&controllers.UiController{},
-			),
-		),
-		beego.NSNamespace("/helper",
-			beego.NSInclude(
-				&controllers.HelperController{},
-			),
-		),
-	)
+			beego.NSInclude(val,),
+		))
+	}
+	ns := beego.NewNamespace("/v1", v1...)
 	beego.AddNamespace(ns)
-
-	//beego.InsertFilter("/v1/t", beego.BeforeRouter, FilterUser)
 }

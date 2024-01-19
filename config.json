@@ -1,4 +1,10 @@
 {
+    "authmode": "session",
     "driverdb": "postgres",
-	"paramsdb": "host=127.0.0.1 port=5432 user=test password=test dbname=test sslmode=disable"
+    "dbhost" : "127.0.0.1",
+    "dbport" : "5432",
+    "dbuser" : "test",
+    "dbpwd" : "test",
+    "dbname" : "test",
+    "dbssl" : "disable"
 }
