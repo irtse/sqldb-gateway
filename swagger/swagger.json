@@ -483,6 +483,162 @@
      "generic"
     ]
    }
+  },
+  "/generic/{table}/{totable}": {
+   "post": {
+    "description": "Link Datas\n\u003cbr\u003e",
+    "operationId": "GenericController.Link",
+    "parameters": [
+     {
+      "description": "Value of the table",
+      "in": "path",
+      "name": "table",
+      "required": true,
+      "type": "string"
+     },
+     {
+      "description": "Value of the totable",
+      "in": "path",
+      "name": "totable",
+      "required": true,
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of rows",
+      "in": "query",
+      "name": "rows",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of columns",
+      "in": "query",
+      "name": "columns",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of orderby",
+      "in": "query",
+      "name": "orderby",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of dir",
+      "in": "query",
+      "name": "dir",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of sqlfilter",
+      "in": "query",
+      "name": "sqlfilter",
+      "type": "string"
+     },
+     {
+      "description": "Authorization Token HEADER ",
+      "in": "header",
+      "name": "Authorization",
+      "type": "string"
+     },
+     {
+      "description": "Request body ",
+      "in": "body",
+      "name": "data",
+      "required": true,
+      "schema": {
+       "$ref": "#/definitions/json"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "{string} success !"
+     },
+     "403": {
+      "description": "no table"
+     }
+    },
+    "tags": [
+     "generic"
+    ]
+   }
+  },
+  "/generic/{table}/{totable}/delete": {
+   "post": {
+    "description": "UnLink Datas\n\u003cbr\u003e",
+    "operationId": "GenericController.UnLink",
+    "parameters": [
+     {
+      "description": "Value of the table",
+      "in": "path",
+      "name": "table",
+      "required": true,
+      "type": "string"
+     },
+     {
+      "description": "Value of the totable",
+      "in": "path",
+      "name": "totable",
+      "required": true,
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of rows",
+      "in": "query",
+      "name": "rows",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of columns",
+      "in": "query",
+      "name": "columns",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of orderby",
+      "in": "query",
+      "name": "orderby",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of dir",
+      "in": "query",
+      "name": "dir",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of sqlfilter",
+      "in": "query",
+      "name": "sqlfilter",
+      "type": "string"
+     },
+     {
+      "description": "Authorization Token HEADER ",
+      "in": "header",
+      "name": "Authorization",
+      "type": "string"
+     },
+     {
+      "description": "Request body ",
+      "in": "body",
+      "name": "data",
+      "required": true,
+      "schema": {
+       "$ref": "#/definitions/json"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "{string} success !"
+     },
+     "403": {
+      "description": "no table"
+     }
+    },
+    "tags": [
+     "generic"
+    ]
+   }
   }
  },
  "swagger": "2.0"

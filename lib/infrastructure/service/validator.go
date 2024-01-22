@@ -8,7 +8,7 @@ import (
 	"sqldb-ws/lib/infrastructure/entities"
 )
 
-type validable interface { entities.TableEntity | entities.TableColumnEntity | entities.TableUpdateEntity | Info | map[string]interface{} }
+type validable interface { entities.TableEntity | entities.LinkEntity | entities.ShallowTableEntity | entities.TableColumnEntity | entities.TableUpdateEntity | Info | map[string]interface{} }
 type DBValidator[T validable] struct { data T }
 
 func Validator[T validable]() *DBValidator[T] {
@@ -26,7 +26,7 @@ func (v *DBValidator[T]) ValidateStruct(data map[string]interface{}) (*T, error)
 }
 
 func (v *DBValidator[T]) ValidateSchema(data map[string]interface{}, t *TableInfo, reverse bool) (map[string]interface{}, error) {
-	schema, err := t.schema()
+	schema, err := t.schema(t.Name)
 	if err != nil { return nil,  err }
 	if reverse {
 		found := false

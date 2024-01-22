@@ -29,7 +29,7 @@ func (t *TableInfo) TableRow(specializedService tool.SpecializedService) *TableR
 	row.db = t.db
 	row.PermService = t.PermService
 	row.Fill(t.Name, t.SuperAdmin, t.User, t.Params, t.Record, t.Method)
-	row.Table = Table(t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method)
+	row.Table = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method)
 	row.EmptyCol = &TableColumnInfo{ } 
 	row.EmptyCol.db = t.db
 	row.EmptyCol.Name = t.Name
@@ -43,7 +43,7 @@ func (t *TableInfo) TableColumn() *TableColumnInfo {
 	col.db = t.db
 	col.PermService = t.PermService
 	col.Fill(t.Name, t.SuperAdmin, t.User, t.Params, t.Record, t.Method)
-	col.Row = Table(t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method,
+	col.Row = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method,
 		           ).TableRow(&tool.CustomService{})
     return col
 }
@@ -55,7 +55,7 @@ func (t *TableInfo) querySchemaCmd(name string, tablename string) string {
 }
 
 func (t *TableInfo) Template() (interface{}, error) {
-	res, err := t.schema()
+	res, err := t.schema(t.Name)
 	if err != nil { return nil, err  }
 	data := struct {
 		Tbl []TableInfo
@@ -65,7 +65,7 @@ func (t *TableInfo) Template() (interface{}, error) {
 }
 
 func (t *TableInfo) EmptyRecord() (tool.Record, error) {
-	res, err := t.schema()
+	res, err := t.schema(t.Name)
 	if err != nil || len(res) == 0 || len(res[0].Columns) == 0 { 
 		return nil, errors.New("any schema available") 
 	}
@@ -75,7 +75,7 @@ func (t *TableInfo) EmptyRecord() (tool.Record, error) {
 }
 // GetAssociativeArray : Provide table data as an associative arra
 func (t *TableInfo) Get() (tool.Results, error) {
-	schema, err := t.schema()
+	schema, err := t.schema(t.Name)
 	if err != nil { return DBError(nil, err) }
 	res := tool.Results{}
 	for _, s := range schema {
@@ -88,14 +88,14 @@ func (t *TableInfo) Get() (tool.Results, error) {
 	return t.Results, nil
 }
 
-func (t *TableInfo) schema() ([]TableInfo, error) {
+func (t *TableInfo) schema(name string) ([]TableInfo, error) {
 	schema:=[]TableInfo{}
 	tables, err := t.db.QueryAssociativeArray(listTablesCmd[t.db.Driver])
 	if err != nil { return nil, err }
 	for _, row := range tables {
 		for _, element := range row {
-			if fmt.Sprintf("%v", element) == t.Name || tool.ReservedParam == t.Name {
-				table, err := EmptyTable(fmt.Sprintf("%v", element)).get()
+			if name == tool.ReservedParam || fmt.Sprintf("%v", element) == name {
+				table, err := EmptyTable(t.db, fmt.Sprintf("%v", element)).get()
 				if err != nil { log.Error().Msg(err.Error()); continue }
 				schema = append(schema, *table)
 			}
@@ -129,7 +129,7 @@ func (t *TableInfo) get() (*TableInfo, error) {
 }
 
 func (t *TableInfo) Verify(name string) (string, bool) {
-    schema, err := t.schema()
+    schema, err :=t.schema(name)
    	if len(schema) == 0 || err !=nil { return name, false }
    	return name, true	
 }
@@ -139,23 +139,25 @@ func (t *TableInfo) Create() (tool.Results, error) {
 	te, err := v.ValidateStruct(t.Record)
 	if err != nil { return nil, errors.New(
 		"Not a proper struct to create a table - expect <TableEntity> Scheme " + err.Error()) }
-	query := "CREATE TABLE " + t.Name + " ( id SERIAL PRIMARY KEY,"
+	query := "CREATE TABLE " + te.Name + " ( id SERIAL PRIMARY KEY,"
 	query = query[:len(query)-1] + " )"
 	_, err = t.db.Query(query)
 	if err != nil { return DBError(nil, err) }
 	for name, rowtype := range te.Columns {
 		if fmt.Sprintf("%v", name) != "id" {
 			tc := t.TableColumn()
+			tc.Name=te.Name
 			col, err := json.Marshal(rowtype)
 			if err != nil { continue }
 			json.Unmarshal(col, &tc.Record)
-			tc.Create()
+			tc.CreateOrUpdate()
 		}
 	}
+	t.Name=te.Name
 	_, err = t.Get()
-	if len(t.Name) > 1 && !strings.Contains(t.Name[:2], "db") {
+	if t.PermService != nil && entities.IsRootDB(te.Name) {
 		t.PermService.SpecializedFill(t.Params, 
-			tool.Record{ "name" : t.Name, 
+			tool.Record{ "name" : te.Name, 
 						 "results" : t.Results, 
 						 "info" : "" }, 
 			t.Method)
@@ -182,12 +184,12 @@ func (t *TableInfo) Update() (tool.Results, error) {
 }
 
 func (t *TableInfo) CreateOrUpdate() (tool.Results, error) { 
-	if _, ok := t.Verify(t.Name); !ok { return t.Create() }
+	if _, ok := t.Verify(t.Name); !ok && t.Name != tool.ReservedParam { return t.Create() }
 	return t.Update()
 }
 
 func (t *TableInfo) Delete() (tool.Results, error) {
-	if strings.Contains(t.Name, "db") { log.Error().Msg("can't delete protected root db.") }
+	if entities.IsRootDB(t.Name) || t.Name == tool.ReservedParam { log.Error().Msg("can't delete protected root db.") }
 	if _, err := t.db.Query("DROP TABLE " + t.Name); err != nil { return DBError(nil, err) }
 	if _, err := t.db.Query("DROP SEQUENCE IF EXISTS sq_" + t.Name); err != nil { return DBError(nil, err) }
 	t.Results = append(t.Results, tool.Record{ entities.NAMEATTR : t.Name })
@@ -239,6 +241,71 @@ func buildLinks(schema []TableInfo) []Link {
 		}
 	}
 	return links
+}
+
+func (t *TableInfo) Link() (tool.Results, error) {
+	//will generate a many to many table
+	if _, ok := t.Params[tool.RootToTableParam]; !ok || t.Name == tool.ReservedParam { return nil, errors.New("no destination table") }
+	otherName := t.Params[tool.RootToTableParam]
+	ok := true; ok2 := true
+	if strings.Contains(otherName[:2], "db") { 
+		_, ok = t.Verify(t.Name + "_" + otherName[2:])
+	} else { _, ok = t.Verify(t.Name + "_" + otherName) }
+	if strings.Contains(t.Name[:2], "db") { _, ok2 = t.Verify(otherName + "_" + t.Name[2:])
+	} else { _, ok2 = t.Verify(otherName + "_" + t.Name) }
+	if !ok && !ok2 {
+		v := Validator[entities.ShallowTableEntity]()
+		v.data = entities.ShallowTableEntity{}
+		te, err := v.ValidateStruct(t.Record)
+		if err != nil { return nil, errors.New("Not a proper struct to create a table - expect <TableEntity> Scheme " + err.Error()) }
+	    name := ""
+		rawName := t.Name
+		if strings.Contains(otherName[:2], "db") { name = rawName + "_" + otherName[2:]
+	    } else { name = rawName + "_" + otherName } 
+		if te.Name != "" { name = te.Name }
+		record := tool.Record{ "name" : name, 
+	                      "columns" : []map[string]interface{}{
+							map[string]interface{}{ "name" : rawName + "_id", "type" : "integer", "not_null" : true, "foreign_table": otherName, },
+							map[string]interface{}{ "name" : otherName + "_id", "type" : "integer", "not_null" : true, "foreign_table": rawName, },
+						  },
+						}
+		/*if te.Columns != nil {
+			for _, col := range te.Columns {
+				var mapped map[string]interface{}
+				inrec, _ := json.Marshal(col)
+    			json.Unmarshal(inrec, &mapped)
+				record["columns"]= append(record["columns"].([]map[string]interface{}), mapped) 
+			}
+		}*/
+		t.Record=record
+		return t.Create()
+	}
+	return nil, errors.New("link table already exists") 
+}
+
+func (t *TableInfo) UnLink() (tool.Results, error) {
+	//will delete a many to many table
+	if _, ok := t.Params[tool.RootToTableParam]; !ok || t.Name == tool.ReservedParam { return nil, errors.New("no destination table") }
+	rootName := t.Name 
+	otherName := t.Params[tool.RootToTableParam]
+	if strings.Contains(otherName[:2], "db") { otherName=otherName[2:] }
+	v := Validator[entities.ShallowTableEntity]()
+	v.data = entities.ShallowTableEntity{}
+	te, err := v.ValidateStruct(t.Record)
+	if err != nil { return nil, errors.New("Not a proper struct to delete a table - expect <TableEntity> Scheme " + err.Error()) }
+	name := ""
+	if strings.Contains(otherName[:2], "db") {  name = rootName + "_" + otherName[2:]
+	} else { name = rootName + "_" + otherName }
+	if te.Name != "" { name = te.Name }
+	if _, ok := t.Verify(name); !ok {
+		if strings.Contains(rootName[:2], "db") {
+			if _, ok2 := t.Verify(otherName + "_" + rootName[2:]); ok2 { name = otherName + "_" + rootName[2:] }
+		} else {
+			if _, ok2 := t.Verify(otherName + "_" + rootName); ok2 { name = otherName + "_" + rootName }
+		}
+	}
+	t.Name=name
+	return t.Delete()
 }
 
 

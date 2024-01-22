@@ -36,6 +36,7 @@ type Info struct {
 }
 
 type PermissionInfo struct {
+	Active                bool
 	WarningUpdateField    []string
 	PartialResults        string
 	Perms     		      map[string]tool.Record
@@ -46,6 +47,7 @@ type PermissionInfo struct {
 
 func (p *PermissionInfo) generatePerms(res tool.Results) {
 	del := []string{}
+	if len(res) == 0 { return }
 	for _, r := range res[1:] {
 		if r[entities.COLNAMEATTR] == nil { p.generatePerm(r[entities.TABLENAMEATTR].(string), r, del)
 		} else { p.generatePerm(r[entities.TABLENAMEATTR].(string) + ":" + r[entities.COLNAMEATTR].(string), r, del) }

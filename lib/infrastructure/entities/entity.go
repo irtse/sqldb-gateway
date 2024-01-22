@@ -19,10 +19,18 @@ type TableEntity struct {
 
 func (t TableEntity) GetName() string { return t.Name }
 
+type ShallowTableEntity struct {
+	Name    string              		 `json:"name"`
+	Columns []TableColumnEntity 		 `json:"columns"`
+}
+func (t ShallowTableEntity) GetName() string { return t.Name }
+
+
 type TableColumnEntity struct {
 	Name string `json:"name" validate:"required"`
-	Type string `json:"type" validate:"required"`
+	Type string `json:"type"`
 	Default string `json:"default_value"`
+	Value   string `json:"value"`
 	ForeignTable string `json:"foreign_table"`
 	Constraint string `json:"constraint"`
 	NotNull bool `json:"not_null"`
@@ -37,3 +45,12 @@ type TableUpdateEntity struct {
 }
 
 func (t TableUpdateEntity) GetName() string { return t.Name }
+
+type LinkEntity struct {
+	From    				int64          			 `json:"from_id" validate:"required"`
+	To 						int64 		 			 `json:"to_id" validate:"required"`
+	Columns 			    map[string]string 	 `json:"columns"`
+	Anchor 					string 		 			 `json:"anchor"`
+}
+
+func (t LinkEntity) GetName() string { return t.Anchor }

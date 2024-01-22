@@ -26,7 +26,6 @@ func main() {
 		viper.SetDefault("dbname", "test")
 		viper.SetDefault("dbssl", "disable")
 	}
-
 	if beego.BConfig.RunMode == "dev" {
 		beego.BConfig.WebConfig.DirectoryIndex = true
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"

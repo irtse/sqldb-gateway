@@ -45,10 +45,9 @@ func Open() *Db {
 		database.Url = "host=" + os.Getenv("dbhost") + " port=" + os.Getenv("dbport")
 		database.Url += " user=" + os.Getenv("dbuser") + " password=" + os.Getenv("dbpwd")
 		database.Url += " dbname=" + os.Getenv("dbname") + " sslmode=" + os.Getenv("dbssl")
-		newD := ClearFilter(&database)
-		newD.Conn, err = sql.Open(newD.Driver, newD.Url)
+		database.Conn, err = sql.Open(database.Driver, database.Url)
 		if err != nil { log.Error().Msg(err.Error()) }
-		return newD
+		return &database
 	} else { log.Error().Msg("Not valid DB driver !") }
 	return &database
 }
@@ -79,7 +78,7 @@ func (db *Db) QueryRow(query string) (int64, error) {
 
 func (db *Db) Query(query string) (*sql.Rows, error) {
 	if db.LogQueries { log.Info().Msg(query) }
-	fmt.Printf("QUERY : %s\n", query)
+	// fmt.Printf("QUERY : %s\n", query)
 	rows, err := db.Conn.Query(query)
 	if err != nil {
 		log.Error().Msg(err.Error())
@@ -196,15 +195,11 @@ func RemoveLastChar(s string) string {
 }
 
 func FormatForSQL(datatype string, value interface{}) string {
-	if value == nil {
-		return "NULL"
-	}
+	if value == nil { return "NULL" }
 	strval := fmt.Sprintf("%v", value)
 	if len(strval) == 0 { return "NULL" }
 	for _, typ := range SpecialTypes {
-		if strings.Contains(datatype, typ) {
-			return "'" + fmt.Sprint(value) + "'" 
-		}
+		if strings.Contains(datatype, typ) { return "'" + fmt.Sprint(value) + "'" }
 	}
 	return fmt.Sprint(strval)
 }

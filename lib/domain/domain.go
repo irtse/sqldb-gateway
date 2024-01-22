@@ -5,6 +5,7 @@ import (
 	"strings"
 	"reflect"
 	tool "sqldb-ws/lib"
+	conn "sqldb-ws/lib/infrastructure/connector"
 	infrastructure "sqldb-ws/lib/infrastructure/service"
 )
 type MainService struct {
@@ -30,7 +31,9 @@ func (d *MainService) call(superAdmin bool, user string, params tool.Params, rec
 		var specializedService tool.SpecializedService
 		specializedService = &tool.CustomService{}
 		if !d.isGenericService { specializedService = SpecializedService(tablename) }
-		table := infrastructure.Table(superAdmin, user, strings.ToLower(tablename), params, record, method)
+		database := conn.Open()
+		defer database.Conn.Close()
+		table := infrastructure.Table(database, superAdmin, user, strings.ToLower(tablename), params, record, method)
 		delete(params, tool.RootTableParam)
 		service=table
 		tablename = strings.ToLower(tablename)
@@ -39,7 +42,11 @@ func (d *MainService) call(superAdmin bool, user string, params tool.Params, rec
 			return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
 		}
 		if rowName, ok := params[tool.RootRowsParam]; ok { // rows override columns
-			perms := infrastructure.Permission(superAdmin, 
+			if tablename == tool.ReservedParam { 
+				return res, errors.New("can't load table as " + tool.ReservedParam) 
+			}
+			perms := infrastructure.Permission(database, 
+				                               superAdmin, 
 											   tablename, 
 											   params, 
 											   record,
@@ -49,18 +56,17 @@ func (d *MainService) call(superAdmin bool, user string, params tool.Params, rec
 			}
 			params[tool.SpecialIDParam]=strings.ToLower(rowName) 
 			delete(params, tool.RootRowsParam)
-			if tablename == tool.ReservedParam { 
-				return res, errors.New("can't load table as " + tool.ReservedParam) 
-			}
 			if params[tool.SpecialIDParam] == tool.ReservedParam { delete(params, tool.SpecialIDParam) }
 			service = table.TableRow(specializedService)
-			defer service.Close()
 			return d.invoke(service, funcName, args...)
 		}
 		if auth && !superAdmin { 
 			return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
 		}
 		if col, ok := params[tool.RootColumnsParam]; ok { 
+			if tablename == tool.ReservedParam { 
+				return res, errors.New("can't load table as " + tool.ReservedParam) 
+			}
 			params[tool.RootColumnsParam]=strings.ToLower(col)
 			service = table.TableColumn() 
 		}
@@ -87,3 +93,12 @@ func (d *MainService) invoke(service infrastructure.InfraServiceItf, funcName st
 	}
 	return res, err
 }
+
+func SpecializedService(name string) tool.SpecializedService {
+	for _, service := range SERVICES {
+		if service.Entity().GetName() == name { return service }
+	}
+	return &tool.CustomService{}
+}
+
+var SERVICES = []tool.SpecializedService{&SchemaService{}, &SchemaFields{}}

@@ -64,6 +64,7 @@ type Params map[string]string
 const ReservedParam = "all" 
 
 const RootTableParam = "table" 
+const RootToTableParam = "totable" 
 const RootRowsParam = "rows" 
 const RootColumnsParam = "columns" 
 const RootOrderParam = "orderby" 

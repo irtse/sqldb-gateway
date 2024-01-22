@@ -41,6 +41,10 @@ func (t *GenericController) Delete() { t.SafeCall(tool.DELETE, "Delete") }
 // @Failure 403 no table
 // @router /:table [get]
 func (t *GenericController) Get() { t.SafeCall(tool.SELECT, "Get") }
+
+func (t *GenericController) Link() { t.SafeCall(tool.CREATE, "Link") }
+
+func (t *GenericController) UnLink() { t.SafeCall(tool.DELETE, "UnLink") }
 // @Title Import
 // @Description post Import
 // @Param	table			path 	string	true		"Name of the table"

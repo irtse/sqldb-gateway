@@ -1,7 +1,6 @@
 package routers
 
 import (
-    "fmt"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/beego/beego/v2/server/web/context/param"
 )
@@ -57,7 +56,22 @@ func init() {
             MethodParams: param.Make(),
             Filters: nil,
             Params: nil})
-
+    beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"],
+        beego.ControllerComments{
+            Method: "Link",
+            Router: `/:table/:totable`,
+            AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+    beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"],
+        beego.ControllerComments{
+            Method: "UnLink",
+            Router: `/:table/:totable/delete`,
+            AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
     beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"],
         beego.ControllerComments{
             Method: "Importated",
@@ -75,7 +89,6 @@ func init() {
             MethodParams: param.Make(),
             Filters: nil,
             Params: nil})
-    fmt.Printf("%v\n", beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"])
     var docs Docs
     docs.GenerateDocs()
 }

@@ -2,6 +2,7 @@
 package controllers
 import (
 	"os"
+	"fmt"
 	"time"
 	"errors"
 	"strings"
@@ -115,7 +116,7 @@ func (t *AbstractController) response(resp tool.Results, err error) {
 		log.Error().Msg(err.Error())
 		t.Data[JSON]=map[string]interface{}{ DATA : tool.Results{}, ERROR : err.Error() }
 	} else { 
-		if len(resp) == 0 { t.Data[JSON] = map[string]interface{}{ DATA : resp, ERROR : "Datas not found" } 			
+		if len(resp) == 0 { t.Data[JSON] = map[string]interface{}{ DATA : resp, ERROR : "datas not found" } 			
 		} else { t.Data[JSON] = map[string]interface{}{ DATA : resp, ERROR : nil } }
 		for _, json := range t.Data[JSON].(map[string]interface{})[DATA].(tool.Results) {
 			if _, ok := json["password"]; ok { delete(json, "password") }

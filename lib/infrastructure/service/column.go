@@ -2,6 +2,7 @@ package service
 
 import (
     "os"
+	"fmt"
 	"errors"
 	"strings"
 	"encoding/json"
@@ -22,18 +23,32 @@ type TableColumnInfo struct {
 func (t *TableColumnInfo) Template() (interface{}, error) { return t.Get() }
 
 func (t *TableColumnInfo) Get() (tool.Results, error) {
-	t.db = conn.ToFilter(t.Name, t.Params, t.db)
-	t.restrition()
+	t.db = ToFilter(t.Name, t.Params, t.db)
 	d, err := t.db.SelectResults(t.Name)
 	t.Results = d
 	if err != nil { return DBError(nil, err) }
 	return t.Results, nil
 }
 
+func (t *TableColumnInfo) get(name string) (tool.Results, error) {
+	empty := EmptyTable(t.db, t.Name)
+	if empty == nil { return nil, errors.New("no table available...") }
+	scheme, err := empty.Get()
+	if err != nil { return nil, err }
+	res := tool.Results{}
+	rec := tool.Record{}
+	if len(scheme) > 0 { 
+		for k, v := range scheme[0]["columns"].(map[string]string) {
+			if k == name { rec[k] = v }
+		}
+		res = append(res, rec)
+	}
+	return res, nil
+}
+
 func (t *TableColumnInfo) Verify(name string) (string, bool) {
-	empty := EmptyTable(t.Name)
+	empty := EmptyTable(t.db, t.Name)
 	if empty == nil { return "", false }
-	empty.db.SQLView=name
 	scheme, err := empty.Get()
 	if err != nil { return "", false }
 	typ := ""
@@ -56,18 +71,17 @@ func (t *TableColumnInfo) Create() (tool.Results, error) {
 	defer rows.Close()
 	err = t.update(tcce)
 	if err != nil { return DBError(nil, err) }
-	rec := map[string]interface{}{ entities.NAMEATTR : tcce.Name }
-	for k, v := range t.Record { rec[k] = v }
-	t.Results = append(t.Results, rec)
-	if len(t.Name) > 1 && !strings.Contains(t.Name[:2], "db") {
+	if len(t.Name) > 1 {
 		t.PermService.SpecializedFill(t.Params, 
 			                          tool.Record{ "name" : t.Name, 
-									               "results" : t.Results, 
+									               "results" : tool.Results{t.Record}, 
 												   "info" : tcce.Name }, 
 									  t.Method)
 		t.PermService.CreateOrUpdate()
 	}
-	return t.Results, err
+	res, err := t.get(tcce.Name)
+	if err != nil { return nil, err }
+	return res, nil
 }
 
 func (t *TableColumnInfo) Update() (tool.Results, error) {
@@ -84,39 +98,43 @@ func (t *TableColumnInfo) Update() (tool.Results, error) {
 	}
 	err = t.update(tcue)
 	if err != nil { return DBError(nil, err) }
-    t.Results = append(t.Results, map[string]interface{}{ entities.NAMEATTR : tcue.Name, "new_name" : tcue.NewName })
-	if len(t.Name) > 1 && !strings.Contains(t.Name[:2], "db") {
+	if len(t.Name) > 1 {
 		t.PermService.SpecializedFill(t.Params, 
 									  tool.Record{ "name" : t.Name, 
-												   "results" : t.Results, 
+												   "results" : tool.Results{t.Record}, 
 												   "info" : tcue.Name }, 
 									  t.Method)
 		t.PermService.CreateOrUpdate()
 	}
-	return t.Results, err
+	res, err := t.get(tcue.Name)
+	if err != nil { return nil, err }
+	return res, err
 }
+
 func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
 	if strings.TrimSpace(tcce.Constraint) != "" {
-		query := "ALTER TABLE " + t.Name + "DROP CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + ";"
+		query := "ALTER TABLE " + t.Name + " DROP CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + ";"
 		t.db.Query(query)
 		query = "ALTER TABLE " + t.Name + "  ADD CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + " " + strings.ToUpper(tcce.Constraint) + "(" + tcce.Name + ");"
 		_, err := t.db.Query(query)
 		if err != nil { return err }
 	}
 	if strings.TrimSpace(tcce.Constraint) != "" {
-		query := "ALTER TABLE " + t.Name + "DROP CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + ";"
+		query := "ALTER TABLE " + t.Name + " DROP CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + ";"
 		t.db.Query(query)
-		query = "ALTER TABLE " + t.Name + "  ADD CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + " " + strings.ToUpper(tcce.Constraint) + "(" + tcce.Name + ");"
+		query = "ALTER TABLE " + t.Name + " ADD CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + " " + strings.ToUpper(tcce.Constraint) + "(" + tcce.Name + ");"
 		_, err := t.db.Query(query)
 		if err != nil { return err }
 	}
 	if strings.TrimSpace(tcce.ForeignTable) != "" {
-		query := "ALTER TABLE " + t.Name + "  ADD CONSTRAINT FOREIGN KEY (" + tcce.Name  + ") REFERENCES " + tcce.ForeignTable + " (id);"
+		query := "ALTER TABLE " + t.Name + " DROP CONSTRAINT fk_" + tcce.Name + ";"
+		t.db.Query(query)
+		query = "ALTER TABLE " + t.Name + " ADD CONSTRAINT  fk_" + tcce.Name +  " FOREIGN KEY(" + tcce.Name  + ") REFERENCES " + tcce.ForeignTable + "(id);"
         _, err := t.db.Query(query)
 		if err != nil { return err }
 	}
 	if tcce.Default != "" {
-		query := "ALTER TABLE " + t.Name + "  ALTER " + tcce.Name  + " SET DEFAULT " + conn.FormatForSQL(tcce.Type, tcce.Default) + ";"
+		query := "ALTER TABLE " + t.Name + " ALTER " + tcce.Name  + " SET DEFAULT " + conn.FormatForSQL(tcce.Type, tcce.Default) + ";"
         _, err := t.db.Query(query)
 		if err != nil { return err } // then iterate on field to update value if null
 		params := tool.Params{ tool.RootSQLFilterParam : tcce.Name + " IS NULL" }
@@ -140,13 +158,11 @@ func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
 }
 
 func (t *TableColumnInfo) CreateOrUpdate() (tool.Results, error) {
-	var err error
 	if col, ok:= t.Record[entities.NAMEATTR]; ok {
-		if _, ok := t.Verify(col.(string)); ok { _, err = t.Update() 
-		} else { _, err = t.Create() }
-		if err != nil { return nil, err }
+		if _, ok := t.Verify(col.(string)); ok { return t.Update() 
+		} else { return t.Create() }
 	}
-	return t.Results, err
+	return nil, errors.New("nothing to do...")
 }
 
 func (t *TableColumnInfo) Delete() (tool.Results, error) {
@@ -187,4 +203,24 @@ func (t *TableColumnInfo) Import(filename string) (tool.Results, error) {
 		if err != nil { log.Error().Msg(err.Error()) }
 	}
 	return t.Results, nil
+}
+
+func (t *TableColumnInfo) Link() (tool.Results, error) {
+	var err error
+	if _, ok := t.Params[tool.RootToTableParam]; !ok { return nil, errors.New("no destination table") }
+	otherName := t.Params[tool.RootToTableParam]
+	cols := strings.Split(t.Params[tool.RootColumnsParam], ",")
+	res := tool.Results{}
+	for _, col := range cols {
+		rename := otherName + "_id"
+		t.Record = tool.Record{ "name" : col, "new_name": rename, "type" : "integer", "foreign_table": otherName, "not_null" : true }
+		res, err = t.CreateOrUpdate()
+		if err == nil { t.Results = append(t.Results, res...) }
+	}
+	return t.Results, nil
+}
+func (t *TableColumnInfo) UnLink() (tool.Results, error) {
+	if _, ok := t.Params[tool.RootToTableParam]; !ok { return nil, errors.New("no destination table") }
+	t.Params[tool.RootColumnsParam] = t.Params[tool.RootToTableParam] + "_id"
+	return t.Delete()
 }

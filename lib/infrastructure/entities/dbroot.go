@@ -36,6 +36,7 @@ var DBSchemaField = TableEntity{
 		 TableColumnEntity{ Name: "default_value", Type: "varchar(255)", NotNull : false, },
 		 TableColumnEntity{ Name: "description", Type: "varchar(255)", NotNull : false, },
         // link define a select.
+		 TableColumnEntity{ Name: "link_anchor", Type: "varchar(255)", NotNull : false, },
 		 TableColumnEntity{ Name: "link_order", Type: "varchar(255)", NotNull : false, },
 		 TableColumnEntity{ Name: "link_columns", Type: "varchar(255)", NotNull : false, },
 		 TableColumnEntity{ Name: "link_restriction", Type: "varchar(255)", NotNull : false, },
@@ -134,15 +135,30 @@ var DBTask = TableEntity{
 		TableColumnEntity{ Name: "view_dir", Type: "varchar(255)",  NotNull : false, },
 		TableColumnEntity{ Name: "view_order", Type: "varchar(255)",  NotNull : false, },
 */
-var DBTaskAffectation = TableEntity{
-	Name : RootName("task_view"),
+var DBTaskAssignee = TableEntity{
+	Name : RootName("task_assignee"),
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
 		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: RootName(DBTask.Name), NotNull : true, },
 		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : true, },
-		TableColumnEntity{ Name: "watcher", Type: "boolean", NotNull : true, },
-		TableColumnEntity{ Name: "assignee", Type: "boolean", NotNull : true, },
-		TableColumnEntity{ Name: "verifyer", Type: "boolean", NotNull : true, },
+ 	},
+}
+
+var DBTaskWatcher = TableEntity{
+	Name : RootName("task_watcher"),
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
+		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: RootName(DBTask.Name), NotNull : true, },
+		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : true, },
+ 	},
+}
+
+var DBTaskVerifyer = TableEntity{
+	Name : RootName("task_verifyer"),
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
+		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: RootName(DBTask.Name), NotNull : true, },
+		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : true, },
  	},
 }
 
@@ -164,4 +180,4 @@ var DBWorkflowTask = TableEntity{
 }
 
 var ROOTTABLES = []TableEntity{DBSchema, DBSchemaField, DBPermission, DBRole, DBRolePermission, DBEntity, DBUser, 
-	    DBEntityUser, DBRoleAttribution, DBTask, DBWorkflow, DBWorkflowTask, DBTaskAffectation, }
+	    DBEntityUser, DBRoleAttribution, DBTask, DBWorkflow, DBWorkflowTask, DBTaskAssignee, DBTaskWatcher, DBTaskVerifyer }

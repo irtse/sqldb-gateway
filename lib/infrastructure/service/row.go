@@ -9,6 +9,7 @@ import (
 	tool "sqldb-ws/lib"
 	"github.com/rs/zerolog/log"
 	_ "github.com/go-sql-driver/mysql"
+	"sqldb-ws/lib/infrastructure/entities"
 	conn "sqldb-ws/lib/infrastructure/connector"
 )
 
@@ -29,9 +30,8 @@ func (t *TableRowInfo) Verify(name string) (string, bool) {
 }
 
 func (t *TableRowInfo) Get() (tool.Results, error) {
-	t.db = conn.ToFilter(t.Name, t.Params, t.db)
-	t.restrition()
-	d, err := t.db.SelectResults(t.Name)
+	t.db = ToFilter(t.Table.Name, t.Params, t.db)
+	d, err := t.db.SelectResults(t.Table.Name)
 	t.Results = d
 	if err != nil { return DBError(nil, err) }
 	return t.Results, nil
@@ -43,7 +43,6 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	var result tool.Results
 	columns := ""
 	values := ""
-	fmt.Printf("SPECIALIZED %v \n", t.SpecializedService)
 	if _, ok := t.SpecializedService.VerifyRowWorkflow(t.Record, true); !ok { return nil, errors.New("verification failed.") }
 	v := Validator[map[string]interface{}]()
 	_, err = v.ValidateSchema(t.Record, t.Table, false)
@@ -58,7 +57,7 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 			values += fmt.Sprintf("%v", element) + ","
 		}
 	}
-	query := "INSERT INTO " + t.Name + "(" + conn.RemoveLastChar(columns) + ") VALUES (" + conn.RemoveLastChar(values) + ")"
+	query := "INSERT INTO " + t.Table.Name + "(" + conn.RemoveLastChar(columns) + ") VALUES (" + conn.RemoveLastChar(values) + ")"
 	if t.db.Driver == conn.PostgresDriver { 
 		id, err = t.db.QueryRow(query)
 		if err != nil { return DBError(nil, err) }
@@ -75,7 +74,7 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 		if err != nil { return DBError(nil, err) }
 		if err != nil { return DBError(nil, err) }
 	}
-	result, err = t.db.SelectResults(t.Name)
+	result, err = t.db.SelectResults(t.Table.Name)
 	t.Results = result
 	t.SpecializedService.WriteRowWorkflow(t.Record)
 	return t.Results, nil
@@ -87,8 +86,7 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 	if err != nil { return nil, errors.New("Not a proper struct to update a row") }
 	r, _ := t.SpecializedService.VerifyRowWorkflow(t.Record, false) 
 	t.Record = r
-	t.db = conn.ToFilter(t.Name, t.Params, t.db)
-	t.restrition()
+	t.db = ToFilter(t.Table.Name, t.Params, t.db)
 	stack := ""
 	filter := ""
 	for key, element := range t.Record {
@@ -100,14 +98,12 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 				}
 				if found {
 					t.Params[key]="NULL"
-					resp, _ := t.db.SelectResults(t.Name)
+					resp, _ := t.db.SelectResults(t.Table.Name)
 					if len(resp) == 0 { continue }
 				}					
 			} 
-			fmt.Printf("VERIFY %b\n", t.Verified )
 			if t.Verified {
 				typ, ok := t.EmptyCol.Verify(key)
-				fmt.Printf("CHECK COLUMNS %s %s %b\n", typ, key, ok)
 				if ok { 
 					stack = stack + " " + key + "=" + conn.FormatForSQL(typ, element) + "," 
 					filter += key + "=" + conn.FormatForSQL(typ, element) + " and " 
@@ -119,7 +115,7 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 		} else if !strings.Contains(t.db.SQLRestriction, "id=") { t.db.SQLRestriction += "id=" + fmt.Sprintf("%d", int64(element.(float64))) + " " }
 	}
 	stack = conn.RemoveLastChar(stack)
-	query := ("UPDATE " + t.Name + " SET " + stack) // REMEMBER id is a restriction !
+	query := ("UPDATE " + t.Table.Name + " SET " + stack) // REMEMBER id is a restriction !
 	if t.db.SQLRestriction != "" { query += " WHERE " + t.db.SQLRestriction }
 	rows, err := t.db.Query(query)
 	if err != nil { return DBError(nil, err) }
@@ -130,7 +126,7 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 		}
     } else { if (len(filter) > 0) { t.db.SQLRestriction = filter[:len(filter) - 4] }  }
 	
-	res, err := t.db.SelectResults(t.Name)
+	res, err := t.db.SelectResults(t.Table.Name)
 	if err != nil { return DBError(nil, err) }
 	t.SpecializedService.UpdateRowWorkflow(res, t.Record) 
 	t.Results = res
@@ -144,12 +140,11 @@ func (t *TableRowInfo) CreateOrUpdate() (tool.Results, error) {
 }
 
 func (t *TableRowInfo) Delete() (tool.Results, error) {
-	t.db = conn.ToFilter(t.Name, t.Params, t.db)
-	t.restrition()
-	res, err := t.db.SelectResults(t.Name)
+	t.db = ToFilter(t.Table.Name, t.Params, t.db)
+	res, err := t.db.SelectResults(t.Table.Name)
 	if err != nil { return DBError(nil, err) }
 	t.Results = res
-	query := ("DELETE FROM " + t.Name)
+	query := ("DELETE FROM " + t.Table.Name)
 	if t.db.SQLRestriction != "" { query += " WHERE " + t.db.SQLRestriction }
 	rows, err := t.db.Query(query)
 	if err != nil { return DBError(nil, err) }
@@ -176,6 +171,73 @@ func (t *TableRowInfo) Import(filename string) (tool.Results, error)  {
 		if t.Method == tool.DELETE { _, err = row.Delete() 
 		} else { _, err = row.Create() }
 		if err != nil { log.Error().Msg(err.Error()) }
+	}
+	return t.Results, nil
+}
+
+func (t *TableRowInfo) Link() (tool.Results, error) {
+	if _, ok := t.Params[tool.RootToTableParam]; !ok { return nil, errors.New("no destination table") }
+	otherName := t.Params[tool.RootToTableParam]
+	v := Validator[entities.LinkEntity]()
+	v.data = entities.LinkEntity{}
+	te, err := v.ValidateStruct(t.Record)
+	if err != nil { return nil, errors.New("Not a proper struct to create a table - expect <LinkEntity> Scheme " + err.Error()) }
+	if _, ok := t.EmptyCol.Verify(otherName + "_id"); ok && te.Anchor == "" {
+		// should verify record from_id to_id
+		res, err := t.link(te, otherName, false)
+		if err != nil { t.Results = append(t.Results, res...) }
+	} else {
+		// here FIND LINK TABLE
+		schemas, err := t.Table.schema(tool.ReservedParam)
+		if err != nil { return nil, errors.New("problem on schema")}
+		for _, scheme := range schemas {
+			_, findRoot := scheme.AssColumns[t.Name + "_id"] 
+			_, findOther := scheme.AssColumns[otherName  + "_id"] 
+			if findRoot && findOther && strings.Contains(scheme.Name, te.Anchor) {
+				t.EmptyCol.Name = scheme.Name
+				t.Table.Name = t.EmptyCol.Name
+				res, err := t.link(te, otherName, false)
+				if err == nil { t.Results = append(t.Results, res...) }
+			}
+		}
+	}
+	return t.Results, nil
+}
+func (t *TableRowInfo) link(te *entities.LinkEntity, otherName string, nullable bool) (tool.Results, error)  {
+	t.Record = tool.Record{ otherName + "_id" : te.To, t.Name + "_id" : te.From }
+	if te.Columns != nil && !nullable {
+		for col, val := range te.Columns {
+			if _, ok := t.EmptyCol.Verify(col); ok && val != "" { t.Record[col]=val }
+		}
+	}
+	if len(t.Record) == 0 { return nil, errors.New("no data to set or create")}
+	if !nullable { return t.CreateOrUpdate() 
+	} else { return t.Delete()  }
+}
+
+func (t *TableRowInfo) UnLink() (tool.Results, error) {
+	if _, ok := t.Params[tool.RootToTableParam]; !ok { return nil, errors.New("no destination table") }
+	otherName := t.Params[tool.RootToTableParam]
+	v := Validator[entities.LinkEntity]()
+	v.data = entities.LinkEntity{}
+	te, err := v.ValidateStruct(t.Record)
+	if err != nil { return nil, errors.New("Not a proper struct to create a table - expect <LinkEntity> Scheme " + err.Error()) }
+	if _, ok := t.EmptyCol.Verify(otherName + "_id"); ok {
+		res, err := t.link(te, otherName, true)
+		if err != nil { t.Results = append(t.Results, res...) }
+	} else { 
+		schema, err := t.Table.schema(tool.ReservedParam)
+		if err != nil { return nil, errors.New("problem on schema")}
+		for _, scheme := range schema {
+			_, findRoot := scheme.AssColumns[t.Name + "_id"] 
+			_, findOther := scheme.AssColumns[otherName + "_id"] 
+			if findRoot && findOther && strings.Contains(scheme.Name, te.Anchor) {
+				t.EmptyCol.Name = scheme.Name
+				t.Table.Name = t.EmptyCol.Name
+				res, err := t.link(te, otherName, true)
+				if err != nil { t.Results = append(t.Results, res...) }
+			}
+		}
 	}
 	return t.Results, nil
 }
