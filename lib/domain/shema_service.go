@@ -7,9 +7,10 @@ import (
 )
 
 type SchemaService struct {
-	Domain MainService
+	Domain tool.DomainITF
 }
 
+func (s *SchemaService) SetDomain(d tool.DomainITF) { s.Domain = d }
 func (s *SchemaService) Entity() tool.SpecializedServiceInfo { return entities.DBSchema }
 func (s *SchemaService) VerifyRowWorkflow(record tool.Record, create bool) (tool.Record, bool) { 
 	res, _ := s.Domain.SafeCall(true, "",
@@ -23,7 +24,7 @@ func (s *SchemaService) VerifyRowWorkflow(record tool.Record, create bool) (tool
 }
 func (s *SchemaService) DeleteRowWorkflow(results tool.Results) { 
 	for _, record := range results { 
-		s.Domain.isGenericService=true
+		s.Domain.(*MainService).isGenericService=true
 		s.Domain.SafeCall(true, "", 
 		                	tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
 			                                tool.RootRowsParam: tool.ReservedParam,

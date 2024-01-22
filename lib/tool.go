@@ -43,9 +43,15 @@ func (ar *Record) GetFloat(column string) float64 {
 
 type Results []Record  
 
+type DomainITF interface {
+	SafeCall(admin bool, user string, params Params, rec Record, m Method, funcName string, args... interface{}) (Results, error)
+	UnSafeCall(user string, params Params, rec Record, m Method, funcName string, args... interface{}) (Results, error)
+}
+
 type SpecializedServiceInfo interface { GetName() string }
 type SpecializedService interface {
 	Entity() SpecializedServiceInfo
+	SetDomain(d DomainITF)
 	WriteRowWorkflow(record Record)
 	VerifyRowWorkflow(record Record, create bool) (Record, bool)
 	DeleteRowWorkflow(results Results)
@@ -57,6 +63,7 @@ func (s *CustomService) UpdateRowWorkflow(results Results, record Record) {}
 func (s *CustomService) WriteRowWorkflow(record Record) {}
 func (s *CustomService) DeleteRowWorkflow(results Results) { }
 func (s *CustomService) Entity() SpecializedServiceInfo { return nil }
+func (s *CustomService) SetDomain(d DomainITF) { }
 func (s *CustomService) VerifyRowWorkflow(record Record, create bool) (Record, bool) { return record, true }
 
 type Params map[string]string

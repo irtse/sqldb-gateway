@@ -10,6 +10,7 @@ import (
 )
 type MainService struct {
 	name                string
+	User				string
 	isGenericService    bool
 }
 func Domain(isGenericService bool) *MainService {
@@ -26,11 +27,13 @@ func (d *MainService) UnSafeCall(user string, params tool.Params, record tool.Re
 
 func (d *MainService) call(superAdmin bool, user string, params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
 	var service infrastructure.InfraServiceItf
+	d.User = user
 	res := tool.Results{}
 	if tablename, ok := params[tool.RootTableParam]; ok {
 		var specializedService tool.SpecializedService
 		specializedService = &tool.CustomService{}
 		if !d.isGenericService { specializedService = SpecializedService(tablename) }
+		specializedService.SetDomain(d)
 		database := conn.Open()
 		defer database.Conn.Close()
 		table := infrastructure.Table(database, superAdmin, user, strings.ToLower(tablename), params, record, method)
@@ -101,4 +104,4 @@ func SpecializedService(name string) tool.SpecializedService {
 	return &tool.CustomService{}
 }
 
-var SERVICES = []tool.SpecializedService{&SchemaService{}, &SchemaFields{}}
+var SERVICES = []tool.SpecializedService{&SchemaService{}, &SchemaFields{}, &TaskAttributionService{}}

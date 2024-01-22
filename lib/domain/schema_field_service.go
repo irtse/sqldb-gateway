@@ -7,9 +7,10 @@ import (
 )
 
 type SchemaFields struct {
-	Domain MainService
+	Domain tool.DomainITF
 }
 
+func (s *SchemaFields) SetDomain(d tool.DomainITF) { s.Domain = d }
 func (s *SchemaFields) Entity() tool.SpecializedServiceInfo {return entities.DBSchemaField }
 func (s *SchemaFields) VerifyRowWorkflow(record tool.Record, create bool) (tool.Record, bool) {
 	rows := "all"
@@ -67,7 +68,7 @@ func (s *SchemaFields) UpdateRowWorkflow(results tool.Results, record tool.Recor
 	for _, r := range results {
 		res, err := s.Domain.SafeCall(true, "",
 			tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-				    tool.RootRowsParam: fmt.Sprintf("%v", r[entities.RootID(entities.DBSchema.Name)]) }, 
+				    tool.RootRowsParam: fmt.Sprintf("%s", r[entities.RootID(entities.DBSchema.Name)]) }, 
 			tool.Record{}, 
 			tool.SELECT, 
 			"Get",
@@ -94,7 +95,7 @@ func (s *SchemaFields) DeleteRowWorkflow(results tool.Results) {
 	for _, record := range results { 
 		res, err := s.Domain.SafeCall(true, "",
 			tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-				    tool.RootRowsParam: fmt.Sprintf("%v", record[entities.RootID(entities.DBSchema.Name)]) }, 
+				    tool.RootRowsParam: fmt.Sprintf("%d", record[entities.RootID(entities.DBSchema.Name)].(int64)) }, 
 			tool.Record{}, 
 			tool.SELECT, 
 			"Get",

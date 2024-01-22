@@ -2,7 +2,6 @@
 package controllers
 import (
 	"os"
-	"fmt"
 	"time"
 	"errors"
 	"strings"

@@ -78,10 +78,11 @@ func (db *Db) QueryRow(query string) (int64, error) {
 
 func (db *Db) Query(query string) (*sql.Rows, error) {
 	if db.LogQueries { log.Info().Msg(query) }
-	// fmt.Printf("QUERY : %s\n", query)
+	//fmt.Printf("QUERY : %s\n", query)
 	rows, err := db.Conn.Query(query)
 	if err != nil {
 		log.Error().Msg(err.Error())
+		fmt.Printf("error : %s\n", query)
 		log.Error().Msg(query)
 		return nil, err
 	}

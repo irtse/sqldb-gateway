@@ -25,7 +25,7 @@ var DBSchema = TableEntity{
 var DBSchemaField = TableEntity{
 	Name : RootName("schema_column"),
 	Columns : []TableColumnEntity{
-		 TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable : RootName(DBSchema.Name), NotNull : true, },
+		 TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable : DBSchema.Name, NotNull : true, },
 		 TableColumnEntity{ Name: "required", Type: "boolean", NotNull : true, },
 		 TableColumnEntity{ Name: "readonly", Type: "boolean", NotNull : true, },
 		 TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)", Constraint: "unique", NotNull : true, },
@@ -67,8 +67,8 @@ var DBRole = TableEntity{
 var DBRolePermission = TableEntity{
 	Name : RootName("role_permission"),
 	Columns : []TableColumnEntity{
-		 TableColumnEntity{ Name: RootID(DBRole.Name), Type: "integer", ForeignTable: RootName(DBRole.Name), NotNull : true, },
-		 TableColumnEntity{ Name: RootID(DBPermission.Name), Type: "integer", ForeignTable: RootName(DBPermission.Name), NotNull : true, },
+		 TableColumnEntity{ Name: RootID(DBRole.Name), Type: "integer", ForeignTable: DBRole.Name, NotNull : true, },
+		 TableColumnEntity{ Name: RootID(DBPermission.Name), Type: "integer", ForeignTable: DBPermission.Name, NotNull : true, },
 	},
 }
 
@@ -94,9 +94,9 @@ var DBUser = TableEntity{
 var DBHierarchy = TableEntity{
 	Name : RootName("hierarchy"),
 	Columns : []TableColumnEntity{
-		 TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
-		 TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : false, },
-		 TableColumnEntity{ Name: "parent_" + RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : true, },
+		 TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, NotNull : false, },
+		 TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, NotNull : false, },
+		 TableColumnEntity{ Name: "parent_" + RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, NotNull : true, },
 		 TableColumnEntity{ Name: "start_date", Type: "timestamp",  NotNull : false, },
 		 TableColumnEntity{ Name: "end_date", Type: "timestamp",  NotNull : false, },
 	},
@@ -105,9 +105,9 @@ var DBHierarchy = TableEntity{
 var DBEntityUser = TableEntity{
 	Name : RootName("entity_user"),
 	Columns : []TableColumnEntity{
-		 TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
-		 TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : false, },
-		 TableColumnEntity{ Name: RootID(DBRole.Name), Type: "integer", ForeignTable: RootName(DBRole.Name), NotNull : true, },
+		 TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, NotNull : false, },
+		 TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, NotNull : false, },
+		 TableColumnEntity{ Name: RootID(DBRole.Name), Type: "integer", ForeignTable: DBRole.Name, NotNull : true, },
 		 TableColumnEntity{ Name: "start_date", Type: "timestamp",  NotNull : false, },
 		 TableColumnEntity{ Name: "end_date", Type: "timestamp",  NotNull : false, },
 	},
@@ -116,9 +116,9 @@ var DBEntityUser = TableEntity{
 var DBRoleAttribution = TableEntity{
 	Name : RootName("role_attribution"),
 	Columns : []TableColumnEntity{
-		 TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
-		 TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : false, },
-		 TableColumnEntity{ Name: RootID(DBRole.Name), Type: "integer", ForeignTable: RootName(DBRole.Name), NotNull : true, },
+		 TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, NotNull : false, },
+		 TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, NotNull : false, },
+		 TableColumnEntity{ Name: RootID(DBRole.Name), Type: "integer", ForeignTable: DBRole.Name, NotNull : true, },
 		 TableColumnEntity{ Name: "start_date", Type: "timestamp",  NotNull : false, },
 		 TableColumnEntity{ Name: "end_date", Type: "timestamp",  NotNull : false, },
 	},
@@ -127,9 +127,9 @@ var DBRoleAttribution = TableEntity{
 var DBTask = TableEntity{
 	Name : RootName("task"),
 	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: RootName(DBSchema.Name), NotNull : false, },
-		TableColumnEntity{ Name: "opened_by", Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
-		TableColumnEntity{ Name: "created_by", Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
+		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, NotNull : false, },
+		TableColumnEntity{ Name: "opened_by", Type: "integer", ForeignTable: DBUser.Name, NotNull : false, },
+		TableColumnEntity{ Name: "created_by", Type: "integer", ForeignTable: DBUser.Name, NotNull : false, },
 		TableColumnEntity{ Name: "opened_date", Type: "timestamp",  NotNull : true, Default : "CURRENT_TIMESTAMP"},
 		TableColumnEntity{ Name: "created_date", Type: "timestamp",  NotNull : true, Default : "CURRENT_TIMESTAMP"},
 		TableColumnEntity{ Name: "state", Type: "enum('close', 'open', 'waiting', 'dismiss', 'unread')",  NotNull : true, Default: "unread" },
@@ -144,12 +144,12 @@ var DBTask = TableEntity{
 	},
 }
 
-var DBTaskAssignee = TableEntity{
+var DBTaskAttribution = TableEntity{
 	Name : RootName("task_attribution"),
 	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
-		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: RootName(DBTask.Name), NotNull : true, },
-		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : true, },
+		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, NotNull : false, },
+		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, NotNull : true, },
+		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, NotNull : true, },
 		TableColumnEntity{ Name: "assignee", Type: "boolean", NotNull : true, Default : false },
 		TableColumnEntity{ Name: "watcher", Type: "boolean", NotNull : true, Default : false },
 		TableColumnEntity{ Name: "verifyer", Type: "boolean", NotNull : true, Default : false },
@@ -167,11 +167,11 @@ var DBWorkflow = TableEntity{
 var DBWorkflowTask = TableEntity{
 	Name : RootName("workflow_task"),
 	Columns : [] TableColumnEntity{
-		TableColumnEntity{ Name: RootID(DBWorkflow.Name), Type: "integer", ForeignTable: RootName(DBWorkflow.Name), NotNull : true, },
-		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: RootName(DBTask.Name), NotNull : true, },
+		TableColumnEntity{ Name: RootID(DBWorkflow.Name), Type: "integer", ForeignTable: DBWorkflow.Name, NotNull : true, },
+		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, NotNull : true, },
 		TableColumnEntity{ Name: "order", Type: "integer", NotNull : true, },
 	},
 }
 
 var ROOTTABLES = []TableEntity{DBSchema, DBSchemaField, DBPermission, DBRole, DBRolePermission, DBEntity, DBUser, 
-	    DBEntityUser, DBRoleAttribution, DBTask, DBWorkflow, DBWorkflowTask, DBTaskAssignee, DBTaskWatcher, DBTaskVerifyer }
+	    DBEntityUser, DBRoleAttribution, DBTask, DBWorkflow, DBWorkflowTask, DBTaskAttribution, }
