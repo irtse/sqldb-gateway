@@ -90,12 +90,26 @@ var DBUser = TableEntity{
 		 TableColumnEntity{ Name: "super_admin", Type: "boolean", NotNull : false, },
 	},
 }
+// Note rules : HIERARCHY IS NOT INNER ROLE. HIERARCHY DEFINE MASTER OF AN ENTITY OR A USER. IT'S AN AUTO WATCHER ON USER ASSIGNEE TASK.
+var DBHierarchy = TableEntity{
+	Name : RootName("hierarchy"),
+	Columns : []TableColumnEntity{
+		 TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
+		 TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : false, },
+		 TableColumnEntity{ Name: "parent_" + RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : true, },
+		 TableColumnEntity{ Name: "start_date", Type: "timestamp",  NotNull : false, },
+		 TableColumnEntity{ Name: "end_date", Type: "timestamp",  NotNull : false, },
+	},
+}
 
 var DBEntityUser = TableEntity{
 	Name : RootName("entity_user"),
 	Columns : []TableColumnEntity{
-		 TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : true, },
-		 TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : true, },
+		 TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
+		 TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : false, },
+		 TableColumnEntity{ Name: RootID(DBRole.Name), Type: "integer", ForeignTable: RootName(DBRole.Name), NotNull : true, },
+		 TableColumnEntity{ Name: "start_date", Type: "timestamp",  NotNull : false, },
+		 TableColumnEntity{ Name: "end_date", Type: "timestamp",  NotNull : false, },
 	},
 }
 
@@ -129,36 +143,16 @@ var DBTask = TableEntity{
 		TableColumnEntity{ Name: RootID("task"), Type: "integer", ForeignTable: RootName("task"), NotNull : false, },
 	},
 }
-/*
-		TableColumnEntity{ Name: "view", Type: "varchar(255)",  NotNull : false, },		
-		TableColumnEntity{ Name: "view_restriction", Type: "varchar(255)",  NotNull : false, },	
-		TableColumnEntity{ Name: "view_dir", Type: "varchar(255)",  NotNull : false, },
-		TableColumnEntity{ Name: "view_order", Type: "varchar(255)",  NotNull : false, },
-*/
+
 var DBTaskAssignee = TableEntity{
-	Name : RootName("task_assignee"),
+	Name : RootName("task_attribution"),
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
 		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: RootName(DBTask.Name), NotNull : true, },
 		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : true, },
- 	},
-}
-
-var DBTaskWatcher = TableEntity{
-	Name : RootName("task_watcher"),
-	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
-		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: RootName(DBTask.Name), NotNull : true, },
-		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : true, },
- 	},
-}
-
-var DBTaskVerifyer = TableEntity{
-	Name : RootName("task_verifyer"),
-	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: RootName(DBUser.Name), NotNull : false, },
-		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: RootName(DBTask.Name), NotNull : true, },
-		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: RootName(DBEntity.Name), NotNull : true, },
+		TableColumnEntity{ Name: "assignee", Type: "boolean", NotNull : true, Default : false },
+		TableColumnEntity{ Name: "watcher", Type: "boolean", NotNull : true, Default : false },
+		TableColumnEntity{ Name: "verifyer", Type: "boolean", NotNull : true, Default : false },
  	},
 }
 
