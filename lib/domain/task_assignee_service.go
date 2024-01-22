@@ -7,16 +7,16 @@ import (
 	conn "sqldb-ws/lib/infrastructure/connector"
 )
 
-type TaskAttributionService struct { Domain tool.DomainITF }
+type TaskAssigneeService struct { Domain tool.DomainITF }
 
-func (s *TaskAttributionService) SetDomain(d tool.DomainITF) { s.Domain = d }
-func (s *TaskAttributionService) Entity() tool.SpecializedServiceInfo { return entities.DBTaskAttribution }
-func (s *TaskAttributionService) VerifyRowWorkflow(record tool.Record, create bool) (tool.Record, bool) { 
+func (s *TaskAssigneeService) SetDomain(d tool.DomainITF) { s.Domain = d }
+func (s *TaskAssigneeService) Entity() tool.SpecializedServiceInfo { return entities.DBTaskAssignee }
+func (s *TaskAssigneeService) VerifyRowWorkflow(record tool.Record, create bool) (tool.Record, bool) { 
 	var res tool.Results
 	if taskID, ok := record[entities.RootID(entities.DBTask.Name)]; ok && taskID != nil {
 		if userID, ok := record[entities.RootID(entities.DBUser.Name)]; ok && userID != nil {
 			res, _ = s.Domain.SafeCall(true, "",
-			tool.Params{ tool.RootTableParam : entities.DBTaskAttribution.Name, 
+			tool.Params{ tool.RootTableParam : entities.DBTaskAssignee.Name, 
 						 tool.RootRowsParam : tool.ReservedParam, 
 						 entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%d", record[entities.RootID(entities.DBTask.Name)].(int64)),
 						 entities.RootID(entities.DBUser.Name): fmt.Sprintf("%d", record[entities.RootID(entities.DBUser.Name)].(int64)) }, 
@@ -25,7 +25,7 @@ func (s *TaskAttributionService) VerifyRowWorkflow(record tool.Record, create bo
 			"Get")
 		} else if entityID, ok := record[entities.RootID(entities.DBEntity.Name)]; ok && entityID != nil {
 			res, _ = s.Domain.SafeCall(true, "",
-			tool.Params{ tool.RootTableParam : entities.DBTaskAttribution.Name, 
+			tool.Params{ tool.RootTableParam : entities.DBTaskAssignee.Name, 
 						 tool.RootRowsParam : tool.ReservedParam, 
 						 entities.RootID(entities.DBEntity.Name): fmt.Sprintf("%d", record[entities.RootID(entities.DBEntity.Name)].(int64)) }, 
 			tool.Record{}, 
@@ -35,14 +35,11 @@ func (s *TaskAttributionService) VerifyRowWorkflow(record tool.Record, create bo
 	}
 	return record, res == nil || len(res) == 0
 }
-func (s *TaskAttributionService) DeleteRowWorkflow(results tool.Results) { }
-func (s *TaskAttributionService) UpdateRowWorkflow(results tool.Results, record tool.Record) {
-	for _, res := range results {
-		s.WriteRowWorkflow(res)
-	}
+func (s *TaskAssigneeService) DeleteRowWorkflow(results tool.Results) { }
+func (s *TaskAssigneeService) UpdateRowWorkflow(results tool.Results, record tool.Record) {
+	for _, res := range results { s.WriteRowWorkflow(res) }
 }
-func (s *TaskAttributionService) WriteRowWorkflow(record tool.Record) { 
-	if isAssignee, ok := record["assignee"]; !ok || isAssignee == false { return }
+func (s *TaskAssigneeService) WriteRowWorkflow(record tool.Record) { 
 	paramsNew := tool.Params{ tool.RootTableParam : entities.DBUser.Name, 
 							  tool.RootRowsParam: tool.ReservedParam, }
 	paramsNew[tool.RootSQLFilterParam] += "id IN (SELECT id FROM " + entities.DBHierarchy.Name + " WHERE "
@@ -62,14 +59,13 @@ func (s *TaskAttributionService) WriteRowWorkflow(record tool.Record) {
 		for _, upper := range hierarchy {
 			s.Domain.SafeCall(true, "",
 							tool.Params{ 
+								tool.RootTableParam : entities.DBTaskWatcher.Name,
+								tool.RootRowsParam : tool.ReservedParam,
 								entities.RootID(entities.DBUser.Name) : fmt.Sprintf("%d", upper["id"].(int64)),
 								entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%d", record[entities.RootID(entities.DBTask.Name)].(int64)),
 							},
 							tool.Record{ entities.RootID(entities.DBUser.Name) : upper["id"],
 										 entities.RootID(entities.DBTask.Name) : record[entities.RootID(entities.DBTask.Name)].(int64),
-										 "assignee" : false,
-										 "watcher" : true,
-										 "verifyer" : false,
 									   },
 								  tool.CREATE,
 								  "CreateOrUpdate",

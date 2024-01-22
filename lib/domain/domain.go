@@ -104,4 +104,4 @@ func SpecializedService(name string) tool.SpecializedService {
 	return &tool.CustomService{}
 }
 
-var SERVICES = []tool.SpecializedService{&SchemaService{}, &SchemaFields{}, &TaskAttributionService{}}
+var SERVICES = []tool.SpecializedService{&SchemaService{}, &SchemaFields{}, &TaskAssigneeService{}, &TaskVerifyerService{} }
