@@ -92,6 +92,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of adminview",
+      "in": "query",
+      "name": "adminview",
+      "type": "string"
+     },
+     {
       "description": "(Optionnal) Value of rows",
       "in": "query",
       "name": "rows",
@@ -152,6 +158,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of adminview",
+      "in": "query",
+      "name": "adminview",
+      "type": "string"
+     },
+     {
       "description": "(Optionnal) Value of rows",
       "in": "query",
       "name": "rows",
@@ -209,6 +221,12 @@
       "in": "path",
       "name": "table",
       "required": true,
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of adminview",
+      "in": "query",
+      "name": "adminview",
       "type": "string"
      },
      {
@@ -278,6 +296,12 @@
       "in": "path",
       "name": "table",
       "required": true,
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of adminview",
+      "in": "query",
+      "name": "adminview",
       "type": "string"
      },
      {
@@ -359,6 +383,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of adminview",
+      "in": "query",
+      "name": "adminview",
+      "type": "string"
+     },
+     {
       "description": "(Optionnal) Value of rows",
       "in": "query",
       "name": "rows",
@@ -423,6 +453,12 @@
       "in": "path",
       "name": "filename",
       "required": true,
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of adminview",
+      "in": "query",
+      "name": "adminview",
       "type": "string"
      },
      {
@@ -504,6 +540,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of adminview",
+      "in": "query",
+      "name": "adminview",
+      "type": "string"
+     },
+     {
       "description": "(Optionnal) Value of rows",
       "in": "query",
       "name": "rows",
@@ -579,6 +621,12 @@
       "in": "path",
       "name": "totable",
       "required": true,
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of adminview",
+      "in": "query",
+      "name": "adminview",
       "type": "string"
      },
      {

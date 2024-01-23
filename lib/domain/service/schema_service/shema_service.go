@@ -41,3 +41,4 @@ func (s *SchemaService) WriteRowAutomation(record tool.Record) {
 				tool.CREATE, 
 				"CreateOrUpdate",)
 }
+func (s *SchemaService) PostTreatment(results tool.Results) tool.Results { return results }

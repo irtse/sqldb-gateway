@@ -73,3 +73,4 @@ func (s *TaskAssigneeService) WriteRowAutomation(record tool.Record) {
 	}
 	
 }
+func (s *TaskAssigneeService) PostTreatment(results tool.Results) tool.Results { return results }

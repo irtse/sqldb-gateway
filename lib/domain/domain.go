@@ -7,6 +7,7 @@ import (
 	"reflect"
 	tool "sqldb-ws/lib"
 	domain "sqldb-ws/lib/domain/service"
+	"sqldb-ws/lib/infrastructure/entities"
 	conn "sqldb-ws/lib/infrastructure/connector"
 	infrastructure "sqldb-ws/lib/infrastructure/service"
 )
@@ -37,9 +38,12 @@ func (d *MainService) call(superAdmin bool, user string, params tool.Params, rec
 	res := tool.Results{}
 	if tablename, ok := params[tool.RootTableParam]; ok {
 		var specializedService tool.SpecializedService
-		specializedService = &tool.CustomService{}
+		specializedService = &domain.CustomService{}
 		if !d.isGenericService { specializedService = domain.SpecializedService(tablename) }
 		specializedService.SetDomain(d)
+		for _, exception := range entities.AUTHEXCEPTION {
+			if tablename == exception.Name { auth = false; break }
+		}
 		database := conn.Open()
 		defer database.Conn.Close()
 		table := infrastructure.Table(database, superAdmin, user, strings.ToLower(tablename), params, record, method)
@@ -66,7 +70,8 @@ func (d *MainService) call(superAdmin bool, user string, params tool.Params, rec
 			params[tool.SpecialIDParam]=strings.ToLower(rowName) 
 			delete(params, tool.RootRowsParam)
 			if params[tool.SpecialIDParam] == tool.ReservedParam { delete(params, tool.SpecialIDParam) }
-			service = table.TableRow(specializedService)
+			if adminView, valid := params[tool.RootAdminView]; valid && adminView == "true" { service = table.TableRow(specializedService, true)
+			} else { service = table.TableRow(specializedService, false) }
 			return d.invoke(service, funcName, args...)
 		}
 		if auth && !superAdmin { 

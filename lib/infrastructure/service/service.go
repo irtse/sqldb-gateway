@@ -110,7 +110,7 @@ func Permission(database *conn.Db, admin bool, user string, params tool.Params, 
 	paramsNew[tool.RootSQLFilterParam] += entities.DBUser.Name + ".login = " + conn.Quote(perms.User) + "))))"
     perms.Row = &TableRowInfo{ } 
 	perms.Row.Table = EmptyTable(database, entities.DBPermission.Name)
-	perms.Row.SpecializedService = &tool.CustomService{}
+	perms.Row.SpecializedService = nil
 	perms.Row.db = database
 	perms.Row.Fill(entities.DBPermission.Name, admin, user, paramsNew, tool.Record{}, tool.SELECT,)
 	perms.Row.PermService=nil

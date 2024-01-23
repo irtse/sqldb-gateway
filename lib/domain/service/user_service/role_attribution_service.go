@@ -14,7 +14,7 @@ func (s *RoleAttributionService) VerifyRowAutomation(record tool.Record, create 
 func (s *RoleAttributionService) DeleteRowAutomation(results tool.Results) { }
 func (s *RoleAttributionService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *RoleAttributionService) WriteRowAutomation(record tool.Record) { }
-func (s *RoleAttributionService) Filter(results tool.Results) tool.Results {
+func (s *RoleAttributionService) PostTreatment(results tool.Results) tool.Results {
 	res := tool.Results{}
 	for _, record := range results {
 		found := true

@@ -12,6 +12,7 @@ const RootRowsParam = "rows"
 const RootColumnsParam = "columns" 
 const RootOrderParam = "orderby" 
 const RootDirParam = "dir"
+const RootAdminView = "adminview"
 const RootSQLFilterParam = "sqlfilter" 
 
 var RootParamsDesc = map[string]string{
@@ -19,7 +20,7 @@ var RootParamsDesc = map[string]string{
     RootColumnsParam : "needed on a columns level request (POST/PUT/DELETE with no rows query params)",
 }
 
-var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootSQLFilterParam}
+var RootParams = []string{RootAdminView, RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootSQLFilterParam}
 
 const SpecialIDParam = "id" 
 const SpecialModeParam = "mode" 

@@ -108,3 +108,4 @@ func (s *SchemaFields) DeleteRowAutomation(results tool.Results) {
 		if err != nil { fmt.Printf("error %s", err.Error()) }
 	}
 }
+func (s *SchemaFields) PostTreatment(results tool.Results) tool.Results { return results }

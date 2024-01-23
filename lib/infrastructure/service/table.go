@@ -24,10 +24,11 @@ type TableInfo struct {
 	Rows       []TableRowInfo       `json:"-"`
 	InfraService
 }
-func (t *TableInfo) TableRow(specializedService tool.SpecializedService) *TableRowInfo {
+func (t *TableInfo) TableRow(specializedService tool.SpecializedService, adminView bool) *TableRowInfo {
 	row := &TableRowInfo{} 
 	row.db = t.db
 	row.PermService = t.PermService
+	row.AdminView = adminView && t.SuperAdmin
 	row.Fill(t.Name, t.SuperAdmin, t.User, t.Params, t.Record, t.Method)
 	row.Table = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method)
 	row.EmptyCol = &TableColumnInfo{ } 
@@ -43,8 +44,7 @@ func (t *TableInfo) TableColumn() *TableColumnInfo {
 	col.db = t.db
 	col.PermService = t.PermService
 	col.Fill(t.Name, t.SuperAdmin, t.User, t.Params, t.Record, t.Method)
-	col.Row = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method,
-		           ).TableRow(&tool.CustomService{})
+	col.Row = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method,).TableRow(nil, true)
     return col
 }
 

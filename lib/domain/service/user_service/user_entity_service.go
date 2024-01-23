@@ -14,7 +14,7 @@ func (s *UserEntityService) VerifyRowAutomation(record tool.Record, create bool)
 func (s *UserEntityService) DeleteRowAutomation(results tool.Results) { }
 func (s *UserEntityService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *UserEntityService) WriteRowAutomation(record tool.Record) { }
-func (s *UserEntityService) Filter(results tool.Results) tool.Results {
+func (s *UserEntityService) PostTreatment(results tool.Results) tool.Results {
 	res := tool.Results{}
 	for _, record := range results {
 		found := true

@@ -69,6 +69,10 @@ paths:
         name: table
         required: true
         type: string
+      - description: (Optionnal) Value of adminview
+        in: query
+        name: adminview
+        type: string
       - description: (Optionnal) Value of rows
         in: query
         name: rows
@@ -111,6 +115,10 @@ paths:
         name: table
         required: true
         type: string
+      - description: (Optionnal) Value of adminview
+        in: query
+        name: adminview
+        type: string
       - description: (Optionnal) Value of rows
         in: query
         name: rows
@@ -152,6 +160,10 @@ paths:
         in: path
         name: table
         required: true
+        type: string
+      - description: (Optionnal) Value of adminview
+        in: query
+        name: adminview
         type: string
       - description: (Optionnal) Value of rows
         in: query
@@ -200,6 +212,10 @@ paths:
         in: path
         name: table
         required: true
+        type: string
+      - description: (Optionnal) Value of adminview
+        in: query
+        name: adminview
         type: string
       - description: (Optionnal) Value of rows
         in: query
@@ -255,6 +271,10 @@ paths:
         name: totable
         required: true
         type: string
+      - description: (Optionnal) Value of adminview
+        in: query
+        name: adminview
+        type: string
       - description: (Optionnal) Value of rows
         in: query
         name: rows
@@ -308,6 +328,10 @@ paths:
         in: path
         name: totable
         required: true
+        type: string
+      - description: (Optionnal) Value of adminview
+        in: query
+        name: adminview
         type: string
       - description: (Optionnal) Value of rows
         in: query
@@ -363,6 +387,10 @@ paths:
         name: filename
         required: true
         type: string
+      - description: (Optionnal) Value of adminview
+        in: query
+        name: adminview
+        type: string
       - description: (Optionnal) Value of rows
         in: query
         name: rows
@@ -409,6 +437,10 @@ paths:
         in: path
         name: filename
         required: true
+        type: string
+      - description: (Optionnal) Value of adminview
+        in: query
+        name: adminview
         type: string
       - description: (Optionnal) Value of rows
         in: query

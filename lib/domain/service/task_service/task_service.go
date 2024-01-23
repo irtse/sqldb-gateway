@@ -77,3 +77,4 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 	}
 }
 func (s *TaskService) WriteRowAutomation(record tool.Record) {}
+func (s *TaskService) PostTreatment(results tool.Results) tool.Results { return results }

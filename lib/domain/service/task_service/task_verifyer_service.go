@@ -81,3 +81,4 @@ func (s *TaskVerifyerService) UpdateRowAutomation(results tool.Results, record t
 	}
 }
 func (s *TaskVerifyerService) WriteRowAutomation(record tool.Record) {}
+func (s *TaskVerifyerService) PostTreatment(results tool.Results) tool.Results { return results }

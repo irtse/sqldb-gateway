@@ -22,5 +22,14 @@ func SpecializedService(name string) tool.SpecializedService {
 	for _, service := range SERVICES {
 		if service.Entity().GetName() == name { return service }
 	}
-	return &tool.CustomService{}
+	return &CustomService{}
 }
+
+type CustomService struct { tool.AbstractSpecializedService }
+func (s *CustomService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
+func (s *CustomService) WriteRowAutomation(record tool.Record) {}
+func (s *CustomService) DeleteRowAutomation(results tool.Results) { }
+func (s *CustomService) Entity() tool.SpecializedServiceInfo { return nil }
+func (s *CustomService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { return record, true }
+func (s *CustomService) PostTreatment(results tool.Results) tool.Results { 	return results }
+// to set up ConfigureFilter

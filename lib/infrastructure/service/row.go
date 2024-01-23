@@ -18,6 +18,7 @@ type TableRowInfo struct {
 	Table				*TableInfo
 	EmptyCol            *TableColumnInfo
 	Verified  	        bool
+	AdminView           bool
 	InfraService
 }
 
@@ -31,9 +32,17 @@ func (t *TableRowInfo) Verify(name string) (string, bool) {
 
 func (t *TableRowInfo) Get() (tool.Results, error) {
 	t.db = ToFilter(t.Table.Name, t.Params, t.db)
+	if t.SpecializedService != nil && ! t.AdminView {
+		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
+		if view != "" { t.db.SQLView = view }
+		if restriction != "" { t.db.SQLRestriction += restriction }
+	}
 	d, err := t.db.SelectResults(t.Table.Name)
 	t.Results = d
 	if err != nil { return DBError(nil, err) }
+	if t.SpecializedService != nil {
+		t.Results = t.SpecializedService.PostTreatment(t.Results)
+	}
 	return t.Results, nil
 }
 
@@ -43,7 +52,9 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	var result tool.Results
 	columns := ""
 	values := ""
-	if _, ok := t.SpecializedService.VerifyRowAutomation(t.Record, true); !ok { return nil, errors.New("verification failed.") }
+	if t.SpecializedService != nil {
+		if _, ok := t.SpecializedService.VerifyRowAutomation(t.Record, true); !ok { return nil, errors.New("verification failed.") }
+	}
 	v := Validator[map[string]interface{}]()
 	_, err = v.ValidateSchema(t.Record, t.Table, false)
 	if err != nil { return nil, errors.New("Not a proper struct to create a row " + err.Error()) }
@@ -74,9 +85,17 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 		if err != nil { return DBError(nil, err) }
 		if err != nil { return DBError(nil, err) }
 	}
+	if t.SpecializedService != nil && !t.AdminView {
+		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
+		if restriction != "" { t.db.SQLRestriction += restriction }
+		if view != "" { t.db.SQLView = view }
+	}
 	result, err = t.db.SelectResults(t.Table.Name)
 	t.Results = result
-	t.SpecializedService.WriteRowAutomation(t.Record)
+	if t.SpecializedService != nil {
+		t.SpecializedService.WriteRowAutomation(t.Record)
+		t.Results = t.SpecializedService.PostTreatment(t.Results)
+	}
 	return t.Results, nil
 }
 
@@ -84,7 +103,10 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 	v := Validator[map[string]interface{}]()
 	_, err := v.ValidateSchema(t.Record, t.Table, true)
 	if err != nil { return nil, errors.New("Not a proper struct to update a row") }
-	r, _ := t.SpecializedService.VerifyRowAutomation(t.Record, false) 
+	r := t.Record
+	if t.SpecializedService != nil {
+		r, _ = t.SpecializedService.VerifyRowAutomation(t.Record, false) 
+	}
 	t.Record = r
 	t.db = ToFilter(t.Table.Name, t.Params, t.db)
 	stack := ""
@@ -125,11 +147,18 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 			t.db.SQLRestriction += "and " + filter[:len(filter) - 4]
 		}
     } else { if (len(filter) > 0) { t.db.SQLRestriction = filter[:len(filter) - 4] }  }
-	
+	if t.SpecializedService != nil && !t.AdminView {
+		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
+		if restriction != "" { t.db.SQLRestriction += restriction }
+		if view != "" { t.db.SQLView = view } 
+	}
 	res, err := t.db.SelectResults(t.Table.Name)
-	if err != nil { return DBError(nil, err) }
-	t.SpecializedService.UpdateRowAutomation(res, t.Record) 
 	t.Results = res
+	if err != nil { return DBError(nil, err) }
+	if t.SpecializedService != nil {
+		t.SpecializedService.UpdateRowAutomation(res, t.Record) 
+		t.Results = t.SpecializedService.PostTreatment(t.Results)
+	}
 	return t.Results, nil
 }
 
@@ -141,6 +170,11 @@ func (t *TableRowInfo) CreateOrUpdate() (tool.Results, error) {
 
 func (t *TableRowInfo) Delete() (tool.Results, error) {
 	t.db = ToFilter(t.Table.Name, t.Params, t.db)
+	if t.SpecializedService != nil && !t.AdminView {
+		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
+		if restriction != "" { t.db.SQLRestriction += restriction }
+		if view != "" { t.db.SQLView = view }
+	}
 	res, err := t.db.SelectResults(t.Table.Name)
 	if err != nil { return DBError(nil, err) }
 	t.Results = res
@@ -149,16 +183,11 @@ func (t *TableRowInfo) Delete() (tool.Results, error) {
 	rows, err := t.db.Query(query)
 	if err != nil { return DBError(nil, err) }
 	defer rows.Close()
-	t.SpecializedService.DeleteRowAutomation(t.Results)
+	if t.SpecializedService != nil {
+		t.SpecializedService.DeleteRowAutomation(t.Results)
+		t.Results = t.SpecializedService.PostTreatment(t.Results)
+	}
 	return t.Results, nil
-}
-
-func (t *TableRowInfo) Add() (tool.Results, error) { 
-	return nil, errors.New("not implemented...")
-}
-
-func (t *TableRowInfo) Remove() (tool.Results, error) { 
-	return nil, errors.New("not implemented...")
 }
 
 func (t *TableRowInfo) Import(filename string) (tool.Results, error)  {

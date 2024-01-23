@@ -14,7 +14,7 @@ func (s *HierarchyService) VerifyRowAutomation(record tool.Record, create bool) 
 func (s *HierarchyService) DeleteRowAutomation(results tool.Results) { }
 func (s *HierarchyService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *HierarchyService) WriteRowAutomation(record tool.Record) { }
-func (s *HierarchyService) Filter(results tool.Results) tool.Results {
+func (s *HierarchyService) PostTreatment(results tool.Results) tool.Results {
 	res := tool.Results{}
 	for _, record := range results {
 		found := true
