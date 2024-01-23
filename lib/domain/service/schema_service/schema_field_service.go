@@ -1,4 +1,4 @@
-package domain
+package schema_service
 
 import (
 	"fmt"
@@ -6,13 +6,10 @@ import (
 	"sqldb-ws/lib/infrastructure/entities"
 )
 
-type SchemaFields struct {
-	Domain tool.DomainITF
-}
+type SchemaFields struct { tool.AbstractSpecializedService }
 
-func (s *SchemaFields) SetDomain(d tool.DomainITF) { s.Domain = d }
 func (s *SchemaFields) Entity() tool.SpecializedServiceInfo {return entities.DBSchemaField }
-func (s *SchemaFields) VerifyRowWorkflow(record tool.Record, create bool) (tool.Record, bool) {
+func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) {
 	rows := "all"
 	found := false
 	if _, ok := record[entities.RootID(entities.DBSchema.Name)]; !ok {
@@ -39,7 +36,7 @@ func (s *SchemaFields) VerifyRowWorkflow(record tool.Record, create bool) (tool.
 	}
 	return newRecord, err == nil && res != nil && len(res) > 0
 }
-func (s *SchemaFields) WriteRowWorkflow(record tool.Record) { 
+func (s *SchemaFields) WriteRowAutomation(record tool.Record) { 
 	res, err := s.Domain.SafeCall(true, "",
 		tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
 			         tool.RootRowsParam: fmt.Sprintf("%v", record[entities.RootID(entities.DBSchema.Name)]) }, 
@@ -64,7 +61,7 @@ func (s *SchemaFields) WriteRowWorkflow(record tool.Record) {
 		if err != nil { fmt.Printf("error %s", err.Error()) }
 	}
 }
-func (s *SchemaFields) UpdateRowWorkflow(results tool.Results, record tool.Record) {
+func (s *SchemaFields) UpdateRowAutomation(results tool.Results, record tool.Record) {
 	for _, r := range results {
 		res, err := s.Domain.SafeCall(true, "",
 			tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
@@ -91,7 +88,7 @@ func (s *SchemaFields) UpdateRowWorkflow(results tool.Results, record tool.Recor
 		)
 	}
 }
-func (s *SchemaFields) DeleteRowWorkflow(results tool.Results) { 
+func (s *SchemaFields) DeleteRowAutomation(results tool.Results) { 
 	for _, record := range results { 
 		res, err := s.Domain.SafeCall(true, "",
 			tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 

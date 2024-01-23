@@ -1,10 +1,12 @@
 package domain
 
 import (
+	"os"
 	"errors"
 	"strings"
 	"reflect"
 	tool "sqldb-ws/lib"
+	domain "sqldb-ws/lib/domain/service"
 	conn "sqldb-ws/lib/infrastructure/connector"
 	infrastructure "sqldb-ws/lib/infrastructure/service"
 )
@@ -14,8 +16,12 @@ type MainService struct {
 	isGenericService    bool
 }
 func Domain(isGenericService bool) *MainService {
+	if os.Getenv("automate") == "false" { isGenericService=true }
 	return &MainService{ isGenericService: isGenericService }
 }
+
+func (d *MainService) SetIsCustom(isCustom bool) { d.isGenericService = isCustom }
+func (d *MainService) GetUser() string { return d.User }
 
 func (d *MainService) SafeCall(superAdmin bool, user string, params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
 	return d.call(superAdmin, user, params, record, method, true, funcName, args...)
@@ -32,7 +38,7 @@ func (d *MainService) call(superAdmin bool, user string, params tool.Params, rec
 	if tablename, ok := params[tool.RootTableParam]; ok {
 		var specializedService tool.SpecializedService
 		specializedService = &tool.CustomService{}
-		if !d.isGenericService { specializedService = SpecializedService(tablename) }
+		if !d.isGenericService { specializedService = domain.SpecializedService(tablename) }
 		specializedService.SetDomain(d)
 		database := conn.Open()
 		defer database.Conn.Close()
@@ -96,12 +102,3 @@ func (d *MainService) invoke(service infrastructure.InfraServiceItf, funcName st
 	}
 	return res, err
 }
-
-func SpecializedService(name string) tool.SpecializedService {
-	for _, service := range SERVICES {
-		if service.Entity().GetName() == name { return service }
-	}
-	return &tool.CustomService{}
-}
-
-var SERVICES = []tool.SpecializedService{&SchemaService{}, &SchemaFields{}, &TaskAssigneeService{}, &TaskVerifyerService{} }

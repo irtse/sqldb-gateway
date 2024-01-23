@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"encoding/json"
+	tool "sqldb-ws/lib"
 	"github.com/go-playground/validator"
 	"sqldb-ws/lib/infrastructure/entities"
 )
@@ -43,7 +44,7 @@ func (v *DBValidator[T]) ValidateSchema(data map[string]interface{}, t *TableInf
 			nullable := strings.Split(v, "|")
 			required := nullable[len(nullable) - 1]
 			if required == "required" {
-				if _, ok := data[k]; ok == false && k != "id" {
+				if _, ok := data[k]; ok == false && k != tool.SpecialIDParam {
 					return nil, errors.New("Missing a required field " + k)
 				}
 			}

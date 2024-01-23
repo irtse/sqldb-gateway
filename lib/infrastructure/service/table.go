@@ -144,7 +144,7 @@ func (t *TableInfo) Create() (tool.Results, error) {
 	_, err = t.db.Query(query)
 	if err != nil { return DBError(nil, err) }
 	for name, rowtype := range te.Columns {
-		if fmt.Sprintf("%v", name) != "id" {
+		if fmt.Sprintf("%v", name) != tool.SpecialIDParam {
 			tc := t.TableColumn()
 			tc.Name=te.Name
 			col, err := json.Marshal(rowtype)

@@ -43,7 +43,7 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	var result tool.Results
 	columns := ""
 	values := ""
-	if _, ok := t.SpecializedService.VerifyRowWorkflow(t.Record, true); !ok { return nil, errors.New("verification failed.") }
+	if _, ok := t.SpecializedService.VerifyRowAutomation(t.Record, true); !ok { return nil, errors.New("verification failed.") }
 	v := Validator[map[string]interface{}]()
 	_, err = v.ValidateSchema(t.Record, t.Table, false)
 	if err != nil { return nil, errors.New("Not a proper struct to create a row " + err.Error()) }
@@ -76,7 +76,7 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	}
 	result, err = t.db.SelectResults(t.Table.Name)
 	t.Results = result
-	t.SpecializedService.WriteRowWorkflow(t.Record)
+	t.SpecializedService.WriteRowAutomation(t.Record)
 	return t.Results, nil
 }
 
@@ -84,13 +84,13 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 	v := Validator[map[string]interface{}]()
 	_, err := v.ValidateSchema(t.Record, t.Table, true)
 	if err != nil { return nil, errors.New("Not a proper struct to update a row") }
-	r, _ := t.SpecializedService.VerifyRowWorkflow(t.Record, false) 
+	r, _ := t.SpecializedService.VerifyRowAutomation(t.Record, false) 
 	t.Record = r
 	t.db = ToFilter(t.Table.Name, t.Params, t.db)
 	stack := ""
 	filter := ""
 	for key, element := range t.Record {
-		if key != "id" { 
+		if key != tool.SpecialIDParam { 
 			if len(t.PermService.WarningUpdateField) > 0 {
 				found := false
 				for _, w := range t.PermService.WarningUpdateField { 
@@ -128,7 +128,7 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 	
 	res, err := t.db.SelectResults(t.Table.Name)
 	if err != nil { return DBError(nil, err) }
-	t.SpecializedService.UpdateRowWorkflow(res, t.Record) 
+	t.SpecializedService.UpdateRowAutomation(res, t.Record) 
 	t.Results = res
 	return t.Results, nil
 }
@@ -149,7 +149,7 @@ func (t *TableRowInfo) Delete() (tool.Results, error) {
 	rows, err := t.db.Query(query)
 	if err != nil { return DBError(nil, err) }
 	defer rows.Close()
-	t.SpecializedService.DeleteRowWorkflow(t.Results)
+	t.SpecializedService.DeleteRowAutomation(t.Results)
 	return t.Results, nil
 }
 

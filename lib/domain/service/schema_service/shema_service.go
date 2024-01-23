@@ -1,4 +1,4 @@
-package domain
+package schema_service
 
 import (
 	"fmt"
@@ -6,13 +6,10 @@ import (
 	"sqldb-ws/lib/infrastructure/entities"
 )
 
-type SchemaService struct {
-	Domain tool.DomainITF
-}
+type SchemaService struct { tool.AbstractSpecializedService }
 
-func (s *SchemaService) SetDomain(d tool.DomainITF) { s.Domain = d }
 func (s *SchemaService) Entity() tool.SpecializedServiceInfo { return entities.DBSchema }
-func (s *SchemaService) VerifyRowWorkflow(record tool.Record, create bool) (tool.Record, bool) { 
+func (s *SchemaService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
 	res, _ := s.Domain.SafeCall(true, "",
 		tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
 					 tool.RootRowsParam : tool.ReservedParam, 
@@ -22,9 +19,9 @@ func (s *SchemaService) VerifyRowWorkflow(record tool.Record, create bool) (tool
 		"Get")
 	return record, res == nil || len(res) == 0
 }
-func (s *SchemaService) DeleteRowWorkflow(results tool.Results) { 
+func (s *SchemaService) DeleteRowAutomation(results tool.Results) { 
 	for _, record := range results { 
-		s.Domain.(*MainService).isGenericService=true
+		s.Domain.SetIsCustom(true)
 		s.Domain.SafeCall(true, "", 
 		                	tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
 			                                tool.RootRowsParam: tool.ReservedParam,
@@ -35,8 +32,8 @@ func (s *SchemaService) DeleteRowWorkflow(results tool.Results) {
 						)
 	}
 }
-func (s *SchemaService) UpdateRowWorkflow(results tool.Results, record tool.Record) {}
-func (s *SchemaService) WriteRowWorkflow(record tool.Record) { 
+func (s *SchemaService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
+func (s *SchemaService) WriteRowAutomation(record tool.Record) { 
 	s.Domain.SafeCall(true, "",
 		tool.Params{ tool.RootTableParam : record[entities.NAMEATTR].(string), }, 
 		tool.Record{ entities.NAMEATTR : record[entities.NAMEATTR], 

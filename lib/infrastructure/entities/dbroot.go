@@ -108,7 +108,7 @@ var DBEntityUser = TableEntity{
 		 TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, NotNull : false, },
 		 TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, NotNull : false, },
 		 TableColumnEntity{ Name: RootID(DBRole.Name), Type: "integer", ForeignTable: DBRole.Name, NotNull : true, },
-		 TableColumnEntity{ Name: "start_date", Type: "timestamp",  NotNull : false, },
+		 TableColumnEntity{ Name: "start_date", Type: "timestamp",  NotNull : false, Default: "CURRENT_TIMESTAMP"},
 		 TableColumnEntity{ Name: "end_date", Type: "timestamp",  NotNull : false, },
 	},
 }
@@ -124,23 +124,45 @@ var DBRoleAttribution = TableEntity{
 	},
 }
 
+var DBWorkflow = TableEntity{
+	Name : RootName("workflow"),
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  NotNull : true, },
+		TableColumnEntity{ Name: "description", Type: "varchar(255)",  NotNull : false, },
+	},
+}
+var DBWorkflowSchema = TableEntity{
+	Name : RootName("workflow_schema"),
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: RootID(DBWorkflow.Name), Type: "integer", ForeignTable: DBWorkflow.Name, NotNull : true, },
+		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, NotNull : true, },
+		TableColumnEntity{ Name: "order", Type: "integer", NotNull : true, },
+	},
+}
+
 var DBTask = TableEntity{
 	Name : RootName("task"),
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, NotNull : false, },
 		TableColumnEntity{ Name: "opened_by", Type: "integer", ForeignTable: DBUser.Name, NotNull : false, },
 		TableColumnEntity{ Name: "created_by", Type: "integer", ForeignTable: DBUser.Name, NotNull : false, },
-		TableColumnEntity{ Name: "opened_date", Type: "timestamp",  NotNull : true, Default : "CURRENT_TIMESTAMP"},
+		TableColumnEntity{ Name: "opened_date", Type: "timestamp",  NotNull : true, },
 		TableColumnEntity{ Name: "created_date", Type: "timestamp",  NotNull : true, Default : "CURRENT_TIMESTAMP"},
 		TableColumnEntity{ Name: "state", Type: "enum('close', 'open', 'pending')",  NotNull : true, Default: "pending" },
 		TableColumnEntity{ Name: "urgency", Type: "enum('low', 'medium', 'high')",  NotNull : true, Default: "medium" },
 		TableColumnEntity{ Name: "priority", Type: "enum('low', 'medium', 'high')",  NotNull : true, Default: "medium" },
-		TableColumnEntity{ Name: "required", Type: "boolean",  NotNull : true, },
-		TableColumnEntity{ Name: "readonly", Type: "boolean",  NotNull : true, },
-		TableColumnEntity{ Name: "title", Type: "varchar(255)",  NotNull : true, },
+		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  NotNull : true, },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  NotNull : false, },
 		TableColumnEntity{ Name: "header", Type: "varchar(255)",  NotNull : false, },
-		TableColumnEntity{ Name: RootID("task"), Type: "integer", ForeignTable: RootName("task"), NotNull : false, },
+		TableColumnEntity{ Name: RootID(DBWorkflow.Name), Type: "integer", ForeignTable: DBWorkflow.Name, NotNull : false, },
+	},
+}
+
+var DBWorkflowTask = TableEntity{
+	Name : RootName("workflow_schema_task"),
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: RootID(DBWorkflowSchema.Name), Type: "integer", ForeignTable: DBWorkflowSchema.Name, NotNull : true, },
+		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, NotNull : true, },
 	},
 }
 
@@ -151,7 +173,8 @@ var DBTaskAssignee = TableEntity{
 		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, NotNull : true, },
 		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, NotNull : true, },
 		TableColumnEntity{ Name: "state", Type: "enum('open', 'pending', 'complete')",  NotNull : true, Default: "pending"},
- 	},
+		TableColumnEntity{ Name: "hidden", Type: "boolean",  NotNull : true, Default: false, },
+	},
 }
 
 var DBTaskVerifyer = TableEntity{
@@ -160,7 +183,8 @@ var DBTaskVerifyer = TableEntity{
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, NotNull : false, },
 		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, NotNull : true, },
 		TableColumnEntity{ Name: "state", Type: "enum('pending', 'dismiss', 'complete')",  NotNull : true, Default: "pending"},
- 	},
+		TableColumnEntity{ Name: "hidden", Type: "boolean",  NotNull : true, Default: false, },
+	},
 }
 
 var DBTaskWatcher = TableEntity{
@@ -169,23 +193,7 @@ var DBTaskWatcher = TableEntity{
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, NotNull : false, },
 		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, NotNull : true, },
 		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, NotNull : false, },
- 	},
-}
-
-var DBWorkflow = TableEntity{
-	Name : RootName("workflow"),
-	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  NotNull : true, },
-		TableColumnEntity{ Name: "description", Type: "varchar(255)",  NotNull : false, },
-		TableColumnEntity{ Name: "state", Type: "enum('close', 'open', 'waiting')",  NotNull : true, Default: "open" },
-	},
-}
-var DBWorkflowTask = TableEntity{
-	Name : RootName("workflow_task"),
-	Columns : [] TableColumnEntity{
-		TableColumnEntity{ Name: RootID(DBWorkflow.Name), Type: "integer", ForeignTable: DBWorkflow.Name, NotNull : true, },
-		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, NotNull : true, },
-		TableColumnEntity{ Name: "order", Type: "integer", NotNull : true, },
+		TableColumnEntity{ Name: "hidden", Type: "boolean",  NotNull : true, Default: false, },
 	},
 }
 

@@ -1,4 +1,4 @@
-package domain
+package task_service
 
 import (
 	"fmt"
@@ -7,11 +7,10 @@ import (
 	conn "sqldb-ws/lib/infrastructure/connector"
 )
 
-type TaskAssigneeService struct { Domain tool.DomainITF }
+type TaskAssigneeService struct { tool.AbstractSpecializedService }
 
-func (s *TaskAssigneeService) SetDomain(d tool.DomainITF) { s.Domain = d }
 func (s *TaskAssigneeService) Entity() tool.SpecializedServiceInfo { return entities.DBTaskAssignee }
-func (s *TaskAssigneeService) VerifyRowWorkflow(record tool.Record, create bool) (tool.Record, bool) { 
+func (s *TaskAssigneeService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
 	var res tool.Results
 	if taskID, ok := record[entities.RootID(entities.DBTask.Name)]; ok && taskID != nil {
 		if userID, ok := record[entities.RootID(entities.DBUser.Name)]; ok && userID != nil {
@@ -35,19 +34,19 @@ func (s *TaskAssigneeService) VerifyRowWorkflow(record tool.Record, create bool)
 	}
 	return record, res == nil || len(res) == 0
 }
-func (s *TaskAssigneeService) DeleteRowWorkflow(results tool.Results) { }
-func (s *TaskAssigneeService) UpdateRowWorkflow(results tool.Results, record tool.Record) {
-	for _, res := range results { s.WriteRowWorkflow(res) }
+func (s *TaskAssigneeService) DeleteRowAutomation(results tool.Results) { }
+func (s *TaskAssigneeService) UpdateRowAutomation(results tool.Results, record tool.Record) {
+	for _, res := range results { s.WriteRowAutomation(res) }
 }
-func (s *TaskAssigneeService) WriteRowWorkflow(record tool.Record) { 
+func (s *TaskAssigneeService) WriteRowAutomation(record tool.Record) { 
 	paramsNew := tool.Params{ tool.RootTableParam : entities.DBUser.Name, 
 							  tool.RootRowsParam: tool.ReservedParam, }
 	paramsNew[tool.RootSQLFilterParam] += "id IN (SELECT id FROM " + entities.DBHierarchy.Name + " WHERE "
 	paramsNew[tool.RootSQLFilterParam] += entities.RootID(entities.DBUser.Name) + " IN ("
-	paramsNew[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.(*MainService).User) + ")"
+	paramsNew[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")"
 	paramsNew[tool.RootSQLFilterParam] += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
 	paramsNew[tool.RootSQLFilterParam] += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name
-	paramsNew[tool.RootSQLFilterParam] += " WHERE " + entities.RootID(entities.DBUser.Name) + "=" + conn.Quote(s.Domain.(*MainService).User) + "))"
+	paramsNew[tool.RootSQLFilterParam] += " WHERE " + entities.RootID(entities.DBUser.Name) + "=" + conn.Quote(s.Domain.GetUser()) + "))"
 	// TODO CHECK IF HIERARCHY FROM ENTITY OR USER
 	hierarchy, err := s.Domain.SafeCall(true, "", 
 						paramsNew, 
@@ -61,10 +60,10 @@ func (s *TaskAssigneeService) WriteRowWorkflow(record tool.Record) {
 							tool.Params{ 
 								tool.RootTableParam : entities.DBTaskWatcher.Name,
 								tool.RootRowsParam : tool.ReservedParam,
-								entities.RootID(entities.DBUser.Name) : fmt.Sprintf("%d", upper["id"].(int64)),
+								entities.RootID(entities.DBUser.Name) : fmt.Sprintf("%d", upper[tool.SpecialIDParam].(int64)),
 								entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%d", record[entities.RootID(entities.DBTask.Name)].(int64)),
 							},
-							tool.Record{ entities.RootID(entities.DBUser.Name) : upper["id"],
+							tool.Record{ entities.RootID(entities.DBUser.Name) : upper[tool.SpecialIDParam],
 										 entities.RootID(entities.DBTask.Name) : record[entities.RootID(entities.DBTask.Name)].(int64),
 									   },
 								  tool.CREATE,

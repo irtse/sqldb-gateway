@@ -1,4 +1,4 @@
-package domain
+package task_service
 
 import (
 	"fmt"
@@ -6,11 +6,10 @@ import (
 	"sqldb-ws/lib/infrastructure/entities"
 )
 
-type TaskVerifyerService struct { Domain tool.DomainITF }
+type TaskVerifyerService struct { tool.AbstractSpecializedService }
 
-func (s *TaskVerifyerService) SetDomain(d tool.DomainITF) { s.Domain = d }
 func (s *TaskVerifyerService) Entity() tool.SpecializedServiceInfo { return entities.DBTaskVerifyer }
-func (s *TaskVerifyerService) VerifyRowWorkflow(record tool.Record, create bool) (tool.Record, bool) { 
+func (s *TaskVerifyerService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
 	var res tool.Results
 	if taskID, ok := record[entities.RootID(entities.DBTask.Name)]; ok && taskID != nil {
 		if userID, ok := record[entities.RootID(entities.DBUser.Name)]; ok && userID != nil {
@@ -34,11 +33,17 @@ func (s *TaskVerifyerService) VerifyRowWorkflow(record tool.Record, create bool)
 	}
 	return record, res == nil || len(res) == 0
 }
-func (s *TaskVerifyerService) DeleteRowWorkflow(results tool.Results) { }
-func (s *TaskVerifyerService) UpdateRowWorkflow(results tool.Results, record tool.Record) {
+func (s *TaskVerifyerService) DeleteRowAutomation(results tool.Results) { }
+func (s *TaskVerifyerService) UpdateRowAutomation(results tool.Results, record tool.Record) {
 	if state, ok := record["state"]; ok && state != "complete" { return }
 	for _, rec := range results {
 		if id, ok2 := rec[entities.RootID(entities.DBTask.Name)]; ok2 {
+			if state, ok3 := rec["state"]; ok3 && state == "dismiss" {
+				params := tool.Params{ tool.RootTableParam : entities.DBTaskAssignee.Name, 
+					                   tool.RootRowsParam: tool.ReservedParam,
+									   entities.RootID(entities.DBTask.Name): fmt.Sprintf("%d", id.(int64)), }
+				s.Domain.SafeCall(true, "", params, tool.Record{ "state": "pending" }, tool.UPDATE, "CreateOrUpdate", )
+			}
 			paramsNew := tool.Params{ tool.RootTableParam : entities.DBTaskVerifyer.Name, 
 				                      tool.RootRowsParam: tool.ReservedParam, }
 			paramsNew[entities.RootID(entities.DBTask.Name)] = fmt.Sprintf("%d", id.(int64))
@@ -67,11 +72,12 @@ func (s *TaskVerifyerService) UpdateRowWorkflow(results tool.Results, record too
 								tool.RootTableParam : entities.DBTask.Name,
 								tool.RootRowsParam : tool.ReservedParam,
 							},
-							tool.Record{ "id" : id, "state" : "close" },
+							tool.Record{ tool.SpecialIDParam : id, "state" : "close" },
 							tool.UPDATE,
 							"CreateOrUpdate",
 						)
 		}
+		// TODO IF VERIFYER DISMISS THE TASK 
 	}
 }
-func (s *TaskVerifyerService) WriteRowWorkflow(record tool.Record) {}
+func (s *TaskVerifyerService) WriteRowAutomation(record tool.Record) {}
