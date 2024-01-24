@@ -19,9 +19,9 @@ var listTablesCmd = map[string]string{
 
 // Table is a table structure description
 type TableInfo struct {
-	AssColumns map[string]string    `json:"columns"`
-	Columns    []TableColumnInfo    `json:"-"`
-	Rows       []TableRowInfo       `json:"-"`
+	AssColumns map[string]entities.TableColumnEntity    `json:"columns"`
+	Columns    []TableColumnInfo    		 			`json:"-"`
+	Rows       []TableRowInfo       		 			`json:"-"`
 	InfraService
 }
 func (t *TableInfo) TableRow(specializedService tool.SpecializedService, adminView bool) *TableRowInfo {
@@ -83,7 +83,7 @@ func (t *TableInfo) Get() (tool.Results, error) {
 	for _, s := range schema {
 		rec := tool.Record{}
 		rec[entities.NAMEATTR] = s.Name
-		rec["columns"] = s.AssColumns
+		rec[tool.RootColumnsParam] = s.AssColumns
 		res = append(res, rec)
 	}
 	t.Results = res
@@ -109,25 +109,28 @@ func (t *TableInfo) schema(name string) ([]TableInfo, error) {
 func (t *TableInfo) get() (*TableInfo, error) {
 	cols, err := t.db.QueryAssociativeArray(t.querySchemaCmd(t.db.Driver, t.Name))
 	if err != nil { return nil, err }
-	t.AssColumns = make(map[string]string)
+	t.AssColumns = map[string]entities.TableColumnEntity{}
 	for _, row := range cols {
-		var name, null, rowtype, comment string
-		for key, element := range row {
-			if key == entities.NAMEATTR { name = fmt.Sprintf("%s", element) }
-			if key == "null" { 
-				null = fmt.Sprintf("%s", element) 
-				if null == "NO" { null="required"
-				} else { null="nullable" }
-			}
-			if key == entities.TYPEATTR { rowtype = fmt.Sprintf("%s", element) }
-			if key == "comment" { comment = fmt.Sprintf("%s", element) }
-		}
-		t.AssColumns[name] = rowtype
-		if comment != "<nil>" && strings.TrimSpace(comment) != "" {
-			t.AssColumns[name] = t.AssColumns[name] + "|" + comment + "|" + null
-		}
+		var tableCol entities.TableColumnEntity
+		b, err := json.Marshal(row)
+		if err != nil { continue }
+		err = json.Unmarshal(b, &tableCol)
+		if err != nil { continue }
+		t.AssColumns[tableCol.Name] = tableCol
 	}
 	return t, nil
+}
+
+type TableColumnEntity struct {
+	Name string         `json:"name" validate:"required"`
+	Type string         `json:"type"`
+	Index string        `json:"index"`
+	Default interface{} `json:"default_value"`
+	ForeignTable string `json:"foreign_table"`
+	Constraint string   `json:"constraint"`
+	NotNull bool        `json:"not_null"`
+	Comment string      `json:"comment"`
+	NewName string      `json:"new_name"`
 }
 
 func (t *TableInfo) Verify(name string) (string, bool) {
@@ -143,7 +146,7 @@ func (t *TableInfo) Create() (tool.Results, error) {
 		"Not a proper struct to create a table - expect <TableEntity> Scheme " + err.Error()) }
 	query := "CREATE TABLE " + te.Name + " ( id SERIAL PRIMARY KEY,"
 	query = query[:len(query)-1] + " )"
-	_, err = t.db.Query(query)
+	err = t.db.Query(query)
 	if err != nil { return DBError(nil, err) }
 	for name, rowtype := range te.Columns {
 		if fmt.Sprintf("%v", name) != tool.SpecialIDParam {
@@ -157,7 +160,11 @@ func (t *TableInfo) Create() (tool.Results, error) {
 	}
 	t.Name=te.Name
 	_, err = t.Get()
-	if t.PermService != nil && entities.IsRootDB(te.Name) {
+	auth := true
+	for _, exception := range entities.PERMISSIONEXCEPTION {
+		if t.Name == exception.Name { auth = false; break }
+	}
+	if t.PermService != nil && auth {
 		t.PermService.SpecializedFill(t.Params, 
 			tool.Record{ "name" : te.Name, 
 						 "results" : t.Results, 
@@ -170,19 +177,6 @@ func (t *TableInfo) Create() (tool.Results, error) {
 
 func (t *TableInfo) Update() (tool.Results, error) {
 	return nil, errors.New("not implemented for integrity reason")
-	/*if strings.Contains(t.Name, "db") { log.Error().Msg("can't rename protected root db.") }
-	v := Validator[entities.TableUpdateEntity]()
-	v.data = entities.TableUpdateEntity{}
-	tcue, err := v.ValidateStruct(t.Record)
-	if err != nil { return nil, errors.New(
-		"Not a proper struct to update a table - expect <entities.TableUpdateEntity> Scheme " + err.Error()) }
-	query := "ALTER TABLE IF EXISTS " + t.Name + " RENAME TO " + tcue.Name + ";"
-	rows, err := t.db.Query(query)
-	if err != nil { return DBError(nil, err) }
-	defer rows.Close()
-    t.Results = append(t.Results, map[string]interface{}{ "name" : tcue.Name, "old" : t.Name })
-	err = t.PermService.Manage(Info{ Name : t.Name, Results : t.Results }, "", tool.UPDATE)
-	return t.Results, err*/
 }
 
 func (t *TableInfo) CreateOrUpdate() (tool.Results, error) { 
@@ -191,16 +185,23 @@ func (t *TableInfo) CreateOrUpdate() (tool.Results, error) {
 }
 
 func (t *TableInfo) Delete() (tool.Results, error) {
+	var err error
 	if entities.IsRootDB(t.Name) || t.Name == tool.ReservedParam { log.Error().Msg("can't delete protected root db.") }
-	if _, err := t.db.Query("DROP TABLE " + t.Name); err != nil { return DBError(nil, err) }
-	if _, err := t.db.Query("DROP SEQUENCE IF EXISTS sq_" + t.Name); err != nil { return DBError(nil, err) }
+	if err = t.db.Query("DROP TABLE " + t.Name); err != nil { return DBError(nil, err) }
+	if err = t.db.Query("DROP SEQUENCE IF EXISTS sq_" + t.Name); err != nil { return DBError(nil, err) }
 	t.Results = append(t.Results, tool.Record{ entities.NAMEATTR : t.Name })
-	t.PermService.SpecializedFill(t.Params, 
-		tool.Record{ "name" : t.Name, 
-					 "results" : t.Results, 
-					 "info" : "" }, 
-		t.Method)
-	_, err := t.PermService.Delete()
+	auth := true
+	for _, exception := range entities.PERMISSIONEXCEPTION {
+		if t.Name == exception.Name { auth = false; break }
+	}
+	if auth && t.PermService != nil {
+		t.PermService.SpecializedFill(t.Params, 
+			tool.Record{ "name" : t.Name, 
+						 "results" : t.Results, 
+						 "info" : "" }, 
+			t.Method)
+		_, err = t.PermService.Delete()
+	}
 	return t.Results, err
 }
 

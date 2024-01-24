@@ -37,9 +37,9 @@ func (t *TableColumnInfo) get(name string) (tool.Results, error) {
 	res := tool.Results{}
 	rec := tool.Record{}
 	if len(scheme) > 0 { 
-		for k, v := range scheme[0]["columns"].(map[string]string) {
-			if k == name { rec[k] = v }
-		}
+		b, err := json.Marshal(scheme[0])
+		if err != nil { return res, err  }
+		err = json.Unmarshal(b, &rec)
 		res = append(res, rec)
 	}
 	return res, nil
@@ -52,7 +52,13 @@ func (t *TableColumnInfo) Verify(name string) (string, bool) {
 	if err != nil { return "", false }
 	typ := ""
 	if len(scheme) > 0 { 
-		typ = strings.Split(scheme[0]["columns"].(map[string]string)[name], "|")[0] 
+		var info TableInfo
+		b, err := json.Marshal(scheme[0])
+		if err != nil { return typ, typ != ""  }
+		err = json.Unmarshal(b, &info)
+		if err != nil { return typ, typ != "" }
+		col := info.AssColumns[name]
+		typ = col.Type
 	}
 	return typ, typ != "" 
 }
@@ -61,16 +67,28 @@ func (t *TableColumnInfo) Create() (tool.Results, error) {
 	v.data = entities.TableColumnEntity{}
 	tcce, err := v.ValidateStruct(t.Record)
 	if err != nil { return nil, errors.New("Not a proper struct to create a column - expect <entities.TableColumnEntity> Scheme " + err.Error()) }
-	query := "ALTER TABLE " + t.Name + " ADD " + tcce.Name + " " + tcce.Type
+	if strings.Contains(strings.ToLower(tcce.Type), "enum") && t.db.Driver == conn.PostgresDriver {
+		query := "CREATE TYPE " + t.Name + "_" + tcce.Name  + " AS " + tcce.Type
+		err := t.db.Query(query)
+		if err != nil { return DBError(nil, err) }
+	}
+	query := ""
+	if strings.Contains(strings.ToLower(tcce.Type), "enum") && t.db.Driver == conn.PostgresDriver {
+		query = "ALTER TABLE " + t.Name + " ADD " + tcce.Name + " " + t.Name + "_" + tcce.Name
+	} else { query = "ALTER TABLE " + t.Name + " ADD " + tcce.Name + " " + tcce.Type }
+	
 	if t.db.Driver == conn.MySQLDriver {
 		if strings.TrimSpace(tcce.Comment) != "" { query += " COMMENT " + pq.QuoteLiteral(tcce.Comment) }
 	}
-	rows, err := t.db.Query(query)
+	err = t.db.Query(query)
 	if err != nil { return DBError(nil, err) }
-	defer rows.Close()
 	err = t.update(tcce)
 	if err != nil { return DBError(nil, err) }
-	if len(t.Name) > 1 {
+	auth := true
+	for _, exception := range entities.PERMISSIONEXCEPTION {
+		if t.Name == exception.Name { auth = false; break }
+	}
+	if len(t.Name) > 1 && t.PermService != nil && auth { // no permissions if in PERMISSIONEXCEPTION TODO
 		t.PermService.SpecializedFill(t.Params, 
 			                          tool.Record{ "name" : t.Name, 
 									               "results" : tool.Results{t.Record}, 
@@ -91,13 +109,16 @@ func (t *TableColumnInfo) Update() (tool.Results, error) {
 	if strings.TrimSpace(tcue.NewName) != "" {
 		if strings.Contains(t.Name, "db") { return nil, errors.New("can't rename protected root db columns.") }
 		query := "ALTER TABLE " + t.Name + " RENAME COLUMN " + tcue.Name + " TO " + tcue.NewName + ";"
-		rows, err := t.db.Query(query)
+		err := t.db.Query(query)
 		if err != nil { return DBError(nil, err) }
-		defer rows.Close()
 	}
 	err = t.update(tcue)
 	if err != nil { return DBError(nil, err) }
-	if len(t.Name) > 1 {
+	auth := true
+	for _, exception := range entities.PERMISSIONEXCEPTION {
+		if t.Name == exception.Name { auth = false; break }
+	}
+	if len(t.Name) > 1 && t.PermService != nil && auth {
 		t.PermService.SpecializedFill(t.Params, 
 									  tool.Record{ "name" : t.Name, 
 												   "results" : tool.Results{t.Record}, 
@@ -115,26 +136,26 @@ func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
 		query := "ALTER TABLE " + t.Name + " DROP CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + ";"
 		t.db.Query(query)
 		query = "ALTER TABLE " + t.Name + "  ADD CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + " " + strings.ToUpper(tcce.Constraint) + "(" + tcce.Name + ");"
-		_, err := t.db.Query(query)
+		err := t.db.Query(query)
 		if err != nil { return err }
 	}
 	if strings.TrimSpace(tcce.Constraint) != "" {
 		query := "ALTER TABLE " + t.Name + " DROP CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + ";"
 		t.db.Query(query)
 		query = "ALTER TABLE " + t.Name + " ADD CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + " " + strings.ToUpper(tcce.Constraint) + "(" + tcce.Name + ");"
-		_, err := t.db.Query(query)
+		err := t.db.Query(query)
 		if err != nil { return err }
 	}
 	if strings.TrimSpace(tcce.ForeignTable) != "" {
 		query := "ALTER TABLE " + t.Name + " DROP CONSTRAINT fk_" + tcce.Name + ";"
 		t.db.Query(query)
 		query = "ALTER TABLE " + t.Name + " ADD CONSTRAINT  fk_" + tcce.Name +  " FOREIGN KEY(" + tcce.Name  + ") REFERENCES " + tcce.ForeignTable + "(id);"
-        _, err := t.db.Query(query)
+        err := t.db.Query(query)
 		if err != nil { return err }
 	}
 	if tcce.Default != "" {
 		query := "ALTER TABLE " + t.Name + " ALTER " + tcce.Name  + " SET DEFAULT " + conn.FormatForSQL(tcce.Type, tcce.Default) + ";"
-        _, err := t.db.Query(query)
+        err := t.db.Query(query)
 		if err != nil { return err } // then iterate on field to update value if null
 		params := tool.Params{ tool.RootSQLFilterParam : tcce.Name + " IS NULL" }
 		record := tool.Record{ tcce.Name : tcce.Default }
@@ -143,13 +164,13 @@ func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
 	}
 	if tcce.NotNull {
 		query := "ALTER TABLE " + t.Name + "  ALTER COLUMN " + tcce.Name + " SET NOT NULL;"
-        _, err := t.db.Query(query)
+        err := t.db.Query(query)
 		if err != nil { return err }
 	}
 	if t.db.Driver == conn.PostgresDriver { // PG COMMENT
 		if strings.TrimSpace(tcce.Comment) != "" {
 			query := "COMMENT ON COLUMN " + t.Name + "." + tcce.Name + " IS '" + tcce.Comment + "'"
-			_, err := t.db.Query(query)
+			err := t.db.Query(query)
 			if err != nil { return err }
 		}
 	}
@@ -168,16 +189,21 @@ func (t *TableColumnInfo) Delete() (tool.Results, error) {
 	if strings.Contains(t.Name, "db") { log.Error().Msg("can't delete protected root db columns.") }
 	for _, col := range strings.Split(t.Params[tool.RootColumnsParam], ",") {
 		query := "ALTER TABLE " + t.Name + " DROP " + col
-		rows, err := t.db.Query(query)
+		err := t.db.Query(query)
 		if err != nil { return DBError(nil, err) }
-		defer rows.Close()
 		t.Results = append(t.Results, tool.Record{ entities.NAMEATTR : col })
-		t.PermService.SpecializedFill(t.Params, 
-			tool.Record{ "name" : t.Name, 
-						 "results" : t.Results, 
-						 "info" : col }, 
-			t.Method)
-		t.PermService.Delete()
+		auth:=true
+		for _, exception := range entities.PERMISSIONEXCEPTION {
+			if t.Name == exception.Name { auth = false; break }
+		}
+		if auth && t.PermService != nil {
+			t.PermService.SpecializedFill(t.Params, 
+				tool.Record{ "name" : t.Name, 
+							 "results" : t.Results, 
+							 "info" : col }, 
+				t.Method)
+			t.PermService.Delete()
+		}	
 	}
 	return t.Results, nil
 }

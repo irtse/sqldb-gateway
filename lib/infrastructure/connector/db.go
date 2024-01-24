@@ -76,21 +76,23 @@ func (db *Db) QueryRow(query string) (int64, error) {
 	return int64(id), err
 }
 
-func (db *Db) Query(query string) (*sql.Rows, error) {
+func (db *Db) Query(query string) (error) {
 	if db.LogQueries { log.Info().Msg(query) }
-	//fmt.Printf("QUERY : %s\n", query)
+	fmt.Printf("QUERY : %s\n", query)
 	rows, err := db.Conn.Query(query)
 	if err != nil {
-		log.Error().Msg(err.Error())
-		fmt.Printf("error : %s\n", query)
+		// log.Error().Msg("" + err.Error())
+		fmt.Printf("\nerror : %s\n", query)
 		log.Error().Msg(query)
-		return nil, err
+		return err
 	}
-	return rows, nil
+	err = rows.Close()
+	return err
 }
 
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
-	rows, err := db.Query(query)
+	fmt.Printf("QUERY ASSO : %s\n", query)
+	rows, err := db.Conn.Query(query)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	// get rows
@@ -200,7 +202,10 @@ func FormatForSQL(datatype string, value interface{}) string {
 	strval := fmt.Sprintf("%v", value)
 	if len(strval) == 0 { return "NULL" }
 	for _, typ := range SpecialTypes {
-		if strings.Contains(datatype, typ) { return "'" + fmt.Sprint(value) + "'" }
+		if strings.Contains(datatype, typ) { 
+			if value == "CURRENT_TIMESTAMP" { return fmt.Sprint(value) 
+			} else { return "'" + fmt.Sprint(value) + "'" }
+		}
 	}
 	return fmt.Sprint(strval)
 }

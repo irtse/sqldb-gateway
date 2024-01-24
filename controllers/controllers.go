@@ -39,7 +39,7 @@ func (t *AbstractController) Call(auth bool, method tool.Method, funcName string
 		user, superAdmin, err = t.authorized()
 		if err != nil { t.response(tool.Results{}, err); return }
 	}
-	response, err := domain.Domain(false).SafeCall(superAdmin, user, t.params(), t.body(true), method, funcName, args...)
+	response, err := domain.Domain(superAdmin, user, false).Call(t.params(), t.body(true), method, true, funcName, args...)
 	t.response(response, err)
 }
 
@@ -135,11 +135,11 @@ func (t *AbstractController) session(userId string, superAdmin bool, delete bool
 			params := t.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name, 
 				                                      tool.RootRowsParam : tool.ReservedParam, 
 													  "login" : userId })
-			domain.Domain(false).UnSafeCall(
-				userId,
+			domain.Domain(false, userId, false).Call(
 				params, 
 				tool.Record{ "token" : nil }, 
 				tool.UPDATE, 
+				false,
 				"CreateOrUpdate",
 			)
 		}
@@ -155,11 +155,11 @@ func (t *AbstractController) session(userId string, superAdmin bool, delete bool
 		params := t.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name,
 			                                      tool.RootRowsParam : tool.ReservedParam, 
 												  "login" : userId })
-		domain.Domain(false).UnSafeCall(
-			userId,
+		domain.Domain(false, userId, false).Call(
 			params, 
 			tool.Record{ "token" : token }, 
 			tool.UPDATE, 
+			false,
 			"CreateOrUpdate",
 		)
 	}

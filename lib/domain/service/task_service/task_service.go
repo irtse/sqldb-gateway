@@ -2,9 +2,9 @@ package task_service
 
 import (
 	"fmt"
-	"errors"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/infrastructure/entities"
+	schema "sqldb-ws/lib/domain/service/schema_service" 
 )
 
 type TaskService struct { tool.AbstractSpecializedService }
@@ -14,9 +14,9 @@ func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool
 	// TODO if "form" presence THEN -> update row and kick form out of record
 	if form, ok := record["form"]; ok {
 		rec := tool.Record{}
-		for k, v := range form.(map[string]tool.Record) { rec[k]=v["value"] }
+		for k, v := range form.(map[string]tool.Record) { rec[k]=v }
 		delete(record, "form")
-		schemas, err := s.schema(record)
+		schemas, err := schema.Schema(s.Domain, record)
 		if err != nil && len(schemas) == 0 { return record, false }
 		id := int64(-1)
 		if idFromRec, ok := rec[tool.SpecialIDParam]; ok { id = idFromRec.(int64) }
@@ -24,19 +24,19 @@ func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool
 		if id == -1 { return record, false }
 		params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
 			                   tool.RootRowsParam : fmt.Sprintf("%d", id), } // empty record
-		s.Domain.SafeCall(true, "", params, rec, tool.UPDATE, "CreateOrUpdate")
+		s.Domain.SuperCall( params, rec, tool.UPDATE, "CreateOrUpdate")
 	}
 	if _, ok := record[entities.RootID("dest_table")]; ok && !create { // TODO if not superadmin PROTECTED
 		delete(record, entities.RootID("dest_table"))
 	}
-	if state, ok := record["state"]; ok && (state == "open" || state == "close" || create) { 
+	if state, ok := record["state"]; ok && (state == "in progress" || create) { 
 		params := tool.Params{ tool.RootTableParam : entities.DBUser.Name, 
 			                   tool.RootRowsParam : tool.ReservedParam, 
 			                   "login" : s.Domain.GetUser(),
 		}
-		user, err := s.Domain.SafeCall(true, "", params, tool.Record{}, tool.SELECT, "Get")
+		user, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 		if err != nil || len(user) == 0 { return record, false }
-		if state == "open" { 
+		if user[0]["state"] != "in progress"  { 
 			record["opened_by"]=user[0][tool.SpecialIDParam] 
 			record["opened_date"]="CURRENT_TIMESTAMP"
 		}
@@ -61,27 +61,27 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 										"%d", res[entities.RootID(entities.DBSchema.Name)].(int64)),
 				                   entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%d", workflowID.(int64)),
 			                     }
-			schemas, err := s.Domain.SafeCall(true, "", params, tool.Record{}, tool.SELECT, "Get")
+			schemas, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 			if err != nil || len(schemas) == 0 { continue }
-			if order, ok3 := schemas[0]["order"]; ok3 {
+			if order, ok3 := schemas[0]["index"]; ok3 {
 				params := tool.Params{ tool.RootTableParam : entities.DBWorkflowSchema.Name, 
 					tool.RootRowsParam : tool.ReservedParam, 
 					entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%d", workflowID.(int64)),
-					"order": fmt.Sprintf("%d", order.(int64) + 1,),
+					"index": fmt.Sprintf("%d", order.(int64) + 1,),
 				}
-				uppers, err := s.Domain.SafeCall(true, "", params, tool.Record{}, tool.SELECT, "Get")
+				uppers, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 				if err != nil || len(uppers) == 0 { continue }
 				params = tool.Params{ tool.RootTableParam : entities.DBWorkflowTask.Name, 
 					                   tool.RootRowsParam : tool.ReservedParam, 
 									   entities.RootID(entities.DBWorkflowSchema.Name) : fmt.Sprintf(
 										"%d", uppers[0][tool.ReservedParam].(int64)),
 									 }
-				wbTasks, err := s.Domain.SafeCall(true, "", params, tool.Record{}, tool.SELECT, "Get")
+				wbTasks, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 				if err != nil { continue }
 				for _, wbTask := range wbTasks {
 					dbs := []string{entities.DBTaskAssignee.Name, entities.DBTaskVerifyer.Name,entities.DBTaskWatcher.Name}
 					for _, dbName := range dbs {
-						s.Domain.SafeCall(true, "", 
+						s.Domain.SuperCall( 
 					                  tool.Params{ 
 										tool.RootTableParam : dbName, 
 					                    tool.RootRowsParam : tool.ReservedParam,
@@ -97,63 +97,54 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 }
 func (s *TaskService) WriteRowAutomation(record tool.Record) {
 	// task creation automation.
-	schemas, err := s.schema(record)
+	schemas, err := schema.Schema(s.Domain, record)
 	if err != nil && len(schemas) == 0 { return }
 	params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
 			              tool.RootRowsParam : tool.ReservedParam,
 	} // empty record
-	created, err := s.Domain.SafeCall(true, "", params, tool.Record{}, tool.CREATE, "CreateOrUpdate")
+	created, err := s.Domain.SuperCall( params, tool.Record{}, tool.CREATE, "CreateOrUpdate")
 	if err != nil && len(created) == 0 { return }
 	newRec := tool.Record{ entities.RootID("dest_table"): created[0][tool.SpecialIDParam] }
 	params = tool.Params{ tool.RootTableParam : s.Entity().GetName(), 
 							  tool.RootRowsParam : tool.ReservedParam,
 						} 
-	s.Domain.SafeCall(true, "", params, newRec, tool.UPDATE, "CreateOrUpdate")
+	s.Domain.SuperCall( params, newRec, tool.UPDATE, "CreateOrUpdate")
 }
 
 func (s *TaskService) PostTreatment(results tool.Results) tool.Results { 
+	res := tool.Results{}
 	for _, record := range results {
 		if dest_id, ok:= record[entities.RootID("dest_table")]; !ok || dest_id == nil { continue }
-		schemas, err := s.schema(record)
-		if err != nil && len(schemas) == 0 { return results }
+		schemas, err := schema.Schema(s.Domain, record)
+		if err != nil && len(schemas) == 0 { continue }
 		params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
 			                   tool.RootRowsParam : fmt.Sprintf("%d", record[entities.RootID("dest_table")].(int64)),}
-		rows, err := s.Domain.SafeCall(true, "", params, tool.Record{}, tool.SELECT, "Get")
-		if err != nil && len(rows) == 0 { return results }
-		record["form"] = map[string]tool.Record{}
-		form := map[string]tool.Record{}
+		rows, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
+		if err != nil && len(rows) == 0 { continue }
+		scheme := map[string]tool.Record{}
+		form := map[string]interface{}{}
 		params = tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
-			tool.RootRowsParam : tool.ReservedParam, 
-			entities.RootID(entities.DBSchema.Name): fmt.Sprintf("%d", schemas[0][tool.SpecialIDParam].(int64)),
-		}
-		fields, err := s.Domain.SafeCall(true, "", params, tool.Record{}, tool.SELECT, "Get")
+			                   tool.RootRowsParam : tool.ReservedParam, 
+			                   entities.RootID(entities.DBSchema.Name): fmt.Sprintf("%d", schemas[0][tool.SpecialIDParam].(int64)),}
+		fields, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 		for _, row := range rows {
 			for k, v := range row {
 				if k == tool.SpecialIDParam { continue }
 				for _, field := range fields {
 					if field[entities.NAMEATTR].(string) == k && !field["hidden"].(bool) {
-						form[k]=field
-						form[k]["value"]=v
+						scheme[k]=field
+						form[k]=v
 					}
 				}
 			}
 		}
 		record["form"] = form
+		record["schemas"] = scheme
+		res = append(res, record)
 	}
-	return results 
+	return res 
 }
 
 func (s *TaskService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
 	return tool.ViewDefinition(s.Domain, tableName, params)
 }	
-
-func (s *TaskService) schema(record tool.Record) (tool.Results, error) {
-	if schemaID, ok := record[entities.RootID(entities.DBSchema.Name)]; ok {
-		params := tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-			tool.RootRowsParam : tool.ReservedParam, 
-			tool.SpecialIDParam : fmt.Sprintf("%d", schemaID.(int64)),
-		}
-		return s.Domain.SafeCall(true, "", params, tool.Record{}, tool.SELECT, "Get")
-	}
-	return nil, errors.New("no schemaID refered...")
-}

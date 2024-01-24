@@ -31,16 +31,16 @@ var DBSchemaField = TableEntity{
 		 TableColumnEntity{ Name: "readonly", Type: "boolean", NotNull : true, },
 		 TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)", Constraint: "unique", NotNull : true, },
 		 TableColumnEntity{ Name: TYPEATTR, Type: "varchar(255)", NotNull : true, },
-		 TableColumnEntity{ Name: "order", Type: "varchar(255)", NotNull : false, },
+		 TableColumnEntity{ Name: "index", Type: "integer", NotNull : false, Default: 1 },
 		 TableColumnEntity{ Name: "label", Type: "varchar(255)", NotNull : true, },
 		 TableColumnEntity{ Name: "placeholder", Type: "varchar(255)", NotNull : false, },
 		 TableColumnEntity{ Name: "default_value", Type: "varchar(255)", NotNull : false, },
 		 TableColumnEntity{ Name: "description", Type: "varchar(255)", NotNull : false, },
         // link define a select.
-		 TableColumnEntity{ Name: "link_anchor", Type: "varchar(255)", NotNull : false, },
-		 TableColumnEntity{ Name: "link_order", Type: "varchar(255)", NotNull : false, },
-		 TableColumnEntity{ Name: "link_columns", Type: "varchar(255)", NotNull : false, },
-		 TableColumnEntity{ Name: "link_restriction", Type: "varchar(255)", NotNull : false, },
+		 TableColumnEntity{ Name: "link_sql_anchor", Type: "varchar(255)", NotNull : false, },
+		 TableColumnEntity{ Name: "link_sql_order", Type: "varchar(255)", NotNull : false, },
+		 TableColumnEntity{ Name: "link_sql_columns", Type: "varchar(255)", NotNull : false, },
+		 TableColumnEntity{ Name: "link_sql_restriction", Type: "varchar(255)", NotNull : false, },
 	},
 }
 
@@ -77,7 +77,7 @@ var DBEntity = TableEntity{
 	Name : RootName("entity"),
 	Columns : []TableColumnEntity{
 		 TableColumnEntity{ Name: TYPEATTR, Type: "varchar(255)", NotNull : false, },
-		 TableColumnEntity{ Name: "parent_id", Type: "varchar(255)", ForeignTable: RootName("entity"), NotNull : false, },
+		 TableColumnEntity{ Name: "parent_id", Type: "varchar(255)", NotNull : false, },
 		 TableColumnEntity{ Name: "description", Type: "text", NotNull : false, },
 	},
 }
@@ -137,7 +137,7 @@ var DBWorkflowSchema = TableEntity{
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: RootID(DBWorkflow.Name), Type: "integer", ForeignTable: DBWorkflow.Name, NotNull : true, },
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, NotNull : true, },
-		TableColumnEntity{ Name: "order", Type: "integer", NotNull : true, },
+		TableColumnEntity{ Name: "index", Type: "integer", NotNull : true, },
 	},
 }
 
@@ -149,7 +149,7 @@ var DBTask = TableEntity{
 		TableColumnEntity{ Name: "created_by", Type: "integer", ForeignTable: DBUser.Name, NotNull : false, },
 		TableColumnEntity{ Name: "opened_date", Type: "timestamp",  NotNull : true, },
 		TableColumnEntity{ Name: "created_date", Type: "timestamp",  NotNull : true, Default : "CURRENT_TIMESTAMP"},
-		TableColumnEntity{ Name: "state", Type: "enum('close', 'open', 'pending')",  NotNull : true, Default: "pending" },
+		TableColumnEntity{ Name: "state", Type: "enum('completed', 'in progress', 'pending', 'close')",  NotNull : true, Default: "pending" },
 		TableColumnEntity{ Name: "urgency", Type: "enum('low', 'medium', 'high')",  NotNull : true, Default: "medium" },
 		TableColumnEntity{ Name: "priority", Type: "enum('low', 'medium', 'high')",  NotNull : true, Default: "medium" },
 		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  NotNull : true, },
@@ -174,7 +174,7 @@ var DBTaskAssignee = TableEntity{
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, NotNull : true, },
 		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, NotNull : true, },
 		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, NotNull : true, },
-		TableColumnEntity{ Name: "state", Type: "enum('open', 'pending', 'complete')",  NotNull : true, Default: "pending"},
+		TableColumnEntity{ Name: "state", Type: "enum('in progress', 'pending', 'completed')",  NotNull : true, Default: "pending"},
 		TableColumnEntity{ Name: "hidden", Type: "boolean",  NotNull : true, Default: false, },
 	},
 }
@@ -202,16 +202,48 @@ var DBTaskWatcher = TableEntity{
 var DBView = TableEntity{
 	Name : RootName("view"),
 	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: "title", Type: "string",  NotNull : true, },
-		TableColumnEntity{ Name: "description", Type: "string",  NotNull : false, },
+		TableColumnEntity{ Name: "name", Type: "varchar(255)",  NotNull : true, },
+		TableColumnEntity{ Name: "category", Type: "varchar(100)",  NotNull : false, },
+		TableColumnEntity{ Name: "description", Type: "varchar(255)",  NotNull : false, },
 		TableColumnEntity{ Name: "readonly", Type: "boolean",  NotNull : true, Default: false, },
+		TableColumnEntity{ Name: "is_empty", Type: "boolean", NotNull : true, Default: false },
+		TableColumnEntity{ Name: "index", Type: "integer", NotNull : true, Default: 1 },
+		TableColumnEntity{ Name: "sql_order", Type: "varchar(255)", NotNull : false, },
+		TableColumnEntity{ Name: "sql_view", Type: "varchar(255)", NotNull : false, },
+		TableColumnEntity{ Name: "sql_restriction", Type: "varchar(255)", NotNull : false, },
 		TableColumnEntity{ Name: "through_perms", Type: "integer",  ForeignTable : DBSchema.Name, NotNull : false, },
-		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", Constraint : "unique", 
+		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer",
 		                   ForeignTable : DBSchema.Name, NotNull : true, },
 	},
 }
 
-var AUTHEXCEPTION = []TableEntity{  } // DBView
-var ROOTTABLES = []TableEntity{DBSchema, DBSchemaField, DBPermission, DBRole, DBRolePermission, DBEntity, DBUser, 
-	    DBEntityUser, DBRoleAttribution, DBTask, DBWorkflow, DBWorkflowSchema, DBWorkflowTask, DBTaskAssignee, 
-		DBTaskVerifyer, DBTaskWatcher }
+var DBAction = TableEntity{
+	Name : RootName("action"),
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: "icon", Type: "varchar(100)",  NotNull : false, },
+		TableColumnEntity{ Name: "name", Type: "varchar(255)",  NotNull : true, },
+		TableColumnEntity{ Name: "description", Type: "varchar(255)",  NotNull : false, },
+		TableColumnEntity{ Name: "category", Type: "varchar(100)",  NotNull : false, },
+		TableColumnEntity{ Name: "method", Type: "enum('POST', 'GET', 'PUT', 'DELETE')",  NotNull : true },
+		TableColumnEntity{ Name: "extra_path", Type: "varchar(255)", NotNull : true, },
+		TableColumnEntity{ Name: "from_schema", Type: "integer",  ForeignTable : DBSchema.Name, NotNull : true, },
+		TableColumnEntity{ Name: "to_schema", Type: "integer",  ForeignTable : DBSchema.Name, NotNull : true, },
+		TableColumnEntity{ Name: "type", Type: "enum('LINK_SELECT', 'BUTTON', 'LINK_ADD')", NotNull : true, },
+		TableColumnEntity{ Name: "link", Type: "integer", ForeignTable : DBSchema.Name, NotNull : false, },
+		TableColumnEntity{ Name: "link_sql_order", Type: "varchar(255)", NotNull : false, },
+		TableColumnEntity{ Name: "link_sql_columns", Type: "varchar(255)", NotNull : false, },
+		TableColumnEntity{ Name: "link_sql_restriction", Type: "varchar(255)", NotNull : false, },
+	},
+}
+
+var DBViewAction = TableEntity{
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: RootID(DBView.Name), Type: "integer", ForeignTable : DBView.Name, NotNull : true, },
+		TableColumnEntity{ Name: RootID(DBAction.Name), Type: "integer", ForeignTable : DBAction.Name, NotNull : true, },
+	},
+}
+var DBRESTRICTED = []TableEntity{ DBPermission, DBSchema, DBSchemaField,  } // override permission checkup
+var PERMISSIONEXCEPTION = []TableEntity{ DBView, DBAction, DBTask, } // override permission checkup
+var ROOTTABLES = []TableEntity{ DBWorkflow, DBRole, DBRolePermission, DBEntity, DBUser, DBRoleAttribution,
+	    DBEntityUser,  DBTask, DBWorkflowSchema, DBWorkflowTask, DBTaskAssignee, 
+		DBTaskVerifyer, DBTaskWatcher, DBView, DBAction, DBViewAction }

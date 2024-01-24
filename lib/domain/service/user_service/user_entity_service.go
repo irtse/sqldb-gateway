@@ -36,7 +36,7 @@ func (s *UserEntityService) PostTreatment(results tool.Results) tool.Results {
 			if userId, ok3 := record[entities.RootID(entities.DBUser.Name)]; ok3 {
 				params[entities.RootID(entities.DBUser.Name)]= fmt.Sprintf("%d", userId.(int64))
 			}
-			s.Domain.SafeCall(true, "", params, tool.Record{}, tool.DELETE, "Delete", )	
+			s.Domain.SuperCall( params, tool.Record{}, tool.DELETE, "Delete", )	
 		} else { res = append(res, record) }
 	}
 	return res

@@ -2,6 +2,7 @@ package service
 
 import (
 	"os"
+	// "fmt"
 	"encoding/json"
 	"html/template"
 	tool "sqldb-ws/lib"
@@ -86,6 +87,9 @@ func TableNoPerm(database *conn.Db, admin bool, user string, name string, params
 func Table(database *conn.Db, admin bool, user string, name string, params tool.Params, record tool.Record, method tool.Method) *TableInfo {
 	table := TableNoPerm(database, admin, user, name, params, record, method)
 	table.PermService = Permission(database, admin, user, tool.Params{}, tool.Record{}, method)
+	for _, restricted := range entities.DBRESTRICTED {
+		if table.Name == restricted.Name { table.PermService = nil; break }
+	}
 	return table
 }
 
@@ -97,8 +101,7 @@ func Permission(database *conn.Db, admin bool, user string, params tool.Params, 
 	perms.Fill(entities.DBPermission.Name, admin, user, params, record, method)
 	// HEAVY SQL PERMISSIONS
 	paramsNew := tool.Params{ }
-	paramsNew[tool.RootSQLFilterParam] = entities.DBPermission.Name + ".id IN ("
-	paramsNew[tool.RootSQLFilterParam] += "SELECT " + entities.DBPermission.Name + "_id FROM " 
+	paramsNew[tool.RootSQLFilterParam] = "id IN (SELECT " + entities.DBPermission.Name + "_id FROM " 
 	paramsNew[tool.RootSQLFilterParam] += entities.DBRolePermission.Name + " WHERE " + entities.DBRole.Name + "_id IN ("
 	paramsNew[tool.RootSQLFilterParam] += "SELECT " + entities.DBRole.Name + "_id FROM " 
 	paramsNew[tool.RootSQLFilterParam] += entities.DBRoleAttribution.Name + " WHERE " + entities.DBUser.Name + "_id IN ("
@@ -114,19 +117,21 @@ func Permission(database *conn.Db, admin bool, user string, params tool.Params, 
 	perms.Row.db = database
 	perms.Row.Fill(entities.DBPermission.Name, admin, user, paramsNew, tool.Record{}, tool.SELECT,)
 	perms.Row.PermService=nil
-	if res, err := perms.Row.Get(); res != nil && err == nil { perms.generatePerms(res) }
 	return perms
 }
 
 func Load() {
 	database := conn.Open()
 	defer database.Conn.Close()
-	for _, table := range entities.ROOTTABLES {
-		rec := tool.Record{}
-		data, _:= json.Marshal(table)
-		json.Unmarshal(data, &rec)
-		service := Table(database, true, "", table.Name, tool.Params{}, rec, tool.CREATE)
-		if _,ok := service.Verify(table.Name); !ok { service.Create() }
+	tables := [][]entities.TableEntity{ entities.DBRESTRICTED, entities.ROOTTABLES }
+	for _, t := range tables {
+		for _, table := range t {
+			rec := tool.Record{}
+			data, _:= json.Marshal(table)
+			json.Unmarshal(data, &rec)
+			service := Table(database, true, "", table.Name, tool.Params{}, rec, tool.CREATE)
+			if _,ok := service.Verify(table.Name); !ok { service.Create() }
+		}
 	}
 }
 

@@ -14,56 +14,59 @@ import (
 type MainService struct {
 	name                string
 	User				string
+	SuperAdmin			bool
 	isGenericService    bool
 }
-func Domain(isGenericService bool) *MainService {
+func Domain(superAdmin bool, user string, isGenericService bool) *MainService {
 	if os.Getenv("automate") == "false" { isGenericService=true }
-	return &MainService{ isGenericService: isGenericService }
+	return &MainService{ 
+		isGenericService: isGenericService, 
+		SuperAdmin: superAdmin, 
+		User : user, 
+	}
 }
 
 func (d *MainService) SetIsCustom(isCustom bool) { d.isGenericService = isCustom }
 func (d *MainService) GetUser() string { return d.User }
+func (d *MainService) IsSuperAdmin() bool { return d.SuperAdmin }
 
-func (d *MainService) SafeCall(superAdmin bool, user string, params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
-	return d.call(superAdmin, user, params, record, method, true, funcName, args...)
+func (d *MainService) SuperCall(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
+	return Domain(true, "", d.isGenericService).call(params, record, method, true, funcName, args...)
 }
 
-func (d *MainService) UnSafeCall(user string, params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
-	return d.call(false, user, params, record, method, false, funcName, args...)
+func (d *MainService) Call(params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
+	return d.call(params, record, method, auth, funcName, args...)
 }
 
-func (d *MainService) call(superAdmin bool, user string, params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
+func (d *MainService) call(params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
 	var service infrastructure.InfraServiceItf
-	d.User = user
 	res := tool.Results{}
 	if tablename, ok := params[tool.RootTableParam]; ok {
 		var specializedService tool.SpecializedService
 		specializedService = &domain.CustomService{}
 		if !d.isGenericService { specializedService = domain.SpecializedService(tablename) }
 		specializedService.SetDomain(d)
-		for _, exception := range entities.AUTHEXCEPTION {
+		for _, exception := range entities.PERMISSIONEXCEPTION {
 			if tablename == exception.Name { auth = false; break }
 		}
 		database := conn.Open()
 		defer database.Conn.Close()
-		table := infrastructure.Table(database, superAdmin, user, strings.ToLower(tablename), params, record, method)
+		table := infrastructure.Table(database, d.SuperAdmin, d.User, strings.ToLower(tablename), params, record, method)
 		delete(params, tool.RootTableParam)
 		service=table
 		tablename = strings.ToLower(tablename)
-		isRestricted := len(tablename) > 1 && tablename[0:2] == "db" 
-		if isRestricted && !superAdmin && method != tool.SELECT { 
-			return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
-		}
+		perms := infrastructure.Permission(database, 
+				 d.SuperAdmin, 
+				 tablename, 
+				 params, 
+				 record,
+				 method)
+		if res, err := perms.Row.Get(); res != nil && err == nil { perms.GeneratePerms(res) }
 		if rowName, ok := params[tool.RootRowsParam]; ok { // rows override columns
 			if tablename == tool.ReservedParam { 
 				return res, errors.New("can't load table as " + tool.ReservedParam) 
 			}
-			perms := infrastructure.Permission(database, 
-				                               superAdmin, 
-											   tablename, 
-											   params, 
-											   record,
-											   method)
+			
 			if _, ok := perms.Verify(tablename); !ok && auth { 
 				return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
 			}
@@ -74,7 +77,7 @@ func (d *MainService) call(superAdmin bool, user string, params tool.Params, rec
 			} else { service = table.TableRow(specializedService, false) }
 			return d.invoke(service, funcName, args...)
 		}
-		if auth && !superAdmin { 
+		if !d.SuperAdmin { 
 			return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
 		}
 		if col, ok := params[tool.RootColumnsParam]; ok { 

@@ -45,7 +45,7 @@ type PermissionInfo struct {
 	InfraService
 }
 
-func (p *PermissionInfo) generatePerms(res tool.Results) {
+func (p *PermissionInfo) GeneratePerms(res tool.Results) {
 	del := []string{}
 	if len(res) == 0 { return }
 	for _, r := range res[1:] {

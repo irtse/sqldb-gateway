@@ -14,7 +14,7 @@ func (s *TaskAssigneeService) VerifyRowAutomation(record tool.Record, create boo
 	var res tool.Results
 	if taskID, ok := record[entities.RootID(entities.DBTask.Name)]; ok && taskID != nil {
 		if userID, ok := record[entities.RootID(entities.DBUser.Name)]; ok && userID != nil {
-			res, _ = s.Domain.SafeCall(true, "",
+			res, _ = s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : entities.DBTaskAssignee.Name, 
 						 tool.RootRowsParam : tool.ReservedParam, 
 						 entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%d", record[entities.RootID(entities.DBTask.Name)].(int64)),
@@ -23,7 +23,7 @@ func (s *TaskAssigneeService) VerifyRowAutomation(record tool.Record, create boo
 			tool.SELECT, 
 			"Get")
 		} else if entityID, ok := record[entities.RootID(entities.DBEntity.Name)]; ok && entityID != nil {
-			res, _ = s.Domain.SafeCall(true, "",
+			res, _ = s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : entities.DBTaskAssignee.Name, 
 						 tool.RootRowsParam : tool.ReservedParam, 
 						 entities.RootID(entities.DBEntity.Name): fmt.Sprintf("%d", record[entities.RootID(entities.DBEntity.Name)].(int64)) }, 
@@ -47,8 +47,7 @@ func (s *TaskAssigneeService) WriteRowAutomation(record tool.Record) {
 	paramsNew[tool.RootSQLFilterParam] += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
 	paramsNew[tool.RootSQLFilterParam] += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name
 	paramsNew[tool.RootSQLFilterParam] += " WHERE " + entities.RootID(entities.DBUser.Name) + "=" + conn.Quote(s.Domain.GetUser()) + "))"
-	// TODO CHECK IF HIERARCHY FROM ENTITY OR USER
-	hierarchy, err := s.Domain.SafeCall(true, "", 
+	hierarchy, err := s.Domain.SuperCall( 
 						paramsNew, 
 						tool.Record{},
 						tool.SELECT,
@@ -56,7 +55,7 @@ func (s *TaskAssigneeService) WriteRowAutomation(record tool.Record) {
 					)
 	if err == nil {
 		for _, upper := range hierarchy {
-			s.Domain.SafeCall(true, "",
+			s.Domain.SuperCall(
 							tool.Params{ 
 								tool.RootTableParam : entities.DBTaskWatcher.Name,
 								tool.RootRowsParam : tool.ReservedParam,

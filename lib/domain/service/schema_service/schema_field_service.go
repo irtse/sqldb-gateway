@@ -10,23 +10,7 @@ type SchemaFields struct { tool.AbstractSpecializedService }
 
 func (s *SchemaFields) Entity() tool.SpecializedServiceInfo {return entities.DBSchemaField }
 func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) {
-	rows := "all"
-	found := false
-	if _, ok := record[entities.RootID(entities.DBSchema.Name)]; !ok {
-		if _, ok2 := record[entities.TABLENAMEATTR]; ok2 { found=true
-		} else { return record, false }
-	} else { rows = fmt.Sprintf("%v", record[entities.RootID(entities.DBSchema.Name)]) }
-	params := tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-						   tool.RootRowsParam: rows, }
-	if found { params[entities.NAMEATTR]=record[entities.TABLENAMEATTR].(string)  }
-	res, err := s.Domain.SafeCall(
-		true, 
-		"",
-		params, 
-		tool.Record{}, 
-		tool.SELECT, 
-		"Get",
-	)
+	schemas, err := Schema(s.Domain, record)
 	newRecord := tool.Record{}
 	if !create {
 		for k, v := range record {
@@ -34,10 +18,10 @@ func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (too
 			} else if k != "type" { newRecord[k] = v }
 		}
 	}
-	return newRecord, err == nil && res != nil && len(res) > 0
+	return newRecord, err == nil && schemas != nil && len(schemas) > 0
 }
 func (s *SchemaFields) WriteRowAutomation(record tool.Record) { 
-	res, err := s.Domain.SafeCall(true, "",
+	res, err := s.Domain.SuperCall(
 		tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
 			         tool.RootRowsParam: fmt.Sprintf("%v", record[entities.RootID(entities.DBSchema.Name)]) }, 
 		tool.Record{}, 
@@ -52,7 +36,7 @@ func (s *SchemaFields) WriteRowAutomation(record tool.Record) {
 	if _, ok := record["default_value"]; ok { data["default_value"] = record["default_value"] }
 	if _, ok := record["description"]; ok { data["comment"] = record["description"] }
 	if len(res) > 0 {
-		_, err := s.Domain.SafeCall(true, "",
+		_, err := s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : res[0][entities.NAMEATTR].(string), 
 				         tool.RootColumnsParam: tool.ReservedParam }, 
 			data, 
@@ -63,7 +47,7 @@ func (s *SchemaFields) WriteRowAutomation(record tool.Record) {
 }
 func (s *SchemaFields) UpdateRowAutomation(results tool.Results, record tool.Record) {
 	for _, r := range results {
-		res, err := s.Domain.SafeCall(true, "",
+		res, err := s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
 				    tool.RootRowsParam: fmt.Sprintf("%s", r[entities.RootID(entities.DBSchema.Name)]) }, 
 			tool.Record{}, 
@@ -78,7 +62,7 @@ func (s *SchemaFields) UpdateRowAutomation(results tool.Results, record tool.Rec
 		}
 		newRecord[entities.TYPEATTR] = r[entities.TYPEATTR]
 		newRecord[entities.NAMEATTR] = r[entities.NAMEATTR]
-		_, err = s.Domain.SafeCall(true, "",
+		_, err = s.Domain.SuperCall(
 			tool.Params{ 
 				tool.RootTableParam : res[0][entities.NAMEATTR].(string), 
 				tool.RootColumnsParam: r[entities.NAMEATTR].(string) }, 
@@ -90,7 +74,7 @@ func (s *SchemaFields) UpdateRowAutomation(results tool.Results, record tool.Rec
 }
 func (s *SchemaFields) DeleteRowAutomation(results tool.Results) { 
 	for _, record := range results { 
-		res, err := s.Domain.SafeCall(true, "",
+		res, err := s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
 				    tool.RootRowsParam: fmt.Sprintf("%d", record[entities.RootID(entities.DBSchema.Name)].(int64)) }, 
 			tool.Record{}, 
@@ -98,7 +82,7 @@ func (s *SchemaFields) DeleteRowAutomation(results tool.Results) {
 			"Get",
 		)
 		if err != nil || res == nil || len(res) == 0 { continue }
-	    _, err = s.Domain.SafeCall(true, "",
+	    _, err = s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : res[0][entities.NAMEATTR].(string), 
 				    tool.RootColumnsParam: record[entities.NAMEATTR].(string) }, 
 			tool.Record{}, 
@@ -108,8 +92,16 @@ func (s *SchemaFields) DeleteRowAutomation(results tool.Results) {
 		if err != nil { fmt.Printf("error %s", err.Error()) }
 	}
 }
-func (s *SchemaFields) PostTreatment(results tool.Results) tool.Results { return results }
-
+func (s *SchemaFields) PostTreatment(results tool.Results) tool.Results { 
+	res := tool.Results{}
+	for _, record := range results{
+		schemas, err := Schema(s.Domain, tool.Record{
+			entities.RootID(entities.DBSchema.Name) : record[entities.RootID(entities.DBSchema.Name)].(int64)})
+		if err != nil || len(schemas) == 0 { continue }
+		res = append(res, record)
+	}
+	return res 
+}
 
 func (s *SchemaFields) ConfigureFilter(tableName string, params tool.Params) (string, string) {
 	return "", ""

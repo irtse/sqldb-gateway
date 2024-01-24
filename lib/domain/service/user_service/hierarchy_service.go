@@ -38,7 +38,7 @@ func (s *HierarchyService) PostTreatment(results tool.Results) tool.Results {
 			if entityParentId, ok4 := record["parent_" + entities.RootID(entities.DBEntity.Name)]; ok4 {
 				params["parent_" + entities.RootID(entities.DBEntity.Name)]= fmt.Sprintf("%d", entityParentId.(int64))
 			}
-			s.Domain.SafeCall(true, "", params, tool.Record{}, tool.DELETE, "Delete", )	
+			s.Domain.SuperCall( params, tool.Record{}, tool.DELETE, "Delete", )	
 		} else { res = append(res, record) }
 	}
 	return res

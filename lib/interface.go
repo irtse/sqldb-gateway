@@ -7,10 +7,11 @@ import (
 )
 
 type DomainITF interface {
-	SafeCall(admin bool, user string, params Params, rec Record, m Method, funcName string, args... interface{}) (Results, error)
-	UnSafeCall(user string, params Params, rec Record, m Method, funcName string, args... interface{}) (Results, error)
+	SuperCall(params Params, rec Record, m Method, funcName string, args... interface{}) (Results, error)
+	Call(params Params, rec Record, m Method, auth bool, funcName string, args... interface{}) (Results, error)
     SetIsCustom(isCustom bool)
 	GetUser() string
+	IsSuperAdmin() bool
 }
 type SpecializedServiceInfo interface { GetName() string }
 type SpecializedService interface {
@@ -45,12 +46,12 @@ func ViewDefinition(domain DomainITF, tableName string, params Params) (string, 
 		         RootRowsParam : ReservedParam,
 		         entities.NAMEATTR : tableName, 
 	}
-	schemas, err := domain.SafeCall(true, "", p, Record{}, SELECT, "Get")
+	schemas, err := domain.SuperCall( p, Record{}, SELECT, "Get")
 	if err != nil || len(schemas) == 0 { return SQLrestriction, SQLview }
 	p = Params{ RootTableParam : entities.DBSchemaField.Name, 
 		        RootRowsParam : ReservedParam,
 		        entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%d", schemas[0][SpecialIDParam].(int64)), }
-	fields, err := domain.SafeCall(true, "", p, Record{}, SELECT, "Get")
+	fields, err := domain.SuperCall( p, Record{}, SELECT, "Get")
 	if err == nil {
 		for _, field := range fields {
 			if  hide, ok := field["hidden"]; ok && !hide.(bool) {
@@ -63,13 +64,13 @@ func ViewDefinition(domain DomainITF, tableName string, params Params) (string, 
 	p = Params{ RootTableParam : entities.DBView.Name, 
 		        RootRowsParam : ReservedParam,
 		        entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%d", schemas[0][SpecialIDParam].(int64)), }
-	views, err := domain.SafeCall(true, "", p, Record{}, SELECT, "Get")
+	views, err := domain.SuperCall( p, Record{}, SELECT, "Get")
 	if err == nil {
 		for _, view := range views {
 			if through, ok := view["through_perms"]; ok {
 				p = Params{ RootTableParam : entities.DBSchema.Name, 
 					         RootRowsParam : fmt.Sprintf("%d", through.(int64)), }          
-				throughs, err := domain.SafeCall(true, "", p, Record{}, SELECT, "Get")
+				throughs, err := domain.SuperCall( p, Record{}, SELECT, "Get")
 				if err != nil || len(throughs) == 0 { continue }
 				if len(SQLrestriction) > 0 {
 					SQLrestriction += " AND " + GeneratePermissionCommand(schemas[0][entities.NAMEATTR].(string),

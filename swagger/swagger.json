@@ -363,7 +363,7 @@
     ]
    }
   },
-  "/generic/{table}/import/{filename}": {
+  "/generic/{table}/{filename}/import": {
    "delete": {
     "description": "NotImportated Datas\n\u003cbr\u003e",
     "operationId": "GenericController.NotImportated",

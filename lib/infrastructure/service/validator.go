@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"strings"
 	"encoding/json"
 	tool "sqldb-ws/lib"
 	"github.com/go-playground/validator"
@@ -33,7 +32,7 @@ func (v *DBValidator[T]) ValidateSchema(data map[string]interface{}, t *TableInf
 		found := false
 		for _, s := range schema {
 			for k, _ := range s.AssColumns {
-				if _, ok := data[k]; !ok { found = true}
+				if _, ok := data[k]; !ok { found = true }
 			}
 		}
 		if !found { return nil, errors.New("Not found field") }
@@ -41,9 +40,7 @@ func (v *DBValidator[T]) ValidateSchema(data map[string]interface{}, t *TableInf
 	}
 	for _, s := range schema {
 		for k, v := range s.AssColumns {
-			nullable := strings.Split(v, "|")
-			required := nullable[len(nullable) - 1]
-			if required == "required" {
+			if v.NotNull {
 				if _, ok := data[k]; ok == false && k != tool.SpecialIDParam {
 					return nil, errors.New("Missing a required field " + k)
 				}

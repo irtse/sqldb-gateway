@@ -124,7 +124,7 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 	filter := ""
 	for key, element := range t.Record {
 		if key != tool.SpecialIDParam { 
-			if len(t.PermService.WarningUpdateField) > 0 {
+			if t.PermService != nil && len(t.PermService.WarningUpdateField) > 0 {
 				found := false
 				for _, w := range t.PermService.WarningUpdateField { 
 					if w == key { found = true; break }
@@ -150,9 +150,8 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 	stack = conn.RemoveLastChar(stack)
 	query := ("UPDATE " + t.Table.Name + " SET " + stack) // REMEMBER id is a restriction !
 	if t.db.SQLRestriction != "" { query += " WHERE " + t.db.SQLRestriction }
-	rows, err := t.db.Query(query)
+	err = t.db.Query(query)
 	if err != nil { return DBError(nil, err) }
-	defer rows.Close()
 	if len(t.db.SQLRestriction) > 0 { 
 		if (len(filter) > 0) {
 			t.db.SQLRestriction += "and " + filter[:len(filter) - 4]
@@ -197,9 +196,8 @@ func (t *TableRowInfo) Delete() (tool.Results, error) {
 	t.Results = res
 	query := ("DELETE FROM " + t.Table.Name)
 	if t.db.SQLRestriction != "" { query += " WHERE " + t.db.SQLRestriction }
-	rows, err := t.db.Query(query)
+	err = t.db.Query(query)
 	if err != nil { return DBError(nil, err) }
-	defer rows.Close()
 	if t.SpecializedService != nil {
 		t.SpecializedService.DeleteRowAutomation(t.Results)
 		t.Results = t.SpecializedService.PostTreatment(t.Results)

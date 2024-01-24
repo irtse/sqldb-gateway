@@ -37,12 +37,11 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db) *conn.Db {
 			continue
 		}
 		if key == tool.RootSQLFilterParam {
-			db.SQLRestriction += params[tool.RootSQLFilterParam] + " AND "
+			db.SQLRestriction += params[tool.RootSQLFilterParam]
 			continue
 		}
 		alreadySet = append(alreadySet, key)
 	}
-	if len(db.SQLRestriction) > 4 { db.SQLRestriction = db.SQLRestriction[:len(db.SQLRestriction) - 4] }
 	    // TODO IN 
 	return db
 }
