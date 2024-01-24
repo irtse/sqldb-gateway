@@ -49,8 +49,8 @@ func (t *TableInfo) TableColumn() *TableColumnInfo {
 }
 
 func (t *TableInfo) querySchemaCmd(name string, tablename string) string {
-	if name == conn.MySQLDriver { return "SELECT COLUMN_NAME as name, IS_NULLABLE as null, CONCAT(DATA_TYPE, COALESCE(CONCAT('(' , CHARACTER_MAXIMUM_LENGTH, ')'), '')) as type FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + tablename + "';" } 
-	if name == conn.PostgresDriver { return "SELECT column_name :: varchar as name, IS_NULLABLE as null, REPLACE(REPLACE(data_type,'character varying','varchar'),'character','char') || COALESCE('(' || character_maximum_length || ')', '') as type, col_description('public." + tablename + "'::regclass, ordinal_position) as comment  from INFORMATION_SCHEMA.COLUMNS where table_name ='" + tablename + "';" }
+	if name == conn.MySQLDriver { return "SELECT COLUMN_NAME as name, column_default as default_value, IS_NULLABLE as null, CONCAT(DATA_TYPE, COALESCE(CONCAT('(' , CHARACTER_MAXIMUM_LENGTH, ')'), '')) as type FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + tablename + "';" } 
+	if name == conn.PostgresDriver { return "SELECT column_name :: varchar as name, column_default as default_value, IS_NULLABLE as null, REPLACE(REPLACE(data_type,'character varying','varchar'),'character','char') || COALESCE('(' || character_maximum_length || ')', '') as type, col_description('public." + tablename + "'::regclass, ordinal_position) as comment  from INFORMATION_SCHEMA.COLUMNS where table_name ='" + tablename + "';" }
     return ""
 }
 
@@ -116,6 +116,9 @@ func (t *TableInfo) get() (*TableInfo, error) {
 		if err != nil { continue }
 		err = json.Unmarshal(b, &tableCol)
 		if err != nil { continue }
+		if tableCol.Default != nil && strings.Contains(tableCol.Default.(string), "NULL") {
+			tableCol.Default = nil
+		}
 		t.AssColumns[tableCol.Name] = tableCol
 	}
 	return t, nil
@@ -231,7 +234,6 @@ type Link struct {
 func buildLinks(schema []TableInfo) []Link {
 	var links []Link
 	for _, ti := range schema {
-		fmt.Println(ti.Name)
 		for column, _ := range ti.AssColumns {
 			if strings.HasSuffix(column, "_id") {
 				tokens := strings.Split(column, "_")

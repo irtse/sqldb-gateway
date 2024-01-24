@@ -78,7 +78,7 @@ func (db *Db) QueryRow(query string) (int64, error) {
 
 func (db *Db) Query(query string) (error) {
 	if db.LogQueries { log.Info().Msg(query) }
-	fmt.Printf("QUERY : %s\n", query)
+	// fmt.Printf("QUERY : %s\n", query)
 	rows, err := db.Conn.Query(query)
 	if err != nil {
 		// log.Error().Msg("" + err.Error())
@@ -91,7 +91,7 @@ func (db *Db) Query(query string) (error) {
 }
 
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
-	fmt.Printf("QUERY ASSO : %s\n", query)
+	// fmt.Printf("QUERY ASSO : %s\n", query)
 	rows, err := db.Conn.Query(query)
 	if err != nil { return nil, err }
 	defer rows.Close()

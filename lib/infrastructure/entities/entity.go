@@ -29,13 +29,13 @@ func (t ShallowTableEntity) GetName() string { return t.Name }
 type TableColumnEntity struct {
 	Name string         `json:"name" validate:"required"`
 	Type string         `json:"type"`
-	Index int64           `json:"index"`
+	Index int64         `json:"-"`
 	Default interface{} `json:"default_value"`
-	ForeignTable string `json:"foreign_table"`
-	Constraint string   `json:"constraint"`
+	ForeignTable string `json:"-"`
+	Constraint string   `json:"-"`
 	NotNull bool        `json:"not_null"`
 	Comment string      `json:"comment"`
-	NewName string      `json:"new_name"`
+	NewName string      `json:"-"`
 }
 
 func (t TableColumnEntity) GetName() string { return t.Name }
