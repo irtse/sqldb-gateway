@@ -35,7 +35,10 @@ func (t *TableRowInfo) Get() (tool.Results, error) {
 	if t.SpecializedService != nil && ! t.AdminView {
 		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
 		if view != "" { t.db.SQLView = view }
-		if restriction != "" { t.db.SQLRestriction += restriction }
+		if restriction != "" { 
+			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + restriction 
+		    } else { t.db.SQLRestriction = restriction }
+		}
 	}
 	d, err := t.db.SelectResults(t.Table.Name)
 	t.Results = d
@@ -55,9 +58,15 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	if t.SpecializedService != nil {
 		if _, ok := t.SpecializedService.VerifyRowAutomation(t.Record, true); !ok { return nil, errors.New("verification failed.") }
 	}
-	v := Validator[map[string]interface{}]()
-	_, err = v.ValidateSchema(t.Record, t.Table, false)
-	if err != nil { return nil, errors.New("Not a proper struct to create a row " + err.Error()) }
+	if len(t.Record) > 0 {
+		v := Validator[map[string]interface{}]()
+		_, err = v.ValidateSchema(t.Record, t.Table, false)
+		if err != nil { return nil, errors.New("Not a proper struct to create a row " + err.Error()) }
+	} else if !entities.IsRootDB(t.Table.Name) {
+		emptyRec, err := t.Table.EmptyRecord()
+		if err != nil { return nil, errors.New("Empty record got a problem : " + err.Error()) }
+		t.Record = emptyRec
+	} else { return nil, errors.New("Empty is not a proper struct to create a row ") }
 	for key, element := range t.Record {
 		columns += key + ","
 		typ := ""
@@ -87,7 +96,10 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	}
 	if t.SpecializedService != nil && !t.AdminView {
 		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
-		if restriction != "" { t.db.SQLRestriction += restriction }
+		if restriction != "" { 
+			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + restriction 
+		    } else { t.db.SQLRestriction = restriction }
+		}
 		if view != "" { t.db.SQLView = view }
 	}
 	result, err = t.db.SelectResults(t.Table.Name)
@@ -101,13 +113,12 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 
 func (t *TableRowInfo) Update() (tool.Results, error) {
 	v := Validator[map[string]interface{}]()
+	if t.SpecializedService != nil {
+		r, _ := t.SpecializedService.VerifyRowAutomation(t.Record, false) 
+		t.Record = r
+	}
 	_, err := v.ValidateSchema(t.Record, t.Table, true)
 	if err != nil { return nil, errors.New("Not a proper struct to update a row") }
-	r := t.Record
-	if t.SpecializedService != nil {
-		r, _ = t.SpecializedService.VerifyRowAutomation(t.Record, false) 
-	}
-	t.Record = r
 	t.db = ToFilter(t.Table.Name, t.Params, t.db)
 	stack := ""
 	filter := ""
@@ -149,7 +160,10 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
     } else { if (len(filter) > 0) { t.db.SQLRestriction = filter[:len(filter) - 4] }  }
 	if t.SpecializedService != nil && !t.AdminView {
 		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
-		if restriction != "" { t.db.SQLRestriction += restriction }
+		if restriction != "" { 
+			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + restriction 
+		    } else { t.db.SQLRestriction = restriction }
+		}
 		if view != "" { t.db.SQLView = view } 
 	}
 	res, err := t.db.SelectResults(t.Table.Name)
@@ -172,7 +186,10 @@ func (t *TableRowInfo) Delete() (tool.Results, error) {
 	t.db = ToFilter(t.Table.Name, t.Params, t.db)
 	if t.SpecializedService != nil && !t.AdminView {
 		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
-		if restriction != "" { t.db.SQLRestriction += restriction }
+		if restriction != "" { 
+			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + restriction 
+		    } else { t.db.SQLRestriction = restriction }
+		}
 		if view != "" { t.db.SQLView = view }
 	}
 	res, err := t.db.SelectResults(t.Table.Name)

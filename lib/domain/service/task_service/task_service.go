@@ -2,6 +2,7 @@ package task_service
 
 import (
 	"fmt"
+	"errors"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/infrastructure/entities"
 )
@@ -10,6 +11,24 @@ type TaskService struct { tool.AbstractSpecializedService }
 
 func (s *TaskService) Entity() tool.SpecializedServiceInfo { return entities.DBTask }
 func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
+	// TODO if "form" presence THEN -> update row and kick form out of record
+	if form, ok := record["form"]; ok {
+		rec := tool.Record{}
+		for k, v := range form.(map[string]tool.Record) { rec[k]=v["value"] }
+		delete(record, "form")
+		schemas, err := s.schema(record)
+		if err != nil && len(schemas) == 0 { return record, false }
+		id := int64(-1)
+		if idFromRec, ok := rec[tool.SpecialIDParam]; ok { id = idFromRec.(int64) }
+		if idFromTask, ok := record[entities.RootID("dest_table")]; ok { id = idFromTask.(int64) }
+		if id == -1 { return record, false }
+		params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
+			                   tool.RootRowsParam : fmt.Sprintf("%d", id), } // empty record
+		s.Domain.SafeCall(true, "", params, rec, tool.UPDATE, "CreateOrUpdate")
+	}
+	if _, ok := record[entities.RootID("dest_table")]; ok && !create { // TODO if not superadmin PROTECTED
+		delete(record, entities.RootID("dest_table"))
+	}
 	if state, ok := record["state"]; ok && (state == "open" || state == "close" || create) { 
 		params := tool.Params{ tool.RootTableParam : entities.DBUser.Name, 
 			                   tool.RootRowsParam : tool.ReservedParam, 
@@ -76,5 +95,65 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 	    }
 	}
 }
-func (s *TaskService) WriteRowAutomation(record tool.Record) {}
-func (s *TaskService) PostTreatment(results tool.Results) tool.Results { return results }
+func (s *TaskService) WriteRowAutomation(record tool.Record) {
+	// task creation automation.
+	schemas, err := s.schema(record)
+	if err != nil && len(schemas) == 0 { return }
+	params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
+			              tool.RootRowsParam : tool.ReservedParam,
+	} // empty record
+	created, err := s.Domain.SafeCall(true, "", params, tool.Record{}, tool.CREATE, "CreateOrUpdate")
+	if err != nil && len(created) == 0 { return }
+	newRec := tool.Record{ entities.RootID("dest_table"): created[0][tool.SpecialIDParam] }
+	params = tool.Params{ tool.RootTableParam : s.Entity().GetName(), 
+							  tool.RootRowsParam : tool.ReservedParam,
+						} 
+	s.Domain.SafeCall(true, "", params, newRec, tool.UPDATE, "CreateOrUpdate")
+}
+
+func (s *TaskService) PostTreatment(results tool.Results) tool.Results { 
+	for _, record := range results {
+		if dest_id, ok:= record[entities.RootID("dest_table")]; !ok || dest_id == nil { continue }
+		schemas, err := s.schema(record)
+		if err != nil && len(schemas) == 0 { return results }
+		params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
+			                   tool.RootRowsParam : fmt.Sprintf("%d", record[entities.RootID("dest_table")].(int64)),}
+		rows, err := s.Domain.SafeCall(true, "", params, tool.Record{}, tool.SELECT, "Get")
+		if err != nil && len(rows) == 0 { return results }
+		record["form"] = map[string]tool.Record{}
+		form := map[string]tool.Record{}
+		params = tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
+			tool.RootRowsParam : tool.ReservedParam, 
+			entities.RootID(entities.DBSchema.Name): fmt.Sprintf("%d", schemas[0][tool.SpecialIDParam].(int64)),
+		}
+		fields, err := s.Domain.SafeCall(true, "", params, tool.Record{}, tool.SELECT, "Get")
+		for _, row := range rows {
+			for k, v := range row {
+				if k == tool.SpecialIDParam { continue }
+				for _, field := range fields {
+					if field[entities.NAMEATTR].(string) == k && !field["hidden"].(bool) {
+						form[k]=field
+						form[k]["value"]=v
+					}
+				}
+			}
+		}
+		record["form"] = form
+	}
+	return results 
+}
+
+func (s *TaskService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
+	return tool.ViewDefinition(s.Domain, tableName, params)
+}	
+
+func (s *TaskService) schema(record tool.Record) (tool.Results, error) {
+	if schemaID, ok := record[entities.RootID(entities.DBSchema.Name)]; ok {
+		params := tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
+			tool.RootRowsParam : tool.ReservedParam, 
+			tool.SpecialIDParam : fmt.Sprintf("%d", schemaID.(int64)),
+		}
+		return s.Domain.SafeCall(true, "", params, tool.Record{}, tool.SELECT, "Get")
+	}
+	return nil, errors.New("no schemaID refered...")
+}

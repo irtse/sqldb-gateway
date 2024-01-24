@@ -43,3 +43,7 @@ func (s *HierarchyService) PostTreatment(results tool.Results) tool.Results {
 	}
 	return res
 }
+
+func (s *HierarchyService) ConfigureFilter(tableName string, params tool.Params) (string, string) {
+	return tool.ViewDefinition(s.Domain, tableName, params)
+}	

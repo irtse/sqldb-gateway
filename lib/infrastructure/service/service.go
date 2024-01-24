@@ -97,7 +97,7 @@ func Permission(database *conn.Db, admin bool, user string, params tool.Params, 
 	perms.Fill(entities.DBPermission.Name, admin, user, params, record, method)
 	// HEAVY SQL PERMISSIONS
 	paramsNew := tool.Params{ }
-	paramsNew[tool.RootSQLFilterParam] += entities.DBPermission.Name + ".id IN ("
+	paramsNew[tool.RootSQLFilterParam] = entities.DBPermission.Name + ".id IN ("
 	paramsNew[tool.RootSQLFilterParam] += "SELECT " + entities.DBPermission.Name + "_id FROM " 
 	paramsNew[tool.RootSQLFilterParam] += entities.DBRolePermission.Name + " WHERE " + entities.DBRole.Name + "_id IN ("
 	paramsNew[tool.RootSQLFilterParam] += "SELECT " + entities.DBRole.Name + "_id FROM " 

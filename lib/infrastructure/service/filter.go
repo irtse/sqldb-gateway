@@ -23,7 +23,6 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db) *conn.Db {
 		}
 	}
 	db.SQLView = ""
-	count := 0
 	alreadySet := []string{}
 	for key, element := range params { // preload restriction
 		if key == tool.RootRowsParam || key == tool.RootTableParam || slices.Contains(alreadySet, key) { continue }
@@ -38,12 +37,12 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db) *conn.Db {
 			continue
 		}
 		if key == tool.RootSQLFilterParam {
-			db.SQLRestriction += params[tool.RootSQLFilterParam] + " "
-			count += 1
+			db.SQLRestriction += params[tool.RootSQLFilterParam] + " AND "
 			continue
 		}
 		alreadySet = append(alreadySet, key)
 	}
+	if len(db.SQLRestriction) > 4 { db.SQLRestriction = db.SQLRestriction[:len(db.SQLRestriction) - 4] }
 	    // TODO IN 
 	return db
 }

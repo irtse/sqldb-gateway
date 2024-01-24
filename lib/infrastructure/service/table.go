@@ -70,7 +70,9 @@ func (t *TableInfo) EmptyRecord() (tool.Record, error) {
 		return nil, errors.New("any schema available") 
 	}
 	record := tool.Record{}
-	for k, _ := range res[0].AssColumns { record[k]=nil }
+	for k, _ := range res[0].AssColumns { 
+		if k != tool.SpecialIDParam { record[k]=nil }
+	}
 	return record, nil
 }
 // GetAssociativeArray : Provide table data as an associative arra

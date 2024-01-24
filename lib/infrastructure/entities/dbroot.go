@@ -155,6 +155,7 @@ var DBTask = TableEntity{
 		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  NotNull : true, },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  NotNull : false, },
 		TableColumnEntity{ Name: "header", Type: "varchar(255)",  NotNull : false, },
+		TableColumnEntity{ Name: RootID("dest_table"), Type: "integer", NotNull : false, },
 		TableColumnEntity{ Name: RootID(DBWorkflow.Name), Type: "integer", ForeignTable: DBWorkflow.Name, NotNull : false, },
 	},
 }
@@ -204,15 +205,13 @@ var DBView = TableEntity{
 		TableColumnEntity{ Name: "title", Type: "string",  NotNull : true, },
 		TableColumnEntity{ Name: "description", Type: "string",  NotNull : false, },
 		TableColumnEntity{ Name: "readonly", Type: "boolean",  NotNull : true, Default: false, },
-		TableColumnEntity{ Name: "sqlfilter", Type: "string",  NotNull : true },
-		TableColumnEntity{ Name: "sqlview", Type: "string",  NotNull : true },
-		TableColumnEntity{ Name: RootID("view"), Type: "integer", ForeignTable : RootName("view"), NotNull : true, },
+		TableColumnEntity{ Name: "through_perms", Type: "integer",  ForeignTable : DBSchema.Name, NotNull : false, },
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", Constraint : "unique", 
 		                   ForeignTable : DBSchema.Name, NotNull : true, },
 	},
 }
 
-var AUTHEXCEPTION = []TableEntity{ DBView }
+var AUTHEXCEPTION = []TableEntity{  } // DBView
 var ROOTTABLES = []TableEntity{DBSchema, DBSchemaField, DBPermission, DBRole, DBRolePermission, DBEntity, DBUser, 
 	    DBEntityUser, DBRoleAttribution, DBTask, DBWorkflow, DBWorkflowSchema, DBWorkflowTask, DBTaskAssignee, 
 		DBTaskVerifyer, DBTaskWatcher }

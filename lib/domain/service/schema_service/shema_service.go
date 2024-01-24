@@ -42,3 +42,7 @@ func (s *SchemaService) WriteRowAutomation(record tool.Record) {
 				"CreateOrUpdate",)
 }
 func (s *SchemaService) PostTreatment(results tool.Results) tool.Results { return results }
+
+func (s *SchemaService) ConfigureFilter(tableName string, params tool.Params) (string, string) {
+	return "", ""
+}	

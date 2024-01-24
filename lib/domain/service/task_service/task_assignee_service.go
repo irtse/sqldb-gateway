@@ -74,3 +74,7 @@ func (s *TaskAssigneeService) WriteRowAutomation(record tool.Record) {
 	
 }
 func (s *TaskAssigneeService) PostTreatment(results tool.Results) tool.Results { return results }
+
+func (s *TaskAssigneeService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
+	return tool.ViewDefinition(s.Domain, tableName, params)
+}	
