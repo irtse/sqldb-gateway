@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"errors"
 	"strings"
 	tool "sqldb-ws/lib"
@@ -113,7 +112,6 @@ func (p *PermissionInfo) CreateOrUpdate() (tool.Results, error) {
 }
 
 func (p *PermissionInfo) Create() (tool.Results, error) {
-	fmt.Printf("WRITE PERMS \n")
 	v := Validator[Info]()
 	v.data = Info{}
 	info, err := v.ValidateStruct(p.Record)

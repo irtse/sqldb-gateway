@@ -2,7 +2,6 @@ package service
 
 import (
     "os"
-	"fmt"
 	"errors"
 	"strings"
 	"encoding/json"
@@ -70,13 +69,12 @@ func (t *TableColumnInfo) Create() (tool.Results, error) {
 	if err != nil { return nil, errors.New("Not a proper struct to create a column - expect <entities.TableColumnEntity> Scheme " + err.Error()) }
 	if strings.Contains(strings.ToLower(tcce.Type), "enum") && t.db.Driver == conn.PostgresDriver {
 		query := "CREATE TYPE " + t.Name + "_" + tcce.Name  + " AS " + tcce.Type
-		err := t.db.Query(query)
-		if err != nil { return t.DBError(nil, err) }
+		t.db.Query(query)
 	}
 	query := ""
 	if strings.Contains(strings.ToLower(tcce.Type), "enum") && t.db.Driver == conn.PostgresDriver {
-		query = "ALTER TABLE " + t.Name + " ADD " + tcce.Name + " " + t.Name + "_" + tcce.Name
-	} else { query = "ALTER TABLE " + t.Name + " ADD " + tcce.Name + " " + tcce.Type }
+		query = "ALTER TABLE " + t.Name + " ADD " + tcce.Name + " " + t.Name + "_" + tcce.Name + "  NULL"
+	} else { query = "ALTER TABLE " + t.Name + " ADD " + tcce.Name + " " + tcce.Type + "  NULL" }
 	
 	if t.db.Driver == conn.MySQLDriver {
 		if strings.TrimSpace(tcce.Comment) != "" { query += " COMMENT " + pq.QuoteLiteral(tcce.Comment) }
@@ -172,7 +170,6 @@ func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
 	}
 	if tcce.Null {
 		query := "ALTER TABLE " + t.Name + " ALTER COLUMN " + tcce.Name + " DROP NOT NULL;"
-		fmt.Printf("QUERY %s \n", query)
         err := t.db.Query(query)
 		if err != nil { return err }
 	}

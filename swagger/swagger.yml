@@ -93,6 +93,10 @@ paths:
         in: query
         name: sqlfilter
         type: string
+      - description: (Optionnal) Value of shallow
+        in: query
+        name: shallow
+        type: string
       - description: 'Authorization Token HEADER '
         in: header
         name: Authorization
@@ -139,6 +143,10 @@ paths:
         in: query
         name: sqlfilter
         type: string
+      - description: (Optionnal) Value of shallow
+        in: query
+        name: shallow
+        type: string
       - description: 'Authorization Token HEADER '
         in: header
         name: Authorization
@@ -184,6 +192,10 @@ paths:
       - description: (Optionnal) Value of sqlfilter
         in: query
         name: sqlfilter
+        type: string
+      - description: (Optionnal) Value of shallow
+        in: query
+        name: shallow
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -236,6 +248,10 @@ paths:
       - description: (Optionnal) Value of sqlfilter
         in: query
         name: sqlfilter
+        type: string
+      - description: (Optionnal) Value of shallow
+        in: query
+        name: shallow
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -295,6 +311,10 @@ paths:
         in: query
         name: sqlfilter
         type: string
+      - description: (Optionnal) Value of shallow
+        in: query
+        name: shallow
+        type: string
       - description: 'Authorization Token HEADER '
         in: header
         name: Authorization
@@ -345,6 +365,10 @@ paths:
       - description: (Optionnal) Value of sqlfilter
         in: query
         name: sqlfilter
+        type: string
+      - description: (Optionnal) Value of shallow
+        in: query
+        name: shallow
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -404,6 +428,10 @@ paths:
         in: query
         name: sqlfilter
         type: string
+      - description: (Optionnal) Value of shallow
+        in: query
+        name: shallow
+        type: string
       - description: 'Authorization Token HEADER '
         in: header
         name: Authorization
@@ -461,6 +489,10 @@ paths:
       - description: (Optionnal) Value of sqlfilter
         in: query
         name: sqlfilter
+        type: string
+      - description: (Optionnal) Value of shallow
+        in: query
+        name: shallow
         type: string
       - description: 'Authorization Token HEADER '
         in: header

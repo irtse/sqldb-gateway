@@ -39,7 +39,7 @@ func main() {
 		beego.BConfig.WebConfig.DirectoryIndex = true
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 	}
-	if os.Getenv("automate") == "" { os.Setenv("automate", "true") }
+	if os.Getenv("automate") == "" { os.Setenv("automate", "enable") }
 	if os.Getenv("authmode") == "" { os.Setenv("authmode", auth.AUTHMODE[0]) }
 	if os.Getenv("driverdb") == "" { os.Setenv("driverdb", "postgres") }
 	if os.Getenv("dbhost") == "" { os.Setenv("dbhost", "127.0.0.1") }

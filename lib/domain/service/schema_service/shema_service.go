@@ -33,7 +33,6 @@ func (s *SchemaService) WriteRowAutomation(record tool.Record) {
 				tool.CREATE, "CreateOrUpdate",)
 }
 func (s *SchemaService) PostTreatment(results tool.Results) tool.Results { 
-	fmt.Printf("POSTTREATMENT \n")
 	res := tool.Results{}
 	for _, record := range results{
 		schemas, err := Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : record[tool.SpecialIDParam].(int64)})
@@ -50,8 +49,7 @@ func (s *SchemaService) ConfigureFilter(tableName string, params tool.Params) (s
 func Schema(domain tool.DomainITF, record tool.Record) (tool.Results, error) {
 	if schemaID, ok := record[entities.RootID(entities.DBSchema.Name)]; ok {
 		params := tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-			tool.RootRowsParam : tool.ReservedParam, 
-			tool.SpecialIDParam : fmt.Sprintf("%v", schemaID),
+			tool.RootRowsParam : fmt.Sprintf("%v", schemaID), 
 		}
 		schemas, err := domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 		if err != nil || len(schemas) == 0 { return nil, err }

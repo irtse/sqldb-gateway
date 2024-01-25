@@ -1,6 +1,7 @@
 package schema_service
 
 import (
+	"fmt"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/infrastructure/entities"
 )
@@ -24,24 +25,38 @@ func (s *ActionService) VerifyRowAutomation(record tool.Record, create bool) (to
 func (s *ActionService) DeleteRowAutomation(results tool.Results) { }
 func (s *ActionService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *ActionService) WriteRowAutomation(record tool.Record) { }
+
 func (s *ActionService) PostTreatment(results tool.Results) tool.Results { 
+	fmt.Printf("ACTION %v\n", results)
 	res := tool.Results{}
 	for _, record := range results{
 		names := []string{}
-		schemas, err := Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : record["from_schema"].(int64)})
-		names = append(names, schemas[0][entities.NAMEATTR].(string))
+		schemas, err := Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : record["from_schema"]})
 		if err != nil || len(schemas) == 0 { continue }
-		if to, ok := record["to_schema"]; ok {
+		delete(record, "from_schema")
+		record["from"]=fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
+		path := "/" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
+		names = append(names, schemas[0][entities.NAMEATTR].(string))
+		if to, ok := record["to_schema"]; ok && to != nil {
 			schemas, err := Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : to.(int64)})
 			if err != nil || len(schemas) == 0 { continue }
-			names = append(names, schemas[0][entities.NAMEATTR].(string))
+			delete(record, "to_schema")
+			record["to"]=fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
+			path += "/" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
 		}
-		if link, ok := record["link"]; ok {
+		if link, ok := record["link"]; ok  && link != nil {
 			schemas, err := Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : link.(int64)})
 			if err != nil || len(schemas) == 0 { continue }
-			names = append(names, schemas[0][entities.NAMEATTR].(string))
+			l := fmt.Sprint("%v", schemas[0][entities.NAMEATTR])
+			record["link"]=l
 		}
+		if p, ok := record["extra_path"]; ok  && p != nil {
+			delete(record, "extra_path")
+			path += "/" + fmt.Sprintf("%v", p)
+		}
+		record["path"] = path
 		record["schemas"] = map[string]tool.Record{}
+		fmt.Printf("ACTION %v\n", names)
         for _, tableName := range names {
 			params := tool.Params{ tool.RootTableParam : tableName, }
 			schemes, err := s.Domain.SuperCall(params, tool.Record{}, tool.SELECT, "Get")

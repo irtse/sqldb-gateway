@@ -40,8 +40,8 @@ func (t *TableRowInfo) Get() (tool.Results, error) {
 		}
 	}
 	d, err := t.db.SelectResults(t.Table.Name)
-	t.Results = d
 	if err != nil { return t.DBError(nil, err) }
+	t.Results = d
 	if t.SpecializedService != nil && t.PostTreatment {
 		t.Results = t.SpecializedService.PostTreatment(t.Results)
 	}
@@ -54,9 +54,6 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	var result tool.Results
 	columns := ""
 	values := ""
-	if t.SpecializedService != nil {
-		if _, ok := t.SpecializedService.VerifyRowAutomation(t.Record, true); !ok { return nil, errors.New("verification failed.") }
-	}
 	if len(t.Record) > 0 {
 		v := Validator[map[string]interface{}]()
 		rec, err := v.ValidateSchema(t.Record, t.Table, false)
@@ -76,6 +73,9 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 		} else {
 			values += fmt.Sprintf("%v", element) + ","
 		}
+	}
+	if t.SpecializedService != nil {
+		if _, ok := t.SpecializedService.VerifyRowAutomation(t.Record, true); !ok { return nil, errors.New("verification failed.") }
 	}
 	query := "INSERT INTO " + t.Table.Name + "(" + conn.RemoveLastChar(columns) + ") VALUES (" + conn.RemoveLastChar(values) + ")"
 	if t.db.Driver == conn.PostgresDriver { 

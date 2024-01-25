@@ -83,6 +83,11 @@ func TableNoPerm(database *conn.Db, admin bool, user string, name string, params
 func Table(database *conn.Db, admin bool, user string, name string, params tool.Params, record tool.Record, method tool.Method) *TableInfo {
 	table := TableNoPerm(database, admin, user, name, params, record, method)
 	table.PermService = Permission(database, admin, user, tool.Params{}, tool.Record{}, method)
+	table.Row = &TableRowInfo{ } 
+	table.Row.Table = EmptyTable(database, entities.DBPermission.Name)
+	table.Row.SpecializedService = nil
+	table.Row.db = database
+	table.Row.Fill(entities.DBPermission.Name, admin, user, tool.Params{ }, tool.Record{}, tool.CREATE,)
 	for _, restricted := range entities.DBRESTRICTED {
 		if table.Name == restricted.Name { table.PermService = nil; break }
 	}

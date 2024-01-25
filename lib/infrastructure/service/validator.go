@@ -31,7 +31,6 @@ func (v *DBValidator[T]) ValidateSchema(data map[string]interface{}, t *TableInf
 	newData := map[string]interface{}{}
 	if reverse {
 		found := false
-		
 		for _, s := range schema {
 			for k, _ := range s.AssColumns {
 				if v, ok := data[k]; ok { 
@@ -49,8 +48,8 @@ func (v *DBValidator[T]) ValidateSchema(data map[string]interface{}, t *TableInf
 				if _, ok := data[k]; ok == false && k != tool.SpecialIDParam {
 					return nil, errors.New("Missing a required field " + k)
 				} 
-				if v, ok := data[k]; ok { newData[k]=v }
 			}
+			if v, ok := data[k]; ok { newData[k]=v }
 		}
 	}
 	return newData, nil

@@ -11,6 +11,7 @@ var SERVICES = []tool.SpecializedService{
 	&schema.SchemaService{}, 
 	&schema.SchemaFields{}, 
 	&schema.ViewService{},
+	&schema.ActionService{},
 	&task.TaskAssigneeService{}, 
 	&task.TaskVerifyerService{}, 
 	&task.TaskService{},

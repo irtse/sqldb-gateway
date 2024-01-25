@@ -19,9 +19,10 @@ var listTablesCmd = map[string]string{
 
 // Table is a table structure description
 type TableInfo struct {
+	ID 		   int64                                    `json:"id"`
 	AssColumns map[string]entities.TableColumnEntity    `json:"columns"`
-	Columns    []TableColumnInfo    		 			`json:"-"`
-	Rows       []TableRowInfo       		 			`json:"-"`
+	Cols 	   []string                                 `json:"-"`
+	Row		   *TableRowInfo							`json:"-"`
 	InfraService
 }
 func (t *TableInfo) TableRow(specializedService tool.SpecializedService, adminView bool) *TableRowInfo {
@@ -68,7 +69,7 @@ func (t *TableInfo) Template() (interface{}, error) {
 
 func (t *TableInfo) EmptyRecord() (tool.Record, error) {
 	res, err := t.schema(t.Name)
-	if err != nil || len(res) == 0 || len(res[0].Columns) == 0 { 
+	if err != nil || len(res) == 0 || len(res[0].AssColumns) == 0 { 
 		return nil, errors.New("any schema available") 
 	}
 	record := tool.Record{}
@@ -85,7 +86,9 @@ func (t *TableInfo) Get() (tool.Results, error) {
 	for _, s := range schema {
 		rec := tool.Record{}
 		rec[entities.NAMEATTR] = s.Name
-		rec[tool.RootColumnsParam] = s.AssColumns
+		if shallow, ok := t.Params[tool.RootShallow]; shallow != "enable" || !ok { 
+			rec[tool.RootColumnsParam] = s.AssColumns
+		} else { rec[tool.RootColumnsParam] = s.Cols }
 		res = append(res, rec)
 	}
 	t.Results = res
@@ -111,6 +114,7 @@ func (t *TableInfo) schema(name string) ([]TableInfo, error) {
 func (t *TableInfo) get() (*TableInfo, error) {
 	cols, err := t.db.QueryAssociativeArray(t.querySchemaCmd(t.db.Driver, t.Name))
 	if err != nil { return nil, err }
+	t.Cols = []string{}
 	t.AssColumns = map[string]entities.TableColumnEntity{}
 	for _, row := range cols {
 		var tableCol entities.TableColumnEntity
@@ -125,7 +129,8 @@ func (t *TableInfo) get() (*TableInfo, error) {
 		if tableCol.Default != nil && strings.Contains(tableCol.Default.(string), "NULL") {
 			tableCol.Default = nil
 		}
-		t.AssColumns[tableCol.Name] = tableCol
+		t.AssColumns[tableCol.Name] = tableCol 
+		t.Cols = append(t.Cols, tableCol.Name)
 	}
 	return t, nil
 }
@@ -243,10 +248,6 @@ func (t *TableInfo) Delete() (tool.Results, error) {
 	return t.Results, err
 }
 
-func (t *TableInfo) Add() (tool.Results, error) { return nil, errors.New("not implemented...") }
-
-func (t *TableInfo) Remove() (tool.Results, error) { return nil, errors.New("not implemented...") }
-
 func (t *TableInfo) Import(filename string) (tool.Results, error) {
 	var jsonSource []TableInfo
 	byteValue, _ := os.ReadFile(filename)
@@ -287,10 +288,10 @@ func (t *TableInfo) Link() (tool.Results, error) {
 	if _, ok := t.Params[tool.RootToTableParam]; !ok || t.Name == tool.ReservedParam { return nil, errors.New("no destination table") }
 	otherName := t.Params[tool.RootToTableParam]
 	ok := true; ok2 := true
-	if strings.Contains(otherName[:2], "db") { 
+	if entities.IsRootDB(otherName){ 
 		_, ok = t.Verify(t.Name + "_" + otherName[2:])
 	} else { _, ok = t.Verify(t.Name + "_" + otherName) }
-	if strings.Contains(t.Name[:2], "db") { _, ok2 = t.Verify(otherName + "_" + t.Name[2:])
+	if entities.IsRootDB(t.Name) { _, ok2 = t.Verify(otherName + "_" + t.Name[2:])
 	} else { _, ok2 = t.Verify(otherName + "_" + t.Name) }
 	if !ok && !ok2 {
 		v := Validator[entities.ShallowTableEntity]()
@@ -302,13 +303,17 @@ func (t *TableInfo) Link() (tool.Results, error) {
 		if strings.Contains(otherName[:2], "db") { name = rawName + "_" + otherName[2:]
 	    } else { name = rawName + "_" + otherName } 
 		if te.Name != "" { name = te.Name }
-		record := tool.Record{ "name" : name, 
-	                      "columns" : []map[string]interface{}{
-							map[string]interface{}{ "name" : rawName + "_id", "type" : "integer", "nullable" : false, "foreign_table": otherName, },
-							map[string]interface{}{ "name" : otherName + "_id", "type" : "integer", "nullable" : false, "foreign_table": rawName, },
-						  },
-						}
-		t.Record=record
+		entity := entities.TableEntity{
+			Name : name,
+			Columns : []entities.TableColumnEntity{
+				entities.TableColumnEntity{
+					Name : rawName + "_id", Type : "integer", Null : false, ForeignTable : otherName },
+				entities.TableColumnEntity{
+					Name : otherName + "_id", Type : "integer", Null : false, ForeignTable : rawName },
+			},
+		}
+		b, _ := json.Marshal(entity)
+		json.Unmarshal(b, &t.Record)
 		return t.Create()
 	}
 	return nil, errors.New("link table already exists") 

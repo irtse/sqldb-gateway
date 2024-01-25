@@ -15,9 +15,9 @@ var READPERMS = "read"
 var DBSchema = TableEntity{
 	Name : RootName("schema"),
 	Columns : []TableColumnEntity{
-		 TableColumnEntity{ Name: TYPEATTR, Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)", Constraint: "unique", Null : false, },
-		 TableColumnEntity{ Name: "title", Type: "varchar(255)", Null : false, Default : "unknown title" },
+		 TableColumnEntity{ Name: TYPEATTR, Type: "varchar(255)", Null : true, },
+		 TableColumnEntity{ Name: "title", Type: "varchar(255)", Null : true, Default : "unknown title" },
 		 TableColumnEntity{ Name: "header", Type: "varchar(255)", Null : true, Default : "" },
 	},
 }
@@ -32,7 +32,7 @@ var DBSchemaField = TableEntity{
 		 TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)", Constraint: "unique", Null : false, },
 		 TableColumnEntity{ Name: TYPEATTR, Type: "varchar(255)", Null : false, },
 		 TableColumnEntity{ Name: "index", Type: "integer", Null : true, Default: 1 },
-		 TableColumnEntity{ Name: "label", Type: "varchar(255)", Null : false, Default : "" },
+		 TableColumnEntity{ Name: "label", Type: "varchar(255)", Null : true, Default : "" },
 		 TableColumnEntity{ Name: "placeholder", Type: "varchar(255)", Null : true, Default : "" },
 		 TableColumnEntity{ Name: "default_value", Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "description", Type: "varchar(255)", Null : true, Default : "no description..." },
@@ -50,10 +50,10 @@ var DBPermission = TableEntity{
 		 TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)", Constraint: "unique", Null : false, },
 		 TableColumnEntity{ Name: TABLENAMEATTR, Type: "varchar(255)", Null : false, },
 		 TableColumnEntity{ Name: COLNAMEATTR, Type: "varchar(255)", Null : true, },
-		 TableColumnEntity{ Name: CREATEPERMS, Type: "boolean", Null : false, Default : false },
-		 TableColumnEntity{ Name: UPDATEPERMS, Type: "boolean", Null : false, Default : false },
-		 TableColumnEntity{ Name: DELETEPERMS, Type: "boolean", Null : false, Default : false },
-		 TableColumnEntity{ Name: READPERMS, Type: "boolean", Null : false, Default : false },
+		 TableColumnEntity{ Name: CREATEPERMS, Type: "boolean", Null : true, Default : false },
+		 TableColumnEntity{ Name: UPDATEPERMS, Type: "boolean", Null : true, Default : false },
+		 TableColumnEntity{ Name: DELETEPERMS, Type: "boolean", Null : true, Default : false },
+		 TableColumnEntity{ Name: READPERMS, Type: "boolean", Null : true, Default : false },
 	},
 }
 
@@ -137,7 +137,7 @@ var DBWorkflowSchema = TableEntity{
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: RootID(DBWorkflow.Name), Type: "integer", ForeignTable: DBWorkflow.Name, Null : false, },
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, Null : false, },
-		TableColumnEntity{ Name: "index", Type: "integer", Null : false, Default: 1 },
+		TableColumnEntity{ Name: "index", Type: "integer", Null : true, Default: 1 },
 	},
 }
 
@@ -148,10 +148,10 @@ var DBTask = TableEntity{
 		TableColumnEntity{ Name: "opened_by", Type: "integer", ForeignTable: DBUser.Name, Null : true, },
 		TableColumnEntity{ Name: "created_by", Type: "integer", ForeignTable: DBUser.Name, Null : true, },
 		TableColumnEntity{ Name: "opened_date", Type: "timestamp",  Null : false, },
-		TableColumnEntity{ Name: "created_date", Type: "timestamp",  Null : false, Default : "CURRENT_TIMESTAMP"},
-		TableColumnEntity{ Name: "state", Type: "enum('completed', 'in progress', 'pending', 'close')",  Null : false, Default: "pending" },
-		TableColumnEntity{ Name: "urgency", Type: "enum('low', 'medium', 'high')",  Null : false, Default: "medium" },
-		TableColumnEntity{ Name: "priority", Type: "enum('low', 'medium', 'high')",  Null : false, Default: "medium" },
+		TableColumnEntity{ Name: "created_date", Type: "timestamp",  Null : true, Default : "CURRENT_TIMESTAMP"},
+		TableColumnEntity{ Name: "state", Type: "enum('completed', 'in progress', 'pending', 'close')",  Null : true, Default: "pending" },
+		TableColumnEntity{ Name: "urgency", Type: "enum('low', 'medium', 'high')",  Null : true, Default: "medium" },
+		TableColumnEntity{ Name: "priority", Type: "enum('low', 'medium', 'high')",  Null : true, Default: "medium" },
 		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true, Default: "no description..." },
 		TableColumnEntity{ Name: "header", Type: "varchar(255)",  Null : true, },
@@ -174,8 +174,8 @@ var DBTaskAssignee = TableEntity{
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : false, },
 		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, Null : false, },
 		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, Null : false, },
-		TableColumnEntity{ Name: "state", Type: "enum('in progress', 'pending', 'completed')",  Null : false, Default: "pending"},
-		TableColumnEntity{ Name: "hidden", Type: "boolean",  Null : false, Default: false, },
+		TableColumnEntity{ Name: "state", Type: "enum('in progress', 'pending', 'completed')",  Null : true, Default: "pending"},
+		TableColumnEntity{ Name: "hidden", Type: "boolean",  Null : true, Default: false, },
 	},
 }
 
@@ -184,8 +184,8 @@ var DBTaskVerifyer = TableEntity{
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, },
 		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, Null : false, },
-		TableColumnEntity{ Name: "state", Type: "enum('pending', 'dismiss', 'complete')",  Null : false, Default: "pending"},
-		TableColumnEntity{ Name: "hidden", Type: "boolean",  Null : false, Default: false, },
+		TableColumnEntity{ Name: "state", Type: "enum('pending', 'dismiss', 'complete')",  Null : true, Default: "pending"},
+		TableColumnEntity{ Name: "hidden", Type: "boolean",  Null : true, Default: false, },
 	},
 }
 
@@ -195,7 +195,7 @@ var DBTaskWatcher = TableEntity{
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, },
 		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, Null : false, },
 		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, Null : true, },
-		TableColumnEntity{ Name: "hidden", Type: "boolean",  Null : false, Default: false, },
+		TableColumnEntity{ Name: "hidden", Type: "boolean",  Null : true, Default: false, },
 	},
 }
 
@@ -205,9 +205,9 @@ var DBView = TableEntity{
 		TableColumnEntity{ Name: "name", Type: "varchar(255)",  Null : false, },
 		TableColumnEntity{ Name: "category", Type: "varchar(100)",  Null : true, },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true,  Default: "no description...", },
-		TableColumnEntity{ Name: "readonly", Type: "boolean",  Null : false, Default: false, },
-		TableColumnEntity{ Name: "is_empty", Type: "boolean", Null : false, Default: false },
-		TableColumnEntity{ Name: "index", Type: "integer", Null : false, Default: 1 },
+		TableColumnEntity{ Name: "readonly", Type: "boolean",  Null : true, Default: false, },
+		TableColumnEntity{ Name: "is_empty", Type: "boolean", Null : true, Default: false },
+		TableColumnEntity{ Name: "index", Type: "integer", Null : true, Default: 1 },
 		TableColumnEntity{ Name: "sql_order", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "sql_view", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "sql_restriction", Type: "varchar(255)", Null : true, },
@@ -224,12 +224,12 @@ var DBAction = TableEntity{
 		TableColumnEntity{ Name: "name", Type: "varchar(255)",  Null : false, },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true, Default: "no description...", },
 		TableColumnEntity{ Name: "category", Type: "varchar(100)",  Null : true, },
-		TableColumnEntity{ Name: "method", Type: "enum('POST', 'GET', 'PUT', 'DELETE')",  Null : false, Default : "GET" },
-		TableColumnEntity{ Name: "extra_path", Type: "varchar(255)", Null : false, Default : ""  },
+		TableColumnEntity{ Name: "method", Type: "enum('POST', 'GET', 'PUT', 'DELETE')",  Null : true, Default : "GET" },
+		TableColumnEntity{ Name: "extra_path", Type: "varchar(255)", Null : true, Default : ""  },
 		TableColumnEntity{ Name: "from_schema", Type: "integer",  ForeignTable : DBSchema.Name, Null : false, },
 		TableColumnEntity{ Name: "to_schema", Type: "integer",  ForeignTable : DBSchema.Name, Null : true, },
-		TableColumnEntity{ Name: RootID(DBView.Name), Type: "integer",  ForeignTable : DBView.Name, Null : false, },
-		TableColumnEntity{ Name: "type", Type: "enum('LINK_SELECT', 'BUTTON', 'LINK_ADD')", Null : false, Default : "BUTTON" },
+		TableColumnEntity{ Name: RootID(DBView.Name), Type: "integer",  ForeignTable : DBView.Name, Null : true, },
+		TableColumnEntity{ Name: "type", Type: "enum('LINK_SELECT', 'BUTTON', 'LINK_ADD')", Null : true, Default : "BUTTON" },
 		TableColumnEntity{ Name: "link", Type: "integer", ForeignTable : DBSchema.Name, Null : true, },
 		TableColumnEntity{ Name: "link_sql_order", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "link_sql_columns", Type: "varchar(255)", Null : true, },
@@ -238,6 +238,7 @@ var DBAction = TableEntity{
 }
 
 var DBViewAction = TableEntity{
+	Name : RootName("view_action"),
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: RootID(DBView.Name), Type: "integer", ForeignTable : DBView.Name, Null : false, },
 		TableColumnEntity{ Name: RootID(DBAction.Name), Type: "integer", ForeignTable : DBAction.Name, Null : false, },

@@ -79,7 +79,6 @@ func (db *Db) Query(query string) (error) {
 }
 
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
-	// fmt.Printf("QUERY ASSO : %s\n", query)
 	// fmt.Printf("QUERY : %s\n", query)
 	rows, err := db.Conn.Query(query)
 	if err != nil { return nil, err }

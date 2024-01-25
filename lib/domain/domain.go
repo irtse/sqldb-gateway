@@ -2,6 +2,7 @@ package domain
 
 import (
 	"os"
+	"fmt"
 	"errors"
 	"strings"
 	"reflect"
@@ -76,8 +77,10 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			params[tool.SpecialIDParam]=strings.ToLower(rowName) 
 			delete(params, tool.RootRowsParam)
 			if params[tool.SpecialIDParam] == tool.ReservedParam { delete(params, tool.SpecialIDParam) }
-			if adminView, valid := params[tool.RootAdminView]; valid && adminView == "true" { service = table.TableRow(specializedService, true)
+			if adminView, valid := params[tool.RootAdminView]; valid && adminView == "enable" { service = table.TableRow(specializedService, true)
 			} else { service = table.TableRow(specializedService, false) }
+			fmt.Printf("POSTREATED %s %b \n", tablename, postTreat)
+			service.SetPostTreatment(postTreat)
 			return d.invoke(service, funcName, args...)
 		}
 		if !d.SuperAdmin { 
@@ -91,6 +94,7 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			params[tool.RootColumnsParam]=strings.ToLower(col)
 			service = table.TableColumn() 
 		}
+		fmt.Printf("POSTREATED %s %b \n", tablename, postTreat)
 		service.SetPostTreatment(postTreat)
 		return d.invoke(service, funcName, args...)
 	}
