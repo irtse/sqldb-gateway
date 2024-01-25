@@ -2,6 +2,7 @@ package service
 
 import (
     "os"
+	"fmt"
 	"errors"
 	"strings"
 	"encoding/json"
@@ -25,7 +26,7 @@ func (t *TableColumnInfo) Get() (tool.Results, error) {
 	t.db = ToFilter(t.Name, t.Params, t.db)
 	d, err := t.db.SelectResults(t.Name)
 	t.Results = d
-	if err != nil { return DBError(nil, err) }
+	if err != nil { return t.DBError(nil, err) }
 	return t.Results, nil
 }
 
@@ -70,7 +71,7 @@ func (t *TableColumnInfo) Create() (tool.Results, error) {
 	if strings.Contains(strings.ToLower(tcce.Type), "enum") && t.db.Driver == conn.PostgresDriver {
 		query := "CREATE TYPE " + t.Name + "_" + tcce.Name  + " AS " + tcce.Type
 		err := t.db.Query(query)
-		if err != nil { return DBError(nil, err) }
+		if err != nil { return t.DBError(nil, err) }
 	}
 	query := ""
 	if strings.Contains(strings.ToLower(tcce.Type), "enum") && t.db.Driver == conn.PostgresDriver {
@@ -81,9 +82,9 @@ func (t *TableColumnInfo) Create() (tool.Results, error) {
 		if strings.TrimSpace(tcce.Comment) != "" { query += " COMMENT " + pq.QuoteLiteral(tcce.Comment) }
 	}
 	err = t.db.Query(query)
-	if err != nil { return DBError(nil, err) }
+	if err != nil { return t.DBError(nil, err) }
 	err = t.update(tcce)
-	if err != nil { return DBError(nil, err) }
+	if err != nil { return t.DBError(nil, err) }
 	auth := true
 	for _, exception := range entities.PERMISSIONEXCEPTION {
 		if t.Name == exception.Name { auth = false; break }
@@ -106,14 +107,15 @@ func (t *TableColumnInfo) Update() (tool.Results, error) {
 	v.data = entities.TableColumnEntity{}
 	tcue, err := v.ValidateStruct(t.Record)
 	if err != nil { return nil, errors.New("Not a proper struct to update a column - expect <entities.TableColumnEntity> Scheme " + err.Error()) }
+	err = t.update(tcue)
+	if err != nil { return t.DBError(nil, err) }
+
 	if strings.TrimSpace(tcue.NewName) != "" {
 		if strings.Contains(t.Name, "db") { return nil, errors.New("can't rename protected root db columns.") }
 		query := "ALTER TABLE " + t.Name + " RENAME COLUMN " + tcue.Name + " TO " + tcue.NewName + ";"
 		err := t.db.Query(query)
-		if err != nil { return DBError(nil, err) }
+		if err != nil { return t.DBError(nil, err) }
 	}
-	err = t.update(tcue)
-	if err != nil { return DBError(nil, err) }
 	auth := true
 	for _, exception := range entities.PERMISSIONEXCEPTION {
 		if t.Name == exception.Name { auth = false; break }
@@ -153,17 +155,24 @@ func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
         err := t.db.Query(query)
 		if err != nil { return err }
 	}
-	if tcce.Default != "" {
+	if tcce.Default != "" && conn.FormatForSQL(tcce.Type, tcce.Default) != "NULL" {
 		query := "ALTER TABLE " + t.Name + " ALTER " + tcce.Name  + " SET DEFAULT " + conn.FormatForSQL(tcce.Type, tcce.Default) + ";"
         err := t.db.Query(query)
 		if err != nil { return err } // then iterate on field to update value if null
-		params := tool.Params{ tool.RootSQLFilterParam : tcce.Name + " IS NULL" }
+		params := tool.Params{ tool.RootSQLFilterParam : tcce.Name + " IS NULL " }
 		record := tool.Record{ tcce.Name : tcce.Default }
 		t.Row.SpecializedFill(params, record, tool.UPDATE)
 		t.Row.CreateOrUpdate()
 	}
-	if tcce.NotNull {
-		query := "ALTER TABLE " + t.Name + "  ALTER COLUMN " + tcce.Name + " SET NOT NULL;"
+	if !tcce.Null {
+
+		query := "ALTER TABLE " + t.Name + " ALTER COLUMN " + tcce.Name + " SET NOT NULL;"
+        err := t.db.Query(query)
+		if err != nil { return err }
+	}
+	if tcce.Null {
+		query := "ALTER TABLE " + t.Name + " ALTER COLUMN " + tcce.Name + " DROP NOT NULL;"
+		fmt.Printf("QUERY %s \n", query)
         err := t.db.Query(query)
 		if err != nil { return err }
 	}
@@ -190,7 +199,7 @@ func (t *TableColumnInfo) Delete() (tool.Results, error) {
 	for _, col := range strings.Split(t.Params[tool.RootColumnsParam], ",") {
 		query := "ALTER TABLE " + t.Name + " DROP " + col
 		err := t.db.Query(query)
-		if err != nil { return DBError(nil, err) }
+		if err != nil { return t.DBError(nil, err) }
 		t.Results = append(t.Results, tool.Record{ entities.NAMEATTR : col })
 		auth:=true
 		for _, exception := range entities.PERMISSIONEXCEPTION {
@@ -220,12 +229,11 @@ func (t *TableColumnInfo) Import(filename string) (tool.Results, error) {
 	var jsonSource []TableColumnInfo
 	byteValue, _ := os.ReadFile(filename)
 	err := json.Unmarshal([]byte(byteValue), &jsonSource)
-	if err != nil { return DBError(nil, err) }
+	if err != nil { return t.DBError(nil, err) }
 	for _, col := range jsonSource {
 		col.db = t.db
-		if t.Method == tool.DELETE { _, err = col.Delete() 
-		} else { _, err = col.CreateOrUpdate() }
-		if err != nil { log.Error().Msg(err.Error()) }
+		if t.Method == tool.DELETE { col.Delete() 
+		} else { col.CreateOrUpdate() }
 	}
 	return t.Results, nil
 }
@@ -238,7 +246,7 @@ func (t *TableColumnInfo) Link() (tool.Results, error) {
 	res := tool.Results{}
 	for _, col := range cols {
 		rename := otherName + "_id"
-		t.Record = tool.Record{ "name" : col, "new_name": rename, "type" : "integer", "foreign_table": otherName, "not_null" : true }
+		t.Record = tool.Record{ "name" : col, "new_name": rename, "type" : "integer", "foreign_table": otherName, "nullable" : false }
 		res, err = t.CreateOrUpdate()
 		if err == nil { t.Results = append(t.Results, res...) }
 	}

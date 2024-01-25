@@ -30,13 +30,13 @@ func (s *HierarchyService) PostTreatment(results tool.Results) tool.Results {
 		if !found {
 			params := tool.Params{ tool.RootTableParam : entities.DBHierarchy.Name, tool.RootRowsParam : tool.ReservedParam, }
 			if entityId, ok2 := record[entities.RootID(entities.DBEntity.Name)]; ok2 {
-				params[entities.RootID(entities.DBEntity.Name)]= fmt.Sprintf("%d", entityId.(int64))
+				params[entities.RootID(entities.DBEntity.Name)]= fmt.Sprintf("%v", entityId)
 			}
 			if userId, ok3 := record[entities.RootID(entities.DBUser.Name)]; ok3 {
-				params[entities.RootID(entities.DBUser.Name)]= fmt.Sprintf("%d", userId.(int64))
+				params[entities.RootID(entities.DBUser.Name)]= fmt.Sprintf("%v", userId)
 			}
 			if entityParentId, ok4 := record["parent_" + entities.RootID(entities.DBEntity.Name)]; ok4 {
-				params["parent_" + entities.RootID(entities.DBEntity.Name)]= fmt.Sprintf("%d", entityParentId.(int64))
+				params["parent_" + entities.RootID(entities.DBEntity.Name)]= fmt.Sprintf("%v", entityParentId)
 			}
 			s.Domain.SuperCall( params, tool.Record{}, tool.DELETE, "Delete", )	
 		} else { res = append(res, record) }

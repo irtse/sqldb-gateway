@@ -7,7 +7,6 @@ import (
 	"errors"
 	"encoding/json"
 	tool "sqldb-ws/lib"
-	"github.com/rs/zerolog/log"
 	_ "github.com/go-sql-driver/mysql"
 	"sqldb-ws/lib/infrastructure/entities"
 	conn "sqldb-ws/lib/infrastructure/connector"
@@ -42,8 +41,8 @@ func (t *TableRowInfo) Get() (tool.Results, error) {
 	}
 	d, err := t.db.SelectResults(t.Table.Name)
 	t.Results = d
-	if err != nil { return DBError(nil, err) }
-	if t.SpecializedService != nil {
+	if err != nil { return t.DBError(nil, err) }
+	if t.SpecializedService != nil && t.PostTreatment {
 		t.Results = t.SpecializedService.PostTreatment(t.Results)
 	}
 	return t.Results, nil
@@ -60,7 +59,8 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	}
 	if len(t.Record) > 0 {
 		v := Validator[map[string]interface{}]()
-		_, err = v.ValidateSchema(t.Record, t.Table, false)
+		rec, err := v.ValidateSchema(t.Record, t.Table, false)
+		t.Record = rec
 		if err != nil { return nil, errors.New("Not a proper struct to create a row " + err.Error()) }
 	} else if !entities.IsRootDB(t.Table.Name) {
 		emptyRec, err := t.Table.EmptyRecord()
@@ -80,20 +80,21 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	query := "INSERT INTO " + t.Table.Name + "(" + conn.RemoveLastChar(columns) + ") VALUES (" + conn.RemoveLastChar(values) + ")"
 	if t.db.Driver == conn.PostgresDriver { 
 		id, err = t.db.QueryRow(query)
-		if err != nil { return DBError(nil, err) }
+		if err != nil { return t.DBError(nil, err) }
 		t.db.SQLRestriction = fmt.Sprintf("id=%d", id)
-		if err != nil { return DBError(nil, err) }
+		if err != nil { return t.DBError(nil, err) }
 	}
 	if t.db.Driver == conn.MySQLDriver {
 		stmt, err := t.db.Prepare(query)
-		if err != nil { return DBError(nil, err) }
+		if err != nil { return t.DBError(nil, err) }
 		res, err := stmt.Exec()
-		if err != nil { return DBError(nil, err) }
+		if err != nil { return t.DBError(nil, err) }
 		id, err = res.LastInsertId()
 		t.db.SQLRestriction = fmt.Sprintf("id=%d", id)
-		if err != nil { return DBError(nil, err) }
-		if err != nil { return DBError(nil, err) }
+		if err != nil { return t.DBError(nil, err) }
+		if err != nil { return t.DBError(nil, err) }
 	}
+
 	if t.SpecializedService != nil && !t.AdminView {
 		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
 		if restriction != "" { 
@@ -106,7 +107,7 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	t.Results = result
 	if t.SpecializedService != nil {
 		t.SpecializedService.WriteRowAutomation(t.Record)
-		t.Results = t.SpecializedService.PostTreatment(t.Results)
+		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results) }
 	}
 	return t.Results, nil
 }
@@ -117,7 +118,8 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 		r, _ := t.SpecializedService.VerifyRowAutomation(t.Record, false) 
 		t.Record = r
 	}
-	_, err := v.ValidateSchema(t.Record, t.Table, true)
+	rec, err := v.ValidateSchema(t.Record, t.Table, true)
+	t.Record = rec
 	if err != nil { return nil, errors.New("Not a proper struct to update a row") }
 	t.db = ToFilter(t.Table.Name, t.Params, t.db)
 	stack := ""
@@ -138,20 +140,20 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 			if t.Verified {
 				typ, ok := t.EmptyCol.Verify(key)
 				if ok { 
-					stack = stack + " " + key + "=" + conn.FormatForSQL(typ, element) + "," 
+					stack = stack + key + "=" + conn.FormatForSQL(typ, element) + "," 
 					filter += key + "=" + conn.FormatForSQL(typ, element) + " and " 
 				}
 			} else { 
 				stack = stack + " " + key + "=" + fmt.Sprintf("%v", element) + "," 
 				filter += key + "=" + fmt.Sprintf("%v", element) + " and " 
 			}
-		} else if !strings.Contains(t.db.SQLRestriction, "id=") { t.db.SQLRestriction += "id=" + fmt.Sprintf("%d", int64(element.(float64))) + " " }
+		} else if !strings.Contains(t.db.SQLRestriction, "id=") { t.db.SQLRestriction += "id=" + fmt.Sprintf("%v", int64(element.(float64))) + " " }
 	}
 	stack = conn.RemoveLastChar(stack)
 	query := ("UPDATE " + t.Table.Name + " SET " + stack) // REMEMBER id is a restriction !
 	if t.db.SQLRestriction != "" { query += " WHERE " + t.db.SQLRestriction }
 	err = t.db.Query(query)
-	if err != nil { return DBError(nil, err) }
+	if err != nil { return t.DBError(nil, err) }
 	if len(t.db.SQLRestriction) > 0 { 
 		if (len(filter) > 0) {
 			t.db.SQLRestriction += "and " + filter[:len(filter) - 4]
@@ -167,10 +169,10 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 	}
 	res, err := t.db.SelectResults(t.Table.Name)
 	t.Results = res
-	if err != nil { return DBError(nil, err) }
+	if err != nil { return t.DBError(nil, err) }
 	if t.SpecializedService != nil {
 		t.SpecializedService.UpdateRowAutomation(res, t.Record) 
-		t.Results = t.SpecializedService.PostTreatment(t.Results)
+		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results) }
 	}
 	return t.Results, nil
 }
@@ -192,15 +194,15 @@ func (t *TableRowInfo) Delete() (tool.Results, error) {
 		if view != "" { t.db.SQLView = view }
 	}
 	res, err := t.db.SelectResults(t.Table.Name)
-	if err != nil { return DBError(nil, err) }
+	if err != nil { return t.DBError(nil, err) }
 	t.Results = res
 	query := ("DELETE FROM " + t.Table.Name)
 	if t.db.SQLRestriction != "" { query += " WHERE " + t.db.SQLRestriction }
 	err = t.db.Query(query)
-	if err != nil { return DBError(nil, err) }
+	if err != nil { return t.DBError(nil, err) }
 	if t.SpecializedService != nil {
 		t.SpecializedService.DeleteRowAutomation(t.Results)
-		t.Results = t.SpecializedService.PostTreatment(t.Results)
+		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results) }
 	}
 	return t.Results, nil
 }
@@ -209,12 +211,11 @@ func (t *TableRowInfo) Import(filename string) (tool.Results, error)  {
 	var jsonSource []TableRowInfo
 	byteValue, _ := os.ReadFile(filename)
 	err := json.Unmarshal([]byte(byteValue), &jsonSource)
-	if err != nil { return DBError(nil, err) }
+	if err != nil { return t.DBError(nil, err) }
 	for _, row := range jsonSource {
 		row.db = t.db
-		if t.Method == tool.DELETE { _, err = row.Delete() 
-		} else { _, err = row.Create() }
-		if err != nil { log.Error().Msg(err.Error()) }
+		if t.Method == tool.DELETE { row.Delete() 
+		} else { row.Create() }
 	}
 	return t.Results, nil
 }

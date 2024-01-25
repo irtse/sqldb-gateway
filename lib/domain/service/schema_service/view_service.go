@@ -39,7 +39,7 @@ func (s *ViewService) PostTreatment(results tool.Results) tool.Results {
 		}
 		params = tool.Params{ tool.RootTableParam : record[entities.RootID(entities.DBViewAction.Name)].(string), 
 			                   tool.RootRowsParam : tool.ReservedParam,
-							   entities.RootID(entities.DBView.Name): fmt.Sprintf("%d", record[tool.SpecialIDParam].(int64)) }
+							   entities.RootID(entities.DBView.Name): fmt.Sprintf("%v", record[tool.SpecialIDParam]) }
 		actions, err := s.Domain.SuperCall(params, tool.Record{}, tool.SELECT, "Get")
 		if err == nil && len(actions) > 0 {
 			recActions := []tool.Record{}

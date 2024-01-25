@@ -17,8 +17,8 @@ func (s *TaskAssigneeService) VerifyRowAutomation(record tool.Record, create boo
 			res, _ = s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : entities.DBTaskAssignee.Name, 
 						 tool.RootRowsParam : tool.ReservedParam, 
-						 entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%d", record[entities.RootID(entities.DBTask.Name)].(int64)),
-						 entities.RootID(entities.DBUser.Name): fmt.Sprintf("%d", record[entities.RootID(entities.DBUser.Name)].(int64)) }, 
+						 entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%v", record[entities.RootID(entities.DBTask.Name)]),
+						 entities.RootID(entities.DBUser.Name): fmt.Sprintf("%v", record[entities.RootID(entities.DBUser.Name)]) }, 
 			tool.Record{}, 
 			tool.SELECT, 
 			"Get")
@@ -26,7 +26,7 @@ func (s *TaskAssigneeService) VerifyRowAutomation(record tool.Record, create boo
 			res, _ = s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : entities.DBTaskAssignee.Name, 
 						 tool.RootRowsParam : tool.ReservedParam, 
-						 entities.RootID(entities.DBEntity.Name): fmt.Sprintf("%d", record[entities.RootID(entities.DBEntity.Name)].(int64)) }, 
+						 entities.RootID(entities.DBEntity.Name): fmt.Sprintf("%v", record[entities.RootID(entities.DBEntity.Name)]) }, 
 			tool.Record{}, 
 			tool.SELECT, 
 			"Get")
@@ -59,11 +59,11 @@ func (s *TaskAssigneeService) WriteRowAutomation(record tool.Record) {
 							tool.Params{ 
 								tool.RootTableParam : entities.DBTaskWatcher.Name,
 								tool.RootRowsParam : tool.ReservedParam,
-								entities.RootID(entities.DBUser.Name) : fmt.Sprintf("%d", upper[tool.SpecialIDParam].(int64)),
-								entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%d", record[entities.RootID(entities.DBTask.Name)].(int64)),
+								entities.RootID(entities.DBUser.Name) : fmt.Sprintf("%v", upper[tool.SpecialIDParam]),
+								entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%v", record[entities.RootID(entities.DBTask.Name)]),
 							},
 							tool.Record{ entities.RootID(entities.DBUser.Name) : upper[tool.SpecialIDParam],
-										 entities.RootID(entities.DBTask.Name) : record[entities.RootID(entities.DBTask.Name)].(int64),
+										 entities.RootID(entities.DBTask.Name) : record[entities.RootID(entities.DBTask.Name)],
 									   },
 								  tool.CREATE,
 								  "CreateOrUpdate",

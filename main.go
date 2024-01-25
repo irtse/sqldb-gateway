@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"fmt"
 	_ "sqldb-ws/routers"
 	"github.com/spf13/viper"
 	"sqldb-ws/lib/domain/auth"
@@ -10,6 +11,14 @@ import (
 )
 
 func main() {
+	title := "  _____  ____  _      _____  ____     __          _______ \n"
+	title += " / ____|/ __ \\| |    |  __ \\|  _ \\    \\ \\        / / ____|\n"
+	title += "| (___ | |  | | |    | |  | | |_) |____\\ \\  /\\  / / (___  \n"
+	title += " \\___ \\| |  | | |    | |  | |  _ <______\\ \\/  \\/ / \\___ \\ \n"
+	title += " ____) | |__| | |____| |__| | |_) |      \\  /\\  /  ____) |\n"
+	title += "|_____/ \\___\\_\\______|_____/|____/        \\/  \\/  |_____/ \n"
+	title += "														 "
+	fmt.Printf("%s\n", title)
 	viper.SetConfigName("config")          // name of config file (without extension)
 	viper.AddConfigPath("/etc/sqldb-ws/")  // path to look for the config file in
 	viper.AddConfigPath("$HOME/.sqldb-ws") // call multiple times to add many search paths
@@ -39,6 +48,9 @@ func main() {
 	if os.Getenv("dbpwd") == "" { os.Setenv("dbpwd", "test") }
 	if os.Getenv("dbname") == "" { os.Setenv("dbname", "test") }
 	if os.Getenv("dbssl") == "" { os.Setenv("dbssl", "disable") }
+	if os.Getenv("log") == "" { os.Setenv("log", "disable") }
+	fmt.Printf("%s\n", "Checking for root DBBases... \nWait for server to launch...")
 	lib.Load()
+	os.Setenv("log", "enable")
 	beego.Run()
 }

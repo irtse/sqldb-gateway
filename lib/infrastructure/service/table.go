@@ -27,6 +27,7 @@ type TableInfo struct {
 func (t *TableInfo) TableRow(specializedService tool.SpecializedService, adminView bool) *TableRowInfo {
 	row := &TableRowInfo{} 
 	row.db = t.db
+	row.NoLog = t.NoLog
 	row.PermService = t.PermService
 	row.AdminView = adminView && t.SuperAdmin
 	row.Fill(t.Name, t.SuperAdmin, t.User, t.Params, t.Record, t.Method)
@@ -42,6 +43,7 @@ func (t *TableInfo) TableRow(specializedService tool.SpecializedService, adminVi
 func (t *TableInfo) TableColumn() *TableColumnInfo {
 	col := &TableColumnInfo{ } 
 	col.db = t.db
+	col.NoLog = t.NoLog
 	col.PermService = t.PermService
 	col.Fill(t.Name, t.SuperAdmin, t.User, t.Params, t.Record, t.Method)
 	col.Row = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method,).TableRow(nil, true)
@@ -78,7 +80,7 @@ func (t *TableInfo) EmptyRecord() (tool.Record, error) {
 // GetAssociativeArray : Provide table data as an associative arra
 func (t *TableInfo) Get() (tool.Results, error) {
 	schema, err := t.schema(t.Name)
-	if err != nil { return DBError(nil, err) }
+	if err != nil { return t.DBError(nil, err) }
 	res := tool.Results{}
 	for _, s := range schema {
 		rec := tool.Record{}
@@ -98,7 +100,7 @@ func (t *TableInfo) schema(name string) ([]TableInfo, error) {
 		for _, element := range row {
 			if name == tool.ReservedParam || fmt.Sprintf("%v", element) == name {
 				table, err := EmptyTable(t.db, fmt.Sprintf("%v", element)).get()
-				if err != nil { log.Error().Msg(err.Error()); continue }
+				if err != nil { continue }
 				schema = append(schema, *table)
 			}
 		}
@@ -116,6 +118,10 @@ func (t *TableInfo) get() (*TableInfo, error) {
 		if err != nil { continue }
 		err = json.Unmarshal(b, &tableCol)
 		if err != nil { continue }
+		if null, ok := row["null"]; ok {
+			if null == "YES" { tableCol.Null = true 
+			} else { tableCol.Null = false }
+		}
 		if tableCol.Default != nil && strings.Contains(tableCol.Default.(string), "NULL") {
 			tableCol.Default = nil
 		}
@@ -131,7 +137,7 @@ type TableColumnEntity struct {
 	Default interface{} `json:"default_value"`
 	ForeignTable string `json:"foreign_table"`
 	Constraint string   `json:"constraint"`
-	NotNull bool        `json:"not_null"`
+	Null bool           `json:"nullable"`
 	Comment string      `json:"comment"`
 	NewName string      `json:"new_name"`
 }
@@ -150,7 +156,7 @@ func (t *TableInfo) Create() (tool.Results, error) {
 	query := "CREATE TABLE " + te.Name + " ( id SERIAL PRIMARY KEY,"
 	query = query[:len(query)-1] + " )"
 	err = t.db.Query(query)
-	if err != nil { return DBError(nil, err) }
+	if err != nil { return t.DBError(nil, err) }
 	for name, rowtype := range te.Columns {
 		if fmt.Sprintf("%v", name) != tool.SpecialIDParam {
 			tc := t.TableColumn()
@@ -179,7 +185,36 @@ func (t *TableInfo) Create() (tool.Results, error) {
 }
 
 func (t *TableInfo) Update() (tool.Results, error) {
-	return nil, errors.New("not implemented for integrity reason")
+	v := Validator[entities.TableEntity]()
+	v.data = entities.TableEntity{}
+	te, err := v.ValidateStruct(t.Record)
+	if err != nil { return nil, errors.New(
+		"Not a proper struct to create a table - expect <TableEntity> Scheme " + err.Error()) }
+	for name, rowtype := range te.Columns {
+		if fmt.Sprintf("%v", name) != tool.SpecialIDParam {
+			tc := t.TableColumn()
+			tc.Name=te.Name
+			col, err := json.Marshal(rowtype)
+			if err != nil { continue }
+			json.Unmarshal(col, &tc.Record)
+			tc.CreateOrUpdate()
+		}
+	}
+	t.Name=te.Name
+	_, err = t.Get()
+	auth := true
+	for _, exception := range entities.PERMISSIONEXCEPTION {
+		if t.Name == exception.Name { auth = false; break }
+	}
+	if t.PermService != nil && auth {
+		t.PermService.SpecializedFill(t.Params, 
+			tool.Record{ "name" : te.Name, 
+						 "results" : t.Results, 
+						 "info" : "" }, 
+			t.Method)
+		t.PermService.CreateOrUpdate()
+	}
+	return t.Results, err
 }
 
 func (t *TableInfo) CreateOrUpdate() (tool.Results, error) { 
@@ -190,8 +225,8 @@ func (t *TableInfo) CreateOrUpdate() (tool.Results, error) {
 func (t *TableInfo) Delete() (tool.Results, error) {
 	var err error
 	if entities.IsRootDB(t.Name) || t.Name == tool.ReservedParam { log.Error().Msg("can't delete protected root db.") }
-	if err = t.db.Query("DROP TABLE " + t.Name); err != nil { return DBError(nil, err) }
-	if err = t.db.Query("DROP SEQUENCE IF EXISTS sq_" + t.Name); err != nil { return DBError(nil, err) }
+	if err = t.db.Query("DROP TABLE " + t.Name); err != nil { return t.DBError(nil, err) }
+	if err = t.db.Query("DROP SEQUENCE IF EXISTS sq_" + t.Name); err != nil { return t.DBError(nil, err) }
 	t.Results = append(t.Results, tool.Record{ entities.NAMEATTR : t.Name })
 	auth := true
 	for _, exception := range entities.PERMISSIONEXCEPTION {
@@ -216,12 +251,11 @@ func (t *TableInfo) Import(filename string) (tool.Results, error) {
 	var jsonSource []TableInfo
 	byteValue, _ := os.ReadFile(filename)
 	err := json.Unmarshal([]byte(byteValue), &jsonSource) 
-	if err != nil { return DBError(nil, err) }
+	if err != nil { return t.DBError(nil, err) }
 	for _, ti := range jsonSource {
 		ti.db = t.db
-		if t.Method == tool.DELETE { _, err = ti.Delete() 
-		} else { _, err = ti.Create() }
-		if err != nil { log.Error().Msg(err.Error()) }
+		if t.Method == tool.DELETE { ti.Delete() 
+		} else { ti.Create() }
 	}
 	return t.Results, nil
 }
@@ -270,18 +304,10 @@ func (t *TableInfo) Link() (tool.Results, error) {
 		if te.Name != "" { name = te.Name }
 		record := tool.Record{ "name" : name, 
 	                      "columns" : []map[string]interface{}{
-							map[string]interface{}{ "name" : rawName + "_id", "type" : "integer", "not_null" : true, "foreign_table": otherName, },
-							map[string]interface{}{ "name" : otherName + "_id", "type" : "integer", "not_null" : true, "foreign_table": rawName, },
+							map[string]interface{}{ "name" : rawName + "_id", "type" : "integer", "nullable" : false, "foreign_table": otherName, },
+							map[string]interface{}{ "name" : otherName + "_id", "type" : "integer", "nullable" : false, "foreign_table": rawName, },
 						  },
 						}
-		/*if te.Columns != nil {
-			for _, col := range te.Columns {
-				var mapped map[string]interface{}
-				inrec, _ := json.Marshal(col)
-    			json.Unmarshal(inrec, &mapped)
-				record["columns"]= append(record["columns"].([]map[string]interface{}), mapped) 
-			}
-		}*/
 		t.Record=record
 		return t.Create()
 	}

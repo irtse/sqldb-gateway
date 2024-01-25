@@ -16,6 +16,7 @@ type MainService struct {
 	User				string
 	SuperAdmin			bool
 	isGenericService    bool
+	PermService			tool.InfraServiceItf
 }
 func Domain(superAdmin bool, user string, isGenericService bool) *MainService {
 	if os.Getenv("automate") == "false" { isGenericService=true }
@@ -25,21 +26,21 @@ func Domain(superAdmin bool, user string, isGenericService bool) *MainService {
 		User : user, 
 	}
 }
-
+func (d *MainService) GetPermission() tool.InfraServiceItf { return d.PermService }
 func (d *MainService) SetIsCustom(isCustom bool) { d.isGenericService = isCustom }
 func (d *MainService) GetUser() string { return d.User }
 func (d *MainService) IsSuperAdmin() bool { return d.SuperAdmin }
 
 func (d *MainService) SuperCall(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
-	return Domain(true, "", d.isGenericService).call(params, record, method, true, funcName, args...)
+	return Domain(true, "", d.isGenericService).call(false, params, record, method, true, funcName, args...)
 }
 
 func (d *MainService) Call(params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
-	return d.call(params, record, method, auth, funcName, args...)
+	return d.call(true, params, record, method, auth, funcName, args...)
 }
 
-func (d *MainService) call(params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
-	var service infrastructure.InfraServiceItf
+func (d *MainService) call(postTreat bool, params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
+	var service tool.InfraServiceItf
 	res := tool.Results{}
 	if tablename, ok := params[tool.RootTableParam]; ok {
 		var specializedService tool.SpecializedService
@@ -55,19 +56,21 @@ func (d *MainService) call(params tool.Params, record tool.Record, method tool.M
 		delete(params, tool.RootTableParam)
 		service=table
 		tablename = strings.ToLower(tablename)
-		perms := infrastructure.Permission(database, 
-				 d.SuperAdmin, 
-				 tablename, 
-				 params, 
-				 record,
-				 method)
-		if res, err := perms.Row.Get(); res != nil && err == nil { perms.GeneratePerms(res) }
+		d.PermService = infrastructure.Permission(database, 
+													d.SuperAdmin, 
+													tablename, 
+													params, 
+													record,
+													method)
+		if res, err := d.PermService.(*infrastructure.PermissionInfo).Row.Get(); res != nil && err == nil { 
+			d.PermService.(*infrastructure.PermissionInfo).GeneratePerms(res) 
+		}
 		if rowName, ok := params[tool.RootRowsParam]; ok { // rows override columns
 			if tablename == tool.ReservedParam { 
 				return res, errors.New("can't load table as " + tool.ReservedParam) 
 			}
 			
-			if _, ok := perms.Verify(tablename); !ok && auth { 
+			if _, ok := d.PermService.Verify(tablename); !ok && auth { 
 				return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
 			}
 			params[tool.SpecialIDParam]=strings.ToLower(rowName) 
@@ -82,16 +85,18 @@ func (d *MainService) call(params tool.Params, record tool.Record, method tool.M
 		}
 		if col, ok := params[tool.RootColumnsParam]; ok { 
 			if tablename == tool.ReservedParam { 
+				database.Conn.Close()
 				return res, errors.New("can't load table as " + tool.ReservedParam) 
 			}
 			params[tool.RootColumnsParam]=strings.ToLower(col)
 			service = table.TableColumn() 
 		}
+		service.SetPostTreatment(postTreat)
 		return d.invoke(service, funcName, args...)
 	}
 	return res, errors.New("no service avaiblable")
 }
-func (d *MainService) invoke(service infrastructure.InfraServiceItf, funcName string, args... interface{}) (tool.Results, error) {
+func (d *MainService) invoke(service tool.InfraServiceItf, funcName string, args... interface{}) (tool.Results, error) {
     var err error
 	res := tool.Results{}
 	clazz := reflect.ValueOf(service).MethodByName(funcName)

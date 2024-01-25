@@ -23,7 +23,7 @@ func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool
 		if idFromTask, ok := record[entities.RootID("dest_table")]; ok { id = idFromTask.(int64) }
 		if id == -1 { return record, false }
 		params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
-			                   tool.RootRowsParam : fmt.Sprintf("%d", id), } // empty record
+			                   tool.RootRowsParam : fmt.Sprintf("%v", id), } // empty record
 		s.Domain.SuperCall( params, rec, tool.UPDATE, "CreateOrUpdate")
 	}
 	if _, ok := record[entities.RootID("dest_table")]; ok && !create { // TODO if not superadmin PROTECTED
@@ -58,16 +58,16 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 			params := tool.Params{ tool.RootTableParam : entities.DBWorkflowSchema.Name, 
 				                   tool.RootRowsParam : tool.ReservedParam, 
 								   entities.RootID(entities.DBSchema.Name) : fmt.Sprintf(
-										"%d", res[entities.RootID(entities.DBSchema.Name)].(int64)),
-				                   entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%d", workflowID.(int64)),
+										"%v", res[entities.RootID(entities.DBSchema.Name)]),
+				                   entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%v", workflowID),
 			                     }
 			schemas, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 			if err != nil || len(schemas) == 0 { continue }
 			if order, ok3 := schemas[0]["index"]; ok3 {
 				params := tool.Params{ tool.RootTableParam : entities.DBWorkflowSchema.Name, 
 					tool.RootRowsParam : tool.ReservedParam, 
-					entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%d", workflowID.(int64)),
-					"index": fmt.Sprintf("%d", order.(int64) + 1,),
+					entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%v", workflowID),
+					"index": fmt.Sprintf("%v", order.(int64) + 1,),
 				}
 				uppers, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 				if err != nil || len(uppers) == 0 { continue }
@@ -85,7 +85,7 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 					                  tool.Params{ 
 										tool.RootTableParam : dbName, 
 					                    tool.RootRowsParam : tool.ReservedParam,
-										entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%d", wbTask[entities.RootID(entities.DBTask.Name)].(int64)),
+										entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%v", wbTask[entities.RootID(entities.DBTask.Name)]),
 									  }, 
 									  tool.Record{ "hidden": false, }, 
 									  tool.UPDATE, "CreateOrUpdate")
@@ -118,14 +118,14 @@ func (s *TaskService) PostTreatment(results tool.Results) tool.Results {
 		schemas, err := schema.Schema(s.Domain, record)
 		if err != nil && len(schemas) == 0 { continue }
 		params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
-			                   tool.RootRowsParam : fmt.Sprintf("%d", record[entities.RootID("dest_table")].(int64)),}
+			                   tool.RootRowsParam : fmt.Sprintf("%v", record[entities.RootID("dest_table")]),}
 		rows, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 		if err != nil && len(rows) == 0 { continue }
 		scheme := map[string]tool.Record{}
 		form := map[string]interface{}{}
 		params = tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
 			                   tool.RootRowsParam : tool.ReservedParam, 
-			                   entities.RootID(entities.DBSchema.Name): fmt.Sprintf("%d", schemas[0][tool.SpecialIDParam].(int64)),}
+			                   entities.RootID(entities.DBSchema.Name): fmt.Sprintf("%v", schemas[0][tool.SpecialIDParam]),}
 		fields, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 		for _, row := range rows {
 			for k, v := range row {

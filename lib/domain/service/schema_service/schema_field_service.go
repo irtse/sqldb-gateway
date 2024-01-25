@@ -28,7 +28,7 @@ func (s *SchemaFields) WriteRowAutomation(record tool.Record) {
 		tool.SELECT, 
 		"Get",
 	)
-	if err != nil { fmt.Printf("ERROR %s", err.Error()) }
+	if err != nil { return }
 	data := tool.Record{ 
 		entities.NAMEATTR : record[entities.NAMEATTR],
 		entities.TYPEATTR : record[entities.TYPEATTR],
@@ -36,13 +36,12 @@ func (s *SchemaFields) WriteRowAutomation(record tool.Record) {
 	if _, ok := record["default_value"]; ok { data["default_value"] = record["default_value"] }
 	if _, ok := record["description"]; ok { data["comment"] = record["description"] }
 	if len(res) > 0 {
-		_, err := s.Domain.SuperCall(
+		s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : res[0][entities.NAMEATTR].(string), 
 				         tool.RootColumnsParam: tool.ReservedParam }, 
 			data, 
 			tool.CREATE, 
 			"CreateOrUpdate")
-		if err != nil { fmt.Printf("error %s", err.Error()) }
 	}
 }
 func (s *SchemaFields) UpdateRowAutomation(results tool.Results, record tool.Record) {
@@ -76,20 +75,19 @@ func (s *SchemaFields) DeleteRowAutomation(results tool.Results) {
 	for _, record := range results { 
 		res, err := s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-				    tool.RootRowsParam: fmt.Sprintf("%d", record[entities.RootID(entities.DBSchema.Name)].(int64)) }, 
+				    tool.RootRowsParam: fmt.Sprintf("%v", record[entities.RootID(entities.DBSchema.Name)]) }, 
 			tool.Record{}, 
 			tool.SELECT, 
 			"Get",
 		)
 		if err != nil || res == nil || len(res) == 0 { continue }
-	    _, err = s.Domain.SuperCall(
+	    s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : res[0][entities.NAMEATTR].(string), 
 				    tool.RootColumnsParam: record[entities.NAMEATTR].(string) }, 
 			tool.Record{}, 
 			tool.DELETE, 
 			"Delete",
 		)
-		if err != nil { fmt.Printf("error %s", err.Error()) }
 	}
 }
 func (s *SchemaFields) PostTreatment(results tool.Results) tool.Results { 

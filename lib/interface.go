@@ -6,12 +6,27 @@ import (
 	"sqldb-ws/lib/infrastructure/entities"
 )
 
+type InfraServiceItf interface {
+	SetPostTreatment(bool)
+	Verify(string)              (string, bool)
+	Save() 			        	(error)
+	Get()                   	(Results, error)
+	CreateOrUpdate()        	(Results, error)
+	Delete()                	(Results, error)
+	Link()        				(Results, error)
+	UnLink()                	(Results, error)
+	Import(string)          	(Results, error)
+	Template()               	(interface{}, error) 
+	GenerateFromTemplate(string) error
+}
+
 type DomainITF interface {
 	SuperCall(params Params, rec Record, m Method, funcName string, args... interface{}) (Results, error)
 	Call(params Params, rec Record, m Method, auth bool, funcName string, args... interface{}) (Results, error)
     SetIsCustom(isCustom bool)
 	GetUser() string
 	IsSuperAdmin() bool
+	GetPermission() InfraServiceItf
 }
 type SpecializedServiceInfo interface { GetName() string }
 type SpecializedService interface {
@@ -50,7 +65,7 @@ func ViewDefinition(domain DomainITF, tableName string, params Params) (string, 
 	if err != nil || len(schemas) == 0 { return SQLrestriction, SQLview }
 	p = Params{ RootTableParam : entities.DBSchemaField.Name, 
 		        RootRowsParam : ReservedParam,
-		        entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%d", schemas[0][SpecialIDParam].(int64)), }
+		        entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", schemas[0][SpecialIDParam]), }
 	fields, err := domain.SuperCall( p, Record{}, SELECT, "Get")
 	if err == nil {
 		for _, field := range fields {
@@ -63,13 +78,13 @@ func ViewDefinition(domain DomainITF, tableName string, params Params) (string, 
 	}
 	p = Params{ RootTableParam : entities.DBView.Name, 
 		        RootRowsParam : ReservedParam,
-		        entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%d", schemas[0][SpecialIDParam].(int64)), }
+		        entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", schemas[0][SpecialIDParam]), }
 	views, err := domain.SuperCall( p, Record{}, SELECT, "Get")
 	if err == nil {
 		for _, view := range views {
 			if through, ok := view["through_perms"]; ok {
 				p = Params{ RootTableParam : entities.DBSchema.Name, 
-					         RootRowsParam : fmt.Sprintf("%d", through.(int64)), }          
+					         RootRowsParam : fmt.Sprintf("%v", through), }          
 				throughs, err := domain.SuperCall( p, Record{}, SELECT, "Get")
 				if err != nil || len(throughs) == 0 { continue }
 				if len(SQLrestriction) > 0 {

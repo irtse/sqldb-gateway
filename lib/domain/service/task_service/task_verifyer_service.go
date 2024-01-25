@@ -16,8 +16,8 @@ func (s *TaskVerifyerService) VerifyRowAutomation(record tool.Record, create boo
 			res, _ = s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : entities.DBTaskVerifyer.Name, 
 						 tool.RootRowsParam : tool.ReservedParam, 
-						 entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%d", record[entities.RootID(entities.DBTask.Name)].(int64)),
-						 entities.RootID(entities.DBUser.Name): fmt.Sprintf("%d", record[entities.RootID(entities.DBUser.Name)].(int64)) }, 
+						 entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%v", record[entities.RootID(entities.DBTask.Name)]),
+						 entities.RootID(entities.DBUser.Name): fmt.Sprintf("%v", record[entities.RootID(entities.DBUser.Name)]) }, 
 			tool.Record{}, 
 			tool.SELECT, 
 			"Get")
@@ -25,7 +25,7 @@ func (s *TaskVerifyerService) VerifyRowAutomation(record tool.Record, create boo
 			res, _ = s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : entities.DBTaskVerifyer.Name, 
 						 tool.RootRowsParam : tool.ReservedParam, 
-						 entities.RootID(entities.DBEntity.Name): fmt.Sprintf("%d", record[entities.RootID(entities.DBEntity.Name)].(int64)) }, 
+						 entities.RootID(entities.DBEntity.Name): fmt.Sprintf("%v", record[entities.RootID(entities.DBEntity.Name)]) }, 
 			tool.Record{}, 
 			tool.SELECT, 
 			"Get")
@@ -41,12 +41,12 @@ func (s *TaskVerifyerService) UpdateRowAutomation(results tool.Results, record t
 			if state, ok3 := rec["state"]; ok3 && state == "dismiss" {
 				params := tool.Params{ tool.RootTableParam : entities.DBTaskAssignee.Name, 
 					                   tool.RootRowsParam: tool.ReservedParam,
-									   entities.RootID(entities.DBTask.Name): fmt.Sprintf("%d", id.(int64)), }
+									   entities.RootID(entities.DBTask.Name): fmt.Sprintf("%v", id), }
 				s.Domain.SuperCall( params, tool.Record{ "state": "pending" }, tool.UPDATE, "CreateOrUpdate", )
 			}
 			paramsNew := tool.Params{ tool.RootTableParam : entities.DBTaskVerifyer.Name, 
 				                      tool.RootRowsParam: tool.ReservedParam, }
-			paramsNew[entities.RootID(entities.DBTask.Name)] = fmt.Sprintf("%d", id.(int64))
+			paramsNew[entities.RootID(entities.DBTask.Name)] = fmt.Sprintf("%v", id)
 			paramsNew[tool.RootSQLFilterParam] = "state != 'completed'"
 			unfinished, err := s.Domain.SuperCall( 
 						paramsNew, 
@@ -57,7 +57,7 @@ func (s *TaskVerifyerService) UpdateRowAutomation(results tool.Results, record t
 			if len(unfinished) > 0 || err != nil  { continue }
 			paramsNew = tool.Params{ tool.RootTableParam : entities.DBTaskAssignee.Name, 
 				                      tool.RootRowsParam: tool.ReservedParam, }
-			paramsNew[entities.RootID(entities.DBTask.Name)] = fmt.Sprintf("%d", id.(int64))
+			paramsNew[entities.RootID(entities.DBTask.Name)] = fmt.Sprintf("%v", id)
 			paramsNew[tool.RootSQLFilterParam] = "state != 'completed'"
 			unfinishedAssign, err := s.Domain.SuperCall( 
 						paramsNew, 

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"errors"
 	"strings"
 	tool "sqldb-ws/lib"
@@ -112,6 +113,7 @@ func (p *PermissionInfo) CreateOrUpdate() (tool.Results, error) {
 }
 
 func (p *PermissionInfo) Create() (tool.Results, error) {
+	fmt.Printf("WRITE PERMS \n")
 	v := Validator[Info]()
 	v.data = Info{}
 	info, err := v.ValidateStruct(p.Record)
@@ -132,9 +134,8 @@ func (p *PermissionInfo) Create() (tool.Results, error) {
 		p.Row.SpecializedFill(params, rec, tool.CREATE)
 		p.Row.Verified=false
 		res, err := p.Row.CreateOrUpdate() 
-		if err != nil { continue }
+		if err != nil { return nil, err  }
 		p.Results = append(p.Results, res...)
-		if err != nil { return nil, err }
 	}
 	return p.Results, nil
 }

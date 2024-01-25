@@ -31,10 +31,10 @@ func (s *RoleAttributionService) PostTreatment(results tool.Results) tool.Result
 			params := tool.Params{ tool.RootTableParam : entities.DBRoleAttribution.Name, 
 				                   tool.RootRowsParam : tool.ReservedParam, }
 			if entityId, ok2 := record[entities.RootID(entities.DBEntity.Name)]; ok2 {
-				params[entities.RootID(entities.DBEntity.Name)]= fmt.Sprintf("%d", entityId.(int64))
+				params[entities.RootID(entities.DBEntity.Name)]= fmt.Sprintf("%v", entityId)
 			}
 			if userId, ok3 := record[entities.RootID(entities.DBUser.Name)]; ok3 {
-				params[entities.RootID(entities.DBUser.Name)]= fmt.Sprintf("%d", userId.(int64))
+				params[entities.RootID(entities.DBUser.Name)]= fmt.Sprintf("%v", userId)
 			}
 			s.Domain.SuperCall( params, tool.Record{}, tool.DELETE, "Delete", )	
 		} else { res = append(res, record) }

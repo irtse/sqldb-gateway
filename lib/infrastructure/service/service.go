@@ -2,7 +2,6 @@ package service
 
 import (
 	"os"
-	// "fmt"
 	"encoding/json"
 	"html/template"
 	tool "sqldb-ws/lib"
@@ -12,19 +11,6 @@ import (
 	
 )
 
-type InfraServiceItf interface {
-	Verify(string)              (string, bool)
-	Save() 			        	(error)
-	Get()                   	(tool.Results, error)
-	CreateOrUpdate()        	(tool.Results, error)
-	Delete()                	(tool.Results, error)
-	Link()        				(tool.Results, error)
-	UnLink()                	(tool.Results, error)
-	Import(string)          	(tool.Results, error)
-	Template()               	(interface{}, error) 
-	GenerateFromTemplate(string) error
-}
-
 type InfraService struct {  
 	Name                string       				`json:"name"`
 	User                string       				`json:"-"`
@@ -33,11 +19,16 @@ type InfraService struct {
 	Results         	tool.Results      			`json:"-"`
 	Method  	    	tool.Method     			`json:"-"`
 	SuperAdmin 	    	bool		 				`json:"-"`
+	PostTreatment 	    bool		 				`json:"-"`
 	PermService         *PermissionInfo             `json:"-"`
+	NoLog				bool						`json:"-"`
 	db                  *conn.Db
-	InfraServiceItf
+	tool.InfraServiceItf
 }
 
+func (service *InfraService) SetPostTreatment(postTreat bool) {
+	service.PostTreatment = postTreat
+}
 func (service *InfraService) SpecializedFill(params tool.Params, record tool.Record, method tool.Method) {
 	service.Record = record
 	service.Method = method
@@ -69,6 +60,11 @@ func (service *InfraService) GenerateFromTemplate(templateName string) error {
 	if err != nil { return err  }
 	if t.Execute(f, data) != nil { return err  }
 	return nil
+}
+
+func (service *InfraService) DBError(res tool.Results, err error) (tool.Results, error) {
+	if !service.NoLog && os.Getenv("log") == "enable" { log.Error().Msg(err.Error()) }
+	return res, err
 }
 
 func EmptyTable(database *conn.Db, name string) *TableInfo {
@@ -130,12 +126,9 @@ func Load() {
 			data, _:= json.Marshal(table)
 			json.Unmarshal(data, &rec)
 			service := Table(database, true, "", table.Name, tool.Params{}, rec, tool.CREATE)
-			if _,ok := service.Verify(table.Name); !ok { service.Create() }
+			service.NoLog = true
+			service.CreateOrUpdate()
 		}
 	}
-}
-
-func DBError(res tool.Results, err error) (tool.Results, error) {
-	log.Error().Msg(err.Error())
-	return res, err
+	database.Conn.Close()
 }

@@ -3,7 +3,6 @@ package connector
 import (
 	"os"
 	"fmt"
-	"errors"
 	"strings"
 	"reflect"
 	"strconv"
@@ -54,24 +53,18 @@ func Open() *Db {
 
 func (db *Db) Prepare(query string) (*sql.Stmt, error) {
 	if db.LogQueries { log.Info().Msg(query) }
+	// fmt.Printf("QUERY : %s\n", query)
 	stmt, err := db.Conn.Prepare(query)
-	if err != nil {
-		log.Error().Msg(err.Error())
-		log.Error().Msg(query)
-		return nil, err
-	}
+	if err != nil { return nil, err }
 	return stmt, nil
 }
 
 func (db *Db) QueryRow(query string) (int64, error) {
     id := 0
 	if db.LogQueries { log.Info().Msg(query) }
+	// fmt.Printf("QUERY : %s\n", query)
 	err := db.Conn.QueryRow(query + " RETURNING id").Scan(&id)
-	if err != nil {
-		err := errors.New("row not found")
-		log.Error().Msg(err.Error())
-		log.Error().Msg(query)
-		return int64(id), err
+	if err != nil { return int64(id), err
 	}
 	return int64(id), err
 }
@@ -80,18 +73,14 @@ func (db *Db) Query(query string) (error) {
 	if db.LogQueries { log.Info().Msg(query) }
 	// fmt.Printf("QUERY : %s\n", query)
 	rows, err := db.Conn.Query(query)
-	if err != nil {
-		// log.Error().Msg("" + err.Error())
-		fmt.Printf("\nerror : %s\n", query)
-		log.Error().Msg(query)
-		return err
-	}
+	if err != nil { return err }
 	err = rows.Close()
 	return err
 }
 
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 	// fmt.Printf("QUERY ASSO : %s\n", query)
+	// fmt.Printf("QUERY : %s\n", query)
 	rows, err := db.Conn.Query(query)
 	if err != nil { return nil, err }
 	defer rows.Close()
