@@ -18,13 +18,10 @@ func (s *UserEntityService) PostTreatment(results tool.Results) tool.Results {
 	res := tool.Results{}
 	for _, record := range results {
 		found := true
-		if date, ok := record["start_date"]; ok && date != nil && date != "" {
-			today := time.Now() 
-			start, err := time.Parse("2000-01-01", date.(string))
-			if err == nil && start.Before(today) { found=false }
-			if date2, ok := record["end_date"]; ok && date2 != nil && date2 != "" && found {
-				end, err := time.Parse("2000-01-01", date2.(string))
-				if err == nil && today.Before(end) { found=false}
+		if start, ok := record["start_date"]; ok && start != nil && start != "" {
+			if !start.(time.Time).Before(time.Now()) { found=false }
+			if end, ok := record["end_date"]; ok && end != nil && end != "" && found {
+				if !time.Now().Before(end.(time.Time)) { found=false }
 			}
 		}
 		if !found {

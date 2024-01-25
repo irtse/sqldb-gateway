@@ -60,7 +60,8 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db) *conn.Db {
 			continue
 		}
 		if key == tool.RootSQLFilterParam {
-			db.SQLRestriction += params[tool.RootSQLFilterParam]
+			if len(db.SQLRestriction) == 0 { db.SQLRestriction = params[tool.RootSQLFilterParam]
+			} else { db.SQLRestriction += " AND " + params[tool.RootSQLFilterParam] }
 			continue
 		}
 		alreadySet = append(alreadySet, key)

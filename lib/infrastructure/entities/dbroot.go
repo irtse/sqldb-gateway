@@ -108,7 +108,6 @@ var DBEntityUser = TableEntity{
 	Columns : []TableColumnEntity{
 		 TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, },
 		 TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, Null : true, },
-		 TableColumnEntity{ Name: RootID(DBRole.Name), Type: "integer", ForeignTable: DBRole.Name, Null : false, },
 		 TableColumnEntity{ Name: "start_date", Type: "timestamp",  Null : true, Default: "CURRENT_TIMESTAMP"},
 		 TableColumnEntity{ Name: "end_date", Type: "timestamp",  Null : true, },
 	},

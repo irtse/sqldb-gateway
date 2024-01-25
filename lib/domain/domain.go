@@ -2,7 +2,6 @@ package domain
 
 import (
 	"os"
-	"fmt"
 	"errors"
 	"strings"
 	"reflect"
@@ -57,29 +56,33 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 		delete(params, tool.RootTableParam)
 		service=table
 		tablename = strings.ToLower(tablename)
-		d.PermService = infrastructure.Permission(database, 
-													d.SuperAdmin, 
-													tablename, 
-													params, 
-													record,
-													method)
-		if res, err := d.PermService.(*infrastructure.PermissionInfo).Row.Get(); res != nil && err == nil { 
-			d.PermService.(*infrastructure.PermissionInfo).GeneratePerms(res) 
+		if auth {
+			d.PermService = infrastructure.Permission(database, 
+				d.SuperAdmin, 
+				tablename, 
+				params, 
+				record,
+				method)
+			if res, err := d.PermService.(*infrastructure.PermissionInfo).Row.Get(); res != nil && err == nil { 
+				d.PermService.(*infrastructure.PermissionInfo).GeneratePerms(res) 
+			}
 		}
 		if rowName, ok := params[tool.RootRowsParam]; ok { // rows override columns
 			if tablename == tool.ReservedParam { 
 				return res, errors.New("can't load table as " + tool.ReservedParam) 
 			}
 			
-			if _, ok := d.PermService.Verify(tablename); !ok && auth { 
-				return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
+			if auth {
+			   	if _, ok := d.PermService.Verify(tablename); !ok { 
+					return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
+			    }
 			}
 			params[tool.SpecialIDParam]=strings.ToLower(rowName) 
 			delete(params, tool.RootRowsParam)
 			if params[tool.SpecialIDParam] == tool.ReservedParam { delete(params, tool.SpecialIDParam) }
 			if adminView, valid := params[tool.RootAdminView]; valid && adminView == "enable" { service = table.TableRow(specializedService, true)
 			} else { service = table.TableRow(specializedService, false) }
-			fmt.Printf("POSTREATED %s %b \n", tablename, postTreat)
+			service.SetAuth(auth)
 			service.SetPostTreatment(postTreat)
 			return d.invoke(service, funcName, args...)
 		}
@@ -94,7 +97,7 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			params[tool.RootColumnsParam]=strings.ToLower(col)
 			service = table.TableColumn() 
 		}
-		fmt.Printf("POSTREATED %s %b \n", tablename, postTreat)
+		service.SetAuth(auth)
 		service.SetPostTreatment(postTreat)
 		return d.invoke(service, funcName, args...)
 	}

@@ -26,6 +26,10 @@ type InfraService struct {
 	tool.InfraServiceItf
 }
 
+func (service *InfraService) SetAuth(auth bool) {
+	if !auth { service.PermService= nil }
+}
+
 func (service *InfraService) SetPostTreatment(postTreat bool) {
 	service.PostTreatment = postTreat
 }

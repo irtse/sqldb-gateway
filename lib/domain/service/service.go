@@ -18,6 +18,8 @@ var SERVICES = []tool.SpecializedService{
 	&user.UserEntityService{},
 	&user.HierarchyService{},
 	&user.RoleAttributionService{},
+	&user.RoleService{},
+	&user.EntityService{},
 }
 
 func SpecializedService(name string) tool.SpecializedService {

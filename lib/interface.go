@@ -7,6 +7,7 @@ import (
 )
 
 type InfraServiceItf interface {
+	SetAuth(bool)
 	SetPostTreatment(bool)
 	Verify(string)              (string, bool)
 	Save() 			        	(error)
