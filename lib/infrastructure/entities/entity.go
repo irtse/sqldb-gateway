@@ -31,6 +31,7 @@ type TableColumnEntity struct {
 	Type string         `json:"type"`
 	Index int64         `json:"-"`
 	Default interface{} `json:"default_value"`
+	Hidden bool         `json:"hidden"`
 	ForeignTable string `json:"-"`
 	Constraint string   `json:"-"`
 	Null bool           `json:"nullable"`

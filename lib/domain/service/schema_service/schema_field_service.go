@@ -10,7 +10,7 @@ type SchemaFields struct { tool.AbstractSpecializedService }
 
 func (s *SchemaFields) Entity() tool.SpecializedServiceInfo {return entities.DBSchemaField }
 func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) {
-	schemas, err := Schema(s.Domain, record)
+	schemas, err := tool.Schema(s.Domain, record)
 	newRecord := tool.Record{}
 	if !create {
 		for k, v := range record {
@@ -90,17 +90,9 @@ func (s *SchemaFields) DeleteRowAutomation(results tool.Results) {
 		)
 	}
 }
-func (s *SchemaFields) PostTreatment(results tool.Results) tool.Results { 
-	res := tool.Results{}
-	for _, record := range results{
-		schemas, err := Schema(s.Domain, tool.Record{
-			entities.RootID(entities.DBSchema.Name) : record[entities.RootID(entities.DBSchema.Name)].(int64)})
-		if err != nil || len(schemas) == 0 { continue }
-		res = append(res, record)
-	}
-	return res 
+func (s *SchemaFields) PostTreatment(results tool.Results, tableName string) tool.Results { 	
+	return tool.PostTreat(s.Domain, results, tableName) 
 }
-
 func (s *SchemaFields) ConfigureFilter(tableName string, params tool.Params) (string, string) {
-	return "", ""
+	return tool.ViewDefinition(s.Domain, tableName, params)
 }	

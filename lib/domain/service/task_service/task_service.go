@@ -4,7 +4,6 @@ import (
 	"fmt"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/infrastructure/entities"
-	schema "sqldb-ws/lib/domain/service/schema_service" 
 )
 
 type TaskService struct { tool.AbstractSpecializedService }
@@ -16,7 +15,7 @@ func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool
 		rec := tool.Record{}
 		for k, v := range form.(map[string]tool.Record) { rec[k]=v }
 		delete(record, "form")
-		schemas, err := schema.Schema(s.Domain, record)
+		schemas, err := tool.Schema(s.Domain, record)
 		if err != nil && len(schemas) == 0 { return record, false }
 		id := int64(-1)
 		if idFromRec, ok := rec[tool.SpecialIDParam]; ok { id = idFromRec.(int64) }
@@ -37,10 +36,10 @@ func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool
 		user, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 		if err != nil || len(user) == 0 { return record, false }
 		if user[0]["state"] != "in progress"  { 
-			record["opened_by"]=user[0][tool.SpecialIDParam] 
+			record[entities.RootID("opened_by")]=user[0][tool.SpecialIDParam] 
 			record["opened_date"]="CURRENT_TIMESTAMP"
 		}
-		if create { record["created_by"]=user[0][tool.SpecialIDParam] }
+		if create { record[entities.RootID("created_by")]=user[0][tool.SpecialIDParam] }
 	}
 	return record, true 
 }
@@ -97,11 +96,10 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 }
 func (s *TaskService) WriteRowAutomation(record tool.Record) {
 	// task creation automation.
-	schemas, err := schema.Schema(s.Domain, record)
+	schemas, err := tool.Schema(s.Domain, record)
 	if err != nil && len(schemas) == 0 { return }
 	params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
-			              tool.RootRowsParam : tool.ReservedParam,
-	} // empty record
+			              tool.RootRowsParam : tool.ReservedParam, } // empty record
 	created, err := s.Domain.SuperCall( params, tool.Record{}, tool.CREATE, "CreateOrUpdate")
 	if err != nil && len(created) == 0 { return }
 	newRec := tool.Record{ entities.RootID("dest_table"): created[0][tool.SpecialIDParam] }
@@ -111,40 +109,24 @@ func (s *TaskService) WriteRowAutomation(record tool.Record) {
 	s.Domain.SuperCall( params, newRec, tool.UPDATE, "CreateOrUpdate")
 }
 
-func (s *TaskService) PostTreatment(results tool.Results) tool.Results { 
-	res := tool.Results{}
-	for _, record := range results {
-		if dest_id, ok:= record[entities.RootID("dest_table")]; !ok || dest_id == nil { continue }
-		schemas, err := schema.Schema(s.Domain, record)
-		if err != nil && len(schemas) == 0 { continue }
-		params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
-			                   tool.RootRowsParam : fmt.Sprintf("%v", record[entities.RootID("dest_table")]),}
-		rows, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-		if err != nil && len(rows) == 0 { continue }
-		scheme := map[string]tool.Record{}
-		form := map[string]interface{}{}
-		params = tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
-			                   tool.RootRowsParam : tool.ReservedParam, 
-			                   entities.RootID(entities.DBSchema.Name): fmt.Sprintf("%v", schemas[0][tool.SpecialIDParam]),}
-		fields, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-		for _, row := range rows {
-			for k, v := range row {
-				if k == tool.SpecialIDParam { continue }
-				for _, field := range fields {
-					if field[entities.NAMEATTR].(string) == k && !field["hidden"].(bool) {
-						scheme[k]=field
-						form[k]=v
-					}
-				}
-			}
-		}
-		record["form"] = form
-		record["schemas"] = scheme
-		res = append(res, record)
-	}
-	return res 
+func (s *TaskService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
+	return tool.PostTreat(s.Domain, results, tableName) 
 }
 
 func (s *TaskService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
+	params[tool.RootSQLFilterParam] = "id IN (SELECT " + entities.RootID(entities.DBTask.Name) + " FROM " + entities.DBTaskWatcher.Name + " WHERE "
+	params[tool.RootSQLFilterParam] += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')" 
+	params[tool.RootSQLFilterParam] += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
+	params[tool.RootSQLFilterParam] += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
+	params[tool.RootSQLFilterParam] += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
+	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')))"
+	params[tool.RootSQLFilterParam] += " OR id IN (SELECT " + entities.RootID(entities.DBTask.Name) + " FROM " + entities.DBTaskAssignee.Name + " WHERE "
+	params[tool.RootSQLFilterParam] += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')" 
+	params[tool.RootSQLFilterParam] += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
+	params[tool.RootSQLFilterParam] += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
+	params[tool.RootSQLFilterParam] += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
+	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')))"
+	params[tool.RootSQLFilterParam] += " OR id IN (SELECT " + entities.RootID(entities.DBTask.Name) + " FROM " + entities.DBTaskVerifyer.Name + " WHERE "
+	params[tool.RootSQLFilterParam] += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "'))" 
 	return tool.ViewDefinition(s.Domain, tableName, params)
 }	

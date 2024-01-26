@@ -11,7 +11,7 @@ type ViewService struct { tool.AbstractSpecializedService }
 func (s *ViewService) Entity() tool.SpecializedServiceInfo { return entities.DBView }
 func (s *ViewService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
 	if _, ok := record["through_perms"]; !ok { return record, false }
-	schemas, err := Schema(s.Domain, tool.Record{ 
+	schemas, err := tool.Schema(s.Domain, tool.Record{ 
 		entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", record["through_perms"]) })	
 	if err != nil && len(schemas) == 0 { return record, false }
 	params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
@@ -31,35 +31,39 @@ func (s *ViewService) VerifyRowAutomation(record tool.Record, create bool) (tool
 func (s *ViewService) DeleteRowAutomation(results tool.Results) { }
 func (s *ViewService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *ViewService) WriteRowAutomation(record tool.Record) { }
-func (s *ViewService) PostTreatment(results tool.Results) tool.Results { 
+func (s *ViewService) PostTreatment(results tool.Results, tableName string) tool.Results { 
+	if len(results) == 0 { return results }
 	res := tool.Results{}
-	for _, record := range results{
-		schemas, err := Schema(s.Domain, record)
-		if err != nil || len(schemas) == 0 { continue }
-		params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), }
-		schemes, err := s.Domain.SuperCall(params, tool.Record{}, tool.SELECT, "Get")
-		if err == nil && len(schemes) > 0 {
-			recSchemes := map[string]tool.Record{}
-			for _, scheme := range schemes { 
-				delete(record, entities.RootID(entities.DBSchema.Name))
-				record["contents"]=[]string{ scheme[entities.NAMEATTR].(string) }
-				recSchemes[scheme[entities.NAMEATTR].(string)]=scheme 
-			}
-			record["schemas"]=recSchemes
-		}
-		params = tool.Params{ tool.RootTableParam : entities.DBAction.Name, 
-			                  tool.RootRowsParam : tool.ReservedParam, }
-		params[tool.RootSQLFilterParam]="id IN (SELECT " + entities.RootID(entities.DBAction.Name) + " FROM " + entities.DBViewAction.Name + " "
-		params[tool.RootSQLFilterParam] += "WHERE " + entities.RootID(entities.DBView.Name) + "=" + fmt.Sprintf("%v", record[tool.SpecialIDParam]) + "  );"
-		actions, err := s.Domain.Call(params, tool.Record{}, tool.SELECT, false, "Get")
-		if err == nil && len(actions) > 0 {
-			recActions := []tool.Record{}
-			for _, action := range actions { recActions=append(recActions, action) }
-			record["actions"]=recActions
-		}
-		res = append(res, record)
+	var cols map[string]entities.TableColumnEntity
+	if !s.Domain.IsShallowed() {
+		params := tool.Params{ tool.RootTableParam : tableName, }
+			schemas, err := s.Domain.Call( params, tool.Record{}, tool.SELECT, true, "Get")
+			if err != nil || len(schemas) == 0 { return tool.Results{} }
+			if _, ok := schemas[0]["columns"]; !ok { return tool.Results{} }
+			cols = schemas[0]["columns"].(map[string]entities.TableColumnEntity)
 	}
-	return res 
+	for _, record := range results {
+		schemas, err := tool.Schema(s.Domain, record)
+		if err != nil && len(schemas) == 0 { continue }
+		through, err := tool.Schema(s.Domain, tool.Record{  entities.RootID(entities.DBSchema.Name) : record["through_perms"] })
+		sqlFilter := ""
+		if err == nil && len(through) > 0 { 
+			sqlFilter += "id IN (SELECT " + entities.RootID(fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])) 
+			sqlFilter += " FROM " + fmt.Sprintf("%v", through[0][entities.NAMEATTR])
+			sqlFilter += " WHERE " + entities.RootID(entities.DBUser.Name) 
+			sqlFilter += " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')" 
+			sqlFilter += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
+			sqlFilter += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
+			sqlFilter += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
+			sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "'))"
+		}
+		r := tool.PostTreatRecord(s.Domain, record, tableName, cols, []string{ sqlFilter }...)
+		r["is_view"]=true
+		res = append(res,  r)
+	}
+	return res
 }
 
-func (s *ViewService) ConfigureFilter(tableName string, params tool.Params) (string, string) { return "", "" }	
+func (s *ViewService) ConfigureFilter(tableName string, params tool.Params) (string, string) { 
+	return tool.ViewDefinition(s.Domain, tableName, params)
+}	

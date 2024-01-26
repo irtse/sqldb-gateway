@@ -39,6 +39,7 @@ type PermissionInfo struct {
 	Active                bool
 	WarningUpdateField    []string
 	PartialResults        string
+	ColsPartialResults    string
 	Perms     		      map[string]tool.Record
 	Row		      		  *TableRowInfo
 	db        		      *conn.Db
@@ -46,6 +47,7 @@ type PermissionInfo struct {
 }
 
 func (p *PermissionInfo) GeneratePerms(res tool.Results) {
+	p.ColsPartialResults = ""
 	del := []string{}
 	if len(res) == 0 { return }
 	for _, r := range res[1:] {
@@ -92,7 +94,11 @@ func (p *PermissionInfo) Verify(name string) (string, bool) {
 	if len(delKeyRec) > 0 {
 		p.PartialResults = "partial results, only treated : "
 		for _, del := range delKeyRec { delete(p.Record, del) }
-		for k, _ := range p.Record { p.PartialResults += k + " " }
+		for k, _ := range p.Record { 
+			p.PartialResults += k + " " 
+			p.ColsPartialResults += k + ","
+		}
+		p.ColsPartialResults = conn.RemoveLastChar(p.ColsPartialResults)
 	}
 	cols := ""
 	for _, v := range view {

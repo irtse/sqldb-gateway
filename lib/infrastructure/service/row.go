@@ -17,7 +17,6 @@ type TableRowInfo struct {
 	Table				*TableInfo
 	EmptyCol            *TableColumnInfo
 	Verified  	        bool
-	AdminView           bool
 	InfraService
 }
 
@@ -30,8 +29,10 @@ func (t *TableRowInfo) Verify(name string) (string, bool) {
 }
 
 func (t *TableRowInfo) Get() (tool.Results, error) {
-	t.db = ToFilter(t.Table.Name, t.Params, t.db)
-	if t.SpecializedService != nil && ! t.AdminView {
+	if t.PermService != nil {
+		t.db = ToFilter(t.Table.Name, t.Params, t.db, t.PermService.ColsPartialResults)
+	} else { t.db = ToFilter(t.Table.Name, t.Params, t.db, "") }
+	if t.SpecializedService != nil {
 		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
 		if view != "" { t.db.SQLView = view }
 		if restriction != "" { 
@@ -43,7 +44,7 @@ func (t *TableRowInfo) Get() (tool.Results, error) {
 	if err != nil { return t.DBError(nil, err) }
 	t.Results = d
 	if t.SpecializedService != nil && t.PostTreatment {
-		t.Results = t.SpecializedService.PostTreatment(t.Results)
+		t.Results = t.SpecializedService.PostTreatment(t.Results, t.Table.Name)
 	}
 	return t.Results, nil
 }
@@ -94,34 +95,35 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 		if err != nil { return t.DBError(nil, err) }
 		if err != nil { return t.DBError(nil, err) }
 	}
-
-	if t.SpecializedService != nil && !t.AdminView {
-		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
-		if restriction != "" { 
-			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + restriction 
-		    } else { t.db.SQLRestriction = restriction }
-		}
+	if t.SpecializedService != nil {
+		t.SpecializedService.WriteRowAutomation(t.Record)
+		_, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
 		if view != "" { t.db.SQLView = view }
 	}
 	result, err = t.db.SelectResults(t.Table.Name)
 	t.Results = result
 	if t.SpecializedService != nil {
-		t.SpecializedService.WriteRowAutomation(t.Record)
-		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results) }
+		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results, t.Table.Name) }
 	}
 	return t.Results, nil
 }
 
 func (t *TableRowInfo) Update() (tool.Results, error) {
 	v := Validator[map[string]interface{}]()
-	if t.SpecializedService != nil {
-		r, _ := t.SpecializedService.VerifyRowAutomation(t.Record, false) 
-		t.Record = r
-	}
 	rec, err := v.ValidateSchema(t.Record, t.Table, true)
 	t.Record = rec
 	if err != nil { return nil, errors.New("Not a proper struct to update a row") }
-	t.db = ToFilter(t.Table.Name, t.Params, t.db)
+	if t.PermService != nil {
+		t.db = ToFilter(t.Table.Name, t.Params, t.db, t.PermService.ColsPartialResults)
+	} else { t.db = ToFilter(t.Table.Name, t.Params, t.db, "") }
+	if t.SpecializedService != nil {
+		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
+		if restriction != "" { 
+			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + restriction 
+		    } else { t.db.SQLRestriction = restriction }
+		}
+		if view != "" { t.db.SQLView = view } 
+	}
 	stack := ""
 	filter := ""
 	for key, element := range t.Record {
@@ -159,20 +161,12 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 			t.db.SQLRestriction += "and " + filter[:len(filter) - 4]
 		}
     } else { if (len(filter) > 0) { t.db.SQLRestriction = filter[:len(filter) - 4] }  }
-	if t.SpecializedService != nil && !t.AdminView {
-		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
-		if restriction != "" { 
-			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + restriction 
-		    } else { t.db.SQLRestriction = restriction }
-		}
-		if view != "" { t.db.SQLView = view } 
-	}
 	res, err := t.db.SelectResults(t.Table.Name)
 	t.Results = res
 	if err != nil { return t.DBError(nil, err) }
 	if t.SpecializedService != nil {
 		t.SpecializedService.UpdateRowAutomation(res, t.Record) 
-		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results) }
+		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results, t.Table.Name) }
 	}
 	return t.Results, nil
 }
@@ -184,8 +178,10 @@ func (t *TableRowInfo) CreateOrUpdate() (tool.Results, error) {
 }
 
 func (t *TableRowInfo) Delete() (tool.Results, error) {
-	t.db = ToFilter(t.Table.Name, t.Params, t.db)
-	if t.SpecializedService != nil && !t.AdminView {
+	if t.PermService != nil {
+		t.db = ToFilter(t.Table.Name, t.Params, t.db, t.PermService.ColsPartialResults)
+	} else { t.db = ToFilter(t.Table.Name, t.Params, t.db, "") }
+	if t.SpecializedService != nil {
 		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
 		if restriction != "" { 
 			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + restriction 
@@ -202,7 +198,7 @@ func (t *TableRowInfo) Delete() (tool.Results, error) {
 	if err != nil { return t.DBError(nil, err) }
 	if t.SpecializedService != nil {
 		t.SpecializedService.DeleteRowAutomation(t.Results)
-		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results) }
+		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results, t.Table.Name) }
 	}
 	return t.Results, nil
 }

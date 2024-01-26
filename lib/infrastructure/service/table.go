@@ -22,15 +22,13 @@ type TableInfo struct {
 	ID 		   int64                                    `json:"id"`
 	AssColumns map[string]entities.TableColumnEntity    `json:"columns"`
 	Cols 	   []string                                 `json:"-"`
-	Row		   *TableRowInfo							`json:"-"`
 	InfraService
 }
-func (t *TableInfo) TableRow(specializedService tool.SpecializedService, adminView bool) *TableRowInfo {
+func (t *TableInfo) TableRow(specializedService tool.SpecializedService) *TableRowInfo {
 	row := &TableRowInfo{} 
 	row.db = t.db
 	row.NoLog = t.NoLog
 	row.PermService = t.PermService
-	row.AdminView = adminView && t.SuperAdmin
 	row.Fill(t.Name, t.SuperAdmin, t.User, t.Params, t.Record, t.Method)
 	row.Table = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method)
 	row.EmptyCol = &TableColumnInfo{ } 
@@ -47,7 +45,7 @@ func (t *TableInfo) TableColumn() *TableColumnInfo {
 	col.NoLog = t.NoLog
 	col.PermService = t.PermService
 	col.Fill(t.Name, t.SuperAdmin, t.User, t.Params, t.Record, t.Method)
-	col.Row = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method,).TableRow(nil, true)
+	col.Row = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method,).TableRow(nil)
     return col
 }
 

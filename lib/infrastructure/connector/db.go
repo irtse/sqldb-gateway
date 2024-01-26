@@ -81,7 +81,11 @@ func (db *Db) Query(query string) (error) {
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 	// fmt.Printf("QUERY : %s\n", query)
 	rows, err := db.Conn.Query(query)
-	if err != nil { return nil, err }
+
+	if err != nil { 
+		fmt.Printf("QUERY : %s\n", query)
+		return nil, err 
+	}
 	defer rows.Close()
 	// get rows
 	results := tool.Results{}
@@ -120,6 +124,9 @@ func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 			if db.Driver == PostgresDriver { m[colName] = *val }
 		}
 		results = append(results, m)
+	}
+	if len(results) == 0 {
+		// fmt.Printf("QUERY : %s\n", query)
 	}
 	return results, nil
 }
@@ -167,7 +174,7 @@ func ValueByType(typing string, defaulting interface{}, query string) interface{
 		return fmt.Sprintf("%s", defaulting)
 	default:
 		if reflect.ValueOf(defaulting).IsNil() == false {
-			fmt.Printf("Unknow type : %s (%s)\n", typing, query)
+			// fmt.Printf("Unknow type : %s (%s)\n", typing, query)
 			return fmt.Sprintf("%v", defaulting)
 		}
 		return nil

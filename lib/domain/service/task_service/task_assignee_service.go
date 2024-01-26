@@ -72,8 +72,14 @@ func (s *TaskAssigneeService) WriteRowAutomation(record tool.Record) {
 	}
 	
 }
-func (s *TaskAssigneeService) PostTreatment(results tool.Results) tool.Results { return results }
-
+func (s *TaskAssigneeService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
+	return tool.PostTreat(s.Domain, results, tableName) 
+}
 func (s *TaskAssigneeService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
+	params[tool.RootSQLFilterParam] = entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')" 
+	params[tool.RootSQLFilterParam] += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
+	params[tool.RootSQLFilterParam] += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
+	params[tool.RootSQLFilterParam] += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
+	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')"
 	return tool.ViewDefinition(s.Domain, tableName, params)
 }	

@@ -6,7 +6,7 @@ import (
 	_ "sqldb-ws/routers"
 	"github.com/spf13/viper"
 	"sqldb-ws/lib/domain/auth"
-	lib "sqldb-ws/lib/infrastructure/service"
+	domain "sqldb-ws/lib/domain"
 	beego "github.com/beego/beego/v2/server/web"
 )
 
@@ -39,7 +39,6 @@ func main() {
 		beego.BConfig.WebConfig.DirectoryIndex = true
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 	}
-	if os.Getenv("automate") == "" { os.Setenv("automate", "enable") }
 	if os.Getenv("authmode") == "" { os.Setenv("authmode", auth.AUTHMODE[0]) }
 	if os.Getenv("driverdb") == "" { os.Setenv("driverdb", "postgres") }
 	if os.Getenv("dbhost") == "" { os.Setenv("dbhost", "127.0.0.1") }
@@ -50,7 +49,7 @@ func main() {
 	if os.Getenv("dbssl") == "" { os.Setenv("dbssl", "disable") }
 	if os.Getenv("log") == "" { os.Setenv("log", "disable") }
 	fmt.Printf("%s\n", "Checking for root DBBases... \nWait for server to launch...")
-	lib.Load()
+	domain.Load()
 	os.Setenv("log", "enable")
 	beego.Run()
 }

@@ -87,11 +87,6 @@ func TableNoPerm(database *conn.Db, admin bool, user string, name string, params
 func Table(database *conn.Db, admin bool, user string, name string, params tool.Params, record tool.Record, method tool.Method) *TableInfo {
 	table := TableNoPerm(database, admin, user, name, params, record, method)
 	table.PermService = Permission(database, admin, user, tool.Params{}, tool.Record{}, method)
-	table.Row = &TableRowInfo{ } 
-	table.Row.Table = EmptyTable(database, entities.DBPermission.Name)
-	table.Row.SpecializedService = nil
-	table.Row.db = database
-	table.Row.Fill(entities.DBPermission.Name, admin, user, tool.Params{ }, tool.Record{}, tool.CREATE,)
 	for _, restricted := range entities.DBRESTRICTED {
 		if table.Name == restricted.Name { table.PermService = nil; break }
 	}
@@ -104,40 +99,11 @@ func Permission(database *conn.Db, admin bool, user string, params tool.Params, 
 	perms.Perms = map[string]tool.Record{}
 	perms.WarningUpdateField = []string{}
 	perms.Fill(entities.DBPermission.Name, admin, user, params, record, method)
-	// HEAVY SQL PERMISSIONS
-	paramsNew := tool.Params{ }
-	paramsNew[tool.RootSQLFilterParam] = "id IN (SELECT " + entities.DBPermission.Name + "_id FROM " 
-	paramsNew[tool.RootSQLFilterParam] += entities.DBRolePermission.Name + " WHERE " + entities.DBRole.Name + "_id IN ("
-	paramsNew[tool.RootSQLFilterParam] += "SELECT " + entities.DBRole.Name + "_id FROM " 
-	paramsNew[tool.RootSQLFilterParam] += entities.DBRoleAttribution.Name + " WHERE " + entities.DBUser.Name + "_id IN ("
-	paramsNew[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE " 
-	paramsNew[tool.RootSQLFilterParam] += entities.DBUser.Name + ".login = " + conn.Quote(perms.User) + ") OR " + entities.DBEntity.Name + "_id IN ("
-	paramsNew[tool.RootSQLFilterParam] += "SELECT " + entities.DBEntity.Name + "_id FROM "
-	paramsNew[tool.RootSQLFilterParam] += entities.DBEntityUser.Name + " WHERE " + entities.DBUser.Name +"_id IN ("
-	paramsNew[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE "
-	paramsNew[tool.RootSQLFilterParam] += entities.DBUser.Name + ".login = " + conn.Quote(perms.User) + "))))"
     perms.Row = &TableRowInfo{ } 
 	perms.Row.Table = EmptyTable(database, entities.DBPermission.Name)
 	perms.Row.SpecializedService = nil
 	perms.Row.db = database
-	perms.Row.Fill(entities.DBPermission.Name, admin, user, paramsNew, tool.Record{}, tool.SELECT,)
+	perms.Row.Fill(entities.DBPermission.Name, admin, user, tool.Params{}, tool.Record{}, tool.SELECT,)
 	perms.Row.PermService=nil
 	return perms
-}
-
-func Load() {
-	database := conn.Open()
-	defer database.Conn.Close()
-	tables := [][]entities.TableEntity{ entities.DBRESTRICTED, entities.ROOTTABLES }
-	for _, t := range tables {
-		for _, table := range t {
-			rec := tool.Record{}
-			data, _:= json.Marshal(table)
-			json.Unmarshal(data, &rec)
-			service := Table(database, true, "", table.Name, tool.Params{}, rec, tool.CREATE)
-			service.NoLog = true
-			service.CreateOrUpdate()
-		}
-	}
-	database.Conn.Close()
 }

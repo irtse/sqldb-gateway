@@ -15,11 +15,14 @@ var SERVICES = []tool.SpecializedService{
 	&task.TaskAssigneeService{}, 
 	&task.TaskVerifyerService{}, 
 	&task.TaskService{},
+	&task.TaskWatcherService{},
 	&user.UserEntityService{},
 	&user.HierarchyService{},
 	&user.RoleAttributionService{},
 	&user.RoleService{},
 	&user.EntityService{},
+	&user.PermissionService{},
+	&user.UserService{},
 }
 
 func SpecializedService(name string) tool.SpecializedService {
@@ -35,7 +38,9 @@ func (s *CustomService) WriteRowAutomation(record tool.Record) {}
 func (s *CustomService) DeleteRowAutomation(results tool.Results) { }
 func (s *CustomService) Entity() tool.SpecializedServiceInfo { return nil }
 func (s *CustomService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { return record, true }
-func (s *CustomService) PostTreatment(results tool.Results) tool.Results { 	return results }
+func (s *CustomService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
+	return tool.PostTreat(s.Domain, results, tableName) 
+}
 func (s *CustomService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
 	return tool.ViewDefinition(s.Domain, tableName, params)
 }	

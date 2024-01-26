@@ -14,7 +14,6 @@ import (
 )
 // Table is a table structure description
 type TableColumnInfo struct { 
-	perms      	*PermissionInfo
 	Row 		*TableRowInfo
 	InfraService 
 }
@@ -22,7 +21,9 @@ type TableColumnInfo struct {
 func (t *TableColumnInfo) Template() (interface{}, error) { return t.Get() }
 
 func (t *TableColumnInfo) Get() (tool.Results, error) {
-	t.db = ToFilter(t.Name, t.Params, t.db)
+	if t.PermService != nil {
+		t.db = ToFilter(t.Name, t.Params, t.db, t.PermService.ColsPartialResults)
+	} else { t.db = ToFilter(t.Name, t.Params, t.db, "") }
 	d, err := t.db.SelectResults(t.Name)
 	t.Results = d
 	if err != nil { return t.DBError(nil, err) }

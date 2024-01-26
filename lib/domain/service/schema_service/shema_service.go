@@ -2,7 +2,6 @@ package schema_service
 
 import (
 	"fmt"
-	"errors"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/infrastructure/entities"
 )
@@ -32,31 +31,9 @@ func (s *SchemaService) WriteRowAutomation(record tool.Record) {
 			    "columns": map[string]interface{}{} }, 
 				tool.CREATE, "CreateOrUpdate",)
 }
-func (s *SchemaService) PostTreatment(results tool.Results) tool.Results { 
-	res := tool.Results{}
-	for _, record := range results{
-		schemas, err := Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : record[tool.SpecialIDParam].(int64)})
-		if err != nil || len(schemas) == 0 { continue }
-		res = append(res, record)
-	}
-	return res 
+func (s *SchemaService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
+	return tool.PostTreat(s.Domain, results, tableName) 
 }
-
 func (s *SchemaService) ConfigureFilter(tableName string, params tool.Params) (string, string) {
-	return "", ""
+	return tool.ViewDefinition(s.Domain, tableName, params)
 }	
-
-func Schema(domain tool.DomainITF, record tool.Record) (tool.Results, error) {
-	if schemaID, ok := record[entities.RootID(entities.DBSchema.Name)]; ok {
-		params := tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-			tool.RootRowsParam : fmt.Sprintf("%v", schemaID), 
-		}
-		schemas, err := domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-		if err != nil || len(schemas) == 0 { return nil, err }
-		if _, ok := domain.GetPermission().Verify(schemas[0][entities.NAMEATTR].(string)); !ok { 
-			return nil, errors.New("not authorized ") 
-		}
-		return schemas, nil
-	}
-	return nil, errors.New("no schemaID refered...")
-}

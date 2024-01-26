@@ -76,7 +76,7 @@ var DBRolePermission = TableEntity{
 var DBEntity = TableEntity{
 	Name : RootName("entity"),
 	Columns : []TableColumnEntity{
-		 TableColumnEntity{ Name: TYPEATTR, Type: "varchar(255)", Null : true, },
+		 TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "parent_id", Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "description", Type: "text", Null : true, },
 	},
@@ -85,7 +85,7 @@ var DBEntity = TableEntity{
 var DBUser = TableEntity{
 	Name : RootName("user"),
 	Columns : []TableColumnEntity{
-		 TableColumnEntity{ Name: "login", Type: "varchar(255)", Constraint: "unique", Null : false, },
+		 TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)", Constraint: "unique", Null : false, },
 		 TableColumnEntity{ Name: "password", Type: "varchar(255)", Null : false, },
 		 TableColumnEntity{ Name: "token", Type: "varchar(255)", Null : true, Default : "" },
 		 TableColumnEntity{ Name: "super_admin", Type: "boolean", Null : true, Default : false  },
@@ -144,9 +144,9 @@ var DBTask = TableEntity{
 	Name : RootName("task"),
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, Null : true, },
-		TableColumnEntity{ Name: "opened_by", Type: "integer", ForeignTable: DBUser.Name, Null : true, },
-		TableColumnEntity{ Name: "created_by", Type: "integer", ForeignTable: DBUser.Name, Null : true, },
-		TableColumnEntity{ Name: "opened_date", Type: "timestamp",  Null : false, },
+		TableColumnEntity{ Name: RootID("opened_by"), Type: "integer", ForeignTable: DBUser.Name, Null : true, },
+		TableColumnEntity{ Name: RootID("created_by"), Type: "integer", ForeignTable: DBUser.Name, Null : true, },
+		TableColumnEntity{ Name: "opened_date", Type: "timestamp",  Null : true, },
 		TableColumnEntity{ Name: "created_date", Type: "timestamp",  Null : true, Default : "CURRENT_TIMESTAMP"},
 		TableColumnEntity{ Name: "state", Type: "enum('completed', 'in progress', 'pending', 'close')",  Null : true, Default: "pending" },
 		TableColumnEntity{ Name: "urgency", Type: "enum('low', 'medium', 'high')",  Null : true, Default: "medium" },
@@ -201,18 +201,16 @@ var DBTaskWatcher = TableEntity{
 var DBView = TableEntity{
 	Name : RootName("view"),
 	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: "name", Type: "varchar(255)",  Null : false, },
+		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, },
 		TableColumnEntity{ Name: "category", Type: "varchar(100)",  Null : true, },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true,  Default: "no description...", },
-		TableColumnEntity{ Name: "readonly", Type: "boolean",  Null : true, Default: false, },
-		TableColumnEntity{ Name: "is_empty", Type: "boolean", Null : true, Default: false },
+		TableColumnEntity{ Name: "is_empty_struct", Type: "boolean", Null : true, Default: false },
 		TableColumnEntity{ Name: "index", Type: "integer", Null : true, Default: 1 },
 		TableColumnEntity{ Name: "sql_order", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "sql_view", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "sql_restriction", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "through_perms", Type: "integer",  ForeignTable : DBSchema.Name, Null : true, },
-		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer",
-		                   ForeignTable : DBSchema.Name, Null : false, },
+		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable : DBSchema.Name, Null : false, },
 	},
 }
 
@@ -220,16 +218,16 @@ var DBAction = TableEntity{
 	Name : RootName("action"),
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: "icon", Type: "varchar(100)",  Null : true, Default: "", },
-		TableColumnEntity{ Name: "name", Type: "varchar(255)",  Null : false, },
+		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true, Default: "no description...", },
 		TableColumnEntity{ Name: "category", Type: "varchar(100)",  Null : true, },
 		TableColumnEntity{ Name: "method", Type: "enum('POST', 'GET', 'PUT', 'DELETE')",  Null : true, Default : "GET" },
 		TableColumnEntity{ Name: "extra_path", Type: "varchar(255)", Null : true, Default : ""  },
-		TableColumnEntity{ Name: "from_schema", Type: "integer",  ForeignTable : DBSchema.Name, Null : false, },
-		TableColumnEntity{ Name: "to_schema", Type: "integer",  ForeignTable : DBSchema.Name, Null : true, },
+		TableColumnEntity{ Name: RootID("from"), Type: "integer",  ForeignTable : DBSchema.Name, Null : false, },
+		TableColumnEntity{ Name: RootID("to"), Type: "integer",  ForeignTable : DBSchema.Name, Null : true, },
 		TableColumnEntity{ Name: RootID(DBView.Name), Type: "integer",  ForeignTable : DBView.Name, Null : true, },
 		TableColumnEntity{ Name: "type", Type: "enum('LINK_SELECT', 'BUTTON', 'LINK_ADD')", Null : true, Default : "BUTTON" },
-		TableColumnEntity{ Name: "link", Type: "integer", ForeignTable : DBSchema.Name, Null : true, },
+		TableColumnEntity{ Name: RootID("link"), Type: "integer", ForeignTable : DBSchema.Name, Null : true, },
 		TableColumnEntity{ Name: "link_sql_order", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "link_sql_columns", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "link_sql_restriction", Type: "varchar(255)", Null : true, },
@@ -243,8 +241,9 @@ var DBViewAction = TableEntity{
 		TableColumnEntity{ Name: RootID(DBAction.Name), Type: "integer", ForeignTable : DBAction.Name, Null : false, },
 	},
 }
-var DBRESTRICTED = []TableEntity{ DBPermission, DBSchema, DBSchemaField,  } // override permission checkup
-var PERMISSIONEXCEPTION = []TableEntity{ DBView, DBAction, DBTask, } // override permission checkup
-var ROOTTABLES = []TableEntity{ DBWorkflow, DBRole, DBRolePermission, DBEntity, DBUser, DBRoleAttribution,
-	    DBEntityUser,  DBTask, DBWorkflowSchema, DBWorkflowTask, DBTaskAssignee, 
-		DBTaskVerifyer, DBTaskWatcher, DBView, DBAction, DBViewAction }
+var DBRESTRICTED = []TableEntity{ DBSchema, DBSchemaField, } // override permission checkup
+var PERMISSIONEXCEPTION = []TableEntity{ DBUser, DBPermission, DBEntity, DBRole, DBView, DBAction, 
+										 DBEntityUser, DBRoleAttribution, } // override permission checkup
+var ROOTTABLES = []TableEntity{ DBUser, DBPermission, DBEntity, DBRole, DBView, DBAction, 
+	DBEntityUser, DBRoleAttribution, DBWorkflow, DBTask, DBTask, DBWorkflowSchema, DBWorkflowTask, DBTaskAssignee, 
+	DBTaskVerifyer, DBTaskWatcher,  DBViewAction, DBRolePermission,  }

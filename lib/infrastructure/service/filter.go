@@ -7,7 +7,7 @@ import (
 	conn "sqldb-ws/lib/infrastructure/connector"
 )
 // union PG + MYSQL
-func ToFilter(tableName string, params tool.Params, db *conn.Db) *conn.Db {
+func ToFilter(tableName string, params tool.Params, db *conn.Db, permsCols string) *conn.Db {
 	db = ClearFilter(db)
     for key, element := range params {
 		col := &TableColumnInfo{ }
@@ -27,23 +27,9 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db) *conn.Db {
 	alreadySet := []string{}
 	for key, element := range params { // preload restriction
 		if key == tool.RootRowsParam || key == tool.RootTableParam || slices.Contains(alreadySet, key) { continue }
-		if key == tool.RootShallow && element == "enable" {
-			/*table := &TableInfo{ }
-			table.db = db
-			schemas, err := table.schema(tableName)
-			if err != nil || len(schemas) == 0 { continue }
-			for key, v := range schemas[0].AssColumns {
-				if !v.Null { 
-					if len(db.SQLView) == 0 || !strings.Contains(db.SQLView, key) { 
-						db.SQLView += key + "," 
-					}
-				}
-			}*/
-			continue 
-		} 
 		if key == tool.RootColumnsParam { 
 			for _, el := range strings.Split(element, ",") {
-				if len(db.SQLView) == 0 || !strings.Contains(db.SQLView, key) {
+				if (len(db.SQLView) == 0 || !strings.Contains(db.SQLView, el)) && !strings.Contains(permsCols, el) {
 					db.SQLView += el + ","
 				}
 			}
@@ -59,12 +45,19 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db) *conn.Db {
 			}
 			continue
 		}
-		if key == tool.RootSQLFilterParam {
+		if key == tool.RootSQLFilterParam  && params[tool.RootSQLFilterParam] != "" {
 			if len(db.SQLRestriction) == 0 { db.SQLRestriction = params[tool.RootSQLFilterParam]
 			} else { db.SQLRestriction += " AND " + params[tool.RootSQLFilterParam] }
 			continue
 		}
 		alreadySet = append(alreadySet, key)
+	}
+	if len(permsCols) > 0 {
+		for _, el := range strings.Split(permsCols, ",") {
+			if len(db.SQLView) == 0 || !strings.Contains(db.SQLView, el) {
+				db.SQLView += el + ","
+			}
+		}
 	}
 	return db
 }

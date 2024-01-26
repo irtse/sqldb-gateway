@@ -1,10 +1,10 @@
 package domain
 
 import (
-	"os"
 	"errors"
 	"strings"
 	"reflect"
+	"encoding/json"
 	tool "sqldb-ws/lib"
 	domain "sqldb-ws/lib/domain/service"
 	"sqldb-ws/lib/infrastructure/entities"
@@ -14,25 +14,31 @@ import (
 type MainService struct {
 	name                string
 	User				string
+	Shallowed			bool
 	SuperAdmin			bool
+	AdminView			bool
 	isGenericService    bool
+	Specialization		bool
 	PermService			tool.InfraServiceItf
 }
 func Domain(superAdmin bool, user string, isGenericService bool) *MainService {
-	if os.Getenv("automate") == "false" { isGenericService=true }
 	return &MainService{ 
 		isGenericService: isGenericService, 
 		SuperAdmin: superAdmin, 
 		User : user, 
+		Specialization : true,
 	}
 }
 func (d *MainService) GetPermission() tool.InfraServiceItf { return d.PermService }
 func (d *MainService) SetIsCustom(isCustom bool) { d.isGenericService = isCustom }
 func (d *MainService) GetUser() string { return d.User }
 func (d *MainService) IsSuperAdmin() bool { return d.SuperAdmin }
+func (d *MainService) IsShallowed() bool { return d.Shallowed }
+func (d *MainService) IsAdminView() bool { return d.AdminView }
 
 func (d *MainService) SuperCall(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
-	return Domain(true, "", d.isGenericService).call(false, params, record, method, true, funcName, args...)
+	params[tool.RootAdminView]="enable"
+	return Domain(true, d.User, d.isGenericService).call(false, params, record, method, true, funcName, args...)
 }
 
 func (d *MainService) Call(params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
@@ -42,13 +48,17 @@ func (d *MainService) Call(params tool.Params, record tool.Record, method tool.M
 func (d *MainService) call(postTreat bool, params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
 	var service tool.InfraServiceItf
 	res := tool.Results{}
+	if adm, ok := params[tool.RootAdminView]; ok && adm == "enable" && d.SuperAdmin { d.AdminView = true } 
+	if shallow, ok := params[tool.RootShallow]; ok && shallow == "enable" { d.Shallowed = true } 
 	if tablename, ok := params[tool.RootTableParam]; ok {
 		var specializedService tool.SpecializedService
-		specializedService = &domain.CustomService{}
-		if !d.isGenericService { specializedService = domain.SpecializedService(tablename) }
-		specializedService.SetDomain(d)
-		for _, exception := range entities.PERMISSIONEXCEPTION {
-			if tablename == exception.Name { auth = false; break }
+		if d.Specialization {
+			specializedService = &domain.CustomService{}
+			if !d.isGenericService { specializedService = domain.SpecializedService(tablename) }
+			specializedService.SetDomain(d)
+			for _, exception := range entities.PERMISSIONEXCEPTION {
+				if tablename == exception.Name { auth = false; break }
+			}
 		}
 		database := conn.Open()
 		defer database.Conn.Close()
@@ -56,13 +66,13 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 		delete(params, tool.RootTableParam)
 		service=table
 		tablename = strings.ToLower(tablename)
+		d.PermService = infrastructure.Permission(database, 
+			d.SuperAdmin, 
+			tablename, 
+			params, 
+			record,
+			method)
 		if auth {
-			d.PermService = infrastructure.Permission(database, 
-				d.SuperAdmin, 
-				tablename, 
-				params, 
-				record,
-				method)
 			if res, err := d.PermService.(*infrastructure.PermissionInfo).Row.Get(); res != nil && err == nil { 
 				d.PermService.(*infrastructure.PermissionInfo).GeneratePerms(res) 
 			}
@@ -71,7 +81,6 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			if tablename == tool.ReservedParam { 
 				return res, errors.New("can't load table as " + tool.ReservedParam) 
 			}
-			
 			if auth {
 			   	if _, ok := d.PermService.Verify(tablename); !ok { 
 					return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
@@ -80,8 +89,7 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			params[tool.SpecialIDParam]=strings.ToLower(rowName) 
 			delete(params, tool.RootRowsParam)
 			if params[tool.SpecialIDParam] == tool.ReservedParam { delete(params, tool.SpecialIDParam) }
-			if adminView, valid := params[tool.RootAdminView]; valid && adminView == "enable" { service = table.TableRow(specializedService, true)
-			} else { service = table.TableRow(specializedService, false) }
+			service = table.TableRow(specializedService)
 			service.SetAuth(auth)
 			service.SetPostTreatment(postTreat)
 			return d.invoke(service, funcName, args...)
@@ -121,4 +129,43 @@ func (d *MainService) invoke(service tool.InfraServiceItf, funcName string, args
 		} else { err = values[1].Interface().(error) } 
 	}
 	return res, err
+}
+
+func Load() {
+	database := conn.Open()
+	defer database.Conn.Close()
+	tables := [][]entities.TableEntity{ entities.DBRESTRICTED, entities.ROOTTABLES }
+	for i, t := range tables {
+		for _, table := range t {
+			rec := tool.Record{}
+			data, _:= json.Marshal(table)
+			json.Unmarshal(data, &rec)
+			if i == 0 {
+				service := infrastructure.Table(database, true, "", table.Name, tool.Params{}, rec, tool.CREATE)
+				service.NoLog = true
+				service.CreateOrUpdate()
+			} else {
+				rec := tool.Record{}
+				data, _:= json.Marshal(table)
+				json.Unmarshal(data, &rec)
+				d := Domain(true, "superadmin", false)
+				sp := domain.SpecializedService(entities.DBSchema.Name)
+				sp.SetDomain(d)
+				d.SuperCall(tool.Params{ tool.RootTableParam: entities.DBSchema.Name, }, rec, tool.SELECT, "Get")
+				res, err := d.SuperCall(tool.Params{ 
+					tool.RootTableParam: entities.DBSchema.Name,
+					tool.RootRowsParam: tool.ReservedParam,
+					entities.NAMEATTR : table.Name }, tool.Record{}, tool.SELECT, "Get")
+				if err != nil || len(res) == 0 { 
+					rec := tool.Record{}
+					data, _:= json.Marshal(table)
+					json.Unmarshal(data, &rec)
+					d.SuperCall(tool.Params{ 
+						tool.RootTableParam: entities.DBSchema.Name,
+						tool.RootRowsParam: tool.ReservedParam, }, rec, tool.CREATE, "CreateOrUpdate")
+				}
+			}
+		}
+	}
+	database.Conn.Close()
 }

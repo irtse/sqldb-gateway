@@ -20,11 +20,9 @@ func (l *AuthController) Login() {
 		params := l.paramsOver(map[string]string{ tool.RootTableParam : "dbuser", 
 												  tool.RootRowsParam : "all", 
 												  "login" : log.(string) })
-		response, err := domain.Domain(false, log.(string), false).Call(params, 
-																		tool.Record{}, 
-																		tool.SELECT, 
-																		false,
-																		"Get")
+		d := domain.Domain(false, log.(string), false)
+		d.Specialization = false
+		response, err := d.Call(params, tool.Record{}, tool.SELECT, false, "Get")
 		if err != nil {  l.response(response, err); return }
 		if len(response) == 0 {  l.response(response, errors.New("AUTH : username/email invalid")); return }
 		user_id, _, err := l.authorized()
