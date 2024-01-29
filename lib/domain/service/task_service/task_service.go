@@ -10,21 +10,15 @@ type TaskService struct { tool.AbstractSpecializedService }
 
 func (s *TaskService) Entity() tool.SpecializedServiceInfo { return entities.DBTask }
 func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
-	// TODO if "form" presence THEN -> update row and kick form out of record
-	if form, ok := record["form"]; ok {
-		rec := tool.Record{}
-		for k, v := range form.(map[string]tool.Record) { rec[k]=v }
-		delete(record, "form")
-		schemas, err := tool.Schema(s.Domain, record)
-		if err != nil && len(schemas) == 0 { return record, false }
-		id := int64(-1)
-		if idFromRec, ok := rec[tool.SpecialIDParam]; ok { id = idFromRec.(int64) }
-		if idFromTask, ok := record[entities.RootID("dest_table")]; ok { id = idFromTask.(int64) }
-		if id == -1 { return record, false }
-		params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
+	schemas, err := tool.Schema(s.Domain, record)
+	if err != nil && len(schemas) == 0 { return record, false }
+	id := int64(-1)
+	if idFromRec, ok := rec[tool.SpecialIDParam]; ok { id = idFromRec.(int64) }
+	if idFromTask, ok := record[entities.RootID("dest_table")]; ok { id = idFromTask.(int64) }
+	if id == -1 { return record, false }
+	params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
 			                   tool.RootRowsParam : fmt.Sprintf("%v", id), } // empty record
-		s.Domain.SuperCall( params, rec, tool.UPDATE, "CreateOrUpdate")
-	}
+	s.Domain.SuperCall( params, rec, tool.UPDATE, "CreateOrUpdate")
 	if _, ok := record[entities.RootID("dest_table")]; ok && !create { // TODO if not superadmin PROTECTED
 		delete(record, entities.RootID("dest_table"))
 	}
@@ -43,7 +37,7 @@ func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool
 	}
 	return record, true 
 }
-func (s *TaskService) DeleteRowAutomation(results tool.Results, tableName string) { 
+func (s *TaskService) DeleteRowAutomation(results tool.Results) { 
 	for _, res := range results {
 		res["state"]="close"
 	}
@@ -68,27 +62,16 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 					entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%v", workflowID),
 					"index": fmt.Sprintf("%v", order.(int64) + 1,),
 				}
-				uppers, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-				if err != nil || len(uppers) == 0 { continue }
-				params = tool.Params{ tool.RootTableParam : entities.DBWorkflowTask.Name, 
-					                   tool.RootRowsParam : tool.ReservedParam, 
-									   entities.RootID(entities.DBWorkflowSchema.Name) : fmt.Sprintf(
-										"%d", uppers[0][tool.ReservedParam].(int64)),
-									 }
-				wbTasks, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-				if err != nil { continue }
-				for _, wbTask := range wbTasks {
-					dbs := []string{entities.DBTaskAssignee.Name, entities.DBTaskVerifyer.Name,entities.DBTaskWatcher.Name}
-					for _, dbName := range dbs {
-						s.Domain.SuperCall( 
-					                  tool.Params{ 
-										tool.RootTableParam : dbName, 
-					                    tool.RootRowsParam : tool.ReservedParam,
-										entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%v", wbTask[entities.RootID(entities.DBTask.Name)]),
-									  }, 
-									  tool.Record{ "hidden": false, }, 
-									  tool.UPDATE, "CreateOrUpdate")
-					}
+				dbs := []string{entities.DBTaskAssignee.Name, entities.DBTaskVerifyer.Name,entities.DBTaskWatcher.Name}
+				for _, dbName := range dbs {
+					s.Domain.SuperCall( 
+					            tool.Params{ 
+									tool.RootTableParam : dbName, 
+					                tool.RootRowsParam : tool.ReservedParam,
+									entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%v", record[tool.SpecialIDParam]),
+								}, 
+								tool.Record{ "hidden": false, }, 
+								tool.UPDATE, "CreateOrUpdate")
 				}
 			}
 	    }
@@ -104,8 +87,7 @@ func (s *TaskService) WriteRowAutomation(record tool.Record, tableName string) {
 	if err != nil && len(created) == 0 { return }
 	newRec := tool.Record{ entities.RootID("dest_table"): created[0][tool.SpecialIDParam] }
 	params = tool.Params{ tool.RootTableParam : s.Entity().GetName(), 
-							  tool.RootRowsParam : tool.ReservedParam,
-						} 
+							  tool.RootRowsParam : tool.ReservedParam, } 
 	s.Domain.SuperCall( params, newRec, tool.UPDATE, "CreateOrUpdate")
 	tool.WriteRow(s.Domain, tableName, record)
 }

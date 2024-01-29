@@ -159,14 +159,6 @@ var DBTask = TableEntity{
 	},
 }
 
-var DBWorkflowTask = TableEntity{
-	Name : RootName("workflow_schema_task"),
-	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: RootID(DBWorkflowSchema.Name), Type: "integer", ForeignTable: DBWorkflowSchema.Name, Null : false, },
-		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, Null : false, },
-	},
-}
-
 var DBTaskAssignee = TableEntity{
 	Name : RootName("task_assignee"),
 	Columns : []TableColumnEntity{
@@ -259,5 +251,5 @@ var DBRESTRICTED = []TableEntity{ DBSchema, DBSchemaField, } // override permiss
 var PERMISSIONEXCEPTION = []TableEntity{ DBUser, DBPermission, DBEntity, DBRole, DBView, DBAction, 
 										 DBEntityUser, DBRoleAttribution, } // override permission checkup
 var ROOTTABLES = []TableEntity{ DBUser, DBPermission, DBEntity, DBRole, DBView, DBAction, 
-	DBEntityUser, DBRoleAttribution, DBWorkflow, DBTask, DBTask, DBWorkflowSchema, DBWorkflowTask, DBTaskAssignee, 
+	DBEntityUser, DBRoleAttribution, DBWorkflow, DBTask, DBWorkflowSchema, DBWorkflowTask, DBTaskAssignee, 
 	DBTaskVerifyer, DBTaskWatcher,  DBViewAction, DBRolePermission, DBUserEntry }
