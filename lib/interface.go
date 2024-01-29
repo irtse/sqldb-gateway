@@ -45,9 +45,9 @@ type SpecializedServiceInfo interface { GetName() string }
 type SpecializedService interface {
 	Entity() SpecializedServiceInfo
 	SetDomain(d DomainITF)
-	WriteRowAutomation(record Record)
+	WriteRowAutomation(record Record, tableName string)
 	VerifyRowAutomation(record Record, create bool) (Record, bool)
-	DeleteRowAutomation(results Results)
+	DeleteRowAutomation(results Results, tableName string)
 	UpdateRowAutomation(results Results, record Record) 
 	PostTreatment(results Results, tableName string) Results
 	ConfigureFilter(tableName string, params Params) (string, string)
@@ -55,6 +55,36 @@ type SpecializedService interface {
 
 type AbstractSpecializedService struct { Domain DomainITF }
 func (s *AbstractSpecializedService) SetDomain(d DomainITF) {  s.Domain = d  }
+
+func DeleteRow(domain DomainITF, tableName string, results Results) {
+	for _, record := range results {
+		params := Params{ RootTableParam : entities.DBUserEntry.Name, 
+			              RootRowsParam: fmt.Sprintf("%v", record[SpecialIDParam]), }
+		domain.SuperCall(params, Record{}, DELETE, "Delete")
+	}	
+}
+
+func WriteRow(domain DomainITF, tableName string, record Record) {
+	params := Params{ RootTableParam : entities.DBUser.Name, 
+		              RootRowsParam: ReservedParam,
+					  "login" : domain.GetUser() }
+	users, err := domain.SuperCall(params, Record{}, SELECT, "Get")
+	if err != nil || len(users) == 0 { return }
+	user_id := users[0][SpecialIDParam]
+	params = Params{ RootTableParam : entities.DBSchema.Name, 
+		                   RootRowsParam: ReservedParam,
+						   entities.NAMEATTR : tableName }
+	schemas, err := domain.SuperCall(params, Record{}, SELECT, "Get")
+	if err != nil || len(schemas) == 0 { return }
+	scheme_id := schemas[0][SpecialIDParam]
+	params = Params{ RootTableParam : entities.DBUserEntry.Name, 
+		                   RootRowsParam: ReservedParam, }
+	users, err = domain.SuperCall(params, Record{
+		entities.RootID(entities.DBSchema.Name) : scheme_id,
+		entities.RootID(entities.DBUser.Name) : user_id,
+		entities.RootID("dest_table") : record[SpecialIDParam],
+	}, CREATE, "CreateOrUpdate")
+}
 
 func PostTreat(domain DomainITF, results Results, tableName string, shallow bool, additonnalRestriction ...string) Results {
 	res := Results{}
@@ -134,7 +164,10 @@ func PostTreatRecord(domain DomainITF, record Record, tableID string, tableName 
 					}
 					field.LinkPath=link_path
 				}
-				schemes[field.Name]=field
+				var shallowField entities.ShallowSchemaColumnEntity
+				b, _ := json.Marshal(field)
+				json.Unmarshal(b, &shallowField)
+				schemes[field.Name]=shallowField
 				vals[field.Name]=record[field.Name]
 				if _, ok := record[field.Name]; ok && strings.Contains(field.Name, "_" + SpecialIDParam) { 
 					tableName := field.Name[:(len(field.Name) - len(SpecialIDParam) - 1)]

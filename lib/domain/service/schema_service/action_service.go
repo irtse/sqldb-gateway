@@ -23,9 +23,9 @@ func (s *ActionService) VerifyRowAutomation(record tool.Record, create bool) (to
 	}
 	return record, true
 }
-func (s *ActionService) DeleteRowAutomation(results tool.Results) { }
+func (s *ActionService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *ActionService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
-func (s *ActionService) WriteRowAutomation(record tool.Record) { }
+func (s *ActionService) WriteRowAutomation(record tool.Record, tableName string) { }
 
 func (s *ActionService) PostTreatment(results tool.Results, tablename string) tool.Results { 
 	res := tool.Results{}

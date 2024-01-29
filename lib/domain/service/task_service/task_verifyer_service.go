@@ -33,12 +33,12 @@ func (s *TaskVerifyerService) VerifyRowAutomation(record tool.Record, create boo
 	}
 	return record, res == nil || len(res) == 0
 }
-func (s *TaskVerifyerService) DeleteRowAutomation(results tool.Results) { }
+func (s *TaskVerifyerService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *TaskVerifyerService) UpdateRowAutomation(results tool.Results, record tool.Record) {
 	if state, ok := record["state"]; ok && state != "completed" { return }
 	for _, rec := range results {
 		if id, ok2 := rec[entities.RootID(entities.DBTask.Name)]; ok2 {
-			if state, ok3 := rec["state"]; ok3 && state == "dismiss" {
+			if state, ok3 := rec["state"]; ok3 && state == "rejected" {
 				params := tool.Params{ tool.RootTableParam : entities.DBTaskAssignee.Name, 
 					                   tool.RootRowsParam: tool.ReservedParam,
 									   entities.RootID(entities.DBTask.Name): fmt.Sprintf("%v", id), }
@@ -80,7 +80,7 @@ func (s *TaskVerifyerService) UpdateRowAutomation(results tool.Results, record t
 		// TODO IF VERIFYER DISMISS THE TASK 
 	}
 }
-func (s *TaskVerifyerService) WriteRowAutomation(record tool.Record) {}
+func (s *TaskVerifyerService) WriteRowAutomation(record tool.Record, tableName string) {}
 func (s *TaskVerifyerService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
 	return tool.PostTreat(s.Domain, results, tableName, false) 
 }

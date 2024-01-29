@@ -18,9 +18,9 @@ func (s *RoleAttributionService) VerifyRowAutomation(record tool.Record, create 
 	s.Domain.SuperCall( params, tool.Record{}, tool.DELETE, "Delete", )	
 	return record, true 
 }
-func (s *RoleAttributionService) DeleteRowAutomation(results tool.Results) { }
+func (s *RoleAttributionService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *RoleAttributionService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
-func (s *RoleAttributionService) WriteRowAutomation(record tool.Record) { }
+func (s *RoleAttributionService) WriteRowAutomation(record tool.Record, tableName string) { }
 func (s *RoleAttributionService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
 	return tool.PostTreat(s.Domain, results, tableName, false) 
 }

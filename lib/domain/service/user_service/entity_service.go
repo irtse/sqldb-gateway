@@ -9,9 +9,9 @@ type EntityService struct { tool.AbstractSpecializedService }
 
 func (s *EntityService) Entity() tool.SpecializedServiceInfo { return entities.DBEntity }
 func (s *EntityService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { return record, true }
-func (s *EntityService) DeleteRowAutomation(results tool.Results) { }
+func (s *EntityService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *EntityService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
-func (s *EntityService) WriteRowAutomation(record tool.Record) { }
+func (s *EntityService) WriteRowAutomation(record tool.Record, tableName string) { }
 func (s *EntityService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
 	return tool.PostTreat(s.Domain, results, tableName, false) 
 }

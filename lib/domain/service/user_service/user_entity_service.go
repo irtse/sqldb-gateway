@@ -18,9 +18,9 @@ func (s *UserEntityService) VerifyRowAutomation(record tool.Record, create bool)
 	s.Domain.SuperCall( params, tool.Record{}, tool.DELETE, "Delete", )	
 	return record, true 
 }
-func (s *UserEntityService) DeleteRowAutomation(results tool.Results) { }
+func (s *UserEntityService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *UserEntityService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
-func (s *UserEntityService) WriteRowAutomation(record tool.Record) { }
+func (s *UserEntityService) WriteRowAutomation(record tool.Record, tableName string) { }
 func (s *UserEntityService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
 	return tool.PostTreat(s.Domain, results, tableName, false) 
 }

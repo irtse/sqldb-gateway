@@ -74,3 +74,16 @@ type SchemaColumnEntity struct {
 	LinkPath 				string 		 			 	 `json:"link_path"`
 }
 func (t SchemaColumnEntity) GetName() string { return t.Name }
+
+type ShallowSchemaColumnEntity struct {
+	Label 					string 						 `json:"label" validate:"required"`
+	Type 					string 		 				 `json:"type" validate:"required"`
+	Index					int64						 `json:"index"`
+	Description 			string				 		 `json:"description"`
+	Placeholder 			string				 		 `json:"placeholder"`
+	Default 				interface{}					 `json:"default_value"`
+	Required 				bool 		 			 	 `json:"required"`
+	Readonly 				bool 		 			 	 `json:"readonly"`
+	LinkPath 				string 		 			 	 `json:"link_path"`
+}
+func (t ShallowSchemaColumnEntity) GetName() string { return t.Label }

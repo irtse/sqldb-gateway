@@ -18,9 +18,9 @@ func (s *HierarchyService) VerifyRowAutomation(record tool.Record, create bool) 
 	s.Domain.SuperCall( params, tool.Record{}, tool.DELETE, "Delete", )	
 	return record, true 
 }
-func (s *HierarchyService) DeleteRowAutomation(results tool.Results) { }
+func (s *HierarchyService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *HierarchyService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
-func (s *HierarchyService) WriteRowAutomation(record tool.Record) { }
+func (s *HierarchyService) WriteRowAutomation(record tool.Record, tableName string) { }
 func (s *HierarchyService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
 	return tool.PostTreat(s.Domain, results, tableName, false) 
 }

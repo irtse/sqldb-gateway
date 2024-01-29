@@ -34,11 +34,11 @@ func (s *TaskAssigneeService) VerifyRowAutomation(record tool.Record, create boo
 	}
 	return record, res == nil || len(res) == 0
 }
-func (s *TaskAssigneeService) DeleteRowAutomation(results tool.Results) { }
+func (s *TaskAssigneeService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *TaskAssigneeService) UpdateRowAutomation(results tool.Results, record tool.Record) {
-	for _, res := range results { s.WriteRowAutomation(res) }
+	for _, res := range results { s.WriteRowAutomation(res, "") }
 }
-func (s *TaskAssigneeService) WriteRowAutomation(record tool.Record) { 
+func (s *TaskAssigneeService) WriteRowAutomation(record tool.Record, tableName string) { 
 	paramsNew := tool.Params{ tool.RootTableParam : entities.DBUser.Name, 
 							  tool.RootRowsParam: tool.ReservedParam, }
 	paramsNew[tool.RootSQLFilterParam] += "id IN (SELECT id FROM " + entities.DBHierarchy.Name + " WHERE "

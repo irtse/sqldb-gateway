@@ -96,7 +96,7 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 		if err != nil { return t.DBError(nil, err) }
 	}
 	if t.SpecializedService != nil {
-		t.SpecializedService.WriteRowAutomation(t.Record)
+		t.SpecializedService.WriteRowAutomation(t.Record, t.Table.Name)
 		_, view := t.SpecializedService.ConfigureFilter(t.Table.Name, t.Params)
 		if view != "" { t.db.SQLView = view }
 	}
@@ -197,7 +197,7 @@ func (t *TableRowInfo) Delete() (tool.Results, error) {
 	err = t.db.Query(query)
 	if err != nil { return t.DBError(nil, err) }
 	if t.SpecializedService != nil {
-		t.SpecializedService.DeleteRowAutomation(t.Results)
+		t.SpecializedService.DeleteRowAutomation(t.Results, t.Table.Name)
 		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results, t.Table.Name) }
 	}
 	return t.Results, nil

@@ -10,7 +10,7 @@ type SchemaService struct { tool.AbstractSpecializedService }
 
 func (s *SchemaService) Entity() tool.SpecializedServiceInfo { return entities.DBSchema }
 func (s *SchemaService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { return record, true }
-func (s *SchemaService) DeleteRowAutomation(results tool.Results) { 
+func (s *SchemaService) DeleteRowAutomation(results tool.Results, tableName string) { 
 	for _, record := range results { 
 		s.Domain.SetIsCustom(true)
 		s.Domain.SuperCall( 
@@ -24,7 +24,7 @@ func (s *SchemaService) DeleteRowAutomation(results tool.Results) {
 	}
 }
 func (s *SchemaService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
-func (s *SchemaService) WriteRowAutomation(record tool.Record) { 
+func (s *SchemaService) WriteRowAutomation(record tool.Record, tableName string) { 
 	s.Domain.SuperCall(
 		tool.Params{ tool.RootTableParam : record[entities.NAMEATTR].(string), }, 
 		tool.Record{ entities.NAMEATTR : record[entities.NAMEATTR], 

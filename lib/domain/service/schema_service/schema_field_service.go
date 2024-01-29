@@ -20,7 +20,7 @@ func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (too
 	}
 	return newRecord, err == nil && schemas != nil && len(schemas) > 0
 }
-func (s *SchemaFields) WriteRowAutomation(record tool.Record) { 
+func (s *SchemaFields) WriteRowAutomation(record tool.Record, tableName string) { 
 	res, err := s.Domain.SuperCall(
 		tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
 			         tool.RootRowsParam: fmt.Sprintf("%v", record[entities.RootID(entities.DBSchema.Name)]) }, 
@@ -71,7 +71,7 @@ func (s *SchemaFields) UpdateRowAutomation(results tool.Results, record tool.Rec
 		)
 	}
 }
-func (s *SchemaFields) DeleteRowAutomation(results tool.Results) { 
+func (s *SchemaFields) DeleteRowAutomation(results tool.Results, tableName string) { 
 	for _, record := range results { 
 		res, err := s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 

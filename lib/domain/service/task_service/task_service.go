@@ -43,7 +43,7 @@ func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool
 	}
 	return record, true 
 }
-func (s *TaskService) DeleteRowAutomation(results tool.Results) { 
+func (s *TaskService) DeleteRowAutomation(results tool.Results, tableName string) { 
 	for _, res := range results {
 		res["state"]="close"
 	}
@@ -94,7 +94,7 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 	    }
 	}
 }
-func (s *TaskService) WriteRowAutomation(record tool.Record) {
+func (s *TaskService) WriteRowAutomation(record tool.Record, tableName string) {
 	// task creation automation.
 	schemas, err := tool.Schema(s.Domain, record)
 	if err != nil && len(schemas) == 0 { return }
@@ -107,6 +107,7 @@ func (s *TaskService) WriteRowAutomation(record tool.Record) {
 							  tool.RootRowsParam : tool.ReservedParam,
 						} 
 	s.Domain.SuperCall( params, newRec, tool.UPDATE, "CreateOrUpdate")
+	tool.WriteRow(s.Domain, tableName, record)
 }
 
 func (s *TaskService) PostTreatment(results tool.Results, tableName string) tool.Results { 	

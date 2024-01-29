@@ -183,7 +183,7 @@ var DBTaskVerifyer = TableEntity{
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, },
 		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, Null : false, },
-		TableColumnEntity{ Name: "state", Type: "enum('pending', 'dismiss', 'complete')",  Null : true, Default: "pending"},
+		TableColumnEntity{ Name: "state", Type: "enum('pending', 'rejected', 'complete')",  Null : true, Default: "pending"},
 		TableColumnEntity{ Name: "hidden", Type: "boolean",  Null : true, Default: false, },
 	},
 }
@@ -247,9 +247,10 @@ var DBViewAction = TableEntity{
 }
 
 var DBUserEntry = TableEntity{
-	Name : RootName("user_entry"),
+	Name : RootName("user_schema_entry"),
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable : DBUser.Name, Null : false, },
+		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable : DBSchema.Name, Null : false, },
 		TableColumnEntity{ Name: RootID("dest_table"), Type: "integer", Null : true, },
 	},
 }

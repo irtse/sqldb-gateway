@@ -9,9 +9,9 @@ type TaskWatcherService struct { tool.AbstractSpecializedService }
 
 func (s *TaskWatcherService) Entity() tool.SpecializedServiceInfo { return entities.DBTaskWatcher }
 func (s *TaskWatcherService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { return record, true }
-func (s *TaskWatcherService) DeleteRowAutomation(results tool.Results) { }
+func (s *TaskWatcherService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *TaskWatcherService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
-func (s *TaskWatcherService) WriteRowAutomation(record tool.Record) {}
+func (s *TaskWatcherService) WriteRowAutomation(record tool.Record, tableName string) {}
 func (s *TaskWatcherService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
 	return tool.PostTreat(s.Domain, results, tableName, false) 
 }
