@@ -22,7 +22,7 @@ func (s *HierarchyService) DeleteRowAutomation(results tool.Results) { }
 func (s *HierarchyService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *HierarchyService) WriteRowAutomation(record tool.Record) { }
 func (s *HierarchyService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName) 
+	return tool.PostTreat(s.Domain, results, tableName, false) 
 }
 func (s *HierarchyService) ConfigureFilter(tableName string, params tool.Params) (string, string) {
 	return tool.ViewDefinition(s.Domain, tableName, params)

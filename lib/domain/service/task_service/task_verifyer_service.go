@@ -82,7 +82,7 @@ func (s *TaskVerifyerService) UpdateRowAutomation(results tool.Results, record t
 }
 func (s *TaskVerifyerService) WriteRowAutomation(record tool.Record) {}
 func (s *TaskVerifyerService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName) 
+	return tool.PostTreat(s.Domain, results, tableName, false) 
 }
 func (s *TaskVerifyerService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
 	params[tool.RootSQLFilterParam] = entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')" 

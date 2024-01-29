@@ -18,7 +18,7 @@ func (l *AuthController) Login() {
 	body := l.body(false)
 	if log, ok := body["login"]; ok {
 		params := l.paramsOver(map[string]string{ tool.RootTableParam : "dbuser", 
-												  tool.RootRowsParam : "all", 
+												  tool.RootRowsParam : tool.ReservedParam, 
 												  "login" : log.(string) })
 		d := domain.Domain(false, log.(string), false)
 		d.Specialization = false

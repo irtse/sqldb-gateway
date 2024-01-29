@@ -13,7 +13,7 @@ func (s *PermissionService) DeleteRowAutomation(results tool.Results) { }
 func (s *PermissionService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *PermissionService) WriteRowAutomation(record tool.Record) { }
 func (s *PermissionService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName) 
+	return tool.PostTreat(s.Domain, results, tableName, false) 
 }
 func (s *PermissionService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
 	params[tool.RootSQLFilterParam] = "id IN (SELECT " + entities.DBPermission.Name + "_id FROM " 

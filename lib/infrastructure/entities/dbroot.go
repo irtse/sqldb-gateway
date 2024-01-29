@@ -16,7 +16,6 @@ var DBSchema = TableEntity{
 	Name : RootName("schema"),
 	Columns : []TableColumnEntity{
 		 TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)", Constraint: "unique", Null : false, },
-		 TableColumnEntity{ Name: TYPEATTR, Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "title", Type: "varchar(255)", Null : true, Default : "unknown title" },
 		 TableColumnEntity{ Name: "header", Type: "varchar(255)", Null : true, Default : "" },
 	},
@@ -37,7 +36,8 @@ var DBSchemaField = TableEntity{
 		 TableColumnEntity{ Name: "default_value", Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "description", Type: "varchar(255)", Null : true, Default : "no description..." },
         // link define a select.
-		 TableColumnEntity{ Name: "link_sql_anchor", Type: "varchar(255)", Null : true, },
+		 TableColumnEntity{ Name: RootID("link"), Type: "integer", ForeignTable : DBSchema.Name, Null : true, },
+		 TableColumnEntity{ Name: "link_sql_dir", Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "link_sql_order", Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "link_sql_columns", Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "link_sql_restriction", Type: "varchar(255)", Null : true, },
@@ -204,12 +204,16 @@ var DBView = TableEntity{
 		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, },
 		TableColumnEntity{ Name: "category", Type: "varchar(100)",  Null : true, },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true,  Default: "no description...", },
-		TableColumnEntity{ Name: "is_empty_struct", Type: "boolean", Null : true, Default: false },
+		TableColumnEntity{ Name: "is_empty", Type: "boolean", Null : true, Default: false }, // EMPTY VIEW OR ...
+		TableColumnEntity{ Name: "is_list", Type: "boolean", Null : true, Default: false }, // SOLO VIEW OR ... 
+		TableColumnEntity{ Name: "readonly", Type: "boolean", Null : true, Default: false }, // SOLO VIEW OR ... 
 		TableColumnEntity{ Name: "index", Type: "integer", Null : true, Default: 1 },
 		TableColumnEntity{ Name: "sql_order", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "sql_view", Type: "varchar(255)", Null : true, },
+		TableColumnEntity{ Name: "sql_dir", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "sql_restriction", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "through_perms", Type: "integer",  ForeignTable : DBSchema.Name, Null : true, },
+		TableColumnEntity{ Name: RootID("view"), Type: "integer", ForeignTable : RootName("view"), Null : true, },
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable : DBSchema.Name, Null : false, },
 	},
 }
@@ -225,9 +229,9 @@ var DBAction = TableEntity{
 		TableColumnEntity{ Name: "extra_path", Type: "varchar(255)", Null : true, Default : ""  },
 		TableColumnEntity{ Name: RootID("from"), Type: "integer",  ForeignTable : DBSchema.Name, Null : false, },
 		TableColumnEntity{ Name: RootID("to"), Type: "integer",  ForeignTable : DBSchema.Name, Null : true, },
-		TableColumnEntity{ Name: RootID(DBView.Name), Type: "integer",  ForeignTable : DBView.Name, Null : true, },
-		TableColumnEntity{ Name: "type", Type: "enum('LINK_SELECT', 'BUTTON', 'LINK_ADD')", Null : true, Default : "BUTTON" },
+		TableColumnEntity{ Name: "kind", Type: "enum('LINK_SELECT', 'BUTTON', 'LINK_ADD')", Null : true, Default : "BUTTON" },
 		TableColumnEntity{ Name: RootID("link"), Type: "integer", ForeignTable : DBSchema.Name, Null : true, },
+		TableColumnEntity{ Name: "link_sql_dir", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "link_sql_order", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "link_sql_columns", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "link_sql_restriction", Type: "varchar(255)", Null : true, },
@@ -241,9 +245,18 @@ var DBViewAction = TableEntity{
 		TableColumnEntity{ Name: RootID(DBAction.Name), Type: "integer", ForeignTable : DBAction.Name, Null : false, },
 	},
 }
+
+var DBUserEntry = TableEntity{
+	Name : RootName("user_entry"),
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable : DBUser.Name, Null : false, },
+		TableColumnEntity{ Name: RootID("dest_table"), Type: "integer", Null : true, },
+	},
+}
+
 var DBRESTRICTED = []TableEntity{ DBSchema, DBSchemaField, } // override permission checkup
 var PERMISSIONEXCEPTION = []TableEntity{ DBUser, DBPermission, DBEntity, DBRole, DBView, DBAction, 
 										 DBEntityUser, DBRoleAttribution, } // override permission checkup
 var ROOTTABLES = []TableEntity{ DBUser, DBPermission, DBEntity, DBRole, DBView, DBAction, 
 	DBEntityUser, DBRoleAttribution, DBWorkflow, DBTask, DBTask, DBWorkflowSchema, DBWorkflowTask, DBTaskAssignee, 
-	DBTaskVerifyer, DBTaskWatcher,  DBViewAction, DBRolePermission,  }
+	DBTaskVerifyer, DBTaskWatcher,  DBViewAction, DBRolePermission, DBUserEntry }

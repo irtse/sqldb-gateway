@@ -3,6 +3,7 @@ package connector
 import (
 	"os"
 	"fmt"
+	"errors"
 	"strings"
 	"reflect"
 	"strconv"
@@ -51,6 +52,15 @@ func Open() *Db {
 	return &database
 }
 
+func (db *Db) GetSQLRestriction() string {
+	return db.SQLRestriction
+}
+func (db *Db) GetSQLOrder() string {
+	return db.SQLOrder
+}
+func (db *Db) GetSQLView() string {
+	return db.SQLView
+}
 func (db *Db) Prepare(query string) (*sql.Stmt, error) {
 	if db.LogQueries { log.Info().Msg(query) }
 	// fmt.Printf("QUERY : %s\n", query)
@@ -64,7 +74,8 @@ func (db *Db) QueryRow(query string) (int64, error) {
 	if db.LogQueries { log.Info().Msg(query) }
 	// fmt.Printf("QUERY : %s\n", query)
 	err := db.Conn.QueryRow(query + " RETURNING id").Scan(&id)
-	if err != nil { return int64(id), err
+	if err != nil { 
+		return int64(id), err
 	}
 	return int64(id), err
 }
@@ -73,13 +84,16 @@ func (db *Db) Query(query string) (error) {
 	if db.LogQueries { log.Info().Msg(query) }
 	// fmt.Printf("QUERY : %s\n", query)
 	rows, err := db.Conn.Query(query)
-	if err != nil { return err }
+	if err != nil { 
+		// fmt.Printf("QUERY : %s\n", query)
+		return err 
+	}
 	err = rows.Close()
 	return err
 }
 
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
-	// fmt.Printf("QUERY : %s\n", query)
+    if strings.Contains(query, "<nil>") { return nil, errors.New("not found")}
 	rows, err := db.Conn.Query(query)
 
 	if err != nil { 

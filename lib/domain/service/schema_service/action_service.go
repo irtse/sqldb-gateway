@@ -2,6 +2,7 @@ package schema_service
 
 import (
 	"fmt"
+	"strings"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/infrastructure/entities"
 )
@@ -10,13 +11,13 @@ type ActionService struct { tool.AbstractSpecializedService }
 
 func (s *ActionService) Entity() tool.SpecializedServiceInfo { return entities.DBAction }
 func (s *ActionService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
-	schemas, err := tool.Schema(s.Domain, record)	
+	schemas, err := tool.Schema(s.Domain, tool.Record{ entities.RootID(entities.DBSchema.Name) : record[entities.RootID("from")].(int64) })	
 	if err != nil && len(schemas) == 0 { return record, false }
-	if to, ok := record["to_schema"]; ok {
+	if to, ok := record[entities.RootID("to")]; ok {
 		schemas, err := tool.Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : to.(int64)})
 		if err != nil || len(schemas) == 0 { return record, false }
 	}
-	if link, ok := record["link"]; ok {
+	if link, ok := record[entities.RootID("link")]; ok {
 		schemas, err := tool.Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : link.(int64)})
 		if err != nil || len(schemas) == 0 { return record, false }
 	}
@@ -29,46 +30,61 @@ func (s *ActionService) WriteRowAutomation(record tool.Record) { }
 func (s *ActionService) PostTreatment(results tool.Results, tablename string) tool.Results { 
 	res := tool.Results{}
 	for _, record := range results{
+		newRec := tool.Record{}
 		names := []string{}
-		schemas, err := tool.Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : record["from_schema"]})
+		schemas, err := tool.Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : record[entities.RootID("from")]})
 		if err != nil || len(schemas) == 0 { continue }
-		delete(record, "from_schema")
-		record["from"]=fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
 		path := "/" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
+		link_path := ""
 		names = append(names, schemas[0][entities.NAMEATTR].(string))
-		if to, ok := record["to_schema"]; ok && to != nil {
+		if to, ok := record[entities.RootID("to")]; ok && to != nil {
 			schemas, err := tool.Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : to.(int64)})
 			if err != nil || len(schemas) == 0 { continue }
-			delete(record, "to_schema")
-			record["to"]=fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
 			path += "/" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
 		}
-		if link, ok := record["link"]; ok  && link != nil {
+		if link, ok := record[entities.RootID("link")]; ok  && link != nil {
 			schemas, err := tool.Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : link.(int64)})
 			if err != nil || len(schemas) == 0 { continue }
-			l := fmt.Sprint("%v", schemas[0][entities.NAMEATTR])
-			record["link"]=l
+			link_path = "/" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
+			restr, ok2 := record["link_sql_restriction"]
+			order, ok3 := record["link_sql_order"]
+			dir, ok4 := record["link_sql_dir"]
+			cols, ok5 := record["link_sql_columns"]
+			if ok2 || ok3 || ok4 || ok5 {
+				link_path += "?rows=all"
+				if ok2 && restr != nil && restr != "" { 
+					link_path += "&" + tool.RootSQLFilterParam + "=" + strings.Replace(restr.(string), " ", "+", -1) }
+				if ok3  && order != nil && order != "" { 
+					link_path += "&" + tool.RootOrderParam + "=" + strings.Replace(order.(string), " ", "+", -1) 
+				}
+				if ok4  && dir != nil && dir != "" { 
+					link_path += "&" + tool.RootDirParam + "=" + strings.Replace(dir.(string), " ", "+", -1) 
+				}
+				if ok5  && cols != nil && cols != "" { 
+					link_path += "&" + tool.RootColumnsParam + "=" + cols.(string)
+				}
+				newRec["link_path"]=link_path
+			}
 		}
 		if p, ok := record["extra_path"]; ok  && p != nil {
-			delete(record, "extra_path")
 			path += "/" + fmt.Sprintf("%v", p)
 		}
-		record["path"] = path
-		record["schemas"] = map[string]tool.Record{}
+		newRec["kind"]=record["kind"]
+		newRec["method"]=record["method"]
+		newRec["path"] = path
+		newRec["schemas"] = map[string]tool.Record{}
         for _, tableName := range names {
 			params := tool.Params{ tool.RootTableParam : tableName, }
 			schemes, err := s.Domain.SuperCall(params, tool.Record{}, tool.SELECT, "Get")
 			if err == nil && len(schemes) > 0 {
 				recSchemes := map[string]tool.Record{}
 				for _, scheme := range schemes { recSchemes[scheme[entities.NAMEATTR].(string)]=scheme }
-				for k, v := range record["schemas"].(map[string]tool.Record) { recSchemes[k]=v }
-				record["schemas"]=recSchemes
+				newRec["schemas"]=recSchemes
 			}
 		}
-		
-		res = append(res, record)
+		res = append(res, newRec)
 	}
-	return tool.PostTreat(s.Domain, res, tablename) 
+	return res 
 }
 
 func (s *ActionService) ConfigureFilter(tableName string, params tool.Params) (string, string) { 

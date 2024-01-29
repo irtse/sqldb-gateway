@@ -137,22 +137,19 @@ func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
 		query := "ALTER TABLE " + t.Name + " DROP CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + ";"
 		t.db.Query(query)
 		query = "ALTER TABLE " + t.Name + "  ADD CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + " " + strings.ToUpper(tcce.Constraint) + "(" + tcce.Name + ");"
-		err := t.db.Query(query)
-		if err != nil { return err }
+		t.db.Query(query)
 	}
 	if strings.TrimSpace(tcce.Constraint) != "" {
 		query := "ALTER TABLE " + t.Name + " DROP CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + ";"
 		t.db.Query(query)
 		query = "ALTER TABLE " + t.Name + " ADD CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + " " + strings.ToUpper(tcce.Constraint) + "(" + tcce.Name + ");"
-		err := t.db.Query(query)
-		if err != nil { return err }
+		t.db.Query(query)
 	}
 	if strings.TrimSpace(tcce.ForeignTable) != "" {
 		query := "ALTER TABLE " + t.Name + " DROP CONSTRAINT fk_" + tcce.Name + ";"
 		t.db.Query(query)
 		query = "ALTER TABLE " + t.Name + " ADD CONSTRAINT  fk_" + tcce.Name +  " FOREIGN KEY(" + tcce.Name  + ") REFERENCES " + tcce.ForeignTable + "(id);"
-        err := t.db.Query(query)
-		if err != nil { return err }
+		t.db.Query(query)
 	}
 	if tcce.Default != "" && conn.FormatForSQL(tcce.Type, tcce.Default) != "NULL" {
 		query := "ALTER TABLE " + t.Name + " ALTER " + tcce.Name  + " SET DEFAULT " + conn.FormatForSQL(tcce.Type, tcce.Default) + ";"
@@ -164,21 +161,17 @@ func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
 		t.Row.CreateOrUpdate()
 	}
 	if !tcce.Null {
-
 		query := "ALTER TABLE " + t.Name + " ALTER COLUMN " + tcce.Name + " SET NOT NULL;"
-        err := t.db.Query(query)
-		if err != nil { return err }
+        t.db.Query(query)
 	}
 	if tcce.Null {
 		query := "ALTER TABLE " + t.Name + " ALTER COLUMN " + tcce.Name + " DROP NOT NULL;"
-        err := t.db.Query(query)
-		if err != nil { return err }
+        t.db.Query(query)
 	}
 	if t.db.Driver == conn.PostgresDriver { // PG COMMENT
 		if strings.TrimSpace(tcce.Comment) != "" {
 			query := "COMMENT ON COLUMN " + t.Name + "." + tcce.Name + " IS '" + tcce.Comment + "'"
-			err := t.db.Query(query)
-			if err != nil { return err }
+			t.db.Query(query)
 		}
 	}
 	return nil

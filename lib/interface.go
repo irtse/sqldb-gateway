@@ -32,7 +32,15 @@ type DomainITF interface {
 	IsAdminView() bool
 	IsSuperAdmin() bool
 	GetPermission() InfraServiceItf
+	GetDB() DbITF
+} 
+
+type DbITF interface {
+	GetSQLView()        string 
+	GetSQLOrder()       string 
+	GetSQLRestriction() string 	
 }
+
 type SpecializedServiceInfo interface { GetName() string }
 type SpecializedService interface {
 	Entity() SpecializedServiceInfo
@@ -48,24 +56,29 @@ type SpecializedService interface {
 type AbstractSpecializedService struct { Domain DomainITF }
 func (s *AbstractSpecializedService) SetDomain(d DomainITF) {  s.Domain = d  }
 
-func PostTreat(domain DomainITF, results Results, tableName string) Results {
+func PostTreat(domain DomainITF, results Results, tableName string, shallow bool, additonnalRestriction ...string) Results {
 	res := Results{}
-	var cols map[string]entities.TableColumnEntity
+	cols := map[string]entities.SchemaColumnEntity{}
+	sqlFilter := entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM " + entities.DBSchema.Name + " WHERE name='" + tableName + "')"
+	params := Params{ RootTableParam : entities.DBSchemaField.Name, RootRowsParam: ReservedParam, RootSQLFilterParam: sqlFilter }
+	schemas, err := domain.SuperCall( params, Record{}, SELECT, "Get")
+	if err != nil || len(schemas) == 0 { return Results{} }
 	if !domain.IsShallowed() {
-		params := Params{ RootTableParam : tableName, }
-			schemas, err := domain.SuperCall( params, Record{}, SELECT, "Get")
-			if err != nil || len(schemas) == 0 { return Results{} }
-			if _, ok := schemas[0]["columns"]; !ok { return Results{} }
-			cols = schemas[0]["columns"].(map[string]entities.TableColumnEntity)
+		for _, r := range schemas {
+			var scheme entities.SchemaColumnEntity
+			b, _ := json.Marshal(r)
+			json.Unmarshal(b, &scheme)
+			cols[scheme.Name]=scheme
+		}
 	}
 	for _, record := range results { 
-		rec := PostTreatRecord(domain, record, tableName, cols) 
+		rec := PostTreatRecord(domain, record, fmt.Sprintf("%v", schemas[0][SpecialIDParam]), tableName, cols, shallow, additonnalRestriction...) 
 		if rec != nil { res = append(res, rec) }
 	}
 	return res
 }
 
-func PostTreatRecord(domain DomainITF, record Record, tableName string, cols map[string]entities.TableColumnEntity, additonnalRestriction ...string) Record {
+func PostTreatRecord(domain DomainITF, record Record, tableID string, tableName string, cols map[string]entities.SchemaColumnEntity, shallow bool, additonnalRestriction ...string) Record {
 	newRec := Record{}
 	if domain.IsShallowed() {
 		if _, ok := record[entities.NAMEATTR]; ok {
@@ -73,34 +86,83 @@ func PostTreatRecord(domain DomainITF, record Record, tableName string, cols map
 		} else { return record }
 	} else {
 		if domain.IsAdminView() { return record } // if admin view avoid.
+		readonly := false 
+		if r, ok := record["readonly"]; ok && r.(bool) { readonly = true }
+		schemass := map[string]interface{}{}
+		schemes := map[string]interface{}{}
 		contents := map[string]interface{}{}
 		vals := map[string]interface{}{}
-		for _, field := range cols {
-			var fieldInfo entities.TableColumnEntity
-			b, _:= json.Marshal(field)
-			json.Unmarshal(b, &fieldInfo)
-			vals[fieldInfo.Name]=record[fieldInfo.Name]
-			if _, ok := record[fieldInfo.Name]; ok && strings.Contains(fieldInfo.Name, "_" + SpecialIDParam){ 
-				tableName := fieldInfo.Name[:(len(fieldInfo.Name) - len(SpecialIDParam) - 1)]
-				params := Params{ RootTableParam : tableName, 
-						            RootRowsParam : fmt.Sprintf("%v", record[fieldInfo.Name]), }
-				fmt.Printf("ADD %v \n", additonnalRestriction)
-				params[RootSQLFilterParam]=""
-				for _, add := range additonnalRestriction { 
-					if add != "" { params[RootSQLFilterParam] += add + " AND " }
+		path := "/" + tableName + "?rows=all"
+		newRec["name"]=tableName
+		newRec["description"]=tableName + " datas"
+		if domain.GetDB().GetSQLView() != "" {
+			path += "&" + RootColumnsParam + "=" + strings.TrimSpace(domain.GetDB().GetSQLView())
+		}
+		if strings.TrimSpace(domain.GetDB().GetSQLRestriction()) != "" || len(additonnalRestriction) > 0 {
+			base := "&" + RootSQLFilterParam + "="
+			ext := ""
+			if domain.GetDB().GetSQLRestriction() != "" {
+				ext += strings.Replace(strings.TrimSpace(domain.GetDB().GetSQLRestriction()), " ", "+", -1) + "+"
+			}
+			for _, add := range additonnalRestriction { 
+				if add != "" { ext += add + "+AND+" }
+			}
+			if len(ext) >= 4 && ext[:len(ext) - 4] == "AND+" { ext = ext[:len(ext) - 4] }
+			if ext != "" { path += base + ext }
+		}
+		if strings.TrimSpace(domain.GetDB().GetSQLOrder()) != "" {
+			path += "&" + RootOrderParam + "=" + strings.Replace(strings.TrimSpace(domain.GetDB().GetSQLOrder()), " ", "+", -1)
+		}
+		if !shallow {
+			for _, field := range cols {
+				if readonly { field.Readonly = true }
+				if domain.GetDB().GetSQLView() != "" && !strings.Contains(domain.GetDB().GetSQLView(), field.Name){ continue }
+				if field.Link != 0 {
+					schemas, err := Schema(domain, Record{entities.RootID(entities.DBSchema.Name) : field.Link})
+					if err != nil || len(schemas) == 0 { continue }
+					link_path := "/" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]) +  "?rows=all"
+					if field.LinkRestriction != "" { 
+						link_path += "&" + RootSQLFilterParam + "=" + strings.Replace(field.LinkRestriction, " ", "+", -1) }
+					if field.LinkOrder != "" { 
+						link_path += "&" + RootOrderParam + "=" + strings.Replace(field.LinkOrder, " ", "+", -1) 
+					}
+					if field.LinkDir != "" { 
+						link_path += "&" + RootDirParam + "=" + strings.Replace(field.LinkDir, " ", "+", -1) 
+					}
+					if field.LinkColumns != "" { 
+						link_path += "&" + RootColumnsParam + "=" + field.LinkColumns
+					}
+					field.LinkPath=link_path
 				}
-				if len(params[RootSQLFilterParam]) >= 4 { 
-					params[RootSQLFilterParam] = params[RootSQLFilterParam][:len(params[RootSQLFilterParam]) - 4]
+				schemes[field.Name]=field
+				vals[field.Name]=record[field.Name]
+				if _, ok := record[field.Name]; ok && strings.Contains(field.Name, "_" + SpecialIDParam) { 
+					tableName := field.Name[:(len(field.Name) - len(SpecialIDParam) - 1)]
+					params := Params{ RootTableParam : tableName, 
+									  RootRowsParam : fmt.Sprintf("%v", record[field.Name]), }
+					datas, err := domain.SuperCall( params, Record{}, SELECT, "Get")
+					if err != nil || len(datas) == 0 { continue }
+					tbname := datas[0][entities.NAMEATTR]
+					ad := Results{}
+					ress := PostTreat(domain, Results{Record{}}, tbname.(string), true, additonnalRestriction...)
+					for _, recs := range ress {
+						schemass[tbname.(string)]=recs["schema"]
+						delete(recs, "schema")
+						ad = append(ad, recs)
+					}
+					contents[tbname.(string)]=ad
 				}
-				datas, err := domain.SuperCall( params, Record{}, SELECT, "Get")
-				if err != nil || len(datas) == 0 { continue }
-				contents[tableName] = PostTreat(domain, datas, tableName)
 			}
 		}
-		newRec["values"]=vals
-		newRec["schema"]=cols
-		newRec["name"]=tableName
-		newRec["contents"]=contents
+		// TODO IF GET IMPORT ACTION OF 
+		newRec["path"]=path
+		if !shallow {
+			newRec["values"]=vals
+			newRec["schema"]=schemes 
+			if len(schemass) > 0 { newRec["schemas"]=schemass }
+			if len(contents) > 0 { newRec["contents"]=contents }
+		}
+		//newRec["actions"]=actions
 	}
 	return newRec 
 }

@@ -39,7 +39,7 @@ func (s *CustomService) DeleteRowAutomation(results tool.Results) { }
 func (s *CustomService) Entity() tool.SpecializedServiceInfo { return nil }
 func (s *CustomService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { return record, true }
 func (s *CustomService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName) 
+	return tool.PostTreat(s.Domain, results, tableName, false) 
 }
 func (s *CustomService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
 	return tool.ViewDefinition(s.Domain, tableName, params)

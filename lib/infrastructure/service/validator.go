@@ -44,7 +44,7 @@ func (v *DBValidator[T]) ValidateSchema(data map[string]interface{}, t *TableInf
 	}
 	for _, s := range schema {
 		for k, v := range s.AssColumns {
-			if !v.Null {
+			if !v.Null && v.Default == nil {
 				if _, ok := data[k]; ok == false && k != tool.SpecialIDParam {
 					return nil, errors.New("Missing a required field " + k)
 				} 

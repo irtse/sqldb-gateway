@@ -32,7 +32,7 @@ type TableColumnEntity struct {
 	Index int64         `json:"-"`
 	Default interface{} `json:"default_value"`
 	Hidden bool         `json:"hidden"`
-	ForeignTable string `json:"-"`
+	ForeignTable string `json:"foreign_table"`
 	Constraint string   `json:"-"`
 	Null bool           `json:"nullable"`
 	Comment string      `json:"comment"`
@@ -55,3 +55,22 @@ type LinkEntity struct {
 }
 
 func (t LinkEntity) GetName() string { return t.Anchor }
+
+type SchemaColumnEntity struct {
+	Label 					string 						 `json:"label" validate:"required"`
+	Name    				string          			 `json:"name" validate:"required"`
+	Type 					string 		 				 `json:"type" validate:"required"`
+	Index					int64						 `json:"index"`
+	Description 			string				 		 `json:"description"`
+	Placeholder 			string				 		 `json:"placeholder"`
+	Default 				interface{}					 `json:"default_value"`
+	Required 				bool 		 			 	 `json:"required"`
+	Readonly 				bool 		 			 	 `json:"readonly"`
+	Link 					int64 		 			 	 `json:"link_id"`
+	LinkDir					string 		 			 	 `json:"link_sql_dir"`
+	LinkOrder 	 			string 		 			 	 `json:"link_sql_order"`
+	LinkColumns 			string 		 			 	 `json:"link_sql_columns"`
+	LinkRestriction 		string 		 			 	 `json:"link_sql_restriction"`
+	LinkPath 				string 		 			 	 `json:"link_path"`
+}
+func (t SchemaColumnEntity) GetName() string { return t.Name }

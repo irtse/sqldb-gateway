@@ -13,7 +13,7 @@ func (s *RoleService) DeleteRowAutomation(results tool.Results) { }
 func (s *RoleService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *RoleService) WriteRowAutomation(record tool.Record) { }
 func (s *RoleService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName) 
+	return tool.PostTreat(s.Domain, results, tableName, false) 
 }
 func (s *RoleService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
 	params[tool.RootSQLFilterParam] = "id IN (SELECT "+ entities.RootID(entities.DBRole.Name) + " FROM " +  entities.DBRoleAttribution.Name + " " 

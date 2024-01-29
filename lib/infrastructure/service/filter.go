@@ -19,7 +19,13 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db, permsCols strin
 				els := ""
 				for _, el := range strings.Split(element, ",") { els += conn.FormatForSQL(typ, el) + "," }
 				db.SQLRestriction += key + " IN (" + conn.RemoveLastChar(els) + ") AND " 
-			} else { db.SQLRestriction += key + "=" + conn.FormatForSQL(typ, element) + " AND " }
+			} else { 
+				sql := conn.FormatForSQL(typ, element)
+				if len(sql) > 1 && sql[:2] == "'%" && sql[:len(sql) - 2] == "%'" {
+					db.SQLRestriction += key + " LIKE " + sql + " AND "
+				} else { db.SQLRestriction += key + "=" + conn.FormatForSQL(typ, element) + " AND " }
+				db.SQLRestriction += key + "=" + sql + " AND " 
+			}
 		}
 	}
 	if len(db.SQLRestriction) > 4 { db.SQLRestriction = db.SQLRestriction[0:len(db.SQLRestriction) - 4]}
@@ -35,7 +41,6 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db, permsCols strin
 			}
 			continue 
 		}
-		db.SQLView = conn.RemoveLastChar(db.SQLView)
 		dir, ok := params[tool.RootDirParam]
 		if key == tool.RootOrderParam && ok {
 			direction := strings.Split(dir, ",")
@@ -46,8 +51,9 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db, permsCols strin
 			continue
 		}
 		if key == tool.RootSQLFilterParam  && params[tool.RootSQLFilterParam] != "" {
-			if len(db.SQLRestriction) == 0 { db.SQLRestriction = params[tool.RootSQLFilterParam]
-			} else { db.SQLRestriction += " AND " + params[tool.RootSQLFilterParam] }
+			filter := strings.Replace(params[tool.RootSQLFilterParam], "+", " ", -1)
+			if len(db.SQLRestriction) == 0 { db.SQLRestriction = filter
+			} else { db.SQLRestriction += " AND " + filter }
 			continue
 		}
 		alreadySet = append(alreadySet, key)
@@ -59,6 +65,7 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db, permsCols strin
 			}
 		}
 	}
+	db.SQLView = conn.RemoveLastChar(db.SQLView)
 	return db
 }
 

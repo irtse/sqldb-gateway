@@ -110,7 +110,7 @@ func (s *TaskService) WriteRowAutomation(record tool.Record) {
 }
 
 func (s *TaskService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName) 
+	return tool.PostTreat(s.Domain, results, tableName, false) 
 }
 
 func (s *TaskService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {

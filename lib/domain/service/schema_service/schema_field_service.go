@@ -91,7 +91,7 @@ func (s *SchemaFields) DeleteRowAutomation(results tool.Results) {
 	}
 }
 func (s *SchemaFields) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName) 
+	return tool.PostTreat(s.Domain, results, tableName, false) 
 }
 func (s *SchemaFields) ConfigureFilter(tableName string, params tool.Params) (string, string) {
 	return tool.ViewDefinition(s.Domain, tableName, params)

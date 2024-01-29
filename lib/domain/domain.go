@@ -20,6 +20,7 @@ type MainService struct {
 	isGenericService    bool
 	Specialization		bool
 	PermService			tool.InfraServiceItf
+	Db					*conn.Db
 }
 func Domain(superAdmin bool, user string, isGenericService bool) *MainService {
 	return &MainService{ 
@@ -35,6 +36,8 @@ func (d *MainService) GetUser() string { return d.User }
 func (d *MainService) IsSuperAdmin() bool { return d.SuperAdmin }
 func (d *MainService) IsShallowed() bool { return d.Shallowed }
 func (d *MainService) IsAdminView() bool { return d.AdminView }
+func (d *MainService) GetDB() tool.DbITF { return d.Db }
+
 
 func (d *MainService) SuperCall(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
 	params[tool.RootAdminView]="enable"
@@ -60,13 +63,13 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 				if tablename == exception.Name { auth = false; break }
 			}
 		}
-		database := conn.Open()
-		defer database.Conn.Close()
-		table := infrastructure.Table(database, d.SuperAdmin, d.User, strings.ToLower(tablename), params, record, method)
+		d.Db = conn.Open()
+		defer d.Db.Conn.Close()
+		table := infrastructure.Table(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename), params, record, method)
 		delete(params, tool.RootTableParam)
 		service=table
 		tablename = strings.ToLower(tablename)
-		d.PermService = infrastructure.Permission(database, 
+		d.PermService = infrastructure.Permission(d.Db, 
 			d.SuperAdmin, 
 			tablename, 
 			params, 
@@ -99,7 +102,7 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 		}
 		if col, ok := params[tool.RootColumnsParam]; ok { 
 			if tablename == tool.ReservedParam { 
-				database.Conn.Close()
+				d.Db.Conn.Close()
 				return res, errors.New("can't load table as " + tool.ReservedParam) 
 			}
 			params[tool.RootColumnsParam]=strings.ToLower(col)
@@ -135,34 +138,36 @@ func Load() {
 	database := conn.Open()
 	defer database.Conn.Close()
 	tables := [][]entities.TableEntity{ entities.DBRESTRICTED, entities.ROOTTABLES }
-	for i, t := range tables {
+	for _, t := range tables {
 		for _, table := range t {
 			rec := tool.Record{}
 			data, _:= json.Marshal(table)
 			json.Unmarshal(data, &rec)
-			if i == 0 {
-				service := infrastructure.Table(database, true, "", table.Name, tool.Params{}, rec, tool.CREATE)
-				service.NoLog = true
-				service.CreateOrUpdate()
-			} else {
-				rec := tool.Record{}
-				data, _:= json.Marshal(table)
-				json.Unmarshal(data, &rec)
-				d := Domain(true, "superadmin", false)
-				sp := domain.SpecializedService(entities.DBSchema.Name)
-				sp.SetDomain(d)
-				d.SuperCall(tool.Params{ tool.RootTableParam: entities.DBSchema.Name, }, rec, tool.SELECT, "Get")
-				res, err := d.SuperCall(tool.Params{ 
+			service := infrastructure.Table(database, true, "", table.Name, tool.Params{}, rec, tool.CREATE)
+			service.NoLog = true
+			service.CreateOrUpdate()
+		}
+	}
+	d := Domain(true, "superadmin", false)
+	for _, t := range tables {
+		for _, table := range t {
+			rec := tool.Record{}
+			data, _:= json.Marshal(table)
+			json.Unmarshal(data, &rec)
+			res, err := d.SuperCall(tool.Params{ 
 					tool.RootTableParam: entities.DBSchema.Name,
 					tool.RootRowsParam: tool.ReservedParam,
 					entities.NAMEATTR : table.Name }, tool.Record{}, tool.SELECT, "Get")
-				if err != nil || len(res) == 0 { 
-					rec := tool.Record{}
-					data, _:= json.Marshal(table)
-					json.Unmarshal(data, &rec)
-					d.SuperCall(tool.Params{ 
-						tool.RootTableParam: entities.DBSchema.Name,
-						tool.RootRowsParam: tool.ReservedParam, }, rec, tool.CREATE, "CreateOrUpdate")
+			if err != nil || len(res) == 0 { 
+				res, err = d.SuperCall(tool.Params{ tool.RootTableParam: entities.DBSchema.Name,
+										tool.RootRowsParam: tool.ReservedParam, }, 
+							rec, tool.CREATE, "CreateOrUpdate")
+				if err != nil || len(res) == 0 { continue }
+				for _, col := range rec["columns"].([]interface{}) {
+					c := col.(map[string]interface{})
+					c[entities.RootID(entities.DBSchema.Name)] = res[0][tool.SpecialIDParam]
+					d.SuperCall(tool.Params{ tool.RootTableParam: entities.DBSchemaField.Name,
+											 tool.RootRowsParam: tool.ReservedParam, }, c, tool.CREATE, "CreateOrUpdate")
 				}
 			}
 		}

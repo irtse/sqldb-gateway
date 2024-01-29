@@ -13,7 +13,7 @@ func (s *UserService) DeleteRowAutomation(results tool.Results) { }
 func (s *UserService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *UserService) WriteRowAutomation(record tool.Record) { }
 func (s *UserService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName) 
+	return tool.PostTreat(s.Domain, results, tableName, false) 
 }
 func (s *UserService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
 	params[tool.RootSQLFilterParam] = "id IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "') "
