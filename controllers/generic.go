@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	tool "sqldb-ws/lib"
 	domain "sqldb-ws/lib/domain"
 	"sqldb-ws/lib/entities"
@@ -24,7 +23,6 @@ func (l *MainController) Main() {
 		params := l.paramsOver(map[string]string{ tool.RootTableParam : entities.DBView.Name, 
 												  tool.RootRowsParam : tool.ReservedParam, })
 		d := domain.Domain(false, user_id, false)
-		fmt.Printf("PARAMS %v \n", params)
 		response, err := d.Call(params, tool.Record{}, tool.SELECT, true, "Get")
 		if err != nil { // token verify
 			l.response(response, err); return

@@ -31,6 +31,7 @@ func (t *TableInfo) TableRow(specializedService tool.SpecializedService) *TableR
 	row.PermService = t.PermService
 	row.Fill(t.Name, t.SuperAdmin, t.User, t.Params, t.Record, t.Method)
 	row.Table = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method)
+	row.PermService=t.PermService
 	row.EmptyCol = &TableColumnInfo{ } 
 	row.EmptyCol.db = t.db
 	row.EmptyCol.Name = t.Name
@@ -46,6 +47,7 @@ func (t *TableInfo) TableColumn() *TableColumnInfo {
 	col.PermService = t.PermService
 	col.Fill(t.Name, t.SuperAdmin, t.User, t.Params, t.Record, t.Method)
 	col.Row = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method,).TableRow(nil)
+	col.Row.PermService = t.PermService
     return col
 }
 

@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"fmt"
 	"errors"
 	"strings"
 	"reflect"
@@ -78,22 +77,20 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 		tablename = strings.ToLower(tablename)
 		d.PermService = infrastructure.Permission(d.Db, 
 			d.SuperAdmin, 
-			tablename, 
+			d.User,
 			params, 
 			record,
 			method)
-		if auth {
-			if res, err := d.PermService.(*infrastructure.PermissionInfo).Row.Get(); res != nil && err == nil { 
-				d.PermService.(*infrastructure.PermissionInfo).GeneratePerms(res) 
-			}
+		if res, err := d.PermService.(*infrastructure.PermissionInfo).Get(); res != nil && err == nil { 
+			d.PermService.(*infrastructure.PermissionInfo).GeneratePerms(res) 
 		}
+		table.PermService=d.PermService.(*infrastructure.PermissionInfo)
 		if rowName, ok := params[tool.RootRowsParam]; ok { // rows override columns
 			if tablename == tool.ReservedParam { 
 				return res, errors.New("can't load table as " + tool.ReservedParam) 
 			}
 			if auth {
 			   	if _, ok := d.PermService.Verify(tablename); !ok { 
-					fmt.Printf("qsdqd \n")
 					return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
 			    }
 			}

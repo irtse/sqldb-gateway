@@ -33,7 +33,7 @@ type TableColumnEntity struct {
 	Default interface{} `json:"default_value"`
 	Hidden bool         `json:"hidden"`
 	ForeignTable string `json:"link"`
-	Constraint string   `json:"-"`
+	Constraint string   `json:"constraint"`
 	Null bool           `json:"nullable"`
 	Comment string      `json:"comment"`
 	NewName string      `json:"-"`

@@ -51,10 +51,11 @@ func (p *PermissionInfo) GeneratePerms(res tool.Results) {
 	p.ColsPartialResults = ""
 	del := []string{}
 	if len(res) == 0 { return }
-	for _, r := range res[1:] {
+	for _, r := range res {
 		if r[entities.COLNAMEATTR] == nil { p.generatePerm(r[entities.TABLENAMEATTR].(string), r, del)
 		} else { p.generatePerm(r[entities.TABLENAMEATTR].(string) + ":" + r[entities.COLNAMEATTR].(string), r, del) }
 	}
+	fmt.Printf("PERMS %v %v \n", p.Perms, res)
 }
 
 func (p *PermissionInfo) generatePerm(name string, record tool.Record, del []string) {
@@ -78,6 +79,7 @@ func (p *PermissionInfo) Verify(name string) (string, bool) {
 	}
 	view := []string{}
 	authorized := false
+	fmt.Printf("PERMS %v \n", p.Perms)
 	if tperms, ok := p.Perms[name]; ok {
 		if valid, ok2 := tperms[p.Method.String()]; ok2 && valid.(bool) { authorized = true }
 	}
@@ -114,7 +116,19 @@ func (p *PermissionInfo) Verify(name string) (string, bool) {
 	return name, authorized
 }
 
-func (p *PermissionInfo) Get() (tool.Results, error) { return nil, errors.New("not implemented") }
+func (p *PermissionInfo) Get() (tool.Results, error) { 
+	p.Row.Params[tool.RootSQLFilterParam] = "id IN (SELECT " + entities.DBPermission.Name + "_id FROM " 
+	p.Row.Params[tool.RootSQLFilterParam] += entities.DBRolePermission.Name + " WHERE " + entities.DBRole.Name + "_id IN ("
+	p.Row.Params[tool.RootSQLFilterParam] += "SELECT " + entities.DBRole.Name + "_id FROM " 
+	p.Row.Params[tool.RootSQLFilterParam] += entities.DBRoleAttribution.Name + " WHERE " + entities.DBUser.Name + "_id IN ("
+	p.Row.Params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE " 
+	p.Row.Params[tool.RootSQLFilterParam] += entities.DBUser.Name + ".login = '" + p.User + "') OR " + entities.DBEntity.Name + "_id IN ("
+	p.Row.Params[tool.RootSQLFilterParam] += "SELECT " + entities.DBEntity.Name + "_id FROM "
+	p.Row.Params[tool.RootSQLFilterParam] += entities.DBEntityUser.Name + " WHERE " + entities.DBUser.Name +"_id IN ("
+	p.Row.Params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE "
+	p.Row.Params[tool.RootSQLFilterParam] += entities.DBUser.Name + ".login = '" + p.User  + "'))))"
+	return p.Row.Get() 
+}
 
 func (p *PermissionInfo) CreateOrUpdate() (tool.Results, error) {
 	if p.Method == tool.UPDATE { return p.Update() 

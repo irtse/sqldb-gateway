@@ -54,11 +54,8 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string) tool
 				scheme.Readonly = readonly
 			}
 		}
-		fmt.Printf("Sqdqsd %v \n", record)
 		schemas, err := s.Domain.Schema(record)
-		fmt.Printf("ddd %v %v \n", schemas, err)
 		if err != nil && len(schemas) == 0 { continue }
-		fmt.Printf("er %v \n", record)
 		tName := fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
 		through, err := s.Domain.Schema(tool.Record{  entities.RootID(entities.DBSchema.Name) : record["through_perms"] })
 		sqlFilter := ""
