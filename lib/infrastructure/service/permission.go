@@ -1,10 +1,11 @@
 package service
 
 import (
+	"fmt"
 	"errors"
 	"strings"
 	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 	conn "sqldb-ws/lib/infrastructure/connector"
 )
 var ADMINROLE = "admin"
@@ -72,6 +73,9 @@ func (p *PermissionInfo) Template() (interface{}, error) { return p.Get() }
 // todo view (columns sort of)
 func (p *PermissionInfo) Verify(name string) (string, bool) {
 	if p.SuperAdmin { return name, true }
+	for _, exception := range entities.PERMISSIONEXCEPTION {
+		if name == exception.Name { return name, true }
+	}
 	view := []string{}
 	authorized := false
 	if tperms, ok := p.Perms[name]; ok {

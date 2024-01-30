@@ -3,22 +3,22 @@ package task_service
 import (
 	"fmt"
 	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 )
 
 type TaskService struct { tool.AbstractSpecializedService }
 
 func (s *TaskService) Entity() tool.SpecializedServiceInfo { return entities.DBTask }
 func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
-	schemas, err := tool.Schema(s.Domain, record)
+	schemas, err := s.Domain.Schema(record)
 	if err != nil && len(schemas) == 0 { return record, false }
 	id := int64(-1)
-	if idFromRec, ok := rec[tool.SpecialIDParam]; ok { id = idFromRec.(int64) }
+	if idFromRec, ok := record[tool.SpecialIDParam]; ok { id = idFromRec.(int64) }
 	if idFromTask, ok := record[entities.RootID("dest_table")]; ok { id = idFromTask.(int64) }
 	if id == -1 { return record, false }
 	params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
 			                   tool.RootRowsParam : fmt.Sprintf("%v", id), } // empty record
-	s.Domain.SuperCall( params, rec, tool.UPDATE, "CreateOrUpdate")
+	s.Domain.SuperCall( params, record, tool.UPDATE, "CreateOrUpdate")
 	if _, ok := record[entities.RootID("dest_table")]; ok && !create { // TODO if not superadmin PROTECTED
 		delete(record, entities.RootID("dest_table"))
 	}
@@ -37,7 +37,7 @@ func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool
 	}
 	return record, true 
 }
-func (s *TaskService) DeleteRowAutomation(results tool.Results) { 
+func (s *TaskService) DeleteRowAutomation(results tool.Results, tableName string) { 
 	for _, res := range results {
 		res["state"]="close"
 	}
@@ -62,13 +62,22 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 					entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%v", workflowID),
 					"index": fmt.Sprintf("%v", order.(int64) + 1,),
 				}
+				afterScheme, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
+				if err != nil || len(afterScheme) == 0 { continue }
+				params = tool.Params{ tool.RootTableParam : entities.DBWorkflowSchema.Name, 
+					tool.RootRowsParam : tool.ReservedParam, 
+					entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", afterScheme[0][entities.RootID(entities.DBSchema.Name)]),
+					entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%v", afterScheme[0][entities.RootID(entities.DBWorkflow.Name)]),
+				}
+				tasks, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
+				if err != nil || len(tasks) == 0 { continue }
 				dbs := []string{entities.DBTaskAssignee.Name, entities.DBTaskVerifyer.Name,entities.DBTaskWatcher.Name}
 				for _, dbName := range dbs {
 					s.Domain.SuperCall( 
 					            tool.Params{ 
 									tool.RootTableParam : dbName, 
 					                tool.RootRowsParam : tool.ReservedParam,
-									entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%v", record[tool.SpecialIDParam]),
+									entities.RootID(entities.DBTask.Name) : fmt.Sprintf("%v", tasks[0][tool.SpecialIDParam]),
 								}, 
 								tool.Record{ "hidden": false, }, 
 								tool.UPDATE, "CreateOrUpdate")
@@ -79,7 +88,7 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 }
 func (s *TaskService) WriteRowAutomation(record tool.Record, tableName string) {
 	// task creation automation.
-	schemas, err := tool.Schema(s.Domain, record)
+	schemas, err := s.Domain.Schema(record)
 	if err != nil && len(schemas) == 0 { return }
 	params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
 			              tool.RootRowsParam : tool.ReservedParam, } // empty record
@@ -89,11 +98,11 @@ func (s *TaskService) WriteRowAutomation(record tool.Record, tableName string) {
 	params = tool.Params{ tool.RootTableParam : s.Entity().GetName(), 
 							  tool.RootRowsParam : tool.ReservedParam, } 
 	s.Domain.SuperCall( params, newRec, tool.UPDATE, "CreateOrUpdate")
-	tool.WriteRow(s.Domain, tableName, record)
+	s.Domain.WriteRow(tableName, record)
 }
 
 func (s *TaskService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName, false) 
+	return s.Domain.PostTreat( results, tableName, false) 
 }
 
 func (s *TaskService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
@@ -111,5 +120,5 @@ func (s *TaskService) ConfigureFilter(tableName string, params  tool.Params) (st
 	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')))"
 	params[tool.RootSQLFilterParam] += " OR id IN (SELECT " + entities.RootID(entities.DBTask.Name) + " FROM " + entities.DBTaskVerifyer.Name + " WHERE "
 	params[tool.RootSQLFilterParam] += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "'))" 
-	return tool.ViewDefinition(s.Domain, tableName, params)
+	return s.Domain.ViewDefinition(tableName, params)
 }	

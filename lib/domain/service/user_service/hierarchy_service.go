@@ -3,7 +3,7 @@ package user_service
 import (
 	"time"
 	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 )
 
 type HierarchyService struct { tool.AbstractSpecializedService }
@@ -22,8 +22,8 @@ func (s *HierarchyService) DeleteRowAutomation(results tool.Results, tableName s
 func (s *HierarchyService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *HierarchyService) WriteRowAutomation(record tool.Record, tableName string) { }
 func (s *HierarchyService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName, false) 
+	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *HierarchyService) ConfigureFilter(tableName string, params tool.Params) (string, string) {
-	return tool.ViewDefinition(s.Domain, tableName, params)
+	return s.Domain.ViewDefinition(tableName, params)
 }	

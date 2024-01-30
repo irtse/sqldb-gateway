@@ -13,6 +13,7 @@ import (
 	"github.com/beego/beego/v2/server/web/context"
 )
 var namespaceV1 = map[string]beego.ControllerInterface {
+	"main" : &controllers.MainController{},
 	"auth" : &controllers.AuthController{},
 	"generic" : &controllers.GenericController{},
 }

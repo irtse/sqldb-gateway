@@ -2,7 +2,7 @@ package user_service
 
 import (
 	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 )
 
 type PermissionService struct { tool.AbstractSpecializedService }
@@ -13,7 +13,7 @@ func (s *PermissionService) DeleteRowAutomation(results tool.Results, tableName 
 func (s *PermissionService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *PermissionService) WriteRowAutomation(record tool.Record, tableName string) { }
 func (s *PermissionService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName, false) 
+	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *PermissionService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
 	params[tool.RootSQLFilterParam] = "id IN (SELECT " + entities.DBPermission.Name + "_id FROM " 
@@ -26,5 +26,5 @@ func (s *PermissionService) ConfigureFilter(tableName string, params  tool.Param
 	params[tool.RootSQLFilterParam] += entities.DBEntityUser.Name + " WHERE " + entities.DBUser.Name +"_id IN ("
 	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE "
 	params[tool.RootSQLFilterParam] += entities.DBUser.Name + ".login = '" + s.Domain.GetUser()  + "'))))"
-	return tool.ViewDefinition(s.Domain, tableName, params)
+	return s.Domain.ViewDefinition(tableName, params)
 }

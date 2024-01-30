@@ -17,8 +17,9 @@ var log zerolog.Logger
 
 const PostgresDriver = "postgres" 
 const MySQLDriver = "mysql"
-var drivers = []string{PostgresDriver, MySQLDriver}
+var drivers = []string{PostgresDriver, MySQLDriver} // define all drivers available per adapter
 
+// verify driver is available
 func checkDriver(d string) bool {
 	for _, driver := range drivers {
 		if driver == d { return true }
@@ -31,6 +32,7 @@ type Db struct {
 	Url            string
 	SQLView        string 
 	SQLOrder       string 
+	SQLDir		   string
 	SQLRestriction string 	  	  
 	LogQueries     bool
 	Restricted     bool
@@ -61,6 +63,7 @@ func (db *Db) GetSQLOrder() string {
 func (db *Db) GetSQLView() string {
 	return db.SQLView
 }
+
 func (db *Db) Prepare(query string) (*sql.Stmt, error) {
 	if db.LogQueries { log.Info().Msg(query) }
 	// fmt.Printf("QUERY : %s\n", query)
@@ -95,9 +98,8 @@ func (db *Db) Query(query string) (error) {
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
     if strings.Contains(query, "<nil>") { return nil, errors.New("not found")}
 	rows, err := db.Conn.Query(query)
-
+	
 	if err != nil { 
-		fmt.Printf("QUERY : %s\n", query)
 		return nil, err 
 	}
 	defer rows.Close()
@@ -131,17 +133,23 @@ func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 		m := make(tool.Record)
 		for i, colName := range cols {
 			val := columnPointers[i].(*interface{})
-			if db.Driver == MySQLDriver {
-				if (*val) == nil { m[colName] = nil
-				} else { m[colName] = ValueByType(columnType[colName], *val, query) }
+			if columnType[colName] != "" {
+				if db.Driver == MySQLDriver {
+					if (*val) == nil { m[colName] = nil
+					} else { m[colName] = ValueByType(columnType[colName], *val, query) }
+				}
+				// action["method"] = fmt.Sprintf("%v", string(action["method"].([]uint8)))
+				if db.Driver == PostgresDriver { m[colName] = *val }
+			} else {
+				m[colName] = *val
+				if m[colName] != nil { m[colName] = fmt.Sprintf("%v", string(m[colName].([]uint8))) }
 			}
-			if db.Driver == PostgresDriver { m[colName] = *val }
 		}
 		results = append(results, m)
 	}
-	if len(results) == 0 {
-		// fmt.Printf("QUERY : %s\n", query)
-	}
+	/*if len(results) == 0 {
+		fmt.Printf("QUERY 0 : %s\n", query)
+	}*/
 	return results, nil
 }
 
@@ -161,7 +169,9 @@ func (db *Db) BuildSelect(name string, view... string) string {
 		} else { query = "SELECT * FROM " + name }
 	} else { query = "SELECT " + db.SQLView + " FROM " + name }
 	if db.SQLRestriction != "" { query += " WHERE " + db.SQLRestriction }
-	if db.SQLOrder != "" { query += " ORDER BY " + db.SQLOrder }
+	if db.SQLOrder != "" { 
+		query += " ORDER BY " + db.SQLOrder 
+	}
 	return query
 }
 
@@ -188,7 +198,6 @@ func ValueByType(typing string, defaulting interface{}, query string) interface{
 		return fmt.Sprintf("%s", defaulting)
 	default:
 		if reflect.ValueOf(defaulting).IsNil() == false {
-			// fmt.Printf("Unknow type : %s (%s)\n", typing, query)
 			return fmt.Sprintf("%v", defaulting)
 		}
 		return nil
@@ -205,7 +214,7 @@ func RemoveLastChar(s string) string {
 	if len(r) > 0 {return string(r[:len(r)-1])}
 	return string(r)
 }
-
+// transition for mysql types
 func FormatForSQL(datatype string, value interface{}) string {
 	if value == nil { return "NULL" }
 	strval := fmt.Sprintf("%v", value)

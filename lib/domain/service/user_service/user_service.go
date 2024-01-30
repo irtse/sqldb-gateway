@@ -2,7 +2,7 @@ package user_service
 
 import (
 	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 )
 
 type UserService struct { tool.AbstractSpecializedService }
@@ -13,9 +13,9 @@ func (s *UserService) DeleteRowAutomation(results tool.Results, tableName string
 func (s *UserService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *UserService) WriteRowAutomation(record tool.Record, tableName string) { }
 func (s *UserService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName, false) 
+	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *UserService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
 	params[tool.RootSQLFilterParam] = "id IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "') "
-	return tool.ViewDefinition(s.Domain, tableName, params)
+	return s.Domain.ViewDefinition(tableName, params)
 }

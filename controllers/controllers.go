@@ -14,7 +14,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/matthewhartstonge/argon2"
 	beego "github.com/beego/beego/v2/server/web"
-	entities "sqldb-ws/lib/infrastructure/entities"
+	entities "sqldb-ws/lib/entities"
 )
 
 var JSON = "json"

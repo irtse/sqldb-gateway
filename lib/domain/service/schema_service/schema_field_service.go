@@ -3,14 +3,14 @@ package schema_service
 import (
 	"fmt"
 	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 )
 
 type SchemaFields struct { tool.AbstractSpecializedService }
 
 func (s *SchemaFields) Entity() tool.SpecializedServiceInfo {return entities.DBSchemaField }
 func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) {
-	schemas, err := tool.Schema(s.Domain, record)
+	schemas, err := s.Domain.Schema(record)
 	newRecord := tool.Record{}
 	if !create {
 		for k, v := range record {
@@ -91,8 +91,8 @@ func (s *SchemaFields) DeleteRowAutomation(results tool.Results, tableName strin
 	}
 }
 func (s *SchemaFields) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName, false) 
+	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *SchemaFields) ConfigureFilter(tableName string, params tool.Params) (string, string) {
-	return tool.ViewDefinition(s.Domain, tableName, params)
+	return s.Domain.ViewDefinition(tableName, params)
 }	

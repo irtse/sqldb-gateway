@@ -1,12 +1,13 @@
 package controllers
 
 import (
-	"errors"
+	"fmt"
 	tool "sqldb-ws/lib"
 	domain "sqldb-ws/lib/domain"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 )
 
+type MainController struct { AbstractController }
 // Operations about table
 type GenericController struct { AbstractController }
 
@@ -16,20 +17,21 @@ type GenericController struct { AbstractController }
 // @Success 200 {string} success !
 // @Failure 403 user does not exist
 // @router / [get]
-func (l *GenericController) Main() {
+func (l *MainController) Main() {
 	user_id, _, err := l.authorized()
 	if err == nil {
 		// LOG ON
 		params := l.paramsOver(map[string]string{ tool.RootTableParam : entities.DBView.Name, 
 												  tool.RootRowsParam : tool.ReservedParam, })
 		d := domain.Domain(false, user_id, false)
-		response, err := d.Call(params, tool.Record{}, tool.SELECT, false, "Get")
+		fmt.Printf("PARAMS %v \n", params)
+		response, err := d.Call(params, tool.Record{}, tool.SELECT, true, "Get")
 		if err != nil { // token verify
 			l.response(response, err); return
 		}
 		l.response(response, nil)
 	}
-	l.response(tool.Results{}, errors.New("Should authenticate !")) // can be replace by a custom view
+	l.response(nil, err) // can be replace by a custom view
 }
 // @Title Post data in table
 // @Description post data in table

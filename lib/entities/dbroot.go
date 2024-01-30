@@ -36,7 +36,7 @@ var DBSchemaField = TableEntity{
 		 TableColumnEntity{ Name: "default_value", Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "description", Type: "varchar(255)", Null : true, Default : "no description..." },
         // link define a select.
-		 TableColumnEntity{ Name: RootID("link"), Type: "integer", ForeignTable : DBSchema.Name, Null : true, },
+		 TableColumnEntity{ Name: "link", Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "link_sql_dir", Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "link_sql_order", Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "link_sql_columns", Type: "varchar(255)", Null : true, },
@@ -143,7 +143,7 @@ var DBWorkflowSchema = TableEntity{
 var DBTask = TableEntity{
 	Name : RootName("task"),
 	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, Null : true, },
+		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, Null : false, },
 		TableColumnEntity{ Name: RootID("opened_by"), Type: "integer", ForeignTable: DBUser.Name, Null : true, },
 		TableColumnEntity{ Name: RootID("created_by"), Type: "integer", ForeignTable: DBUser.Name, Null : true, },
 		TableColumnEntity{ Name: "opened_date", Type: "timestamp",  Null : true, },
@@ -162,9 +162,9 @@ var DBTask = TableEntity{
 var DBTaskAssignee = TableEntity{
 	Name : RootName("task_assignee"),
 	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : false, },
+		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, },
 		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, Null : false, },
-		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, Null : false, },
+		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, Null : true, },
 		TableColumnEntity{ Name: "state", Type: "enum('in progress', 'pending', 'completed')",  Null : true, Default: "pending"},
 		TableColumnEntity{ Name: "hidden", Type: "boolean",  Null : true, Default: false, },
 	},
@@ -173,7 +173,7 @@ var DBTaskAssignee = TableEntity{
 var DBTaskVerifyer = TableEntity{
 	Name : RootName("task_verifyer"),
 	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, },
+		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : false, },
 		TableColumnEntity{ Name: RootID(DBTask.Name), Type: "integer", ForeignTable: DBTask.Name, Null : false, },
 		TableColumnEntity{ Name: "state", Type: "enum('pending', 'rejected', 'complete')",  Null : true, Default: "pending"},
 		TableColumnEntity{ Name: "hidden", Type: "boolean",  Null : true, Default: false, },
@@ -222,7 +222,7 @@ var DBAction = TableEntity{
 		TableColumnEntity{ Name: RootID("from"), Type: "integer",  ForeignTable : DBSchema.Name, Null : false, },
 		TableColumnEntity{ Name: RootID("to"), Type: "integer",  ForeignTable : DBSchema.Name, Null : true, },
 		TableColumnEntity{ Name: "kind", Type: "enum('LINK_SELECT', 'BUTTON', 'LINK_ADD')", Null : true, Default : "BUTTON" },
-		TableColumnEntity{ Name: RootID("link"), Type: "integer", ForeignTable : DBSchema.Name, Null : true, },
+		TableColumnEntity{ Name: "link", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "link_sql_dir", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "link_sql_order", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "link_sql_columns", Type: "varchar(255)", Null : true, },
@@ -251,5 +251,5 @@ var DBRESTRICTED = []TableEntity{ DBSchema, DBSchemaField, } // override permiss
 var PERMISSIONEXCEPTION = []TableEntity{ DBUser, DBPermission, DBEntity, DBRole, DBView, DBAction, 
 										 DBEntityUser, DBRoleAttribution, } // override permission checkup
 var ROOTTABLES = []TableEntity{ DBUser, DBPermission, DBEntity, DBRole, DBView, DBAction, 
-	DBEntityUser, DBRoleAttribution, DBWorkflow, DBTask, DBWorkflowSchema, DBWorkflowTask, DBTaskAssignee, 
+	DBEntityUser, DBRoleAttribution, DBWorkflow, DBTask, DBWorkflowSchema, DBTaskAssignee, 
 	DBTaskVerifyer, DBTaskWatcher,  DBViewAction, DBRolePermission, DBUserEntry }

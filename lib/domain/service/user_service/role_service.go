@@ -1,8 +1,9 @@
 package user_service
 
 import (
+	"fmt"
 	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 )
 
 type RoleService struct { tool.AbstractSpecializedService }
@@ -13,7 +14,8 @@ func (s *RoleService) DeleteRowAutomation(results tool.Results, tableName string
 func (s *RoleService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *RoleService) WriteRowAutomation(record tool.Record, tableName string) { }
 func (s *RoleService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName, false) 
+	fmt.Printf("sqsdqs %v \n", results)
+	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *RoleService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
 	params[tool.RootSQLFilterParam] = "id IN (SELECT "+ entities.RootID(entities.DBRole.Name) + " FROM " +  entities.DBRoleAttribution.Name + " " 
@@ -22,5 +24,5 @@ func (s *RoleService) ConfigureFilter(tableName string, params  tool.Params) (st
 	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')) "
 	params[tool.RootSQLFilterParam] += "OR " + entities.RootID(entities.DBUser.Name) + " IN ("
 	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')) "
-	return tool.ViewDefinition(s.Domain, tableName, params)
+	return s.Domain.ViewDefinition(tableName, params)
 }

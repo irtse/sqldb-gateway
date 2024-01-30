@@ -3,7 +3,7 @@ package schema_service
 import (
 	"fmt"
 	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 )
 
 type SchemaService struct { tool.AbstractSpecializedService }
@@ -32,8 +32,8 @@ func (s *SchemaService) WriteRowAutomation(record tool.Record, tableName string)
 				tool.CREATE, "CreateOrUpdate",)
 }
 func (s *SchemaService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
-	return tool.PostTreat(s.Domain, results, tableName, false) 
+	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *SchemaService) ConfigureFilter(tableName string, params tool.Params) (string, string) {
-	return tool.ViewDefinition(s.Domain, tableName, params)
+	return s.Domain.ViewDefinition(tableName, params)
 }	

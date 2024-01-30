@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	tool "sqldb-ws/lib"
 	_ "github.com/go-sql-driver/mysql"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 	conn "sqldb-ws/lib/infrastructure/connector"
 )
 
@@ -43,9 +43,6 @@ func (t *TableRowInfo) Get() (tool.Results, error) {
 	d, err := t.db.SelectResults(t.Table.Name)
 	if err != nil { return t.DBError(nil, err) }
 	t.Results = d
-	if t.SpecializedService != nil && t.PostTreatment {
-		t.Results = t.SpecializedService.PostTreatment(t.Results, t.Table.Name)
-	}
 	return t.Results, nil
 }
 
@@ -102,9 +99,6 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	}
 	result, err = t.db.SelectResults(t.Table.Name)
 	t.Results = result
-	if t.SpecializedService != nil {
-		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results, t.Table.Name) }
-	}
 	return t.Results, nil
 }
 
@@ -164,10 +158,6 @@ func (t *TableRowInfo) Update() (tool.Results, error) {
 	res, err := t.db.SelectResults(t.Table.Name)
 	t.Results = res
 	if err != nil { return t.DBError(nil, err) }
-	if t.SpecializedService != nil {
-		t.SpecializedService.UpdateRowAutomation(res, t.Record) 
-		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results, t.Table.Name) }
-	}
 	return t.Results, nil
 }
 
@@ -198,7 +188,6 @@ func (t *TableRowInfo) Delete() (tool.Results, error) {
 	if err != nil { return t.DBError(nil, err) }
 	if t.SpecializedService != nil {
 		t.SpecializedService.DeleteRowAutomation(t.Results, t.Table.Name)
-		if t.PostTreatment { t.Results = t.SpecializedService.PostTreatment(t.Results, t.Table.Name) }
 	}
 	return t.Results, nil
 }

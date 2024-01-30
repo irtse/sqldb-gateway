@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	tool "sqldb-ws/lib"
 	"github.com/go-playground/validator"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 )
 
 type validable interface { entities.TableEntity | entities.LinkEntity | entities.ShallowTableEntity | entities.TableColumnEntity | entities.TableUpdateEntity | Info | map[string]interface{} }

@@ -9,7 +9,7 @@ import (
 	tool "sqldb-ws/lib"
 	"github.com/rs/zerolog/log"
 	_ "github.com/go-sql-driver/mysql"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 	conn "sqldb-ws/lib/infrastructure/connector"
 )
 // Table is a table structure description

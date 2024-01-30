@@ -7,7 +7,7 @@ import (
 	tool "sqldb-ws/lib"
 	"github.com/rs/zerolog/log"
 	conn "sqldb-ws/lib/infrastructure/connector"
-	entities "sqldb-ws/lib/infrastructure/entities"
+	entities "sqldb-ws/lib/entities"
 	
 )
 
@@ -19,7 +19,6 @@ type InfraService struct {
 	Results         	tool.Results      			`json:"-"`
 	Method  	    	tool.Method     			`json:"-"`
 	SuperAdmin 	    	bool		 				`json:"-"`
-	PostTreatment 	    bool		 				`json:"-"`
 	PermService         *PermissionInfo             `json:"-"`
 	NoLog				bool						`json:"-"`
 	db                  *conn.Db
@@ -30,9 +29,6 @@ func (service *InfraService) SetAuth(auth bool) {
 	if !auth { service.PermService= nil }
 }
 
-func (service *InfraService) SetPostTreatment(postTreat bool) {
-	service.PostTreatment = postTreat
-}
 func (service *InfraService) SpecializedFill(params tool.Params, record tool.Record, method tool.Method) {
 	service.Record = record
 	service.Method = method

@@ -32,7 +32,7 @@ type TableColumnEntity struct {
 	Index int64         `json:"-"`
 	Default interface{} `json:"default_value"`
 	Hidden bool         `json:"hidden"`
-	ForeignTable string `json:"foreign_table"`
+	ForeignTable string `json:"link"`
 	Constraint string   `json:"-"`
 	Null bool           `json:"nullable"`
 	Comment string      `json:"comment"`
@@ -66,7 +66,8 @@ type SchemaColumnEntity struct {
 	Default 				interface{}					 `json:"default_value"`
 	Required 				bool 		 			 	 `json:"required"`
 	Readonly 				bool 		 			 	 `json:"readonly"`
-	Link 					int64 		 			 	 `json:"link_id"`
+	SchemaId 				int64 		 			 	 `json:"dbschema_id"`
+	Link 					string 		 			 	 `json:"link"`
 	LinkDir					string 		 			 	 `json:"link_sql_dir"`
 	LinkOrder 	 			string 		 			 	 `json:"link_sql_order"`
 	LinkColumns 			string 		 			 	 `json:"link_sql_columns"`

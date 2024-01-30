@@ -1,16 +1,21 @@
 package domain
 
 import (
+	"fmt"
 	"errors"
 	"strings"
 	"reflect"
-	"encoding/json"
 	tool "sqldb-ws/lib"
 	domain "sqldb-ws/lib/domain/service"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 	conn "sqldb-ws/lib/infrastructure/connector"
 	infrastructure "sqldb-ws/lib/infrastructure/service"
 )
+/*
+	Main Controller at a Domain level, it follows the DOMAIN ITF from tool. 
+	Domain interact at a "Model" level with generic and abstract infra services. 
+	Main service give the main process to interact with Infra. 
+*/
 type MainService struct {
 	name                string
 	User				string
@@ -22,14 +27,16 @@ type MainService struct {
 	PermService			tool.InfraServiceItf
 	Db					*conn.Db
 }
+// generate a new domain controller. 
 func Domain(superAdmin bool, user string, isGenericService bool) *MainService {
 	return &MainService{ 
-		isGenericService: isGenericService, 
-		SuperAdmin: superAdmin, 
-		User : user, 
-		Specialization : true,
+		isGenericService: isGenericService, // generic specialized service is CustomService
+		SuperAdmin: superAdmin, // carry the security level of the "User" or an inner action
+		User : user, // current user... 
+		Specialization : true, // define if a specialized treatment is await. 
 	}
 }
+// Main accessor defined by DomainITF interface
 func (d *MainService) GetPermission() tool.InfraServiceItf { return d.PermService }
 func (d *MainService) SetIsCustom(isCustom bool) { d.isGenericService = isCustom }
 func (d *MainService) GetUser() string { return d.User }
@@ -38,22 +45,22 @@ func (d *MainService) IsShallowed() bool { return d.Shallowed }
 func (d *MainService) IsAdminView() bool { return d.AdminView }
 func (d *MainService) GetDB() tool.DbITF { return d.Db }
 
-
+// Infra func caller with admin view && superadmin right (not a structured view made around data for view reason)
 func (d *MainService) SuperCall(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
-	params[tool.RootAdminView]="enable"
+	params[tool.RootAdminView]="enable" // set admin view params to true
 	return Domain(true, d.User, d.isGenericService).call(false, params, record, method, true, funcName, args...)
 }
-
+// Infra func caller with current option view and user rights.
 func (d *MainService) Call(params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
 	return d.call(true, params, record, method, auth, funcName, args...)
 }
-
+// Main process to call an Infra function
 func (d *MainService) call(postTreat bool, params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
-	var service tool.InfraServiceItf
+	var service tool.InfraServiceItf // generate an empty var for a casual infra service ITF (interface) to embedded any service.
 	res := tool.Results{}
-	if adm, ok := params[tool.RootAdminView]; ok && adm == "enable" && d.SuperAdmin { d.AdminView = true } 
-	if shallow, ok := params[tool.RootShallow]; ok && shallow == "enable" { d.Shallowed = true } 
-	if tablename, ok := params[tool.RootTableParam]; ok {
+	if adm, ok := params[tool.RootAdminView]; ok && adm == "enable" && d.SuperAdmin { d.AdminView = true } // set up admin view
+	if shallow, ok := params[tool.RootShallow]; ok && shallow == "enable" { d.Shallowed = true }  // set up shallow option (lighter version of results)
+	if tablename, ok := params[tool.RootTableParam]; ok { // retrieve tableName in query (not optionnal)
 		var specializedService tool.SpecializedService
 		if d.Specialization {
 			specializedService = &domain.CustomService{}
@@ -63,8 +70,8 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 				if tablename == exception.Name { auth = false; break }
 			}
 		}
-		d.Db = conn.Open()
-		defer d.Db.Conn.Close()
+		d.Db = conn.Open() // open base
+		defer d.Db.Conn.Close() // close when finished
 		table := infrastructure.Table(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename), params, record, method)
 		delete(params, tool.RootTableParam)
 		service=table
@@ -86,6 +93,7 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			}
 			if auth {
 			   	if _, ok := d.PermService.Verify(tablename); !ok { 
+					fmt.Printf("qsdqd \n")
 					return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
 			    }
 			}
@@ -94,8 +102,11 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			if params[tool.SpecialIDParam] == tool.ReservedParam { delete(params, tool.SpecialIDParam) }
 			service = table.TableRow(specializedService)
 			service.SetAuth(auth)
-			service.SetPostTreatment(postTreat)
-			return d.invoke(service, funcName, args...)
+			res, err := d.invoke(service, funcName, args...)
+			if specializedService != nil && postTreat {
+				return specializedService.PostTreatment(res, tablename), nil
+			}
+			return res, err
 		}
 		if !d.SuperAdmin { 
 			return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
@@ -109,7 +120,6 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			service = table.TableColumn() 
 		}
 		service.SetAuth(auth)
-		service.SetPostTreatment(postTreat)
 		return d.invoke(service, funcName, args...)
 	}
 	return res, errors.New("no service avaiblable")
@@ -132,45 +142,4 @@ func (d *MainService) invoke(service tool.InfraServiceItf, funcName string, args
 		} else { err = values[1].Interface().(error) } 
 	}
 	return res, err
-}
-
-func Load() {
-	database := conn.Open()
-	defer database.Conn.Close()
-	tables := [][]entities.TableEntity{ entities.DBRESTRICTED, entities.ROOTTABLES }
-	for _, t := range tables {
-		for _, table := range t {
-			rec := tool.Record{}
-			data, _:= json.Marshal(table)
-			json.Unmarshal(data, &rec)
-			service := infrastructure.Table(database, true, "", table.Name, tool.Params{}, rec, tool.CREATE)
-			service.NoLog = true
-			service.CreateOrUpdate()
-		}
-	}
-	d := Domain(true, "superadmin", false)
-	for _, t := range tables {
-		for _, table := range t {
-			rec := tool.Record{}
-			data, _:= json.Marshal(table)
-			json.Unmarshal(data, &rec)
-			res, err := d.SuperCall(tool.Params{ 
-					tool.RootTableParam: entities.DBSchema.Name,
-					tool.RootRowsParam: tool.ReservedParam,
-					entities.NAMEATTR : table.Name }, tool.Record{}, tool.SELECT, "Get")
-			if err != nil || len(res) == 0 { 
-				res, err = d.SuperCall(tool.Params{ tool.RootTableParam: entities.DBSchema.Name,
-										tool.RootRowsParam: tool.ReservedParam, }, 
-							rec, tool.CREATE, "CreateOrUpdate")
-				if err != nil || len(res) == 0 { continue }
-				for _, col := range rec["columns"].([]interface{}) {
-					c := col.(map[string]interface{})
-					c[entities.RootID(entities.DBSchema.Name)] = res[0][tool.SpecialIDParam]
-					d.SuperCall(tool.Params{ tool.RootTableParam: entities.DBSchemaField.Name,
-											 tool.RootRowsParam: tool.ReservedParam, }, c, tool.CREATE, "CreateOrUpdate")
-				}
-			}
-		}
-	}
-	database.Conn.Close()
 }

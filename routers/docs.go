@@ -83,12 +83,16 @@ func (d *Docs) generateDocsOnRun() map[string]interface{} {
 			for _, query := range queries {
 				if slices.Contains(alreadySet, query) == false {
 					alreadySet = append(alreadySet, query)
-					pars= append(pars, map[string]interface{}{
+					sets := map[string]interface{}{
 						"in": "query",
 						"name": query,
 						"description": "(Optionnal) Value of " + query,
 						"type": "string",
-					})
+					}
+					if desc, ok := tool.RootParamsDesc[query]; ok {
+						sets["description"]=desc
+					}
+					pars= append(pars, sets)
 				}  
             }
 			pars=append(pars, map[string]interface{}{

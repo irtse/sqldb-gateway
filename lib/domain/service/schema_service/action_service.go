@@ -4,21 +4,21 @@ import (
 	"fmt"
 	"strings"
 	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/infrastructure/entities"
+	"sqldb-ws/lib/entities"
 )
 
 type ActionService struct { tool.AbstractSpecializedService }
 
 func (s *ActionService) Entity() tool.SpecializedServiceInfo { return entities.DBAction }
 func (s *ActionService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
-	schemas, err := tool.Schema(s.Domain, tool.Record{ entities.RootID(entities.DBSchema.Name) : record[entities.RootID("from")].(int64) })	
+	schemas, err := s.Domain.Schema(tool.Record{ entities.RootID(entities.DBSchema.Name) : record[entities.RootID("from")].(int64) })	
 	if err != nil && len(schemas) == 0 { return record, false }
 	if to, ok := record[entities.RootID("to")]; ok {
-		schemas, err := tool.Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : to.(int64)})
+		schemas, err := s.Domain.Schema(tool.Record{entities.RootID(entities.DBSchema.Name) : to.(int64)})
 		if err != nil || len(schemas) == 0 { return record, false }
 	}
 	if link, ok := record[entities.RootID("link")]; ok {
-		schemas, err := tool.Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : link.(int64)})
+		schemas, err := s.Domain.Schema(tool.Record{entities.RootID(entities.DBSchema.Name) : link.(int64)})
 		if err != nil || len(schemas) == 0 { return record, false }
 	}
 	return record, true
@@ -32,18 +32,18 @@ func (s *ActionService) PostTreatment(results tool.Results, tablename string) to
 	for _, record := range results{
 		newRec := tool.Record{}
 		names := []string{}
-		schemas, err := tool.Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : record[entities.RootID("from")]})
+		schemas, err := s.Domain.Schema(tool.Record{entities.RootID(entities.DBSchema.Name) : record[entities.RootID("from")]})
 		if err != nil || len(schemas) == 0 { continue }
 		path := "/" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
 		link_path := ""
 		names = append(names, schemas[0][entities.NAMEATTR].(string))
 		if to, ok := record[entities.RootID("to")]; ok && to != nil {
-			schemas, err := tool.Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : to.(int64)})
+			schemas, err := s.Domain.Schema(tool.Record{entities.RootID(entities.DBSchema.Name) : to.(int64)})
 			if err != nil || len(schemas) == 0 { continue }
 			path += "/" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
 		}
 		if link, ok := record[entities.RootID("link")]; ok  && link != nil {
-			schemas, err := tool.Schema(s.Domain, tool.Record{entities.RootID(entities.DBSchema.Name) : link.(int64)})
+			schemas, err := s.Domain.Schema(tool.Record{entities.RootID(entities.DBSchema.Name) : link.(int64)})
 			if err != nil || len(schemas) == 0 { continue }
 			link_path = "/" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
 			restr, ok2 := record["link_sql_restriction"]
@@ -88,5 +88,5 @@ func (s *ActionService) PostTreatment(results tool.Results, tablename string) to
 }
 
 func (s *ActionService) ConfigureFilter(tableName string, params tool.Params) (string, string) { 
-	return tool.ViewDefinition(s.Domain, tableName, params)
+	return s.Domain.ViewDefinition(tableName, params)
 }	
