@@ -13,7 +13,10 @@ import (
 	infrastructure "sqldb-ws/lib/infrastructure/service"
 )
 /*
-	Main Controller at a Domain level, it follows the DOMAIN ITF from tool. 
+	Domain is defined as the DDD patterns will suggest it.
+	It's the specialized part of the API, it concive particular behavior on datas (in our cases, particular Root DB declares in entity)
+	
+	Main Service at a Domain level, it follows the DOMAIN ITF from tool. 
 	Domain interact at a "Model" level with generic and abstract infra services. 
 	Main service give the main process to interact with Infra. 
 */

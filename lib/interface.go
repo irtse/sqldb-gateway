@@ -1,6 +1,6 @@
 package lib
 
-import ()
+// API COMMON INTERFACE
 // Defined infrastructure service functions
 type InfraServiceItf interface {
 	SetAuth(bool)

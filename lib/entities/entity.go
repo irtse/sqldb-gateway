@@ -2,6 +2,11 @@ package entities
 
 import ("strings")
 
+/*
+	Here are common resources for every level.
+	Entity are usefull struct to organize our Database works.
+*/
+
 func IsRootDB(name string) bool { 
 	if len(name) > 1 { return strings.Contains(name[:2], "db") 
     } else { return false }
@@ -12,21 +17,21 @@ func RootID(name string) string {
 }
 func RootName(name string) string { return "db" + name }
 
-type TableEntity struct {
+type TableEntity struct { // define a db table 
 	Name    string              		 `json:"name" validate:"required"`
 	Columns []TableColumnEntity 		 `json:"columns"`
 }
 
 func (t TableEntity) GetName() string { return t.Name }
 
-type ShallowTableEntity struct {
+type ShallowTableEntity struct { // lightest definition a db table 
 	Name    string              		 `json:"name"`
 	Columns []TableColumnEntity 		 `json:"columns"`
 }
 func (t ShallowTableEntity) GetName() string { return t.Name }
 
 
-type TableColumnEntity struct {
+type TableColumnEntity struct { // definition a db table columns
 	Name string         `json:"name" validate:"required"`
 	Type string         `json:"type"`
 	Index int64         `json:"-"`
@@ -42,13 +47,7 @@ type TableColumnEntity struct {
 
 func (t TableColumnEntity) GetName() string { return t.Name }
 
-type TableUpdateEntity struct {
-	Name string `json:"name" validate:"required"`
-}
-
-func (t TableUpdateEntity) GetName() string { return t.Name }
-
-type LinkEntity struct {
+type LinkEntity struct { // struct for Link/Unlink calls
 	From    				int64          			 `json:"from_id" validate:"required"`
 	To 						int64 		 			 `json:"to_id" validate:"required"`
 	Columns 			    map[string]string 	 `json:"columns"`
@@ -57,7 +56,7 @@ type LinkEntity struct {
 
 func (t LinkEntity) GetName() string { return t.Anchor }
 
-type SchemaColumnEntity struct {
+type SchemaColumnEntity struct { // struct based on dbschema_columns in root
 	Label 					string 						 `json:"label" validate:"required"`
 	Name    				string          			 `json:"name" validate:"required"`
 	Type 					string 		 				 `json:"type" validate:"required"`
@@ -76,7 +75,7 @@ type SchemaColumnEntity struct {
 }
 func (t SchemaColumnEntity) GetName() string { return t.Name }
 
-type ShallowSchemaColumnEntity struct {
+type ShallowSchemaColumnEntity struct {// lightest struct based on dbschema_columns in root
 	Label 					string 						 `json:"label" validate:"required"`
 	Type 					string 		 				 `json:"type" validate:"required"`
 	Index					int64						 `json:"index"`

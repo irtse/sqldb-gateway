@@ -1,7 +1,10 @@
 package entities
 
-import ()
-
+/*
+	DB ROOT are all the ROOT database table needed in our generic API. They are restricted to modification
+	and can be impacted by a specialized service at DOMAIN level. 
+	Their declarations is based on our Entity terminology, to help us in coding. 
+*/
 var TABLENAMEATTR = "table_name"
 var COLNAMEATTR = "col_name"
 var NAMEATTR = "name"

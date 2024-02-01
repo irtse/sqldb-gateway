@@ -14,7 +14,9 @@ import (
 )
 
 var log zerolog.Logger
-
+/*
+	Generic Connector to DB 
+*/
 const PostgresDriver = "postgres" 
 const MySQLDriver = "mysql"
 var drivers = []string{PostgresDriver, MySQLDriver} // define all drivers available per adapter
@@ -138,7 +140,6 @@ func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 					if (*val) == nil { m[colName] = nil
 					} else { m[colName] = ValueByType(columnType[colName], *val, query) }
 				}
-				// action["method"] = fmt.Sprintf("%v", string(action["method"].([]uint8)))
 				if db.Driver == PostgresDriver { m[colName] = *val }
 			} else {
 				m[colName] = *val
@@ -147,9 +148,6 @@ func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 		}
 		results = append(results, m)
 	}
-	/*if len(results) == 0 {
-		fmt.Printf("QUERY 0 : %s\n", query)
-	}*/
 	return results, nil
 }
 
@@ -205,6 +203,7 @@ func ValueByType(typing string, defaulting interface{}, query string) interface{
 	return nil
 }
 
+// HELPING TOOLS FOR DB WORKS
 var SpecialTypes = []string{"char", "text", "date", "time", "interval", "var", "blob", "set", "enum", "year"}
 
 func Quote(s string) string { return "'" + s + "'" }
@@ -227,3 +226,4 @@ func FormatForSQL(datatype string, value interface{}) string {
 	}
 	return fmt.Sprint(strval)
 }
+// TODO type db to type response (usefull for input)

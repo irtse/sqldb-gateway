@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 )
-
+// API COMMON Models 
 type Method int64
 const(
 	SELECT Method = 1

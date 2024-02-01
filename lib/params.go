@@ -1,6 +1,6 @@
 package lib
 
-// All common query params !
+// API COMMON query params !
 type Params map[string]string
 
 const ReservedParam = "all" // IMPORTANT IS THE DEFAULT PARAMS FOR ROWS & COLUMNS PARAMS
