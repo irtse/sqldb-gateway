@@ -21,7 +21,8 @@ func (l *MainController) Main() {
 	if err == nil {
 		// LOG ON
 		params := l.paramsOver(map[string]string{ tool.RootTableParam : entities.DBView.Name, 
-												  tool.RootRowsParam : tool.ReservedParam, })
+												  tool.RootRowsParam : tool.ReservedParam,
+												  tool.RootShallow : "enable" })
 		d := domain.Domain(false, user_id, false)
 		response, err := d.Call(params, tool.Record{}, tool.SELECT, true, "Get")
 		if err != nil { // token verify

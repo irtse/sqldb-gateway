@@ -1,9 +1,11 @@
 package domain
 
 import (
+	"fmt"
 	"errors"
 	"strings"
 	"reflect"
+	"encoding/json"
 	tool "sqldb-ws/lib"
 	domain "sqldb-ws/lib/domain/service"
 	"sqldb-ws/lib/entities"
@@ -20,7 +22,7 @@ type MainService struct {
 	User				string
 	Shallowed			bool
 	SuperAdmin			bool
-	AdminView			bool
+	RawView				bool
 	isGenericService    bool
 	Specialization		bool
 	PermService			tool.InfraServiceItf
@@ -41,12 +43,12 @@ func (d *MainService) SetIsCustom(isCustom bool) { d.isGenericService = isCustom
 func (d *MainService) GetUser() string { return d.User }
 func (d *MainService) IsSuperAdmin() bool { return d.SuperAdmin }
 func (d *MainService) IsShallowed() bool { return d.Shallowed }
-func (d *MainService) IsAdminView() bool { return d.AdminView }
+func (d *MainService) IsRawView() bool { return d.RawView }
 func (d *MainService) GetDB() tool.DbITF { return d.Db }
 
 // Infra func caller with admin view && superadmin right (not a structured view made around data for view reason)
 func (d *MainService) SuperCall(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
-	params[tool.RootAdminView]="enable" // set admin view params to true
+	params[tool.RootRawView]="enable"
 	return Domain(true, d.User, d.isGenericService).call(false, params, record, method, true, funcName, args...)
 }
 // Infra func caller with current option view and user rights.
@@ -57,7 +59,7 @@ func (d *MainService) Call(params tool.Params, record tool.Record, method tool.M
 func (d *MainService) call(postTreat bool, params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
 	var service tool.InfraServiceItf // generate an empty var for a casual infra service ITF (interface) to embedded any service.
 	res := tool.Results{}
-	if adm, ok := params[tool.RootAdminView]; ok && adm == "enable" && d.SuperAdmin { d.AdminView = true } // set up admin view
+	if adm, ok := params[tool.RootRawView]; ok && adm == "enable" { d.RawView = true } // set up admin view
 	if shallow, ok := params[tool.RootShallow]; ok && shallow == "enable" { d.Shallowed = true }  // set up shallow option (lighter version of results)
 	if tablename, ok := params[tool.RootTableParam]; ok { // retrieve tableName in query (not optionnal)
 		var specializedService tool.SpecializedService
@@ -103,6 +105,9 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			if specializedService != nil && postTreat {
 				return specializedService.PostTreatment(res, tablename), nil
 			}
+			if (d.PermService.(*infrastructure.PermissionInfo).PartialResults != "") {
+				return res, errors.New(d.PermService.(*infrastructure.PermissionInfo).PartialResults)
+			}
 			return res, err
 		}
 		if !d.SuperAdmin { 
@@ -139,4 +144,116 @@ func (d *MainService) invoke(service tool.InfraServiceItf, funcName string, args
 		} else { err = values[1].Interface().(error) } 
 	}
 	return res, err
+}
+
+type View struct {
+	Name  		 string 					`json:"name"`
+	SchemaName   string 					`json:"schema_name"`
+	Description  string 					`json:"description"`
+	Method		 string 					`json:"method"`
+	Path		 string 					`json:"link_path"`
+	Schema		 tool.Record 				`json:"schema"`
+	Items		 []tool.Record 				`json:"items"`
+	Actions		 []map[string]interface{} 	`json:"actions"`
+}
+
+type ViewItem struct {
+	Path 	   string					 	`json:"link_path"`
+	Values 	   map[string]interface{} 	    `json:"values"`
+	DataPaths  string				        `json:"data_path"`
+	ValuePaths map[string]string			`json:"values_path"`
+}
+
+func (d *MainService) PostTreat(results tool.Results, tableName string, shallow bool, 
+	                            additonnalRestriction ...string) tool.Results {
+	cols := map[string]entities.SchemaColumnEntity{}
+	sqlFilter := entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM "
+	sqlFilter += entities.DBSchema.Name + " WHERE name='" + tableName + "')"
+	// retrive all fields from schema...
+	params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
+		                   tool.RootRowsParam: tool.ReservedParam, 
+						   tool.RootSQLFilterParam: sqlFilter }
+	schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
+	if err != nil || len(schemas) == 0 { return tool.Results{} }
+	var view View
+	if !d.IsShallowed() && !d.IsRawView() {
+		schemes := map[string]interface{}{}
+		for _, r := range schemas {
+			var scheme entities.SchemaColumnEntity
+			var shallowField entities.ShallowSchemaColumnEntity
+			b, _ := json.Marshal(r)
+			json.Unmarshal(b, &scheme)
+			cols[scheme.Name]=scheme
+			json.Unmarshal(b, &shallowField)
+			if scheme.Link != "" {
+				shallowField.LinkPath = "/" + scheme.Link + "?rows=all"
+				if scheme.LinkRestriction != "" { shallowField.LinkPath += "&" + tool.RootSQLFilterParam + "=" + scheme.LinkRestriction  }
+				if scheme.LinkView != "" { shallowField.LinkPath += "&" + tool.RootColumnsParam + "=" + scheme.LinkView  }
+				if scheme.LinkOrder != "" { shallowField.LinkPath += "&" + tool.RootOrderParam + "=" + scheme.LinkOrder  }
+			}
+			schemes[scheme.Name]=shallowField
+		}
+		view = View{ Name : tableName, Description : tableName + " datas", 
+	                  Path : "", 
+					  Method : "GET",
+					  Schema : schemes,
+					  SchemaName: tableName, 
+					  Actions : []map[string]interface{}{},
+					  Items : []tool.Record{} }	
+		res := tool.Results{} 
+		for _, record := range results { 
+			rec := d.PostTreatRecord(record, tableName, cols, shallow)
+			if rec == nil { continue }
+			view.Items = append(view.Items, rec)
+			r := tool.Record{}
+			b, _ := json.Marshal(view)
+			json.Unmarshal(b, &r)
+			res = append(res, r)
+		}
+		return res
+	} else { return results }
+}
+
+func (d *MainService) PostTreatRecord(record tool.Record, tableName string, 
+									  cols map[string]entities.SchemaColumnEntity, shallow bool) tool.Record {
+	if d.IsShallowed() {
+		if _, ok := record[entities.NAMEATTR]; ok {
+			return tool.Record{ entities.NAMEATTR : record[entities.NAMEATTR] }
+		} else { return record }
+	} else {
+		if d.IsRawView() { return record } // if admin view avoid.
+		vals := map[string]interface{}{}
+		contentPaths := map[string]string{}
+		datapath := ""
+		if !shallow { vals[tool.SpecialIDParam]=fmt.Sprintf("%v", record[tool.SpecialIDParam]) }
+		for _, field := range cols {
+			if d.Db.GetSQLView() != "" && !strings.Contains(d.Db.GetSQLView(), field.Name){ continue }
+			dest, ok := record[entities.RootID("dest_table")]
+			id, ok2 := record[field.Name]
+			if strings.Contains(field.Name, entities.DBSchema.Name) && ok2 && ok && dest != nil && id != nil { 
+				schemas, err := d.Schema(tool.Record{ entities.RootID(entities.DBSchema.Name) : id })
+				if err != nil || len(schemas) == 0 { continue }
+				datapath=d.BuildPath(fmt.Sprintf("%v",schemas[0][entities.NAMEATTR]), fmt.Sprintf("%v", dest))
+				continue
+			}
+			if f, ok:= record[field.Name]; ok && field.Link != "" && f != nil { 
+				contentPaths[field.Name]=d.BuildPath(field.Link, fmt.Sprintf("%v", f), "shallow=enable")
+				continue
+			}
+			if shallow { vals[field.Name]=nil 
+			} else if v, ok:=record[field.Name]; ok { vals[field.Name]=v }
+		}
+		view := ViewItem{ Values : vals, Path : d.BuildPath(tableName, fmt.Sprintf("%v", record[tool.SpecialIDParam])), 
+		                  DataPaths :  datapath, ValuePaths : contentPaths, }
+		var newRec tool.Record
+		b, _ := json.Marshal(view)
+		json.Unmarshal(b, &newRec)
+		return newRec
+	}
+}
+
+func (d *MainService) BuildPath(tableName string, rows string, extra... string) string {
+		path := "/" + tool.MAIN_PREFIX + "/" + tableName + "?rows=" + rows
+		for _, ext := range extra { path += "&" + ext }
+		return path
 }

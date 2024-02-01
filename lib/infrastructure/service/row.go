@@ -78,19 +78,17 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	query := "INSERT INTO " + t.Table.Name + "(" + conn.RemoveLastChar(columns) + ") VALUES (" + conn.RemoveLastChar(values) + ")"
 	if t.db.Driver == conn.PostgresDriver { 
 		id, err = t.db.QueryRow(query)
-		if err != nil { return t.DBError(nil, err) }
+		if err != nil { return t.Update() }
 		t.db.SQLRestriction = fmt.Sprintf("id=%d", id)
-		if err != nil { return t.DBError(nil, err) }
 	}
 	if t.db.Driver == conn.MySQLDriver {
 		stmt, err := t.db.Prepare(query)
 		if err != nil { return t.DBError(nil, err) }
 		res, err := stmt.Exec()
-		if err != nil { return t.DBError(nil, err) }
+		if err != nil { return t.Update() }
 		id, err = res.LastInsertId()
+		if err != nil { return t.DBError(nil, err) }
 		t.db.SQLRestriction = fmt.Sprintf("id=%d", id)
-		if err != nil { return t.DBError(nil, err) }
-		if err != nil { return t.DBError(nil, err) }
 	}
 	if t.SpecializedService != nil {
 		t.SpecializedService.WriteRowAutomation(t.Record, t.Table.Name)

@@ -9,13 +9,14 @@ package routers
 
 import (
 	"sqldb-ws/controllers"
+	tool "sqldb-ws/lib"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/beego/beego/v2/server/web/context"
 )
 var namespaceV1 = map[string]beego.ControllerInterface {
 	"main" : &controllers.MainController{},
 	"auth" : &controllers.AuthController{},
-	"generic" : &controllers.GenericController{},
+	tool.MAIN_PREFIX : &controllers.GenericController{},
 }
 func init() {
 	var FilterUser = func(ctx *context.Context) {}

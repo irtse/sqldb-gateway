@@ -2,6 +2,7 @@ package schema_service
 
 import (
 	"fmt"
+	"encoding/json"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
 )
@@ -29,17 +30,17 @@ func (s *SchemaFields) WriteRowAutomation(record tool.Record, tableName string) 
 		"Get",
 	)
 	if err != nil { return }
-	data := tool.Record{ 
-		entities.NAMEATTR : record[entities.NAMEATTR],
-		entities.TYPEATTR : record[entities.TYPEATTR],
-	}
-	if _, ok := record["default_value"]; ok { data["default_value"] = record["default_value"] }
-	if _, ok := record["description"]; ok { data["comment"] = record["description"] }
+	var data entities.TableColumnEntity
+	b, _:= json.Marshal(record)
+	json.Unmarshal(b, &data)
+    var rec tool.Record 
+	b, _= json.Marshal(data)
+	json.Unmarshal(b, &rec)
 	if len(res) > 0 {
 		s.Domain.SuperCall(
 			tool.Params{ tool.RootTableParam : res[0][entities.NAMEATTR].(string), 
 				         tool.RootColumnsParam: tool.ReservedParam }, 
-			data, 
+			rec, 
 			tool.CREATE, 
 			"CreateOrUpdate")
 	}
@@ -56,8 +57,7 @@ func (s *SchemaFields) UpdateRowAutomation(results tool.Results, record tool.Rec
 		if err != nil || res == nil || len(res) == 0 { return }
 		newRecord := tool.Record{}
 		for k, v := range record {
-			if k == "default_value" { newRecord[k] = v 
-			} else if k == "description"{ newRecord["comment"] = v }
+			newRecord[k] = v 
 		}
 		newRecord[entities.TYPEATTR] = r[entities.TYPEATTR]
 		newRecord[entities.NAMEATTR] = r[entities.NAMEATTR]

@@ -3,7 +3,6 @@ package schema_service
 import (
 	"fmt"
 	"strings"
-	"encoding/json"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
 )
@@ -38,22 +37,8 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string) tool
 	for _, record := range results {
 		readonly := false 
 		if r, ok := record["readonly"]; ok && r.(bool) { readonly = true }
-		rec := tool.Record{ "name" : record["name"], "description" : record["description"], 
-		               "index" : record["index"], "category" : record["category"], "is_list" : record["is_list"], }
-		cols := map[string]entities.SchemaColumnEntity{}
-		if !s.Domain.IsShallowed() {
-			params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, tool.RootRowsParam: tool.ReservedParam, 
-				                   entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", record[entities.RootID(entities.DBSchema.Name)]) }
-			schemas, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-			if err != nil || len(schemas) == 0 { return tool.Results{} }
-			for _, r := range schemas {
-				var scheme entities.SchemaColumnEntity
-				b, _ := json.Marshal(r)
-				json.Unmarshal(b, &scheme)
-				cols[scheme.Name]=scheme
-				scheme.Readonly = readonly
-			}
-		}
+		rec := tool.Record{ "name" : record["name"], "description" : record["description"],
+		                    "index" : record["index"], "category" : record["category"], }
 		schemas, err := s.Domain.Schema(record)
 		if err != nil && len(schemas) == 0 { continue }
 		tName := fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
@@ -69,29 +54,31 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string) tool
 			sqlFilter += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
 			sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')))"
 		}
-		if restr, ok2 := record["sql_restriction"]; ok2 && restr != nil && restr != "" { 
-			if len(sqlFilter) > 0 { sqlFilter += " AND " + strings.Replace(restr.(string), "+", " ", -1) 
-			} else { sqlFilter = strings.Replace(restr.(string), "+", " ", -1)  } 
-		}
-		params := tool.Params{ tool.RootTableParam : tName, 
-						  tool.RootRowsParam: tool.ReservedParam, 
-						  tool.RootSQLFilterParam : sqlFilter, }
-		if columns, ok2 := record["sql_view"]; ok2 && columns != nil && columns != "" { params[tool.RootColumnsParam] = fmt.Sprintf("%v", columns) }
-		if order, ok2 := record["sql_order"]; ok2 && order != nil && order != "" { params[tool.RootOrderParam] = fmt.Sprintf("%v", order) }
-		if dir, ok2 := record["sql_dir"]; ok2 && dir != nil  && dir != "" { params[tool.RootDirParam] = fmt.Sprintf("%v", dir) }
+		path, params := s.Domain.GeneratePathFilter(tName, record, tool.Params{ tool.RootTableParam : tName, 
+			                                                                    tool.RootRowsParam: tool.ReservedParam, })
+		if s.Domain.IsShallowed() { 
+			rec["link_path"]=s.Domain.BuildPath(fmt.Sprintf(entities.DBView.Name), fmt.Sprintf("%v", record[tool.SpecialIDParam]))
+			res = append(res, rec); continue 
+		}																
 		datas, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 		empty, ok := record["is_empty"]
 		treated := s.Domain.PostTreat(datas, tName, ok && empty.(bool), []string{ sqlFilter }...)
 		if len(treated) > 0 {
+			if len(path) > 0 && path[:1] == "/" { treated[0]["link_path"]=path }  
 			for k, v := range treated[0] { 
-				if _, ok := rec[k]; !ok { rec[k]=v }
+				if _, ok := rec[k]; !ok { 
+					if k == "schema" { 
+						newV := map[string]interface{}{}
+						for fieldName, field := range v.(map[string]interface{}) {
+							if readonly { field.(map[string]interface{})["readonly"] = true }
+							if view, ok := params[tool.RootColumnsParam]; !ok || view == "" || strings.Contains(view, fieldName) { 
+								newV[fieldName] = field 
+							}
+						}
+						rec[k] = newV
+					} else { rec[k]=v }
+				}
 			}
-		}
-		if view, ok3 := record[entities.RootID(entities.DBView.Name)]; ok3 {
-			params := tool.Params{ tool.RootTableParam : entities.DBView.Name, 
-				                   tool.RootRowsParam: fmt.Sprintf("%v", view), }
-			views, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-			if err == nil && len(views) > 0 { rec["items"]=views[0] }
 		}
 		params = tool.Params{ tool.RootTableParam : entities.DBAction.Name, tool.RootRowsParam: tool.ReservedParam, }
 		params[tool.RootSQLFilterParam] = "id IN (SELECT " + entities.RootID(entities.DBAction.Name) + " FROM " + entities.DBViewAction.Name

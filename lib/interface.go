@@ -22,7 +22,9 @@ type DomainITF interface {
     SetIsCustom(isCustom bool)
 	GetUser() string
 	IsShallowed() bool 
-	IsAdminView() bool
+	IsRawView() bool
+	BuildPath(tableName string, rows string, extra... string) string
+	GeneratePathFilter(path string, record Record, params Params) (string, Params)
 	IsSuperAdmin() bool
 	GetPermission() InfraServiceItf
 	DeleteRow(tableName string, results Results)

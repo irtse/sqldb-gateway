@@ -112,8 +112,13 @@ func (t *AbstractController) response(resp tool.Results, err error) {
 	t.Ctx.Output.SetStatus(http.StatusOK)
 	if err != nil {
 		if strings.Contains(err.Error(), "AUTH") { t.Ctx.Output.SetStatus(http.StatusUnauthorized) }
-		log.Error().Msg(err.Error())
-		t.Data[JSON]=map[string]interface{}{ DATA : tool.Results{}, ERROR : err.Error() }
+		if strings.Contains(err.Error(), "partial") { 
+			t.Ctx.Output.SetStatus(http.StatusPartialContent) 
+			t.Data[JSON]=map[string]interface{}{ DATA : resp, ERROR : err.Error() }
+		} else {
+			log.Error().Msg(err.Error())
+			t.Data[JSON]=map[string]interface{}{ DATA : tool.Results{}, ERROR : err.Error() }
+		}
 	} else { 
 		if len(resp) == 0 { t.Data[JSON] = map[string]interface{}{ DATA : resp, ERROR : "datas not found" } 			
 		} else { t.Data[JSON] = map[string]interface{}{ DATA : resp, ERROR : nil } }

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"errors"
 	"strings"
 	tool "sqldb-ws/lib"
@@ -13,13 +12,6 @@ var WRITEROLE = "manager"
 var CREATEROLE = "creator"
 var UPDATEROLE = "updater"
 var READERROLE = "reader"
-
-var DBrole = "dbrole"
-var DBuser = "dbuser"
-var DBentity = "dbentity"
-var DBentityuser = "dbentityuser"
-var DBroleentity = "dbroleentity"
-var DBrolepermission = "dbrolepermission"
 var PERMS = []string{entities.CREATEPERMS, entities.UPDATEPERMS, entities.DELETEPERMS, entities.READPERMS}
 
 var MAIN_PERMS=map[string]map[string]bool{
@@ -55,7 +47,6 @@ func (p *PermissionInfo) GeneratePerms(res tool.Results) {
 		if r[entities.COLNAMEATTR] == nil { p.generatePerm(r[entities.TABLENAMEATTR].(string), r, del)
 		} else { p.generatePerm(r[entities.TABLENAMEATTR].(string) + ":" + r[entities.COLNAMEATTR].(string), r, del) }
 	}
-	fmt.Printf("PERMS %v %v \n", p.Perms, res)
 }
 
 func (p *PermissionInfo) generatePerm(name string, record tool.Record, del []string) {
@@ -79,7 +70,6 @@ func (p *PermissionInfo) Verify(name string) (string, bool) {
 	}
 	view := []string{}
 	authorized := false
-	fmt.Printf("PERMS %v \n", p.Perms)
 	if tperms, ok := p.Perms[name]; ok {
 		if valid, ok2 := tperms[p.Method.String()]; ok2 && valid.(bool) { authorized = true }
 	}

@@ -33,6 +33,7 @@ type TableColumnEntity struct {
 	Default interface{} `json:"default_value"`
 	Hidden bool         `json:"hidden"`
 	ForeignTable string `json:"link"`
+	Readonly bool		`json:"readonly"`
 	Constraint string   `json:"constraint"`
 	Null bool           `json:"nullable"`
 	Comment string      `json:"comment"`
@@ -70,9 +71,8 @@ type SchemaColumnEntity struct {
 	Link 					string 		 			 	 `json:"link"`
 	LinkDir					string 		 			 	 `json:"link_sql_dir"`
 	LinkOrder 	 			string 		 			 	 `json:"link_sql_order"`
-	LinkColumns 			string 		 			 	 `json:"link_sql_columns"`
+	LinkView				string 		 			 	 `json:"link_sql_view"`
 	LinkRestriction 		string 		 			 	 `json:"link_sql_restriction"`
-	LinkPath 				string 		 			 	 `json:"link_path"`
 }
 func (t SchemaColumnEntity) GetName() string { return t.Name }
 

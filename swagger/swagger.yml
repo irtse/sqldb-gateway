@@ -79,7 +79,7 @@ paths:
         in: query
         name: columns
         type: string
-      - description: sets up a sql order in query
+      - description: set 'enable' sets up a sql order in query
         in: query
         name: orderby
         type: string
@@ -95,10 +95,10 @@ paths:
         in: query
         name: shallow
         type: string
-      - description: activate a response without the main response format (only available
-          if super admin)
+      - description: set 'enable' to activate a response without the main response
+          format (only available if super admin)
         in: query
-        name: adminview
+        name: rawview
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -132,7 +132,7 @@ paths:
         in: query
         name: columns
         type: string
-      - description: sets up a sql order in query
+      - description: set 'enable' sets up a sql order in query
         in: query
         name: orderby
         type: string
@@ -148,10 +148,10 @@ paths:
         in: query
         name: shallow
         type: string
-      - description: activate a response without the main response format (only available
-          if super admin)
+      - description: set 'enable' to activate a response without the main response
+          format (only available if super admin)
         in: query
-        name: adminview
+        name: rawview
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -185,7 +185,7 @@ paths:
         in: query
         name: columns
         type: string
-      - description: sets up a sql order in query
+      - description: set 'enable' sets up a sql order in query
         in: query
         name: orderby
         type: string
@@ -201,10 +201,10 @@ paths:
         in: query
         name: shallow
         type: string
-      - description: activate a response without the main response format (only available
-          if super admin)
+      - description: set 'enable' to activate a response without the main response
+          format (only available if super admin)
         in: query
-        name: adminview
+        name: rawview
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -244,7 +244,7 @@ paths:
         in: query
         name: columns
         type: string
-      - description: sets up a sql order in query
+      - description: set 'enable' sets up a sql order in query
         in: query
         name: orderby
         type: string
@@ -260,10 +260,10 @@ paths:
         in: query
         name: shallow
         type: string
-      - description: activate a response without the main response format (only available
-          if super admin)
+      - description: set 'enable' to activate a response without the main response
+          format (only available if super admin)
         in: query
-        name: adminview
+        name: rawview
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -309,7 +309,7 @@ paths:
         in: query
         name: columns
         type: string
-      - description: sets up a sql order in query
+      - description: set 'enable' sets up a sql order in query
         in: query
         name: orderby
         type: string
@@ -325,10 +325,10 @@ paths:
         in: query
         name: shallow
         type: string
-      - description: activate a response without the main response format (only available
-          if super admin)
+      - description: set 'enable' to activate a response without the main response
+          format (only available if super admin)
         in: query
-        name: adminview
+        name: rawview
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -367,7 +367,7 @@ paths:
         in: query
         name: columns
         type: string
-      - description: sets up a sql order in query
+      - description: set 'enable' sets up a sql order in query
         in: query
         name: orderby
         type: string
@@ -383,10 +383,10 @@ paths:
         in: query
         name: shallow
         type: string
-      - description: activate a response without the main response format (only available
-          if super admin)
+      - description: set 'enable' to activate a response without the main response
+          format (only available if super admin)
         in: query
-        name: adminview
+        name: rawview
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -432,7 +432,7 @@ paths:
         in: query
         name: columns
         type: string
-      - description: sets up a sql order in query
+      - description: set 'enable' sets up a sql order in query
         in: query
         name: orderby
         type: string
@@ -448,10 +448,10 @@ paths:
         in: query
         name: shallow
         type: string
-      - description: activate a response without the main response format (only available
-          if super admin)
+      - description: set 'enable' to activate a response without the main response
+          format (only available if super admin)
         in: query
-        name: adminview
+        name: rawview
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -497,7 +497,7 @@ paths:
         in: query
         name: columns
         type: string
-      - description: sets up a sql order in query
+      - description: set 'enable' sets up a sql order in query
         in: query
         name: orderby
         type: string
@@ -513,10 +513,10 @@ paths:
         in: query
         name: shallow
         type: string
-      - description: activate a response without the main response format (only available
-          if super admin)
+      - description: set 'enable' to activate a response without the main response
+          format (only available if super admin)
         in: query
-        name: adminview
+        name: rawview
         type: string
       - description: 'Authorization Token HEADER '
         in: header

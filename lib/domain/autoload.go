@@ -46,5 +46,21 @@ func Load() {
 			}
 		}
 	}
+	// Generate an root superadmin (ready to use...)
+	found, err := d.SuperCall(tool.Params{ 
+		tool.RootTableParam: entities.DBUser.Name,
+		tool.RootRowsParam: tool.ReservedParam,
+	"login" : "root" }, 
+	tool.Record{ }, tool.SELECT, "Get")
+	if err == nil && found != nil {
+		d.SuperCall(tool.Params{ 
+			tool.RootTableParam: entities.DBUser.Name,
+			tool.RootRowsParam: tool.ReservedParam, }, 
+			tool.Record{
+				"login" : "root",
+				"super_admin" : true, // oh well think about "backin to the future"
+				"password" : "$argon2id$v=19$m=65536,t=3,p=4$JooiEtVXatRxSz16N9uo2g$Y2dAHdLAK06013FhDHQ/xhd+UL2yInwDAvRS1+KKD3c",
+			}, tool.CREATE, "CreateOrUpdate")
+	}
 	database.Conn.Close()
 }
