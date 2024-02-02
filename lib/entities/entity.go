@@ -84,6 +84,6 @@ type ShallowSchemaColumnEntity struct {// lightest struct based on dbschema_colu
 	Default 				interface{}					 `json:"default_value"`
 	Required 				bool 		 			 	 `json:"required"`
 	Readonly 				bool 		 			 	 `json:"readonly"`
-	LinkPath 				string 		 			 	 `json:"link_path"`
+	LinkPath 				string 		 			 	 `json:"values_path"`
 }
 func (t ShallowSchemaColumnEntity) GetName() string { return t.Label }
