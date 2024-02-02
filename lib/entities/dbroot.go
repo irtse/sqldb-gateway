@@ -151,6 +151,7 @@ var DBTask = TableEntity{
 		TableColumnEntity{ Name: RootID("opened_by"), Type: "integer", ForeignTable: DBUser.Name, Null : true, Readonly : true },
 		TableColumnEntity{ Name: RootID("created_by"), Type: "integer", ForeignTable: DBUser.Name, Null : true, Readonly : true },
 		TableColumnEntity{ Name: "opened_date", Type: "timestamp",  Null : true, Readonly : true },
+		TableColumnEntity{ Name: "comment", Type: "text", Null : false, },
 		TableColumnEntity{ Name: "created_date", Type: "timestamp",  Null : true, Default : "CURRENT_TIMESTAMP", Readonly : true },
 		TableColumnEntity{ Name: "state", Type: "enum('completed', 'in progress', 'pending', 'close')",  Null : true, Default: "pending" },
 		TableColumnEntity{ Name: "urgency", Type: "enum('low', 'medium', 'high')",  Null : true, Default: "medium", Readonly : true },
@@ -199,6 +200,8 @@ var DBView = TableEntity{
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, },
 		TableColumnEntity{ Name: "category", Type: "varchar(100)",  Null : true, },
+		TableColumnEntity{ Name: "is_list", Type: "boolean", Null : false, Default: true },
+		TableColumnEntity{ Name: "indexable", Type: "boolean", Null : false, Default: true },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true,  Default: "no description...", },
 		TableColumnEntity{ Name: "is_empty", Type: "boolean", Null : true, Default: false }, // EMPTY VIEW OR ...
 		TableColumnEntity{ Name: "readonly", Type: "boolean", Null : true, Default: false }, // SOLO VIEW OR ... 

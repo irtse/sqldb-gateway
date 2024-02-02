@@ -34,7 +34,7 @@ func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (too
 			}
 		}
 		if _, ok := newRecord["label"]; !ok {
-			newRecord["label"] = strings.Replace(fmt.Sprintf("%v", newRecord["label"]), "_", " ", -1)
+			newRecord["label"] = strings.Replace(fmt.Sprintf("%v", newRecord["name"]), "_", " ", -1)
 		}
 	}
 	return newRecord, err == nil && schemas != nil && len(schemas) > 0, true

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	tool "sqldb-ws/lib"
 	domain "sqldb-ws/lib/domain"
 	"sqldb-ws/lib/entities"
@@ -22,6 +23,7 @@ func (l *MainController) Main() {
 	if err == nil { // if authorized then ask for shallow view authorized for the user
 		params := l.paramsOver(map[string]string{ tool.RootTableParam : entities.DBView.Name, 
 												  tool.RootRowsParam : tool.ReservedParam,
+												  "indexable" : fmt.Sprintf("%v", true),
 												  tool.RootShallow : "enable" })
 		d := domain.Domain(false, user_id, false) // load a domain with user perms
 		response, err := d.Call(params, tool.Record{}, tool.SELECT, true, "Get") // then call with auth activated

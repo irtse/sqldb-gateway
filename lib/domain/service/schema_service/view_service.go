@@ -35,12 +35,13 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 	if len(results) == 0 { return results }
 	res := tool.Results{}
 	for _, record := range results {
+		if !record["is_list"].(bool) && len(dest_id) == 0 { continue }
 		readonly := false 
 		id := ""
 		if r, ok := record["readonly"]; ok && r.(bool) { readonly = true }
 		rec := tool.Record{ "name" : record["name"], "description" : record["description"],
 		                    "index" : record["index"], "category" : record["category"],
-							"is_list" : len(dest_id) == 0, "is_view" : true, }
+							"is_list" : record["is_list"], }
 		for _, dest := range dest_id {
 			if id == "" { id = dest 
 			} else { id = "," + dest  }
@@ -64,22 +65,18 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 		                                            record, tool.Params{ tool.RootTableParam : tName, 
 			                                        tool.RootRowsParam: tool.ReservedParam, })
 		if id != "" { params[tool.RootRowsParam] = id }
-		if s.Domain.IsShallowed() { 
-			rec["link_path"]=s.Domain.BuildPath(fmt.Sprintf(entities.DBView.Name), 
-			                                    fmt.Sprintf("%v", record[tool.SpecialIDParam]))
-			res = append(res, rec); continue 
-		}	
+		rec["link_path"]=s.Domain.BuildPath(fmt.Sprintf(entities.DBView.Name), fmt.Sprintf("%v", record[tool.SpecialIDParam]))
+		if s.Domain.IsShallowed() { res = append(res, rec); continue }	
 		datas, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 		empty, ok := record["is_empty"]
 		treated := s.Domain.PostTreat(datas, tName, ok && empty.(bool), []string{ sqlFilter }...)
 		if len(treated) > 0 {
-			if len(path) > 0 && path[:1] == "/" { treated[0]["link_path"]=path }  
 			for k, v := range treated[0] { 
 				if _, ok := rec[k]; !ok { 
-					if k == "items" && len(path) > 0 && path[:1] == "/" {
+					if k == "items" && len(path) > 0 && path[:1] == "/" && record["is_list"].(bool) {
 						for _, item := range v.([]interface{}) {
-							nP := ""
-							nP = path 
+							nP := "/" + tool.MAIN_PREFIX
+							nP += path 
 							values := item.(map[string]interface{})["values"]
 							if valID, ok := values.(map[string]interface{})[tool.SpecialIDParam]; ok {
 								nP += "&" + tool.RootDestTableIDParam + "=" + fmt.Sprintf("%v", valID)
