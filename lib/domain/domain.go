@@ -251,10 +251,7 @@ func (d *MainService) PostTreatRecord(record tool.Record, tableName string,
 			if shallow { vals[field.Name]=nil 
 			} else if v, ok:=record[field.Name]; ok { vals[field.Name]=v }
 		}
-		link := ""
-		if !shallow { link = d.BuildPath(tableName, fmt.Sprintf("%v", record[tool.SpecialIDParam])) }
-		view := ViewItem{ Values : vals, Path : link, 
-		                  DataPaths :  datapath, ValuePaths : contentPaths, }
+		view := ViewItem{ Values : vals, Path : "", DataPaths :  datapath, ValuePaths : contentPaths, }
 		var newRec tool.Record
 		b, _ := json.Marshal(view)
 		json.Unmarshal(b, &newRec)
