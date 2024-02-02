@@ -6,6 +6,7 @@ import (
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
 )
+//WORKING BUT NEED A CLEAN UP
 type ViewService struct { tool.AbstractSpecializedService }
 
 func (s *ViewService) Entity() tool.SpecializedServiceInfo { return entities.DBView }
@@ -35,7 +36,7 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 	if len(results) == 0 { return results }
 	res := tool.Results{}
 	for _, record := range results {
-		if !record["is_list"].(bool) && len(dest_id) == 0 { continue }
+		if !record["is_list"].(bool) && len(dest_id) == 0 && !record["is_empty"].(bool) { continue }
 		readonly := false 
 		id := ""
 		if r, ok := record["readonly"]; ok && r.(bool) { readonly = true }
@@ -74,6 +75,7 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 			for k, v := range treated[0] { 
 				if _, ok := rec[k]; !ok { 
 					if k == "items" && len(path) > 0 && path[:1] == "/" && record["is_list"].(bool) {
+						fmt.Printf("LEN OF ITEMS %v\n", len(v.([]interface{})))
 						for _, item := range v.([]interface{}) {
 							nP := "/" + tool.MAIN_PREFIX
 							nP += path 
@@ -83,8 +85,8 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 							}
 							item.(map[string]interface{})["link_path"] = nP
 						}
-					}
-					if k == "schema" { 
+						rec[k]=v 
+					} else if k == "schema" { 
 						newV := map[string]interface{}{}
 						for fieldName, field := range v.(map[string]interface{}) {
 							if readonly { field.(map[string]interface{})["readonly"] = true }

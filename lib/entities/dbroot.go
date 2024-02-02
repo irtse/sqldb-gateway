@@ -31,7 +31,7 @@ var DBSchemaField = TableEntity{
 		 TableColumnEntity{ Name: "required", Type: "boolean", Null : true, Default : false },
 		 TableColumnEntity{ Name: "hidden", Type: "boolean", Null : true, Default : false },
 		 TableColumnEntity{ Name: "readonly", Type: "boolean", Null : true, Default : false },
-		 TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)", Constraint: "unique", Null : false, Readonly : true },
+		 TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)", Null : false, Readonly : true },
 		 TableColumnEntity{ Name: TYPEATTR, Type: "varchar(255)", Null : false, },
 		 TableColumnEntity{ Name: "index", Type: "integer", Null : true, Default: 1 },
 		 TableColumnEntity{ Name: "kind", Type: "enum('LINK_SELECT', 'INPUT', 'LINK_ADD')", Null : true, Default : "INPUT" },
@@ -89,7 +89,7 @@ var DBEntity = TableEntity{
 var DBUser = TableEntity{
 	Name : RootName("user"),
 	Columns : []TableColumnEntity{
-		 TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)", Constraint: "unique", Null : false, Readonly : true },
+		 TableColumnEntity{ Name: "login", Type: "varchar(255)", Constraint: "unique", Null : false, Readonly : true },
 		 TableColumnEntity{ Name: "password", Type: "varchar(255)", Null : false, Hidden: true },
 		 TableColumnEntity{ Name: "token", Type: "varchar(255)", Null : true, Default : "" },
 		 TableColumnEntity{ Name: "super_admin", Type: "boolean", Null : true, Default : false  },
@@ -131,7 +131,7 @@ var DBRoleAttribution = TableEntity{
 var DBWorkflow = TableEntity{
 	Name : RootName("workflow"),
 	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, Readonly : true, },
+		TableColumnEntity{ Name: NAMEATTR, Constraint : "unique", Type: "varchar(255)",  Null : false, Readonly : true, },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true, },
 	},
 }

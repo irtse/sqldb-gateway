@@ -211,11 +211,12 @@ func (d *MainService) PostTreat(results tool.Results, tableName string, shallow 
 			rec := d.PostTreatRecord(record, tableName, cols, shallow)
 			if rec == nil { continue }
 			view.Items = append(view.Items, rec)
-			r := tool.Record{}
-			b, _ := json.Marshal(view)
-			json.Unmarshal(b, &r)
-			res = append(res, r)
+			if shallow { break; }
 		}
+		r := tool.Record{}
+		b, _ := json.Marshal(view)
+		json.Unmarshal(b, &r)
+		res = append(res, r)
 		return res
 	} else { return results }
 }
@@ -234,22 +235,26 @@ func (d *MainService) PostTreatRecord(record tool.Record, tableName string,
 		if !shallow { vals[tool.SpecialIDParam]=fmt.Sprintf("%v", record[tool.SpecialIDParam]) }
 		for _, field := range cols {
 			if d.Db.GetSQLView() != "" && !strings.Contains(d.Db.GetSQLView(), field.Name){ continue }
-			dest, ok := record[entities.RootID("dest_table")]
-			id, ok2 := record[field.Name]
-			if strings.Contains(field.Name, entities.DBSchema.Name) && ok2 && ok && dest != nil && id != nil { 
-				schemas, err := d.Schema(tool.Record{ entities.RootID(entities.DBSchema.Name) : id })
-				if err != nil || len(schemas) == 0 { continue }
-				datapath=d.BuildPath(fmt.Sprintf("%v",schemas[0][entities.NAMEATTR]), fmt.Sprintf("%v", dest))
+			if strings.Contains(field.Name, entities.DBSchema.Name) && !shallow { 
+				dest, ok := record[entities.RootID("dest_table")]
+				id, ok2 := record[field.Name]
+				if ok2 && ok && dest != nil && id != nil {
+					schemas, err := d.Schema(tool.Record{ entities.RootID(entities.DBSchema.Name) : id })
+					if err != nil || len(schemas) == 0 { continue }
+					datapath=d.BuildPath(fmt.Sprintf("%v",schemas[0][entities.NAMEATTR]), fmt.Sprintf("%v", dest))
+				}
 				continue
 			}
-			if f, ok:= record[field.Name]; ok && field.Link != "" && f != nil { 
+			if f, ok:= record[field.Name]; ok && field.Link != "" && f != nil && !shallow { 
 				contentPaths[field.Name]=d.BuildPath(field.Link, fmt.Sprintf("%v", f), "shallow=enable")
 				continue
 			}
 			if shallow { vals[field.Name]=nil 
 			} else if v, ok:=record[field.Name]; ok { vals[field.Name]=v }
 		}
-		view := ViewItem{ Values : vals, Path : d.BuildPath(tableName, fmt.Sprintf("%v", record[tool.SpecialIDParam])), 
+		link := ""
+		if !shallow { link = d.BuildPath(tableName, fmt.Sprintf("%v", record[tool.SpecialIDParam])) }
+		view := ViewItem{ Values : vals, Path : link, 
 		                  DataPaths :  datapath, ValuePaths : contentPaths, }
 		var newRec tool.Record
 		b, _ := json.Marshal(view)
