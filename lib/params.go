@@ -13,6 +13,7 @@ const RootOrderParam = "orderby"
 const RootDirParam = "dir"
 const RootRawView = "rawview"
 const RootShallow = "shallow"
+const RootSuperCall = "super"
 const RootDestTableIDParam = "dest_table_id" 
 
 var RootParamsDesc = map[string]string{
@@ -24,7 +25,7 @@ var RootParamsDesc = map[string]string{
 	RootRawView : "set 'enable' to activate a response without the main response format (only available if super admin)",
 }
 var HiddenParams = []string{RootDestTableIDParam}
-var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootShallow, RootRawView}
+var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootShallow, RootRawView, RootSuperCall}
 
 const SpecialIDParam = "id" 
 

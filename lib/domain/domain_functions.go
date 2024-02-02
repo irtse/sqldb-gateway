@@ -41,7 +41,7 @@ func (d *MainService) WriteRow(tableName string, record tool.Record) {
 // define filter whatever what happen on sql...
 func (d *MainService) ViewDefinition(tableName string, innerRestriction... string) (string, string) {
 	SQLview := ""; SQLrestriction := ""; auth := true
-	if d.IsRawView() && d.SuperAdmin { 
+	if d.IsRawView() && d.IsSuperCall() { 
 		return SQLrestriction, SQLview // admin can see all on admin view
 	}
 	for _, exception := range entities.PERMISSIONEXCEPTION {

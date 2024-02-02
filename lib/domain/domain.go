@@ -26,6 +26,7 @@ type MainService struct {
 	Shallowed			bool
 	SuperAdmin			bool
 	RawView				bool
+	Super				bool
 	isGenericService    bool
 	Specialization		bool
 	PermService			tool.InfraServiceItf
@@ -45,6 +46,7 @@ func (d *MainService) GetPermission() tool.InfraServiceItf { return d.PermServic
 func (d *MainService) SetIsCustom(isCustom bool) { d.isGenericService = isCustom }
 func (d *MainService) GetUser() string { return d.User }
 func (d *MainService) IsSuperAdmin() bool { return d.SuperAdmin }
+func (d *MainService) IsSuperCall() bool { return d.Super && d.SuperAdmin }
 func (d *MainService) IsShallowed() bool { return d.Shallowed }
 func (d *MainService) IsRawView() bool { return d.RawView }
 func (d *MainService) GetDB() tool.DbITF { return d.Db }
@@ -52,6 +54,7 @@ func (d *MainService) GetDB() tool.DbITF { return d.Db }
 // Infra func caller with admin view && superadmin right (not a structured view made around data for view reason)
 func (d *MainService) SuperCall(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
 	params[tool.RootRawView]="enable"
+	params[tool.RootSuperCall]="enable"
 	return Domain(true, d.User, d.isGenericService).call(false, params, record, method, true, funcName, args...)
 }
 // Infra func caller with current option view and user rights.
@@ -62,6 +65,7 @@ func (d *MainService) Call(params tool.Params, record tool.Record, method tool.M
 func (d *MainService) call(postTreat bool, params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
 	var service tool.InfraServiceItf // generate an empty var for a casual infra service ITF (interface) to embedded any service.
 	res := tool.Results{}
+	if adm, ok := params[tool.RootSuperCall]; ok && adm == "enable" { d.Super = true } // set up admin view
 	if adm, ok := params[tool.RootRawView]; ok && adm == "enable" { d.RawView = true } // set up admin view
 	if shallow, ok := params[tool.RootShallow]; ok && shallow == "enable" { d.Shallowed = true }  // set up shallow option (lighter version of results)
 	if tablename, ok := params[tool.RootTableParam]; ok { // retrieve tableName in query (not optionnal)

@@ -128,6 +128,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of super",
+      "in": "query",
+      "name": "super",
+      "type": "string"
+     },
+     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -194,6 +200,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of super",
+      "in": "query",
+      "name": "super",
+      "type": "string"
+     },
+     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -257,6 +269,12 @@
       "description": "set 'enable' to activate a response without the main response format (only available if super admin)",
       "in": "query",
       "name": "rawview",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of super",
+      "in": "query",
+      "name": "super",
       "type": "string"
      },
      {
@@ -332,6 +350,12 @@
       "description": "set 'enable' to activate a response without the main response format (only available if super admin)",
       "in": "query",
       "name": "rawview",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of super",
+      "in": "query",
+      "name": "super",
       "type": "string"
      },
      {
@@ -419,6 +443,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of super",
+      "in": "query",
+      "name": "super",
+      "type": "string"
+     },
+     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -489,6 +519,12 @@
       "description": "set 'enable' to activate a response without the main response format (only available if super admin)",
       "in": "query",
       "name": "rawview",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of super",
+      "in": "query",
+      "name": "super",
       "type": "string"
      },
      {
@@ -576,6 +612,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of super",
+      "in": "query",
+      "name": "super",
+      "type": "string"
+     },
+     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -657,6 +699,12 @@
       "description": "set 'enable' to activate a response without the main response format (only available if super admin)",
       "in": "query",
       "name": "rawview",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of super",
+      "in": "query",
+      "name": "super",
       "type": "string"
      },
      {

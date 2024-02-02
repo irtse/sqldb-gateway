@@ -18,6 +18,7 @@ type DomainITF interface {
 	SuperCall(params Params, rec Record, m Method, funcName string, args... interface{}) (Results, error)
 	Call(params Params, rec Record, m Method, auth bool, funcName string, args... interface{}) (Results, error)
     SetIsCustom(isCustom bool)
+	IsSuperCall() bool
 	GetUser() string
 	IsShallowed() bool 
 	IsRawView() bool

@@ -98,6 +98,10 @@ paths:
         in: query
         name: rawview
         type: string
+      - description: (Optionnal) Value of super
+        in: query
+        name: super
+        type: string
       - description: 'Authorization Token HEADER '
         in: header
         name: Authorization
@@ -149,6 +153,10 @@ paths:
         in: query
         name: rawview
         type: string
+      - description: (Optionnal) Value of super
+        in: query
+        name: super
+        type: string
       - description: 'Authorization Token HEADER '
         in: header
         name: Authorization
@@ -199,6 +207,10 @@ paths:
           format (only available if super admin)
         in: query
         name: rawview
+        type: string
+      - description: (Optionnal) Value of super
+        in: query
+        name: super
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -256,6 +268,10 @@ paths:
           format (only available if super admin)
         in: query
         name: rawview
+        type: string
+      - description: (Optionnal) Value of super
+        in: query
+        name: super
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -320,6 +336,10 @@ paths:
         in: query
         name: rawview
         type: string
+      - description: (Optionnal) Value of super
+        in: query
+        name: super
+        type: string
       - description: 'Authorization Token HEADER '
         in: header
         name: Authorization
@@ -375,6 +395,10 @@ paths:
           format (only available if super admin)
         in: query
         name: rawview
+        type: string
+      - description: (Optionnal) Value of super
+        in: query
+        name: super
         type: string
       - description: 'Authorization Token HEADER '
         in: header
@@ -439,6 +463,10 @@ paths:
         in: query
         name: rawview
         type: string
+      - description: (Optionnal) Value of super
+        in: query
+        name: super
+        type: string
       - description: 'Authorization Token HEADER '
         in: header
         name: Authorization
@@ -501,6 +529,10 @@ paths:
           format (only available if super admin)
         in: query
         name: rawview
+        type: string
+      - description: (Optionnal) Value of super
+        in: query
+        name: super
         type: string
       - description: 'Authorization Token HEADER '
         in: header
