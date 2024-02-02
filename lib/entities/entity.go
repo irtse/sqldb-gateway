@@ -47,15 +47,6 @@ type TableColumnEntity struct { // definition a db table columns
 
 func (t TableColumnEntity) GetName() string { return t.Name }
 
-type LinkEntity struct { // struct for Link/Unlink calls
-	From    				int64          			 `json:"from_id" validate:"required"`
-	To 						int64 		 			 `json:"to_id" validate:"required"`
-	Columns 			    map[string]string 	 `json:"columns"`
-	Anchor 					string 		 			 `json:"anchor"`
-}
-
-func (t LinkEntity) GetName() string { return t.Anchor }
-
 type SchemaColumnEntity struct { // struct based on dbschema_columns in root
 	Label 					string 						 `json:"label" validate:"required"`
 	Name    				string          			 `json:"name" validate:"required"`

@@ -104,13 +104,13 @@
       "type": "string"
      },
      {
-      "description": "set 'enable' sets up a sql order in query",
+      "description": "sets up a sql order in query (don't even try to inject you little joker)",
       "in": "query",
       "name": "orderby",
       "type": "string"
      },
      {
-      "description": "sets up a sql direction in query (ex.ASC)",
+      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
       "in": "query",
       "name": "dir",
       "type": "string"
@@ -170,13 +170,13 @@
       "type": "string"
      },
      {
-      "description": "set 'enable' sets up a sql order in query",
+      "description": "sets up a sql order in query (don't even try to inject you little joker)",
       "in": "query",
       "name": "orderby",
       "type": "string"
      },
      {
-      "description": "sets up a sql direction in query (ex.ASC)",
+      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
       "in": "query",
       "name": "dir",
       "type": "string"
@@ -236,13 +236,13 @@
       "type": "string"
      },
      {
-      "description": "set 'enable' sets up a sql order in query",
+      "description": "sets up a sql order in query (don't even try to inject you little joker)",
       "in": "query",
       "name": "orderby",
       "type": "string"
      },
      {
-      "description": "sets up a sql direction in query (ex.ASC)",
+      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
       "in": "query",
       "name": "dir",
       "type": "string"
@@ -311,13 +311,13 @@
       "type": "string"
      },
      {
-      "description": "set 'enable' sets up a sql order in query",
+      "description": "sets up a sql order in query (don't even try to inject you little joker)",
       "in": "query",
       "name": "orderby",
       "type": "string"
      },
      {
-      "description": "sets up a sql direction in query (ex.ASC)",
+      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
       "in": "query",
       "name": "dir",
       "type": "string"
@@ -395,13 +395,13 @@
       "type": "string"
      },
      {
-      "description": "set 'enable' sets up a sql order in query",
+      "description": "sets up a sql order in query (don't even try to inject you little joker)",
       "in": "query",
       "name": "orderby",
       "type": "string"
      },
      {
-      "description": "sets up a sql direction in query (ex.ASC)",
+      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
       "in": "query",
       "name": "dir",
       "type": "string"
@@ -468,13 +468,13 @@
       "type": "string"
      },
      {
-      "description": "set 'enable' sets up a sql order in query",
+      "description": "sets up a sql order in query (don't even try to inject you little joker)",
       "in": "query",
       "name": "orderby",
       "type": "string"
      },
      {
-      "description": "sets up a sql direction in query (ex.ASC)",
+      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
       "in": "query",
       "name": "dir",
       "type": "string"
@@ -552,13 +552,13 @@
       "type": "string"
      },
      {
-      "description": "set 'enable' sets up a sql order in query",
+      "description": "sets up a sql order in query (don't even try to inject you little joker)",
       "in": "query",
       "name": "orderby",
       "type": "string"
      },
      {
-      "description": "sets up a sql direction in query (ex.ASC)",
+      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
       "in": "query",
       "name": "dir",
       "type": "string"
@@ -636,13 +636,13 @@
       "type": "string"
      },
      {
-      "description": "set 'enable' sets up a sql order in query",
+      "description": "sets up a sql order in query (don't even try to inject you little joker)",
       "in": "query",
       "name": "orderby",
       "type": "string"
      },
      {
-      "description": "sets up a sql direction in query (ex.ASC)",
+      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
       "in": "query",
       "name": "dir",
       "type": "string"

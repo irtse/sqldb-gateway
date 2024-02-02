@@ -9,8 +9,6 @@ type InfraServiceItf interface {
 	Get(restriction... string)  					(Results, error)
 	CreateOrUpdate(restriction... string)        	(Results, error)
 	Delete(restriction... string)                	(Results, error)
-	Link(restriction... string)        				(Results, error)
-	UnLink(restriction... string)                	(Results, error)
 	Import(string, ...string)          	(Results, error)
 	Template(restriction... string)               	(interface{}, error) 
 	GenerateFromTemplate(string) error
