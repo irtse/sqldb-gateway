@@ -9,19 +9,19 @@ import (
 type RoleAttributionService struct { tool.AbstractSpecializedService }
 
 func (s *RoleAttributionService) Entity() tool.SpecializedServiceInfo { return entities.DBRoleAttribution }
-func (s *RoleAttributionService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
+func (s *RoleAttributionService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
 	params := tool.Params{ tool.RootTableParam : entities.DBRoleAttribution.Name, 
 	                       tool.RootRowsParam : tool.ReservedParam, }
 	currentTime := time.Now()
 	params[tool.RootSQLFilterParam]= "'" + currentTime.Format("2000-01-01") + "' < start_date OR " 
 	params[tool.RootSQLFilterParam]+= "'" + currentTime.Format("2000-01-01") + "' > end_date"
 	s.Domain.SuperCall( params, tool.Record{}, tool.DELETE, "Delete", )	
-	return record, true 
+	return record, true, false 
 }
 func (s *RoleAttributionService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *RoleAttributionService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *RoleAttributionService) WriteRowAutomation(record tool.Record, tableName string) { }
-func (s *RoleAttributionService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
+func (s *RoleAttributionService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *RoleAttributionService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {

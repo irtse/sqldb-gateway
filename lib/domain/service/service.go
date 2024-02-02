@@ -46,8 +46,9 @@ func (s *CustomService) DeleteRowAutomation(results tool.Results, tableName stri
 	s.Domain.DeleteRow(tableName, results) // call main func that unlink creator user and new row
 }
 func (s *CustomService) Entity() tool.SpecializedServiceInfo { return nil }
-func (s *CustomService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { return record, true }
-func (s *CustomService) PostTreatment(results tool.Results, tableName string) tool.Results { 
+func (s *CustomService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
+	return record, true, false }
+func (s *CustomService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 
 	return s.Domain.PostTreat( results, tableName, false) // call main post treatment
 }
 // default have a right to access to whatever is in dbuser_entry database... (sets at creation)

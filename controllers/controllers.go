@@ -87,6 +87,7 @@ func (t *AbstractController) params() map[string]string {
 	}
 	queries := []string{} // then we will extract query parameters
     queries = append(queries, tool.RootParams...) // firstival we will try to found pertinent query params
+	queries = append(queries, tool.HiddenParams...)
 	for _, val := range queries {
 		name := t.Ctx.Input.Query(val)
 		if name != "" { params[val] = name }

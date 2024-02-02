@@ -9,7 +9,7 @@ import (
 type SchemaService struct { tool.AbstractSpecializedService }
 
 func (s *SchemaService) Entity() tool.SpecializedServiceInfo { return entities.DBSchema }
-func (s *SchemaService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { return record, true }
+func (s *SchemaService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { return record, true, false }
 func (s *SchemaService) DeleteRowAutomation(results tool.Results, tableName string) { 
 	for _, record := range results { 
 		s.Domain.SetIsCustom(true)
@@ -31,7 +31,7 @@ func (s *SchemaService) WriteRowAutomation(record tool.Record, tableName string)
 			    "columns": map[string]interface{}{} }, 
 				tool.CREATE, "CreateOrUpdate",)
 }
-func (s *SchemaService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
+func (s *SchemaService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *SchemaService) ConfigureFilter(tableName string, params tool.Params) (string, string) {

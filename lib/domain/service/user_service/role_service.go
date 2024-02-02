@@ -8,11 +8,12 @@ import (
 type RoleService struct { tool.AbstractSpecializedService }
 
 func (s *RoleService) Entity() tool.SpecializedServiceInfo { return entities.DBRole }
-func (s *RoleService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { return record, true }
+func (s *RoleService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
+	return record, true, false }
 func (s *RoleService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *RoleService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *RoleService) WriteRowAutomation(record tool.Record, tableName string) { }
-func (s *RoleService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
+func (s *RoleService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *RoleService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {

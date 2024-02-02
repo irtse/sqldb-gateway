@@ -32,7 +32,6 @@ func (l *AuthController) Login() {
 		if err == nil && user_id == log.(string) { // token verify
 			l.response(response, errors.New("already log in")); return
 		}
-		if err != nil { l.response(response, err); return }
 		pass, ok := body["password"] // then compare password founded in base and ... whatever... you know what's about
 		pwd, ok1 := response[0]["password"].(string)
 		if ok && ok1 {

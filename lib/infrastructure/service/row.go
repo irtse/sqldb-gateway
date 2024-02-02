@@ -52,6 +52,11 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	var result tool.Results
 	columns := ""
 	values := ""
+	if t.SpecializedService != nil {
+		r, ok, forceChange := t.SpecializedService.VerifyRowAutomation(t.Record, true)
+		if !ok { return nil, errors.New("verification failed.") }
+		if forceChange { t.Record = r }
+	}
 	if len(t.Record) > 0 {
 		v := Validator[map[string]interface{}]()
 		rec, err := v.ValidateSchema(t.Record, t.Table, false)
@@ -62,6 +67,7 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 		if err != nil { return nil, errors.New("Empty record got a problem : " + err.Error()) }
 		t.Record = emptyRec
 	} else { return nil, errors.New("Empty is not a proper struct to create a row ") }
+
 	for key, element := range t.Record {
 		columns += key + ","
 		typ := ""
@@ -71,9 +77,6 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 		} else {
 			values += fmt.Sprintf("%v", element) + ","
 		}
-	}
-	if t.SpecializedService != nil {
-		if _, ok := t.SpecializedService.VerifyRowAutomation(t.Record, true); !ok { return nil, errors.New("verification failed.") }
 	}
 	query := "INSERT INTO " + t.Table.Name + "(" + conn.RemoveLastChar(columns) + ") VALUES (" + conn.RemoveLastChar(values) + ")"
 	if t.db.Driver == conn.PostgresDriver { 

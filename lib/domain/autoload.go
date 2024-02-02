@@ -33,15 +33,16 @@ func Load() {
 					tool.RootRowsParam: tool.ReservedParam,
 					entities.NAMEATTR : table.Name }, tool.Record{}, tool.SELECT, "Get")
 			if err != nil || len(res) == 0 { 
-				res, err = d.SuperCall(tool.Params{ tool.RootTableParam: entities.DBSchema.Name,
-										tool.RootRowsParam: tool.ReservedParam, }, 
-							rec, tool.CREATE, "CreateOrUpdate")
+				res, err := d.SuperCall(tool.Params{ tool.RootTableParam: entities.DBSchema.Name,
+									   tool.RootRowsParam: tool.ReservedParam, }, 
+									   rec, tool.CREATE, "CreateOrUpdate")
 				if err != nil || len(res) == 0 { continue }
 				for _, col := range rec["columns"].([]interface{}) {
-					c := col.(map[string]interface{})
-					c[entities.RootID(entities.DBSchema.Name)] = res[0][tool.SpecialIDParam]
-					d.SuperCall(tool.Params{ tool.RootTableParam: entities.DBSchemaField.Name,
-											 tool.RootRowsParam: tool.ReservedParam, }, c, tool.CREATE, "CreateOrUpdate")
+							c := col.(map[string]interface{})
+							c[entities.RootID(entities.DBSchema.Name)] = res[0][tool.SpecialIDParam]
+							d.SuperCall(tool.Params{ tool.RootTableParam: entities.DBSchemaField.Name,
+													tool.RootRowsParam: tool.ReservedParam, }, 
+										c, tool.CREATE, "CreateOrUpdate")
 				}
 			}
 		}

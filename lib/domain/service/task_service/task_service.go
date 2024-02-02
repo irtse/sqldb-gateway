@@ -9,13 +9,13 @@ import (
 type TaskService struct { tool.AbstractSpecializedService }
 
 func (s *TaskService) Entity() tool.SpecializedServiceInfo { return entities.DBTask }
-func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
+func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
 	schemas, err := s.Domain.Schema(record)
-	if err != nil && len(schemas) == 0 { return record, false }
+	if err != nil && len(schemas) == 0 { return record, false, false }
 	id := int64(-1)
 	if idFromRec, ok := record[tool.SpecialIDParam]; ok { id = idFromRec.(int64) }
 	if idFromTask, ok := record[entities.RootID("dest_table")]; ok { id = idFromTask.(int64) }
-	if id == -1 { return record, false }
+	if id == -1 { return record, false, false }
 	params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
 			                   tool.RootRowsParam : fmt.Sprintf("%v", id), } // empty record
 	s.Domain.SuperCall( params, record, tool.UPDATE, "CreateOrUpdate")
@@ -28,14 +28,14 @@ func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool
 			                   "login" : s.Domain.GetUser(),
 		}
 		user, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-		if err != nil || len(user) == 0 { return record, false }
+		if err != nil || len(user) == 0 { return record, false, false }
 		if user[0]["state"] != "in progress"  { 
 			record[entities.RootID("opened_by")]=user[0][tool.SpecialIDParam] 
 			record["opened_date"]="CURRENT_TIMESTAMP"
 		}
 		if create { record[entities.RootID("created_by")]=user[0][tool.SpecialIDParam] }
 	}
-	return record, true 
+	return record, true , false
 }
 func (s *TaskService) DeleteRowAutomation(results tool.Results, tableName string) { 
 	for _, res := range results {
@@ -101,7 +101,7 @@ func (s *TaskService) WriteRowAutomation(record tool.Record, tableName string) {
 	s.Domain.WriteRow(tableName, record)
 }
 
-func (s *TaskService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
+func (s *TaskService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
 

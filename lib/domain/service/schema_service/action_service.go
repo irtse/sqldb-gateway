@@ -11,24 +11,24 @@ import (
 type ActionService struct { tool.AbstractSpecializedService }
 
 func (s *ActionService) Entity() tool.SpecializedServiceInfo { return entities.DBAction }
-func (s *ActionService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
+func (s *ActionService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
 	schemas, err := s.Domain.Schema(tool.Record{ entities.RootID(entities.DBSchema.Name) : record[entities.RootID("from")].(int64) })	
-	if err != nil && len(schemas) == 0 { return record, false }
+	if err != nil && len(schemas) == 0 { return record, false, false }
 	if to, ok := record[entities.RootID("to")]; ok {
 		schemas, err := s.Domain.Schema(tool.Record{entities.RootID(entities.DBSchema.Name) : to.(int64)})
-		if err != nil || len(schemas) == 0 { return record, false }
+		if err != nil || len(schemas) == 0 { return record, false, false }
 	}
 	if link, ok := record[entities.RootID("link")]; ok {
 		schemas, err := s.Domain.Schema(tool.Record{entities.RootID(entities.DBSchema.Name) : link.(int64)})
-		if err != nil || len(schemas) == 0 { return record, false }
+		if err != nil || len(schemas) == 0 { return record, false, false }
 	}
-	return record, true
+	return record, true, false
 }
 func (s *ActionService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *ActionService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *ActionService) WriteRowAutomation(record tool.Record, tableName string) { }
 
-func (s *ActionService) PostTreatment(results tool.Results, tablename string) tool.Results { 
+func (s *ActionService) PostTreatment(results tool.Results, tablename string, dest_id... string) tool.Results { 
 	res := tool.Results{}
 	for _, record := range results{
 		names := []string{}
@@ -53,7 +53,7 @@ func (s *ActionService) PostTreatment(results tool.Results, tablename string) to
 	                           "description" : fmt.Sprintf("%v",  record["description"]),
 							   "method" : fmt.Sprintf("%v", record["method"]),
 							   "is_view" : strings.Contains(link_path, entities.DBView.Name),
-							   "parameters" : fmt.Sprintf("%v", record["parameters"]),
+							   "parameters" : strings.Split(fmt.Sprintf("%v", record["parameters"]), ","),
 							   "link_path" : link_path }
 		sqlFilter := entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM "
 		sqlFilter += entities.DBSchema.Name + " WHERE name='" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]) + "')"
@@ -72,6 +72,7 @@ func (s *ActionService) PostTreatment(results tool.Results, tablename string) to
 			json.Unmarshal(b, &shallowField)
 			schemes[scheme.Name]=shallowField
 		}
+		newRec["schema_name"]=fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
 		newRec["schema"]=schemes
 		res = append(res, newRec)
 	}

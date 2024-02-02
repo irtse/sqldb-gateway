@@ -45,10 +45,10 @@ type SpecializedService interface {
 	Entity() SpecializedServiceInfo
 	SetDomain(d DomainITF)
 	WriteRowAutomation(record Record, tableName string)
-	VerifyRowAutomation(record Record, create bool) (Record, bool)
+	VerifyRowAutomation(record Record, create bool) (Record, bool, bool)
 	DeleteRowAutomation(results Results, tableName string)
 	UpdateRowAutomation(results Results, record Record) 
-	PostTreatment(results Results, tableName string) Results
+	PostTreatment(results Results, tableName string, dest_id... string) Results
 	ConfigureFilter(tableName string, params Params) (string, string)
 }
 

@@ -2,6 +2,7 @@ package schema_service
 
 import (
 	"fmt"
+	"strings"
 	"encoding/json"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
@@ -10,7 +11,7 @@ import (
 type SchemaFields struct { tool.AbstractSpecializedService }
 
 func (s *SchemaFields) Entity() tool.SpecializedServiceInfo {return entities.DBSchemaField }
-func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) {
+func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) {
 	schemas, err := s.Domain.Schema(record)
 	newRecord := tool.Record{}
 	if !create {
@@ -18,8 +19,25 @@ func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (too
 			if k == "name" { newRecord["label"] = v 
 			} else if k != "type" { newRecord[k] = v }
 		}
+	} else {
+		for k, v := range record {
+			if k != "type" { newRecord[k] = v 
+			} else { 
+				if strings.Contains(fmt.Sprintf("%v", v), "enum") {
+					typ := fmt.Sprintf("%v", v)
+					typ = strings.Replace(typ, " ", "", -1)
+					typ = strings.Replace(typ, "'", "", -1)
+					typ = strings.Replace(typ, "(", ":", -1)
+					typ = strings.Replace(typ, ")", "", -1)
+					newRecord[k] = typ
+				} else { newRecord[k] = v  }
+			}
+		}
+		if _, ok := newRecord["label"]; !ok {
+			newRecord["label"] = strings.Replace(fmt.Sprintf("%v", newRecord["label"]), "_", " ", -1)
+		}
 	}
-	return newRecord, err == nil && schemas != nil && len(schemas) > 0
+	return newRecord, err == nil && schemas != nil && len(schemas) > 0, true
 }
 func (s *SchemaFields) WriteRowAutomation(record tool.Record, tableName string) { 
 	res, err := s.Domain.SuperCall(
@@ -90,7 +108,7 @@ func (s *SchemaFields) DeleteRowAutomation(results tool.Results, tableName strin
 		)
 	}
 }
-func (s *SchemaFields) PostTreatment(results tool.Results, tableName string) tool.Results { 	
+func (s *SchemaFields) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *SchemaFields) ConfigureFilter(tableName string, params tool.Params) (string, string) {

@@ -106,6 +106,9 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			service.SetAuth(auth)
 			res, err := d.invoke(service, funcName, args...)
 			if specializedService != nil && postTreat {
+				if dest_id, ok := params[tool.RootDestTableIDParam]; ok {
+					return specializedService.PostTreatment(res, tablename, dest_id), nil
+				}
 				return specializedService.PostTreatment(res, tablename), nil
 			}
 			if (d.PermService.(*infrastructure.PermissionInfo).PartialResults != "") {

@@ -9,7 +9,7 @@ import (
 type TaskVerifyerService struct { tool.AbstractSpecializedService }
 
 func (s *TaskVerifyerService) Entity() tool.SpecializedServiceInfo { return entities.DBTaskVerifyer }
-func (s *TaskVerifyerService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool) { 
+func (s *TaskVerifyerService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
 	var res tool.Results
 	if taskID, ok := record[entities.RootID(entities.DBTask.Name)]; ok && taskID != nil {
 		if userID, ok := record[entities.RootID(entities.DBUser.Name)]; ok && userID != nil {
@@ -31,7 +31,7 @@ func (s *TaskVerifyerService) VerifyRowAutomation(record tool.Record, create boo
 			"Get")
 		}
 	}
-	return record, res == nil || len(res) == 0
+	return record, res == nil || len(res) == 0, false
 }
 func (s *TaskVerifyerService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *TaskVerifyerService) UpdateRowAutomation(results tool.Results, record tool.Record) {
@@ -81,7 +81,7 @@ func (s *TaskVerifyerService) UpdateRowAutomation(results tool.Results, record t
 	}
 }
 func (s *TaskVerifyerService) WriteRowAutomation(record tool.Record, tableName string) {}
-func (s *TaskVerifyerService) PostTreatment(results tool.Results, tableName string) tool.Results { 	
+func (s *TaskVerifyerService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *TaskVerifyerService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
