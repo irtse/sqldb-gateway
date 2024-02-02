@@ -3,6 +3,7 @@ package user_service
 import (
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
+	conn "sqldb-ws/lib/infrastructure/connector"
 )
 
 type PermissionService struct { tool.AbstractSpecializedService }
@@ -16,16 +17,16 @@ func (s *PermissionService) WriteRowAutomation(record tool.Record, tableName str
 func (s *PermissionService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
-func (s *PermissionService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
-	params[tool.RootSQLFilterParam] = "id IN (SELECT " + entities.DBPermission.Name + "_id FROM " 
-	params[tool.RootSQLFilterParam] += entities.DBRolePermission.Name + " WHERE " + entities.DBRole.Name + "_id IN ("
-	params[tool.RootSQLFilterParam] += "SELECT " + entities.DBRole.Name + "_id FROM " 
-	params[tool.RootSQLFilterParam] += entities.DBRoleAttribution.Name + " WHERE " + entities.DBUser.Name + "_id IN ("
-	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE " 
-	params[tool.RootSQLFilterParam] += entities.DBUser.Name + ".login = '" + s.Domain.GetUser() + "') OR " + entities.DBEntity.Name + "_id IN ("
-	params[tool.RootSQLFilterParam] += "SELECT " + entities.DBEntity.Name + "_id FROM "
-	params[tool.RootSQLFilterParam] += entities.DBEntityUser.Name + " WHERE " + entities.DBUser.Name +"_id IN ("
-	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE "
-	params[tool.RootSQLFilterParam] += entities.DBUser.Name + ".login = '" + s.Domain.GetUser()  + "'))))"
-	return s.Domain.ViewDefinition(tableName, params)
+func (s *PermissionService) ConfigureFilter(tableName string) (string, string) {
+	restr := "id IN (SELECT " + entities.DBPermission.Name + "_id FROM " 
+	restr += entities.DBRolePermission.Name + " WHERE " + entities.DBRole.Name + "_id IN ("
+	restr += "SELECT " + entities.DBRole.Name + "_id FROM " 
+	restr += entities.DBRoleAttribution.Name + " WHERE " + entities.DBUser.Name + "_id IN ("
+	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE " 
+	restr += entities.DBUser.Name + ".login = " + conn.Quote(s.Domain.GetUser()) + ") OR " + entities.DBEntity.Name + "_id IN ("
+	restr += "SELECT " + entities.DBEntity.Name + "_id FROM "
+	restr += entities.DBEntityUser.Name + " WHERE " + entities.DBUser.Name +"_id IN ("
+	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE "
+	restr += entities.DBUser.Name + ".login = " + conn.Quote(s.Domain.GetUser())  + "))))"
+	return s.Domain.ViewDefinition(tableName, restr)
 }

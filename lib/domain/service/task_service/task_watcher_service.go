@@ -3,6 +3,7 @@ package task_service
 import (
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
+	conn "sqldb-ws/lib/infrastructure/connector"
 )
 
 type TaskWatcherService struct { tool.AbstractSpecializedService }
@@ -16,11 +17,11 @@ func (s *TaskWatcherService) WriteRowAutomation(record tool.Record, tableName st
 func (s *TaskWatcherService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
-func (s *TaskWatcherService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
-	params[tool.RootSQLFilterParam] = entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')" 
-	params[tool.RootSQLFilterParam] += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
-	params[tool.RootSQLFilterParam] += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
-	params[tool.RootSQLFilterParam] += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
-	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')"
-	return s.Domain.ViewDefinition(tableName, params)
+func (s *TaskWatcherService) ConfigureFilter(tableName string) (string, string) {
+	restr := entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")" 
+	restr += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
+	restr += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
+	restr += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
+	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")"
+	return s.Domain.ViewDefinition(tableName, restr)
 }	

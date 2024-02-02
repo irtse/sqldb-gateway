@@ -44,7 +44,6 @@ var DBSchemaField = TableEntity{
 		 TableColumnEntity{ Name: "link_sql_dir", Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "link_sql_order", Type: "varchar(255)", Null : true, },
 		 TableColumnEntity{ Name: "link_sql_view", Type: "varchar(255)", Null : true, },
-		 TableColumnEntity{ Name: "link_sql_restriction", Type: "varchar(255)", Null : true, },
 	},
 }
 
@@ -209,7 +208,6 @@ var DBView = TableEntity{
 		TableColumnEntity{ Name: "sql_order", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "sql_view", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "sql_dir", Type: "varchar(255)", Null : true, },
-		TableColumnEntity{ Name: "sql_restriction", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "through_perms", Type: "integer",  ForeignTable : DBSchema.Name, Null : true, },
 		TableColumnEntity{ Name: RootID("view"), Type: "integer", ForeignTable : RootName("view"), Null : true, },
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable : DBSchema.Name, Null : false, },
@@ -228,7 +226,6 @@ var DBAction = TableEntity{
 		TableColumnEntity{ Name: "sql_dir", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "sql_order", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "sql_view", Type: "varchar(255)", Null : true, },
-		TableColumnEntity{ Name: "sql_restriction", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "extra_path", Type: "varchar(255)", Null : true, Default : ""  },
 		TableColumnEntity{ Name: RootID("view"), Type: "integer", ForeignTable : DBView.Name, Null : true, },
 	},

@@ -111,6 +111,6 @@ func (s *SchemaFields) DeleteRowAutomation(results tool.Results, tableName strin
 func (s *SchemaFields) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
-func (s *SchemaFields) ConfigureFilter(tableName string, params tool.Params) (string, string) {
-	return s.Domain.ViewDefinition(tableName, params)
+func (s *SchemaFields) ConfigureFilter(tableName string) (string, string) {
+	return s.Domain.ViewDefinition(tableName)
 }	

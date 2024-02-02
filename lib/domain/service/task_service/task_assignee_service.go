@@ -41,17 +41,18 @@ func (s *TaskAssigneeService) UpdateRowAutomation(results tool.Results, record t
 func (s *TaskAssigneeService) WriteRowAutomation(record tool.Record, tableName string) { 
 	paramsNew := tool.Params{ tool.RootTableParam : entities.DBUser.Name, 
 							  tool.RootRowsParam: tool.ReservedParam, }
-	paramsNew[tool.RootSQLFilterParam] += "id IN (SELECT id FROM " + entities.DBHierarchy.Name + " WHERE "
-	paramsNew[tool.RootSQLFilterParam] += entities.RootID(entities.DBUser.Name) + " IN ("
-	paramsNew[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")"
-	paramsNew[tool.RootSQLFilterParam] += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
-	paramsNew[tool.RootSQLFilterParam] += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name
-	paramsNew[tool.RootSQLFilterParam] += " WHERE " + entities.RootID(entities.DBUser.Name) + "=" + conn.Quote(s.Domain.GetUser()) + "))"
+	sqlFilter := "id IN (SELECT id FROM " + entities.DBHierarchy.Name + " WHERE "
+	sqlFilter += entities.RootID(entities.DBUser.Name) + " IN ("
+	sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")"
+	sqlFilter += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
+	sqlFilter += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name
+	sqlFilter += " WHERE " + entities.RootID(entities.DBUser.Name) + "=" + conn.Quote(s.Domain.GetUser()) + "))"
 	hierarchy, err := s.Domain.SuperCall( 
 						paramsNew, 
 						tool.Record{},
 						tool.SELECT,
 						"Get",
+						sqlFilter,
 					)
 	if err == nil {
 		for _, upper := range hierarchy {
@@ -75,11 +76,11 @@ func (s *TaskAssigneeService) WriteRowAutomation(record tool.Record, tableName s
 func (s *TaskAssigneeService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
-func (s *TaskAssigneeService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
-	params[tool.RootSQLFilterParam] = entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')" 
-	params[tool.RootSQLFilterParam] += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
-	params[tool.RootSQLFilterParam] += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
-	params[tool.RootSQLFilterParam] += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
-	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')"
-	return s.Domain.ViewDefinition(tableName, params)
+func (s *TaskAssigneeService) ConfigureFilter(tableName string) (string, string) {
+	restr := entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")" 
+	restr += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
+	restr += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
+	restr += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
+	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")"
+	return s.Domain.ViewDefinition(tableName, restr)
 }	

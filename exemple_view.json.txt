@@ -30,11 +30,11 @@
       "category": null, // view category it describe a sub organized folder in the menu
       "description": "no description...", // hover description of the view
       "index": 1, // where its positionned in the view menu
-      "is_list": true, // if view content implied a list of item
+      "is_list": false, // if view content implied a list of item
       "items": [ // list of items implied in the view
         {
           "data_path": "/generic/dbuser?rows=1", // path to GET content inside item (not used in a case of list)
-          "link_path": "/generic/dbview?rows=2&dest_table_id=1", // path to REDIRECT on (not used in a case of not list)
+          "link_path": "", // path to REDIRECT on (not used in a case of not list)
           "values": { // current values of field of the item
             "comment": "fulfill user god",
           },

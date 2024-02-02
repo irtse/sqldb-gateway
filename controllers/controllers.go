@@ -91,7 +91,7 @@ func (t *AbstractController) params() map[string]string {
 	for _, val := range queries {
 		name := t.Ctx.Input.Query(val)
 		if name != "" { params[val] = name }
-	}
+	} // GET SCHEMA PARAMETERS
 	if pass, ok := params["password"]; ok { // if any password founded hash it
 		argon := argon2.DefaultConfig()
 		hash, err := argon.HashEncoded([]byte(pass))

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
+	conn "sqldb-ws/lib/infrastructure/connector"
 )
 
 type ActionService struct { tool.AbstractSpecializedService }
@@ -56,12 +57,11 @@ func (s *ActionService) PostTreatment(results tool.Results, tablename string, de
 							   "parameters" : strings.Split(fmt.Sprintf("%v", record["parameters"]), ","),
 							   "link_path" : link_path }
 		sqlFilter := entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM "
-		sqlFilter += entities.DBSchema.Name + " WHERE name='" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]) + "')"
+		sqlFilter += entities.DBSchema.Name + " WHERE name=" + conn.Quote(fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])) + ")"
 		// retrive all fields from schema...
 		params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
-		                       tool.RootRowsParam: tool.ReservedParam, 
-						       tool.RootSQLFilterParam: sqlFilter }
-		schemas, err = s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
+		                       tool.RootRowsParam: tool.ReservedParam }
+		schemas, err = s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 		if err != nil || len(schemas) == 0 { continue }
 		schemes := map[string]interface{}{}
 		for _, r := range schemas {
@@ -79,6 +79,6 @@ func (s *ActionService) PostTreatment(results tool.Results, tablename string, de
 	return res 
 }
 
-func (s *ActionService) ConfigureFilter(tableName string, params tool.Params) (string, string) { 
-	return s.Domain.ViewDefinition(tableName, params)
+func (s *ActionService) ConfigureFilter(tableName string) (string, string) { 
+	return s.Domain.ViewDefinition(tableName)
 }	

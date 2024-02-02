@@ -4,6 +4,7 @@ import (
 	"time"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
+	conn "sqldb-ws/lib/infrastructure/connector"
 )
 
 type RoleAttributionService struct { tool.AbstractSpecializedService }
@@ -13,9 +14,9 @@ func (s *RoleAttributionService) VerifyRowAutomation(record tool.Record, create 
 	params := tool.Params{ tool.RootTableParam : entities.DBRoleAttribution.Name, 
 	                       tool.RootRowsParam : tool.ReservedParam, }
 	currentTime := time.Now()
-	params[tool.RootSQLFilterParam]= "'" + currentTime.Format("2000-01-01") + "' < start_date OR " 
-	params[tool.RootSQLFilterParam]+= "'" + currentTime.Format("2000-01-01") + "' > end_date"
-	s.Domain.SuperCall( params, tool.Record{}, tool.DELETE, "Delete", )	
+	sqlFilter := conn.Quote(currentTime.Format("2000-01-01")) + " < start_date OR " 
+	sqlFilter += conn.Quote(currentTime.Format("2000-01-01")) + " > end_date"
+	s.Domain.SuperCall( params, tool.Record{}, tool.DELETE, "Delete", sqlFilter)	
 	return record, true, false 
 }
 func (s *RoleAttributionService) DeleteRowAutomation(results tool.Results, tableName string) { }
@@ -24,11 +25,11 @@ func (s *RoleAttributionService) WriteRowAutomation(record tool.Record, tableNam
 func (s *RoleAttributionService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
-func (s *RoleAttributionService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
-	params[tool.RootSQLFilterParam] = entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')" 
-	params[tool.RootSQLFilterParam] += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
-	params[tool.RootSQLFilterParam] += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
-	params[tool.RootSQLFilterParam] += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
-	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')"
-	return s.Domain.ViewDefinition(tableName, params)
+func (s *RoleAttributionService) ConfigureFilter(tableName string) (string, string) {
+	restr := entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")" 
+	restr += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
+	restr += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
+	restr += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
+	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")"
+	return s.Domain.ViewDefinition(tableName, restr)
 }

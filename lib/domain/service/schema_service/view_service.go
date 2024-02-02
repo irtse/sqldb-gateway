@@ -5,6 +5,7 @@ import (
 	"strings"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
+	conn "sqldb-ws/lib/infrastructure/connector"
 )
 //WORKING BUT NEED A CLEAN UP
 type ViewService struct { tool.AbstractSpecializedService }
@@ -56,11 +57,11 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 			sqlFilter += "id IN (SELECT " + entities.RootID(tName) 
 			sqlFilter += " FROM " + fmt.Sprintf("%v", through[0][entities.NAMEATTR])
 			sqlFilter += " WHERE " + entities.RootID(entities.DBUser.Name) 
-			sqlFilter += " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')" 
+			sqlFilter += " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")" 
 			sqlFilter += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
 			sqlFilter += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
 			sqlFilter += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
-			sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')))"
+			sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")))"
 		}
 		path, params := s.Domain.GeneratePathFilter("/" + tool.MAIN_PREFIX + "/" + tName, 
 		                                            record, tool.Params{ tool.RootTableParam : tName, 
@@ -100,10 +101,10 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 			}
 		}
 		params = tool.Params{ tool.RootTableParam : entities.DBAction.Name, tool.RootRowsParam: tool.ReservedParam, }
-		params[tool.RootSQLFilterParam] = "id IN (SELECT " + entities.RootID(entities.DBAction.Name) + " FROM " + entities.DBViewAction.Name
-		params[tool.RootSQLFilterParam] += " WHERE " + entities.RootID(entities.DBView.Name) + "=" 
-		params[tool.RootSQLFilterParam] += fmt.Sprintf("%v", record[tool.SpecialIDParam]) + ")"
-		actions, err := s.Domain.Call( params, tool.Record{}, tool.SELECT, false, "Get")
+		sqlFilter = "id IN (SELECT " + entities.RootID(entities.DBAction.Name) + " FROM " + entities.DBViewAction.Name
+		sqlFilter += " WHERE " + entities.RootID(entities.DBView.Name) + "=" 
+		sqlFilter += fmt.Sprintf("%v", record[tool.SpecialIDParam]) + ")"
+		actions, err := s.Domain.Call( params, tool.Record{}, tool.SELECT, false, "Get", sqlFilter)
 		if err == nil && len(actions) > 0 {
 			rec["actions"] = tool.Results{}
 			for _, action := range actions { 
@@ -115,6 +116,6 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 	return res
 }
 
-func (s *ViewService) ConfigureFilter(tableName string, params tool.Params) (string, string) { 
-	return s.Domain.ViewDefinition( tableName, params)
+func (s *ViewService) ConfigureFilter(tableName string) (string, string) { 
+	return s.Domain.ViewDefinition(tableName)
 }	

@@ -87,10 +87,6 @@ paths:
         in: query
         name: dir
         type: string
-      - description: sets up a sql filter in query
-        in: query
-        name: sqlfilter
-        type: string
       - description: activate a lightest response (name only)
         in: query
         name: shallow
@@ -140,10 +136,6 @@ paths:
         in: query
         name: dir
         type: string
-      - description: sets up a sql filter in query
-        in: query
-        name: sqlfilter
-        type: string
       - description: activate a lightest response (name only)
         in: query
         name: shallow
@@ -192,10 +184,6 @@ paths:
       - description: sets up a sql direction in query (ex.ASC)
         in: query
         name: dir
-        type: string
-      - description: sets up a sql filter in query
-        in: query
-        name: sqlfilter
         type: string
       - description: activate a lightest response (name only)
         in: query
@@ -251,10 +239,6 @@ paths:
       - description: sets up a sql direction in query (ex.ASC)
         in: query
         name: dir
-        type: string
-      - description: sets up a sql filter in query
-        in: query
-        name: sqlfilter
         type: string
       - description: activate a lightest response (name only)
         in: query
@@ -317,10 +301,6 @@ paths:
         in: query
         name: dir
         type: string
-      - description: sets up a sql filter in query
-        in: query
-        name: sqlfilter
-        type: string
       - description: activate a lightest response (name only)
         in: query
         name: shallow
@@ -374,10 +354,6 @@ paths:
       - description: sets up a sql direction in query (ex.ASC)
         in: query
         name: dir
-        type: string
-      - description: sets up a sql filter in query
-        in: query
-        name: sqlfilter
         type: string
       - description: activate a lightest response (name only)
         in: query
@@ -440,10 +416,6 @@ paths:
         in: query
         name: dir
         type: string
-      - description: sets up a sql filter in query
-        in: query
-        name: sqlfilter
-        type: string
       - description: activate a lightest response (name only)
         in: query
         name: shallow
@@ -504,10 +476,6 @@ paths:
       - description: sets up a sql direction in query (ex.ASC)
         in: query
         name: dir
-        type: string
-      - description: sets up a sql filter in query
-        in: query
-        name: sqlfilter
         type: string
       - description: activate a lightest response (name only)
         in: query

@@ -13,7 +13,6 @@ const RootOrderParam = "orderby"
 const RootDirParam = "dir"
 const RootRawView = "rawview"
 const RootShallow = "shallow"
-const RootSQLFilterParam = "sqlfilter" 
 const RootDestTableIDParam = "dest_table_id" 
 
 var RootParamsDesc = map[string]string{
@@ -22,11 +21,10 @@ var RootParamsDesc = map[string]string{
 	RootShallow : "activate a lightest response (name only)",
 	RootOrderParam : "set 'enable' sets up a sql order in query",
 	RootDirParam : "sets up a sql direction in query (ex.ASC)",
-	RootSQLFilterParam : "sets up a sql filter in query",
 	RootRawView : "set 'enable' to activate a response without the main response format (only available if super admin)",
 }
 var HiddenParams = []string{RootDestTableIDParam}
-var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootSQLFilterParam, RootShallow, RootRawView}
+var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootShallow, RootRawView}
 
 const SpecialIDParam = "id" 
 

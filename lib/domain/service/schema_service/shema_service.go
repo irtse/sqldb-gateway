@@ -34,6 +34,6 @@ func (s *SchemaService) WriteRowAutomation(record tool.Record, tableName string)
 func (s *SchemaService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
-func (s *SchemaService) ConfigureFilter(tableName string, params tool.Params) (string, string) {
-	return s.Domain.ViewDefinition(tableName, params)
+func (s *SchemaService) ConfigureFilter(tableName string) (string, string) {
+	return s.Domain.ViewDefinition(tableName)
 }	

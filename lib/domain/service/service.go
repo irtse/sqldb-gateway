@@ -4,6 +4,7 @@ import (
 	"fmt"
 	tool "sqldb-ws/lib" 
 	"sqldb-ws/lib/entities" 
+	conn "sqldb-ws/lib/infrastructure/connector" 
 	task "sqldb-ws/lib/domain/service/task_service" 
 	user "sqldb-ws/lib/domain/service/user_service"
 	schema "sqldb-ws/lib/domain/service/schema_service" 
@@ -52,12 +53,12 @@ func (s *CustomService) PostTreatment(results tool.Results, tableName string, de
 	return s.Domain.PostTreat( results, tableName, false) // call main post treatment
 }
 // default have a right to access to whatever is in dbuser_entry database... (sets at creation)
-func (s *CustomService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
-	params[tool.RootSQLFilterParam] = "id IN (SELECT " + fmt.Sprintf("%v",  entities.RootID("dest_table")) + " FROM " + entities.DBUserEntry.Name 
-	params[tool.RootSQLFilterParam] += " WHERE " + fmt.Sprintf("%v", entities.RootID(entities.DBSchema.Name))  + " IN ("
-	params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBSchema.Name + " WHERE name=" + tableName + ") "
-	params[tool.RootSQLFilterParam] += "AND " + fmt.Sprintf("%v",  entities.RootID(entities.DBUser.Name)) + " IN (SELECT id FROM " + entities.DBUser.Name 
-	params[tool.RootSQLFilterParam] += " WHERE login='" + s.Domain.GetUser() + "'))"
-	return s.Domain.ViewDefinition(tableName, params)
+func (s *CustomService) ConfigureFilter(tableName string) (string, string) {
+	restr := "id IN (SELECT " + fmt.Sprintf("%v",  entities.RootID("dest_table")) + " FROM " + entities.DBUserEntry.Name 
+	restr += " WHERE " + fmt.Sprintf("%v", entities.RootID(entities.DBSchema.Name))  + " IN ("
+	restr += "SELECT id FROM " + entities.DBSchema.Name + " WHERE name=" + tableName + ") "
+	restr += "AND " + fmt.Sprintf("%v",  entities.RootID(entities.DBUser.Name)) + " IN (SELECT id FROM " + entities.DBUser.Name 
+	restr += " WHERE login=" + conn.Quote(s.Domain.GetUser()) + "))"
+	return s.Domain.ViewDefinition(tableName, restr)
 }	
 // to set up ConfigureFilter

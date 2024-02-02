@@ -39,7 +39,7 @@ func (d *MainService) WriteRow(tableName string, record tool.Record) {
 	},tool.CREATE, "CreateOrUpdate")
 }
 // define filter whatever what happen on sql...
-func (d *MainService) ViewDefinition(tableName string, params tool.Params) (string, string) {
+func (d *MainService) ViewDefinition(tableName string, innerRestriction... string) (string, string) {
 	SQLview := ""; SQLrestriction := ""; auth := true
 	if d.IsRawView() && d.SuperAdmin { 
 		return SQLrestriction, SQLview // admin can see all on admin view
@@ -48,9 +48,11 @@ func (d *MainService) ViewDefinition(tableName string, params tool.Params) (stri
 		if tableName == exception.Name { auth = false; break }
 	}
 	if auth { SQLrestriction, SQLview = d.byFields(tableName) }
-	if filter, ok := params[tool.RootSQLFilterParam]; ok {
-		if len(SQLrestriction) > 0 { SQLrestriction += " AND " + filter 
-	    } else { SQLrestriction = filter  }
+	if len(innerRestriction) > 0 {
+		for _, restr := range innerRestriction {
+			if len(SQLrestriction) > 0 { SQLrestriction += " AND " + restr 
+			} else { SQLrestriction = restr  }
+		}
 	}
 	return SQLrestriction, SQLview
 }
@@ -100,20 +102,15 @@ type Filter struct {
 	Dir					string 		 			 	 `json:"sql_dir"`
 	Order 	 			string 		 			 	 `json:"sql_order"`
 	View				string 		 			 	 `json:"sql_view"`
-	Restriction 		string 		 			 	 `json:"sql_restriction"`
 	ViewID 				int64 		 			 	 `json:"dbview_id"`
 }
 
 func (d *MainService) GeneratePathFilter(path string, record tool.Record, params tool.Params) (string, tool.Params) { // check schema auth access
 	var filter Filter
 	b, _:= json.Marshal(record)
-	json.Unmarshal(b, &filter)
+	json.Unmarshal(b, &filter) // GET ITS OWN FILTER
 	if filter.Extra != "" { 
 		path += "/" + filter.Extra
-	}
-	if filter.Restriction != "" { 
-		if params != nil { params[tool.RootSQLFilterParam] = filter.Restriction }
-		path += "&" + tool.RootSQLFilterParam + "=" + strings.Replace(filter.Restriction, " ", "+", -1)
 	}
 	if filter.View != "" { 
 		if params != nil { params[tool.RootColumnsParam] = filter.View }

@@ -18,12 +18,12 @@ type TableColumnInfo struct {
 	InfraService 
 }
 
-func (t *TableColumnInfo) Template() (interface{}, error) { return t.Get() }
+func (t *TableColumnInfo) Template(restriction... string) (interface{}, error) { return t.Get(restriction...) }
 
-func (t *TableColumnInfo) Get() (tool.Results, error) {
+func (t *TableColumnInfo) Get(restriction... string) (tool.Results, error) {
 	if t.PermService != nil {
-		t.db = ToFilter(t.Name, t.Params, t.db, t.PermService.ColsPartialResults)
-	} else { t.db = ToFilter(t.Name, t.Params, t.db, "") }
+		t.db = ToFilter(t.Name, t.Params, t.db, t.PermService.ColsPartialResults, restriction...)
+	} else { t.db = ToFilter(t.Name, t.Params, t.db, "", restriction...) }
 	d, err := t.db.SelectResults(t.Name)
 	t.Results = d
 	if err != nil { return t.DBError(nil, err) }
@@ -155,10 +155,9 @@ func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
 		query := "ALTER TABLE " + t.Name + " ALTER " + tcce.Name  + " SET DEFAULT " + conn.FormatForSQL(tcce.Type, tcce.Default) + ";"
         err := t.db.Query(query)
 		if err != nil { return err } // then iterate on field to update value if null
-		params := tool.Params{ tool.RootSQLFilterParam : tcce.Name + " IS NULL " }
 		record := tool.Record{ tcce.Name : tcce.Default }
-		t.Row.SpecializedFill(params, record, tool.UPDATE)
-		t.Row.CreateOrUpdate()
+		t.Row.SpecializedFill(tool.Params{}, record, tool.UPDATE)
+		t.Row.CreateOrUpdate(tcce.Name + " IS NULL ")
 	}
 	if !tcce.Null {
 		query := "ALTER TABLE " + t.Name + " ALTER COLUMN " + tcce.Name + " SET NOT NULL;"
@@ -170,14 +169,14 @@ func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
 	}
 	if t.db.Driver == conn.PostgresDriver { // PG COMMENT
 		if strings.TrimSpace(tcce.Comment) != "" {
-			query := "COMMENT ON COLUMN " + t.Name + "." + tcce.Name + " IS '" + tcce.Comment + "'"
+			query := "COMMENT ON COLUMN " + t.Name + "." + tcce.Name + " IS " + conn.Quote(tcce.Comment) + ""
 			t.db.Query(query)
 		}
 	}
 	return nil
 }
 
-func (t *TableColumnInfo) CreateOrUpdate() (tool.Results, error) {
+func (t *TableColumnInfo) CreateOrUpdate(restriction... string) (tool.Results, error) {
 	if col, ok:= t.Record[entities.NAMEATTR]; ok {
 		if _, ok := t.Verify(col.(string)); ok { return t.Update() 
 		} else { return t.Create() }
@@ -185,7 +184,7 @@ func (t *TableColumnInfo) CreateOrUpdate() (tool.Results, error) {
 	return nil, errors.New("nothing to do...")
 }
 
-func (t *TableColumnInfo) Delete() (tool.Results, error) {
+func (t *TableColumnInfo) Delete(restriction... string) (tool.Results, error) {
 	if strings.Contains(t.Name, "db") { log.Error().Msg("can't delete protected root db columns.") }
 	for _, col := range strings.Split(t.Params[tool.RootColumnsParam], ",") {
 		query := "ALTER TABLE " + t.Name + " DROP " + col
@@ -216,7 +215,7 @@ func (t *TableColumnInfo) Remove() (tool.Results, error) {
 	return nil, errors.New("not implemented...")
 }
 
-func (t *TableColumnInfo) Import(filename string) (tool.Results, error) {
+func (t *TableColumnInfo) Import(filename string, restriction... string) (tool.Results, error) {
 	var jsonSource []TableColumnInfo
 	byteValue, _ := os.ReadFile(filename)
 	err := json.Unmarshal([]byte(byteValue), &jsonSource)
@@ -224,27 +223,7 @@ func (t *TableColumnInfo) Import(filename string) (tool.Results, error) {
 	for _, col := range jsonSource {
 		col.db = t.db
 		if t.Method == tool.DELETE { col.Delete() 
-		} else { col.CreateOrUpdate() }
+		} else { col.CreateOrUpdate(restriction...) }
 	}
 	return t.Results, nil
-}
-
-func (t *TableColumnInfo) Link() (tool.Results, error) {
-	var err error
-	if _, ok := t.Params[tool.RootToTableParam]; !ok { return nil, errors.New("no destination table") }
-	otherName := t.Params[tool.RootToTableParam]
-	cols := strings.Split(t.Params[tool.RootColumnsParam], ",")
-	res := tool.Results{}
-	for _, col := range cols {
-		rename := otherName + "_id"
-		t.Record = tool.Record{ "name" : col, "new_name": rename, "type" : "integer", "foreign_table": otherName, "nullable" : false }
-		res, err = t.CreateOrUpdate()
-		if err == nil { t.Results = append(t.Results, res...) }
-	}
-	return t.Results, nil
-}
-func (t *TableColumnInfo) UnLink() (tool.Results, error) {
-	if _, ok := t.Params[tool.RootToTableParam]; !ok { return nil, errors.New("no destination table") }
-	t.Params[tool.RootColumnsParam] = t.Params[tool.RootToTableParam] + "_id"
-	return t.Delete()
 }

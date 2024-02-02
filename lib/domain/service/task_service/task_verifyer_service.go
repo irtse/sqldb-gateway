@@ -4,6 +4,7 @@ import (
 	"fmt"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
+	conn "sqldb-ws/lib/infrastructure/connector"
 )
 
 type TaskVerifyerService struct { tool.AbstractSpecializedService }
@@ -47,23 +48,25 @@ func (s *TaskVerifyerService) UpdateRowAutomation(results tool.Results, record t
 			paramsNew := tool.Params{ tool.RootTableParam : entities.DBTaskVerifyer.Name, 
 				                      tool.RootRowsParam: tool.ReservedParam, }
 			paramsNew[entities.RootID(entities.DBTask.Name)] = fmt.Sprintf("%v", id)
-			paramsNew[tool.RootSQLFilterParam] = "state != 'completed'"
+			sqlFilter := "state != 'completed'"
 			unfinished, err := s.Domain.SuperCall( 
 						paramsNew, 
 						tool.Record{},
 						tool.SELECT,
 						"Get",
+						sqlFilter,
 					)
 			if len(unfinished) > 0 || err != nil  { continue }
 			paramsNew = tool.Params{ tool.RootTableParam : entities.DBTaskAssignee.Name, 
 				                      tool.RootRowsParam: tool.ReservedParam, }
 			paramsNew[entities.RootID(entities.DBTask.Name)] = fmt.Sprintf("%v", id)
-			paramsNew[tool.RootSQLFilterParam] = "state != 'completed'"
+			sqlFilter = "state != 'completed'"
 			unfinishedAssign, err := s.Domain.SuperCall( 
 						paramsNew, 
 						tool.Record{},
 						tool.SELECT,
 						"Get",
+						sqlFilter,
 					)
 			if len(unfinishedAssign) > 0  || err != nil { continue }
 			// TODO when all is verified
@@ -84,7 +87,7 @@ func (s *TaskVerifyerService) WriteRowAutomation(record tool.Record, tableName s
 func (s *TaskVerifyerService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	return s.Domain.PostTreat( results, tableName, false) 
 }
-func (s *TaskVerifyerService) ConfigureFilter(tableName string, params  tool.Params) (string, string) {
-	params[tool.RootSQLFilterParam] = entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login='" + s.Domain.GetUser() + "')" 
-	return s.Domain.ViewDefinition(tableName, params)
+func (s *TaskVerifyerService) ConfigureFilter(tableName string) (string, string) {
+	restr := entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")" 
+	return s.Domain.ViewDefinition(tableName, restr)
 }	

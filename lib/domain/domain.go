@@ -174,12 +174,11 @@ func (d *MainService) PostTreat(results tool.Results, tableName string, shallow 
 	                            additonnalRestriction ...string) tool.Results {
 	cols := map[string]entities.SchemaColumnEntity{}
 	sqlFilter := entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM "
-	sqlFilter += entities.DBSchema.Name + " WHERE name='" + tableName + "')"
+	sqlFilter += entities.DBSchema.Name + " WHERE name=" + conn.Quote(tableName) + ")"
 	// retrive all fields from schema...
 	params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
-		                   tool.RootRowsParam: tool.ReservedParam, 
-						   tool.RootSQLFilterParam: sqlFilter }
-	schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
+		                   tool.RootRowsParam: tool.ReservedParam, }
+	schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 	if err != nil || len(schemas) == 0 { return tool.Results{} }
 	var view View
 	if !d.IsShallowed() && !d.IsRawView() {
@@ -193,7 +192,6 @@ func (d *MainService) PostTreat(results tool.Results, tableName string, shallow 
 			json.Unmarshal(b, &shallowField)
 			if scheme.Link != "" {
 				shallowField.LinkPath = "/" + scheme.Link + "?rows=all"
-				if scheme.LinkRestriction != "" { shallowField.LinkPath += "&" + tool.RootSQLFilterParam + "=" + scheme.LinkRestriction  }
 				if scheme.LinkView != "" { shallowField.LinkPath += "&" + tool.RootColumnsParam + "=" + scheme.LinkView  }
 				if scheme.LinkOrder != "" { shallowField.LinkPath += "&" + tool.RootOrderParam + "=" + scheme.LinkOrder  }
 			}

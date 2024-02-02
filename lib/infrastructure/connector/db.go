@@ -221,7 +221,7 @@ func FormatForSQL(datatype string, value interface{}) string {
 	for _, typ := range SpecialTypes {
 		if strings.Contains(datatype, typ) { 
 			if value == "CURRENT_TIMESTAMP" { return fmt.Sprint(value) 
-			} else { return "'" + fmt.Sprint(value) + "'" }
+			} else { return Quote(fmt.Sprint(value))}
 		}
 	}
 	return fmt.Sprint(strval)

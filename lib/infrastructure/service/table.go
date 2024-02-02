@@ -52,12 +52,12 @@ func (t *TableInfo) TableColumn() *TableColumnInfo {
 }
 
 func (t *TableInfo) querySchemaCmd(name string, tablename string) string {
-	if name == conn.MySQLDriver { return "SELECT COLUMN_NAME as name, column_default as default_value, IS_NULLABLE as null, CONCAT(DATA_TYPE, COALESCE(CONCAT('(' , CHARACTER_MAXIMUM_LENGTH, ')'), '')) as type FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + tablename + "';" } 
-	if name == conn.PostgresDriver { return "SELECT column_name :: varchar as name, column_default as default_value, IS_NULLABLE as null, REPLACE(REPLACE(data_type,'character varying','varchar'),'character','char') || COALESCE('(' || character_maximum_length || ')', '') as type, col_description('public." + tablename + "'::regclass, ordinal_position) as comment  from INFORMATION_SCHEMA.COLUMNS where table_name ='" + tablename + "';" }
+	if name == conn.MySQLDriver { return "SELECT COLUMN_NAME as name, column_default as default_value, IS_NULLABLE as null, CONCAT(DATA_TYPE, COALESCE(CONCAT('(' , CHARACTER_MAXIMUM_LENGTH, ')'), '')) as type FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = " + conn.Quote(tablename) + ";" } 
+	if name == conn.PostgresDriver { return "SELECT column_name :: varchar as name, column_default as default_value, IS_NULLABLE as null, REPLACE(REPLACE(data_type,'character varying','varchar'),'character','char') || COALESCE('(' || character_maximum_length || ')', '') as type, col_description('public." + tablename + "'::regclass, ordinal_position) as comment  from INFORMATION_SCHEMA.COLUMNS where table_name =" + conn.Quote(tablename) + ";" }
     return ""
 }
 
-func (t *TableInfo) Template() (interface{}, error) {
+func (t *TableInfo) Template(restriction... string) (interface{}, error) {
 	res, err := t.schema(t.Name)
 	if err != nil { return nil, err  }
 	data := struct {
@@ -79,7 +79,7 @@ func (t *TableInfo) EmptyRecord() (tool.Record, error) {
 	return record, nil
 }
 // GetAssociativeArray : Provide table data as an associative arra
-func (t *TableInfo) Get() (tool.Results, error) {
+func (t *TableInfo) Get(restriction... string) (tool.Results, error) {
 	schema, err := t.schema(t.Name)
 	if err != nil { return t.DBError(nil, err) }
 	res := tool.Results{}
@@ -133,18 +133,6 @@ func (t *TableInfo) get() (*TableInfo, error) {
 		t.Cols = append(t.Cols, tableCol.Name)
 	}
 	return t, nil
-}
-
-type TableColumnEntity struct {
-	Name string         `json:"name" validate:"required"`
-	Type string         `json:"type"`
-	Index string        `json:"index"`
-	Default interface{} `json:"default_value"`
-	ForeignTable string `json:"foreign_table"`
-	Constraint string   `json:"constraint"`
-	Null bool           `json:"nullable"`
-	Comment string      `json:"comment"`
-	NewName string      `json:"new_name"`
 }
 
 func (t *TableInfo) Verify(name string) (string, bool) {
@@ -222,12 +210,12 @@ func (t *TableInfo) Update() (tool.Results, error) {
 	return t.Results, err
 }
 
-func (t *TableInfo) CreateOrUpdate() (tool.Results, error) { 
+func (t *TableInfo) CreateOrUpdate(restriction... string) (tool.Results, error) { 
 	if _, ok := t.Verify(t.Name); !ok && t.Name != tool.ReservedParam { return t.Create() }
 	return t.Update()
 }
 
-func (t *TableInfo) Delete() (tool.Results, error) {
+func (t *TableInfo) Delete(restriction... string) (tool.Results, error) {
 	var err error
 	if entities.IsRootDB(t.Name) || t.Name == tool.ReservedParam { log.Error().Msg("can't delete protected root db.") }
 	if err = t.db.Query("DROP TABLE " + t.Name); err != nil { return t.DBError(nil, err) }
@@ -248,7 +236,7 @@ func (t *TableInfo) Delete() (tool.Results, error) {
 	return t.Results, err
 }
 
-func (t *TableInfo) Import(filename string) (tool.Results, error) {
+func (t *TableInfo) Import(filename string, restriction... string) (tool.Results, error) {
 	var jsonSource []TableInfo
 	byteValue, _ := os.ReadFile(filename)
 	err := json.Unmarshal([]byte(byteValue), &jsonSource) 
@@ -282,68 +270,6 @@ func buildLinks(schema []TableInfo) []Link {
 	}
 	return links
 }
-
-func (t *TableInfo) Link() (tool.Results, error) {
-	//will generate a many to many table
-	if _, ok := t.Params[tool.RootToTableParam]; !ok || t.Name == tool.ReservedParam { return nil, errors.New("no destination table") }
-	otherName := t.Params[tool.RootToTableParam]
-	ok := true; ok2 := true
-	if entities.IsRootDB(otherName){ 
-		_, ok = t.Verify(t.Name + "_" + otherName[2:])
-	} else { _, ok = t.Verify(t.Name + "_" + otherName) }
-	if entities.IsRootDB(t.Name) { _, ok2 = t.Verify(otherName + "_" + t.Name[2:])
-	} else { _, ok2 = t.Verify(otherName + "_" + t.Name) }
-	if !ok && !ok2 {
-		v := Validator[entities.ShallowTableEntity]()
-		v.data = entities.ShallowTableEntity{}
-		te, err := v.ValidateStruct(t.Record)
-		if err != nil { return nil, errors.New("Not a proper struct to create a table - expect <TableEntity> Scheme " + err.Error()) }
-	    name := ""
-		rawName := t.Name
-		if strings.Contains(otherName[:2], "db") { name = rawName + "_" + otherName[2:]
-	    } else { name = rawName + "_" + otherName } 
-		if te.Name != "" { name = te.Name }
-		entity := entities.TableEntity{
-			Name : name,
-			Columns : []entities.TableColumnEntity{
-				entities.TableColumnEntity{
-					Name : rawName + "_id", Type : "integer", Null : false, ForeignTable : otherName },
-				entities.TableColumnEntity{
-					Name : otherName + "_id", Type : "integer", Null : false, ForeignTable : rawName },
-			},
-		}
-		b, _ := json.Marshal(entity)
-		json.Unmarshal(b, &t.Record)
-		return t.Create()
-	}
-	return nil, errors.New("link table already exists") 
-}
-
-func (t *TableInfo) UnLink() (tool.Results, error) {
-	//will delete a many to many table
-	if _, ok := t.Params[tool.RootToTableParam]; !ok || t.Name == tool.ReservedParam { return nil, errors.New("no destination table") }
-	rootName := t.Name 
-	otherName := t.Params[tool.RootToTableParam]
-	if strings.Contains(otherName[:2], "db") { otherName=otherName[2:] }
-	v := Validator[entities.ShallowTableEntity]()
-	v.data = entities.ShallowTableEntity{}
-	te, err := v.ValidateStruct(t.Record)
-	if err != nil { return nil, errors.New("Not a proper struct to delete a table - expect <TableEntity> Scheme " + err.Error()) }
-	name := ""
-	if strings.Contains(otherName[:2], "db") {  name = rootName + "_" + otherName[2:]
-	} else { name = rootName + "_" + otherName }
-	if te.Name != "" { name = te.Name }
-	if _, ok := t.Verify(name); !ok {
-		if strings.Contains(rootName[:2], "db") {
-			if _, ok2 := t.Verify(otherName + "_" + rootName[2:]); ok2 { name = otherName + "_" + rootName[2:] }
-		} else {
-			if _, ok2 := t.Verify(otherName + "_" + rootName); ok2 { name = otherName + "_" + rootName }
-		}
-	}
-	t.Name=name
-	return t.Delete()
-}
-
 
 /*func (db *Db) ListSequences() (Rows, error) {
 	return db.QueryAssociativeArray("SELECT sequence_name :: varchar FROM information_schema.sequences WHERE sequence_schema = 'public' ORDER BY sequence_name;")

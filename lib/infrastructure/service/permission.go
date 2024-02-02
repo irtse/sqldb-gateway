@@ -61,7 +61,7 @@ func (p *PermissionInfo) generatePerm(name string, record tool.Record, del []str
 	} else { p.Perms[name]= record }
 }
 
-func (p *PermissionInfo) Template() (interface{}, error) { return p.Get() }
+func (p *PermissionInfo) Template(restriction... string) (interface{}, error) { return p.Get(restriction...) }
 // todo view (columns sort of)
 func (p *PermissionInfo) Verify(name string) (string, bool) {
 	if p.SuperAdmin { return name, true }
@@ -106,21 +106,11 @@ func (p *PermissionInfo) Verify(name string) (string, bool) {
 	return name, authorized
 }
 
-func (p *PermissionInfo) Get() (tool.Results, error) { 
-	p.Row.Params[tool.RootSQLFilterParam] = "id IN (SELECT " + entities.DBPermission.Name + "_id FROM " 
-	p.Row.Params[tool.RootSQLFilterParam] += entities.DBRolePermission.Name + " WHERE " + entities.DBRole.Name + "_id IN ("
-	p.Row.Params[tool.RootSQLFilterParam] += "SELECT " + entities.DBRole.Name + "_id FROM " 
-	p.Row.Params[tool.RootSQLFilterParam] += entities.DBRoleAttribution.Name + " WHERE " + entities.DBUser.Name + "_id IN ("
-	p.Row.Params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE " 
-	p.Row.Params[tool.RootSQLFilterParam] += entities.DBUser.Name + ".login = '" + p.User + "') OR " + entities.DBEntity.Name + "_id IN ("
-	p.Row.Params[tool.RootSQLFilterParam] += "SELECT " + entities.DBEntity.Name + "_id FROM "
-	p.Row.Params[tool.RootSQLFilterParam] += entities.DBEntityUser.Name + " WHERE " + entities.DBUser.Name +"_id IN ("
-	p.Row.Params[tool.RootSQLFilterParam] += "SELECT id FROM " + entities.DBUser.Name + " WHERE "
-	p.Row.Params[tool.RootSQLFilterParam] += entities.DBUser.Name + ".login = '" + p.User  + "'))))"
-	return p.Row.Get() 
+func (p *PermissionInfo) Get(restriction... string) (tool.Results, error) { 
+	return p.Row.Get(restriction...) 
 }
 
-func (p *PermissionInfo) CreateOrUpdate() (tool.Results, error) {
+func (p *PermissionInfo) CreateOrUpdate(restriction... string) (tool.Results, error) {
 	if p.Method == tool.UPDATE { return p.Update() 
     } else { return p.Create() }
 }
@@ -170,12 +160,12 @@ func (p *PermissionInfo) Update() (tool.Results, error) {
 	return nil, errors.New("no permissions to update")
 }
 
-func (p *PermissionInfo) Delete() (tool.Results, error) {
+func (p *PermissionInfo) Delete(restriction... string) (tool.Results, error) {
 	v := Validator[Info]()
 	v.data = Info{}
 	info, err := v.ValidateStruct(p.Record)
 	if err != nil { return nil, errors.New("Not a proper struct to delete a column - expect <Info> Scheme " + err.Error()) }
 	params := tool.Params{ entities.TABLENAMEATTR :  info.Name, }
 	p.Row.SpecializedFill(params, tool.Record{}, tool.DELETE)
-	return p.Row.Delete()
+	return p.Row.Delete(restriction...)
 }

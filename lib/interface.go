@@ -4,15 +4,15 @@ package lib
 // Defined infrastructure service functions
 type InfraServiceItf interface {
 	SetAuth(bool)
-	Verify(string)              (string, bool)
-	Save() 			        	(error)
-	Get()                   	(Results, error)
-	CreateOrUpdate()        	(Results, error)
-	Delete()                	(Results, error)
-	Link()        				(Results, error)
-	UnLink()                	(Results, error)
-	Import(string)          	(Results, error)
-	Template()               	(interface{}, error) 
+	Verify(string)              					(string, bool)
+	Save(restriction... string) 			        (error)
+	Get(restriction... string)  					(Results, error)
+	CreateOrUpdate(restriction... string)        	(Results, error)
+	Delete(restriction... string)                	(Results, error)
+	Link(restriction... string)        				(Results, error)
+	UnLink(restriction... string)                	(Results, error)
+	Import(string, ...string)          	(Results, error)
+	Template(restriction... string)               	(interface{}, error) 
 	GenerateFromTemplate(string) error
 }
 // Defined domain service functions
@@ -29,7 +29,7 @@ type DomainITF interface {
 	GetPermission() InfraServiceItf
 	DeleteRow(tableName string, results Results)
 	WriteRow(tableName string, record Record)
-	ViewDefinition(tableName string, params Params) (string, string)
+	ViewDefinition(tableName string, innerRestriction... string) (string, string)
 	Schema(record Record) (Results, error)
 	PostTreat(results Results, tableName string, shallow bool,  additonnalRestriction ...string) Results
 } 
@@ -49,7 +49,7 @@ type SpecializedService interface {
 	DeleteRowAutomation(results Results, tableName string)
 	UpdateRowAutomation(results Results, record Record) 
 	PostTreatment(results Results, tableName string, dest_id... string) Results
-	ConfigureFilter(tableName string, params Params) (string, string)
+	ConfigureFilter(tableName string) (string, string)
 }
 
 type AbstractSpecializedService struct { Domain DomainITF }

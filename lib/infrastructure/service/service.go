@@ -46,8 +46,8 @@ func (service *InfraService) Fill(name string, admin bool, user string, params t
 	service.SuperAdmin = admin
 }
 // Common Service action of saving (TO USE)
-func (service *InfraService) Save() error {
-	res, err := service.Get()
+func (service *InfraService) Save(restriction... string) error {
+	res, err := service.Get(restriction...)
 	if err != nil { return err  }
 	file, err := json.MarshalIndent(res, "", " ")
 	if err != nil { return err }
@@ -99,7 +99,6 @@ func Permission(database *conn.Db, admin bool, user string, params tool.Params, 
 	perms.Fill(entities.DBPermission.Name, admin, user, params, record, method)
     perms.Row = &TableRowInfo{ } 
 	perms.Row.Table = EmptyTable(database, entities.DBPermission.Name)
-	perms.Row.SpecializedService = nil
 	perms.Row.db = database
 	perms.Row.Fill(entities.DBPermission.Name, admin, user, tool.Params{}, tool.Record{}, tool.SELECT,)
 	perms.Row.PermService=nil

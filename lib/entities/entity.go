@@ -71,7 +71,6 @@ type SchemaColumnEntity struct { // struct based on dbschema_columns in root
 	LinkDir					string 		 			 	 `json:"link_sql_dir"`
 	LinkOrder 	 			string 		 			 	 `json:"link_sql_order"`
 	LinkView				string 		 			 	 `json:"link_sql_view"`
-	LinkRestriction 		string 		 			 	 `json:"link_sql_restriction"`
 }
 func (t SchemaColumnEntity) GetName() string { return t.Name }
 
