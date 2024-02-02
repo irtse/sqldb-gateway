@@ -221,7 +221,7 @@ var DBAction = TableEntity{
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true, Default: "no description...", },
 		TableColumnEntity{ Name: "parameters", Type: "varchar(255)",  Null : true },
 		TableColumnEntity{ Name: "method", Type: "enum('POST', 'GET', 'PUT', 'DELETE')",  Null : true, Default : "GET" },
-		TableColumnEntity{ Name: RootID(entities.DBSchema.Name), Type: "integer",  ForeignTable : DBSchema.Name, Null : false, },
+		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer",  ForeignTable : DBSchema.Name, Null : false, },
 		TableColumnEntity{ Name: "sql_dir", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "sql_order", Type: "varchar(255)", Null : true, },
 		TableColumnEntity{ Name: "sql_view", Type: "varchar(255)", Null : true, },

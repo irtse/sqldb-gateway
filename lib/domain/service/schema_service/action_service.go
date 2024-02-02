@@ -31,7 +31,7 @@ func (s *ActionService) PostTreatment(results tool.Results, tablename string, de
 	for _, record := range results{
 		names := []string{}
 		schemas, err := s.Domain.Schema(tool.Record{
-			entities.RootID(entities.DBSchema.Name) : entities.RootID(entities.DBSchema.Name)]})
+			entities.RootID(entities.DBSchema.Name) : record[entities.RootID(entities.DBSchema.Name)]})
 		if err != nil || len(schemas) == 0 { continue }
 		link_path := "/" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
 		names = append(names, schemas[0][entities.NAMEATTR].(string))
