@@ -76,6 +76,7 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 		}
 		d.Db = conn.Open() // open base
 		defer d.Db.Conn.Close() // close when finished
+		// load the highest entity avaiable Table level.
 		table := infrastructure.Table(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename), params, record, method)
 		delete(params, tool.RootTableParam)
 		service=table
@@ -156,7 +157,6 @@ type View struct {
 	Name  		 string 					`json:"name"`
 	SchemaName   string 					`json:"schema_name"`
 	Description  string 					`json:"description"`
-	Method		 string 					`json:"method"`
 	Path		 string 					`json:"link_path"`
 	Schema		 tool.Record 				`json:"schema"`
 	Items		 []tool.Record 				`json:"items"`
@@ -201,7 +201,6 @@ func (d *MainService) PostTreat(results tool.Results, tableName string, shallow 
 		}
 		view = View{ Name : tableName, Description : tableName + " datas", 
 	                  Path : "", 
-					  Method : "GET",
 					  Schema : schemes,
 					  SchemaName: tableName, 
 					  Actions : []map[string]interface{}{},

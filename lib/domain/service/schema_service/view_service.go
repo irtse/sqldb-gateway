@@ -75,7 +75,6 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 			for k, v := range treated[0] { 
 				if _, ok := rec[k]; !ok { 
 					if k == "items" && len(path) > 0 && path[:1] == "/" && record["is_list"].(bool) {
-						fmt.Printf("LEN OF ITEMS %v\n", len(v.([]interface{})))
 						for _, item := range v.([]interface{}) {
 							nP := "/" + tool.MAIN_PREFIX
 							nP += path 
@@ -84,6 +83,7 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 								nP += "&" + tool.RootDestTableIDParam + "=" + fmt.Sprintf("%v", valID)
 							}
 							item.(map[string]interface{})["link_path"] = nP
+							item.(map[string]interface{})["data_path"] = ""
 						}
 						rec[k]=v 
 					} else if k == "schema" { 
