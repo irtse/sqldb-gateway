@@ -31,6 +31,7 @@ func (t *TableColumnInfo) Get(restriction... string) (tool.Results, error) {
 }
 
 func (t *TableColumnInfo) get(name string) (tool.Results, error) {
+	t.db = ClearFilter(t.db)
 	empty := EmptyTable(t.db, t.Name)
 	if empty == nil { return nil, errors.New("no table available...") }
 	scheme, err := empty.Get()
@@ -59,15 +60,25 @@ func (t *TableColumnInfo) Verify(name string) (string, bool) {
 		err = json.Unmarshal(b, &info)
 		if err != nil { return typ, typ != "" }
 		col := info.AssColumns[name]
-		typ = col.Type
+		if col.Null {
+			typ = col.Type + ":nullable"
+		} else { typ = col.Type + ":required" }
 	}
 	return typ, typ != "" 
 }
 func (t *TableColumnInfo) Create() (tool.Results, error) {
+	t.db = ClearFilter(t.db)
 	v := Validator[entities.TableColumnEntity]()
 	v.data = entities.TableColumnEntity{}
 	tcce, err := v.ValidateStruct(t.Record)
 	if err != nil { return nil, errors.New("Not a proper struct to create a column - expect <entities.TableColumnEntity> Scheme " + err.Error()) }
+	found := false
+	for _, verifiedType := range tool.DATATYPE {
+		if strings.Contains(strings.ToUpper(tcce.Type), verifiedType) {
+			found = true; break;
+		}
+	}
+	if ! found { return nil, errors.New("not allowed type") }
 	if strings.Contains(strings.ToLower(tcce.Type), "enum") && t.db.Driver == conn.PostgresDriver {
 		query := "CREATE TYPE " + t.Name + "_" + tcce.Name  + " AS " + tcce.Type
 		t.db.Query(query)
@@ -85,10 +96,12 @@ func (t *TableColumnInfo) Create() (tool.Results, error) {
 	err = t.update(tcce)
 	if err != nil { return t.DBError(nil, err) }
 	auth := true
-	for _, exception := range entities.PERMISSIONEXCEPTION {
-		if t.Name == exception.Name { auth = false; break }
+	if t.Method == tool.SELECT {
+		for _, exception := range entities.PERMISSIONEXCEPTION {
+			if t.Name == exception.Name { auth = false; break }
+		}
 	}
-	if len(t.Name) > 1 && t.PermService != nil && auth { // no permissions if in PERMISSIONEXCEPTION TODO
+	if len(t.Name) > 1 && t.PermService != nil && auth {
 		t.PermService.SpecializedFill(t.Params, 
 			                          tool.Record{ "name" : t.Name, 
 									               "results" : tool.Results{t.Record}, 
@@ -102,13 +115,20 @@ func (t *TableColumnInfo) Create() (tool.Results, error) {
 }
 
 func (t *TableColumnInfo) Update() (tool.Results, error) {
+	t.db = ClearFilter(t.db)
 	v := Validator[entities.TableColumnEntity]()
 	v.data = entities.TableColumnEntity{}
 	tcue, err := v.ValidateStruct(t.Record)
 	if err != nil { return nil, errors.New("Not a proper struct to update a column - expect <entities.TableColumnEntity> Scheme " + err.Error()) }
 	err = t.update(tcue)
 	if err != nil { return t.DBError(nil, err) }
-
+	found := false
+	for _, verifiedType := range tool.DATATYPE {
+		if strings.Contains(strings.ToUpper(tcue.Type), verifiedType) {
+			found = true; break;
+		}
+	}
+	if ! found { return nil, errors.New("not allowed type") }
 	if strings.TrimSpace(tcue.NewName) != "" {
 		if strings.Contains(t.Name, "db") { return nil, errors.New("can't rename protected root db columns.") }
 		query := "ALTER TABLE " + t.Name + " RENAME COLUMN " + tcue.Name + " TO " + tcue.NewName + ";"
@@ -116,8 +136,10 @@ func (t *TableColumnInfo) Update() (tool.Results, error) {
 		if err != nil { return t.DBError(nil, err) }
 	}
 	auth := true
-	for _, exception := range entities.PERMISSIONEXCEPTION {
-		if t.Name == exception.Name { auth = false; break }
+	if t.Method == tool.SELECT {
+		for _, exception := range entities.PERMISSIONEXCEPTION {
+			if t.Name == exception.Name { auth = false; break }
+		}
 	}
 	if len(t.Name) > 1 && t.PermService != nil && auth {
 		t.PermService.SpecializedFill(t.Params, 
@@ -151,13 +173,13 @@ func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
 		query = "ALTER TABLE " + t.Name + " ADD CONSTRAINT  fk_" + tcce.Name +  " FOREIGN KEY(" + tcce.Name  + ") REFERENCES " + tcce.ForeignTable + "(id);"
 		t.db.Query(query)
 	}
-	if tcce.Default != "" && conn.FormatForSQL(tcce.Type, tcce.Default) != "NULL" {
+	if tcce.Default != "" && conn.FormatForSQL(tcce.Type, tcce.Default) != "NULL" && !strings.Contains(strings.ToLower(tcce.Type), "bool") {
 		query := "ALTER TABLE " + t.Name + " ALTER " + tcce.Name  + " SET DEFAULT " + conn.FormatForSQL(tcce.Type, tcce.Default) + ";"
         err := t.db.Query(query)
 		if err != nil { return err } // then iterate on field to update value if null
 		record := tool.Record{ tcce.Name : tcce.Default }
 		t.Row.SpecializedFill(tool.Params{}, record, tool.UPDATE)
-		t.Row.CreateOrUpdate(tcce.Name + " IS NULL ")
+		t.Row.CreateOrUpdate(tcce.Name + " IS NULL AND " +  tcce.Name + "!=FALSE AND " +  tcce.Name + "!=TRUE")
 	}
 	if !tcce.Null {
 		query := "ALTER TABLE " + t.Name + " ALTER COLUMN " + tcce.Name + " SET NOT NULL;"
@@ -185,6 +207,7 @@ func (t *TableColumnInfo) CreateOrUpdate(restriction... string) (tool.Results, e
 }
 
 func (t *TableColumnInfo) Delete(restriction... string) (tool.Results, error) {
+	t.db = ClearFilter(t.db)
 	if strings.Contains(t.Name, "db") { log.Error().Msg("can't delete protected root db columns.") }
 	for _, col := range strings.Split(t.Params[tool.RootColumnsParam], ",") {
 		query := "ALTER TABLE " + t.Name + " DROP " + col
@@ -192,8 +215,10 @@ func (t *TableColumnInfo) Delete(restriction... string) (tool.Results, error) {
 		if err != nil { return t.DBError(nil, err) }
 		t.Results = append(t.Results, tool.Record{ entities.NAMEATTR : col })
 		auth:=true
-		for _, exception := range entities.PERMISSIONEXCEPTION {
-			if t.Name == exception.Name { auth = false; break }
+		if t.Method == tool.SELECT {
+			for _, exception := range entities.PERMISSIONEXCEPTION {
+				if t.Name == exception.Name { auth = false; break }
+			}
 		}
 		if auth && t.PermService != nil {
 			t.PermService.SpecializedFill(t.Params, 
@@ -216,6 +241,7 @@ func (t *TableColumnInfo) Remove() (tool.Results, error) {
 }
 
 func (t *TableColumnInfo) Import(filename string, restriction... string) (tool.Results, error) {
+	t.db = ClearFilter(t.db)
 	var jsonSource []TableColumnInfo
 	byteValue, _ := os.ReadFile(filename)
 	err := json.Unmarshal([]byte(byteValue), &jsonSource)

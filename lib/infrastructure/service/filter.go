@@ -15,26 +15,34 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db, permsCols strin
 	db = ClearFilter(db)
     for key, element := range params {
 		field, ok := fields[key]
-		if ok { 
+		if ok || key == "id" { 
+			// TODO if AND or OR define truncature
 			if strings.Contains(element, ",") { 
 				els := ""
 				for _, el := range strings.Split(element, ",") { 
 					els += conn.FormatForSQL(field.Type, SQLInjectionProtector(el)) + "," 
 				}
-				db.SQLRestriction += key + " IN (" + conn.RemoveLastChar(els) + ") AND " 
+				if len(db.SQLRestriction) > 0 { db.SQLRestriction +=  " AND " }
+				db.SQLRestriction += key + " IN (" + conn.RemoveLastChar(els) + ")" 
 			} else { 
 				sql := conn.FormatForSQL(field.Type, element)
-				if len(sql) > 1 && sql[:2] == "'%" && sql[:len(sql) - 2] == "%'" {
-					db.SQLRestriction += key + " LIKE " + sql + " AND "
-				} else { db.SQLRestriction += key + "=" + sql + " AND " }
-				db.SQLRestriction += key + "=" + sql + " AND " 
+				if len(sql) > 1 && sql[:2] == conn.Quote("%" + sql[:len(sql) - 2] + "%") {
+					if len(db.SQLRestriction) > 0 { db.SQLRestriction +=  " AND " }
+					db.SQLRestriction += key + " LIKE " + sql
+				} else { 
+					if len(db.SQLRestriction) > 0 { db.SQLRestriction +=  " AND " }
+					db.SQLRestriction += key + "=" + sql
+				}
+				if len(db.SQLRestriction) > 0 { db.SQLRestriction +=  " AND " }
+				db.SQLRestriction += key + "=" + sql
 			}
 		}
 	}
-	if len(db.SQLRestriction) > 4 { db.SQLRestriction = db.SQLRestriction[0:len(db.SQLRestriction) - 4]}
 	for _, restr := range restriction {
-		if len(db.SQLRestriction) == 0 { db.SQLRestriction = restr
-		} else { db.SQLRestriction += " AND " + restr }
+		if len(restr) > 0 {
+			if len(db.SQLRestriction) == 0 { db.SQLRestriction = restr
+			} else { db.SQLRestriction += " AND " + restr }
+		}
 		continue
 	}
 

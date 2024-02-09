@@ -80,6 +80,7 @@ func (t *TableInfo) EmptyRecord() (tool.Record, error) {
 }
 // GetAssociativeArray : Provide table data as an associative arra
 func (t *TableInfo) Get(restriction... string) (tool.Results, error) {
+	t.db = ClearFilter(t.db)
 	schema, err := t.schema(t.Name)
 	if err != nil { return t.DBError(nil, err) }
 	res := tool.Results{}
@@ -136,11 +137,13 @@ func (t *TableInfo) get() (*TableInfo, error) {
 }
 
 func (t *TableInfo) Verify(name string) (string, bool) {
+	t.db = ClearFilter(t.db)
     schema, err :=t.schema(name)
    	if len(schema) == 0 || err !=nil { return name, false }
    	return name, true	
 }
 func (t *TableInfo) Create() (tool.Results, error) {
+	t.db = ClearFilter(t.db)
 	v := Validator[entities.TableEntity]()
 	v.data = entities.TableEntity{}
 	te, err := v.ValidateStruct(t.Record)
@@ -163,8 +166,10 @@ func (t *TableInfo) Create() (tool.Results, error) {
 	t.Name=te.Name
 	_, err = t.Get()
 	auth := true
-	for _, exception := range entities.PERMISSIONEXCEPTION {
-		if t.Name == exception.Name { auth = false; break }
+	if t.Method == tool.SELECT {
+		for _, exception := range entities.PERMISSIONEXCEPTION {
+			if t.Name == exception.Name { auth = false; break }
+		}
 	}
 	if t.PermService != nil && auth {
 		t.PermService.SpecializedFill(t.Params, 
@@ -178,6 +183,7 @@ func (t *TableInfo) Create() (tool.Results, error) {
 }
 
 func (t *TableInfo) Update() (tool.Results, error) {
+	t.db = ClearFilter(t.db)
 	v := Validator[entities.TableEntity]()
 	v.data = entities.TableEntity{}
 	te, err := v.ValidateStruct(t.Record)
@@ -196,8 +202,10 @@ func (t *TableInfo) Update() (tool.Results, error) {
 	t.Name=te.Name
 	_, err = t.Get()
 	auth := true
-	for _, exception := range entities.PERMISSIONEXCEPTION {
-		if t.Name == exception.Name { auth = false; break }
+	if t.Method == tool.SELECT {
+		for _, exception := range entities.PERMISSIONEXCEPTION {
+			if t.Name == exception.Name { auth = false; break }
+		}
 	}
 	if t.PermService != nil && auth {
 		t.PermService.SpecializedFill(t.Params, 
@@ -216,14 +224,17 @@ func (t *TableInfo) CreateOrUpdate(restriction... string) (tool.Results, error) 
 }
 
 func (t *TableInfo) Delete(restriction... string) (tool.Results, error) {
+	t.db = ClearFilter(t.db)
 	var err error
 	if entities.IsRootDB(t.Name) || t.Name == tool.ReservedParam { log.Error().Msg("can't delete protected root db.") }
 	if err = t.db.Query("DROP TABLE " + t.Name); err != nil { return t.DBError(nil, err) }
 	if err = t.db.Query("DROP SEQUENCE IF EXISTS sq_" + t.Name); err != nil { return t.DBError(nil, err) }
 	t.Results = append(t.Results, tool.Record{ entities.NAMEATTR : t.Name })
 	auth := true
-	for _, exception := range entities.PERMISSIONEXCEPTION {
-		if t.Name == exception.Name { auth = false; break }
+	if t.Method == tool.SELECT {
+		for _, exception := range entities.PERMISSIONEXCEPTION {
+			if t.Name == exception.Name { auth = false; break }
+		}
 	}
 	if auth && t.PermService != nil {
 		t.PermService.SpecializedFill(t.Params, 
@@ -237,6 +248,7 @@ func (t *TableInfo) Delete(restriction... string) (tool.Results, error) {
 }
 
 func (t *TableInfo) Import(filename string, restriction... string) (tool.Results, error) {
+	t.db = ClearFilter(t.db)
 	var jsonSource []TableInfo
 	byteValue, _ := os.ReadFile(filename)
 	err := json.Unmarshal([]byte(byteValue), &jsonSource) 

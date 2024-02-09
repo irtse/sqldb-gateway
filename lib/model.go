@@ -15,7 +15,7 @@ const(
 func (s Method) String() string {
 	switch s {
 		case SELECT: return "read"
-		case CREATE: return "create"
+		case CREATE: return "write"
 		case UPDATE: return "update"
 		case DELETE: return "delete"
 	}
@@ -41,3 +41,28 @@ func (ar *Record) GetFloat(column string) float64 {
 	return val
 }
 
+var DATATYPE = []string {
+	"TINYINT",
+	"SMALLINT",
+	"MEDIUMINT",
+	"INT",
+	"INTEGER",
+	"BIGINT",
+	"FLOAT",
+	"DOUBLE",
+	"TIME",
+	"DATE",
+	"BOOLEAN",
+	"TIMESTAMP",
+	"VARCHAR",
+	"TINYTEXT",
+	"SMALLTEXT",
+	"MEDIUMTEXT",
+	"TEXT",
+	"TINYBLOB",
+	"SMALLBLOB",
+	"MEDIUMBLOB",
+	"BLOB", // ??? 
+	"ENUM",
+	"MANYTOMANY", // TODO FOR REAL
+}

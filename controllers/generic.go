@@ -3,7 +3,6 @@ package controllers
 import (
 	"fmt"
 	tool "sqldb-ws/lib"
-	domain "sqldb-ws/lib/domain"
 	"sqldb-ws/lib/entities"
 )
 
@@ -19,20 +18,11 @@ type GenericController struct { AbstractController }
 // @router / [get]
 func (l *MainController) Main() {
 	// Main is the default root of the API, it gives back all your allowed shallowed view
-	user_id, _, err := l.authorized() // check up if allowed to communicate with API
-	if err == nil { // if authorized then ask for shallow view authorized for the user
-		params := l.paramsOver(map[string]string{ tool.RootTableParam : entities.DBView.Name, 
-												  tool.RootRowsParam : tool.ReservedParam,
-												  "indexable" : fmt.Sprintf("%v", true),
-												  tool.RootShallow : "enable" })
-		d := domain.Domain(false, user_id, false) // load a domain with user perms
-		response, err := d.Call(params, tool.Record{}, tool.SELECT, true, "Get") // then call with auth activated
-		if err != nil {
-			l.response(response, err); return
-		}
-		l.response(response, nil)
-	}
-	l.response(nil, err) // TODO can be replace by a custom view (login view ???)
+	l.paramsOverload = map[string]string{ tool.RootTableParam : entities.DBView.Name, 
+										  tool.RootRowsParam : tool.ReservedParam,
+										  tool.RootShallow : "enable",
+										  "indexable" : fmt.Sprintf("%v", true) }
+	l.SafeCall(tool.SELECT, "Get")
 }
 // @Title Post data in table
 // @Description post data in table

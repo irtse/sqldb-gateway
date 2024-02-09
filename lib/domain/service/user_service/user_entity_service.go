@@ -26,6 +26,5 @@ func (s *UserEntityService) PostTreatment(results tool.Results, tableName string
 	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *UserEntityService) ConfigureFilter(tableName string) (string, string) {
-	restr := entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")" 
-	return s.Domain.ViewDefinition(tableName, restr)
+	return s.Domain.ViewDefinition(tableName)
 }

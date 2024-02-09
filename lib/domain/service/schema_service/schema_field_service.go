@@ -12,7 +12,7 @@ type SchemaFields struct { tool.AbstractSpecializedService }
 
 func (s *SchemaFields) Entity() tool.SpecializedServiceInfo {return entities.DBSchemaField }
 func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) {
-	schemas, err := s.Domain.Schema(record)
+	schemas, err := s.Domain.Schema(record, true)
 	newRecord := tool.Record{}
 	if !create {
 		for k, v := range record {
@@ -29,7 +29,13 @@ func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (too
 					typ = strings.Replace(typ, "'", "", -1)
 					typ = strings.Replace(typ, "(", ":", -1)
 					typ = strings.Replace(typ, ")", "", -1)
-					newRecord[k] = typ
+					found := false
+					for _, verifiedType := range tool.DATATYPE {
+						if strings.Contains(strings.ToUpper(typ), verifiedType) {
+							found = true; break;
+						}
+					}
+					if found { newRecord[k] = strings.ToLower(typ) }
 				} else { newRecord[k] = v  }
 			}
 		}

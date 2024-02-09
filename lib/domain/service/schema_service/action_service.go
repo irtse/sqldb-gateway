@@ -14,10 +14,10 @@ type ActionService struct { tool.AbstractSpecializedService }
 func (s *ActionService) Entity() tool.SpecializedServiceInfo { return entities.DBAction }
 func (s *ActionService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
 	schemas, err := s.Domain.Schema(tool.Record{ 
-		entities.RootID(entities.DBSchema.Name) : record[entities.RootID(entities.DBSchema.Name)].(int64) })	
+		entities.RootID(entities.DBSchema.Name) : record[entities.RootID(entities.DBSchema.Name)].(int64) }, true)	
 	if err != nil && len(schemas) == 0 { return record, false, false }
 	if link, ok := record[entities.RootID("link")]; ok {
-		schemas, err := s.Domain.Schema(tool.Record{entities.RootID(entities.DBSchema.Name) : link.(int64)})
+		schemas, err := s.Domain.Schema(tool.Record{entities.RootID(entities.DBSchema.Name) : link.(int64)}, true)
 		if err != nil || len(schemas) == 0 { return record, false, false }
 	}
 	return record, true, false
@@ -29,12 +29,10 @@ func (s *ActionService) WriteRowAutomation(record tool.Record, tableName string)
 func (s *ActionService) PostTreatment(results tool.Results, tablename string, dest_id... string) tool.Results { 
 	res := tool.Results{}
 	for _, record := range results{
-		names := []string{}
 		schemas, err := s.Domain.Schema(tool.Record{
-			entities.RootID(entities.DBSchema.Name) : record[entities.RootID(entities.DBSchema.Name)]})
+			entities.RootID(entities.DBSchema.Name) : record[entities.RootID(entities.DBSchema.Name)]}, true)
 		if err != nil || len(schemas) == 0 { continue }
 		link_path := "/" + fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
-		names = append(names, schemas[0][entities.NAMEATTR].(string))
 		link_path, _ = s.Domain.GeneratePathFilter(link_path, record, nil)
 		if !strings.Contains(link_path, "?") { link_path +="?rawview=enable"
 	    } else { link_path +="&rawview=enable" }

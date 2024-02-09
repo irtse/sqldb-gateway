@@ -26,10 +26,5 @@ func (s *RoleAttributionService) PostTreatment(results tool.Results, tableName s
 	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *RoleAttributionService) ConfigureFilter(tableName string) (string, string) {
-	restr := entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")" 
-	restr += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
-	restr += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
-	restr += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
-	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")"
-	return s.Domain.ViewDefinition(tableName, restr)
+	return s.Domain.ViewDefinition(tableName)
 }

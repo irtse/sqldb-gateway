@@ -72,7 +72,8 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 		typ := ""
 		if t.Verified { 
 			typ, _ = t.EmptyCol.Verify(key) 
-			values += conn.FormatForSQL(typ, element) + ","
+			realType := strings.Split(typ, ":")[0]
+			values += conn.FormatForSQL(realType, element) + ","
 		} else {
 			values += fmt.Sprintf("%v", element) + ","
 		}
@@ -80,14 +81,14 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	query := "INSERT INTO " + t.Table.Name + "(" + conn.RemoveLastChar(columns) + ") VALUES (" + conn.RemoveLastChar(values) + ")"
 	if t.db.Driver == conn.PostgresDriver { 
 		id, err = t.db.QueryRow(query)
-		if err != nil { return t.Update() }
+		if err != nil { return nil, err }
 		t.db.SQLRestriction = fmt.Sprintf("id=%d", id)
 	}
 	if t.db.Driver == conn.MySQLDriver {
 		stmt, err := t.db.Prepare(query)
 		if err != nil { return t.DBError(nil, err) }
 		res, err := stmt.Exec()
-		if err != nil { return t.Update() }
+		if err != nil { return nil, err }
 		id, err = res.LastInsertId()
 		if err != nil { return t.DBError(nil, err) }
 		t.db.SQLRestriction = fmt.Sprintf("id=%d", id)
@@ -135,9 +136,12 @@ func (t *TableRowInfo) Update(restriction... string) (tool.Results, error) {
 			} 
 			if t.Verified {
 				typ, ok := t.EmptyCol.Verify(key)
+				realType := strings.Split(typ, ":")[0]
+				isNull := strings.Split(typ, ":")[1] == "nullable"
 				if ok { 
-					stack = stack + key + "=" + conn.FormatForSQL(typ, element) + "," 
-					filter += key + "=" + conn.FormatForSQL(typ, element) + " and " 
+					if (!isNull && conn.FormatForSQL(realType, element) == "NULL") || (!isNull && strings.Contains(strings.ToLower(realType), "bool")) { continue }
+					stack = stack + key + "=" + conn.FormatForSQL(realType, element) + "," 
+					filter += key + "=" + conn.FormatForSQL(realType, element) + " and " 
 				}
 			} else { 
 				stack = stack + " " + key + "=" + fmt.Sprintf("%v", element) + "," 
@@ -163,7 +167,7 @@ func (t *TableRowInfo) Update(restriction... string) (tool.Results, error) {
 
 func (t *TableRowInfo) CreateOrUpdate(restriction... string) (tool.Results, error) {
 	_, ok := t.Params[tool.SpecialIDParam]
-	if ok == false && t.Method != tool.UPDATE { return t.Create() 
+	if ok == false { return t.Create() 
 	} else { return t.Update(restriction...) }
 }
 

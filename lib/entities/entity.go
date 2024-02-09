@@ -55,6 +55,7 @@ type SchemaColumnEntity struct { // struct based on dbschema_columns in root
 	Description 			string				 		 `json:"description"`
 	Placeholder 			string				 		 `json:"placeholder"`
 	Default 				interface{}					 `json:"default_value"`
+	Hidden 					bool 		 			 	 `json:"hidden"`
 	Required 				bool 		 			 	 `json:"required"`
 	Readonly 				bool 		 			 	 `json:"readonly"`
 	SchemaId 				int64 		 			 	 `json:"dbschema_id"`

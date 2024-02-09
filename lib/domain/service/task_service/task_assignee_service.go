@@ -43,10 +43,10 @@ func (s *TaskAssigneeService) WriteRowAutomation(record tool.Record, tableName s
 							  tool.RootRowsParam: tool.ReservedParam, }
 	sqlFilter := "id IN (SELECT id FROM " + entities.DBHierarchy.Name + " WHERE "
 	sqlFilter += entities.RootID(entities.DBUser.Name) + " IN ("
-	sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")"
+	sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")"
 	sqlFilter += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
 	sqlFilter += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name
-	sqlFilter += " WHERE " + entities.RootID(entities.DBUser.Name) + "=" + conn.Quote(s.Domain.GetUser()) + "))"
+	sqlFilter += " WHERE " + entities.RootID(entities.DBUser.Name) + "=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))"
 	hierarchy, err := s.Domain.SuperCall( 
 						paramsNew, 
 						tool.Record{},
@@ -77,10 +77,5 @@ func (s *TaskAssigneeService) PostTreatment(results tool.Results, tableName stri
 	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *TaskAssigneeService) ConfigureFilter(tableName string) (string, string) {
-	restr := entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")" 
-	restr += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
-	restr += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
-	restr += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
-	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")"
-	return s.Domain.ViewDefinition(tableName, restr)
+	return s.Domain.ViewDefinition(tableName)
 }	

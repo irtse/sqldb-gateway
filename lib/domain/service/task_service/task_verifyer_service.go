@@ -4,7 +4,6 @@ import (
 	"fmt"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
-	conn "sqldb-ws/lib/infrastructure/connector"
 )
 
 type TaskVerifyerService struct { tool.AbstractSpecializedService }
@@ -88,6 +87,5 @@ func (s *TaskVerifyerService) PostTreatment(results tool.Results, tableName stri
 	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *TaskVerifyerService) ConfigureFilter(tableName string) (string, string) {
-	restr := entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")" 
-	return s.Domain.ViewDefinition(tableName, restr)
+	return s.Domain.ViewDefinition(tableName)
 }	

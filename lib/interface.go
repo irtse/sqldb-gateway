@@ -15,6 +15,7 @@ type InfraServiceItf interface {
 }
 // Defined domain service functions
 type DomainITF interface {
+	PermsSuperCall(params Params, record Record, method Method, funcName string, args... interface{}) (Results, error)
 	SuperCall(params Params, rec Record, m Method, funcName string, args... interface{}) (Results, error)
 	Call(params Params, rec Record, m Method, auth bool, funcName string, args... interface{}) (Results, error)
     SetIsCustom(isCustom bool)
@@ -29,7 +30,7 @@ type DomainITF interface {
 	DeleteRow(tableName string, results Results)
 	WriteRow(tableName string, record Record)
 	ViewDefinition(tableName string, innerRestriction... string) (string, string)
-	Schema(record Record) (Results, error)
+	Schema(record Record, p bool) (Results, error)
 	PostTreat(results Results, tableName string, shallow bool,  additonnalRestriction ...string) Results
 } 
 

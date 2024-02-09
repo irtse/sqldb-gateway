@@ -14,6 +14,7 @@ const RootDirParam = "dir"
 const RootRawView = "rawview"
 const RootShallow = "shallow"
 const RootSuperCall = "super"
+const RootEmpty = "empty"
 const RootDestTableIDParam = "dest_table_id" 
 
 var RootParamsDesc = map[string]string{

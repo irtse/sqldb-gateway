@@ -23,10 +23,10 @@ func (s *PermissionService) ConfigureFilter(tableName string) (string, string) {
 	restr += "SELECT " + entities.DBRole.Name + "_id FROM " 
 	restr += entities.DBRoleAttribution.Name + " WHERE " + entities.DBUser.Name + "_id IN ("
 	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE " 
-	restr += entities.DBUser.Name + ".login = " + conn.Quote(s.Domain.GetUser()) + ") OR " + entities.DBEntity.Name + "_id IN ("
+	restr += "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ") OR " + entities.DBEntity.Name + "_id IN ("
 	restr += "SELECT " + entities.DBEntity.Name + "_id FROM "
 	restr += entities.DBEntityUser.Name + " WHERE " + entities.DBUser.Name +"_id IN ("
 	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE "
-	restr += entities.DBUser.Name + ".login = " + conn.Quote(s.Domain.GetUser())  + "))))"
+	restr += "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))))"
 	return s.Domain.ViewDefinition(tableName, restr)
 }

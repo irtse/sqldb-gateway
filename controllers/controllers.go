@@ -23,7 +23,10 @@ var JSON = "json"
 var DATA = "data"
 var ERROR = "error"
 // Operations about table
-type AbstractController struct { beego.Controller }
+type AbstractController struct { 
+	paramsOverload map[string]string
+	beego.Controller 
+}
 // SafeCaller will ask for a authenticated procedure
 func (t *AbstractController) SafeCall(method tool.Method, funcName string, args... interface{}) {
 	t.Call(true, method, funcName, args...)
@@ -78,6 +81,7 @@ func (t *AbstractController) paramsOver(override map[string]string) map[string]s
 }
 // params will produce a Params struct compose of url & query parameters
 func (t *AbstractController) params() map[string]string {
+	if t.paramsOverload != nil { return t.paramsOverload }
 	params := map[string]string{} 
 	rawParams := t.Ctx.Input.Params() // extract all params from url and fill params
 	for key, val := range rawParams {
@@ -88,6 +92,18 @@ func (t *AbstractController) params() map[string]string {
 	queries := []string{} // then we will extract query parameters
     queries = append(queries, tool.RootParams...) // firstival we will try to found pertinent query params
 	queries = append(queries, tool.HiddenParams...)
+	if tablename, ok := params[tool.RootTableParam]; ok { // retrieve schema
+		params := tool.Params{ tool.RootTableParam : tablename, }
+		d := domain.Domain(true, "", false) // create a new domain with current permissions of user
+		d.Specialization = false // when launching call disable every auth check up (don't forget you are not logged)
+		response, err := d.Call(params, tool.Record{}, tool.SELECT, false, "Get")
+		if cols, ok2 := response[0]["columns"]; ok2 && err == nil {
+			for colName, _ := range cols.(map[string]entities.TableColumnEntity) {
+				queries = append(queries, colName)
+			}
+		}
+	}
+
 	for _, val := range queries {
 		name := t.Ctx.Input.Query(val)
 		if name != "" { params[val] = name }
@@ -143,7 +159,7 @@ func (t *AbstractController) session(userId string, superAdmin bool, delete bool
 		if os.Getenv("authmode") != auth.AUTHMODE[0] { // in case of token way of authenticate
 			params := t.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name, 
 				                                      tool.RootRowsParam : tool.ReservedParam, 
-													  "login" : userId })
+													  "name" : userId })
 			domain.Domain(false, userId, false).Call( // replace token by a nil
 				params, 
 				tool.Record{ "token" : nil }, 
@@ -158,11 +174,11 @@ func (t *AbstractController) session(userId string, superAdmin bool, delete bool
 	t.SetSession(auth.ADMIN_KEY, superAdmin)
 	if os.Getenv("authmode") != auth.AUTHMODE[0] { // if token way of authentication
 		tokenService := &auth.Token{} // generate a new token with all needed claims
-		token, err := tokenService.Create(userId, superAdmin) 
+		token, err := tokenService.Create(userId, superAdmin); 
 		if err != nil { t.response(tool.Results{}, err); return } // then update user with its brand new token.
 		params := t.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name,
 			                                      tool.RootRowsParam : tool.ReservedParam, 
-												  "login" : userId })
+												  "name" : userId })
 		domain.Domain(false, userId, false).Call(
 			params, 
 			tool.Record{ "token" : token }, 

@@ -3,58 +3,70 @@ package domain
 import (
 	"fmt"
 	"strings"
-	"errors"
 	"encoding/json"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
+	conn "sqldb-ws/lib/infrastructure/connector"
 )
 // main func delete Row in user Entry
 func (d *MainService) DeleteRow(tableName string, results tool.Results) {
-	for _, record := range results {
+	/*for _, record := range results {
 		params := tool.Params{ tool.RootTableParam : entities.DBUserEntry.Name, 
 			                   tool.RootRowsParam: fmt.Sprintf("%v", record[tool.SpecialIDParam]), }
 		d.SuperCall(params, tool.Record{}, tool.DELETE, "Delete")
-	}	
+	}*/	
 }
 // main func add Row in user Entry
-func (d *MainService) WriteRow(tableName string, record tool.Record) {
-	params := tool.Params{  tool.RootTableParam : entities.DBUser.Name, 
-		                    tool.RootRowsParam:  tool.ReservedParam, "login" : d.GetUser() }
-	// retrieve user your proper user
-	users, err := d.SuperCall(params, tool.Record{},tool.SELECT, "Get") // by super procedure in domain
-	if err != nil || len(users) == 0 { return }
-	params = tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-		             tool.RootRowsParam:  tool.ReservedParam,
-					 entities.NAMEATTR : tableName }
-	// retrieve table schema
-	schemas, err := d.SuperCall(params, tool.Record{},tool.SELECT, "Get") // by super procedure in domain
-	if err != nil || len(schemas) == 0 { return }
-	params = tool.Params{  tool.RootTableParam : entities.DBUserEntry.Name, 
-		                   tool.RootRowsParam:  tool.ReservedParam, }
-	// then create link between schema/user/new row
-	users, err = d.SuperCall(params, tool.Record{
-		entities.RootID(entities.DBSchema.Name) : schemas[0][tool.SpecialIDParam],
-		entities.RootID(entities.DBUser.Name) : users[0][tool.SpecialIDParam],
-		entities.RootID("dest_table") : record[tool.SpecialIDParam],
-	},tool.CREATE, "CreateOrUpdate")
-}
+func (d *MainService) WriteRow(tableName string, record tool.Record) {}
 // define filter whatever what happen on sql...
 func (d *MainService) ViewDefinition(tableName string, innerRestriction... string) (string, string) {
 	SQLview := ""; SQLrestriction := ""; auth := true
 	if d.IsRawView() && d.IsSuperCall() { 
 		return SQLrestriction, SQLview // admin can see all on admin view
 	}
-	for _, exception := range entities.PERMISSIONEXCEPTION {
-		if tableName == exception.Name { auth = false; break }
+	if d.Method == tool.SELECT {
+		for _, exception := range entities.PERMISSIONEXCEPTION {
+			if tableName == exception.Name { auth = false; break }
+		}
 	}
-	if auth { SQLrestriction, SQLview = d.byFields(tableName) }
+	SQLrestriction = d.ByEntityUser(tableName)
+	if auth { 
+		restr, v := d.byFields(tableName) 
+		SQLview = v
+		if len(strings.TrimSpace(restr)) > 0 {
+			if len(SQLrestriction) > 0 { SQLrestriction += " AND " + restr
+	    	} else {  SQLrestriction = restr }
+		}
+	}
 	if len(innerRestriction) > 0 {
 		for _, restr := range innerRestriction {
-			if len(SQLrestriction) > 0 { SQLrestriction += " AND " + restr 
-			} else { SQLrestriction = restr  }
+			if len(strings.TrimSpace(restr)) > 0 {
+				if len(SQLrestriction) > 0 { SQLrestriction += " AND " + restr 
+				} else { SQLrestriction = restr  }
+			}
 		}
 	}
 	return SQLrestriction, SQLview
+}
+
+func (s *MainService) ByEntityUser(tableName string) (string) {
+	schemas, err := s.Schema(tool.Record{ entities.NAMEATTR : tableName }, false)
+	restr := ""
+	if err != nil && schemas != nil && len(schemas) > 0 { 
+		userID := entities.RootID(entities.DBUser.Name)
+		entityID := entities.RootID(entities.DBEntity.Name)
+		if _, ok := schemas[0][userID]; ok || tableName == entities.DBUser.Name {
+			if tableName == entities.DBUser.Name  { userID = tool.SpecialIDParam }
+			restr := userID + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")" 
+			if _, ok := schemas[0][entityID]; ok || tableName == entities.DBEntity.Name  {
+				if tableName == entities.DBEntity.Name  { entityID = tool.SpecialIDParam }
+				if len(restr) > 0 { restr +=  " OR " }
+				restr += entityID + " IN (SELECT " + entityID + " FROM " + entities.DBEntityUser.Name + "WHERE " + entities.RootID(entities.DBUser.Name) + " IN (" 
+				restr += "SELECT id FROM " + userID + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")"
+			}
+		}
+	}
+	return restr
 }
 
 func (d *MainService) byFields(tableName string) (string, string) {
@@ -73,28 +85,20 @@ func (d *MainService) byFields(tableName string) (string, string) {
 				     entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", schemas[0][tool.SpecialIDParam]) }
 	fields, err := d.SuperCall( p, tool.Record{}, tool.SELECT, "Get")
 	if err != nil || len(fields) == 0 { return "id=-1", "" }
-	for _, field := range fields {
-		if name, okName := field["name"]; !okName {
-			n := fmt.Sprintf("%v", name)
-			if hide, ok := field["hidden"]; (!ok || !hide.(bool)) && n != "id" { SQLview += n + "," }
-		}
-	}
 	return "", SQLview
 }
 
-func (d *MainService) Schema(record tool.Record) (tool.Results, error) { // check schema auth access
-	if schemaID, ok := record[entities.RootID(entities.DBSchema.Name)]; ok {
-		params := tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-			              tool.RootRowsParam : fmt.Sprintf("%v", schemaID), 
-		                }
-		schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-		if err != nil || len(schemas) == 0 { return nil, err }
-		if _, ok := d.GetPermission().Verify(schemas[0][entities.NAMEATTR].(string)); !ok { 
-			return nil, errors.New("not authorized ") 
-		}
-		return schemas, nil
+func (d *MainService) Schema(record tool.Record, permitted bool) (tool.Results, error) { // check schema auth access
+	params := tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
+			               tool.RootRowsParam : tool.ReservedParam }
+	sqlFilter := ""
+	// fmt.Printf("RECORD %v \n ", record)
+	if id, ok := record[entities.RootID(entities.DBSchema.Name)]; ok {
+		sqlFilter += "id=" + fmt.Sprintf("%v", id)
+	} else if name, ok := record[entities.NAMEATTR]; ok {
+		sqlFilter += "name='" + fmt.Sprintf("%v", name) + "'"
 	}
-	return nil, errors.New("no schemaID refered...")
+	return d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 }
 
 type Filter struct {

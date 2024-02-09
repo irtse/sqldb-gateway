@@ -14,7 +14,7 @@ func (s *ViewService) Entity() tool.SpecializedServiceInfo { return entities.DBV
 func (s *ViewService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
 	if _, ok := record["through_perms"]; !ok { return record, false, false }
 	schemas, err := s.Domain.Schema(tool.Record{ 
-		entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", record["through_perms"]) })	
+		entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", record["through_perms"]) }, true)	
 	if err != nil && len(schemas) == 0 { return record, false, false }
 	params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
 	                       tool.RootRowsParam : tool.ReservedParam, 
@@ -37,31 +37,30 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 	if len(results) == 0 { return results }
 	res := tool.Results{}
 	for _, record := range results {
-		if !record["is_list"].(bool) && len(dest_id) == 0 && !record["is_empty"].(bool) { continue }
 		readonly := false 
 		id := ""
 		if r, ok := record["readonly"]; ok && r.(bool) { readonly = true }
-		rec := tool.Record{ "name" : record["name"], "description" : record["description"],
+		rec := tool.Record{ "id": record["id"], "name" : record["name"], "description" : record["description"],
 		                    "index" : record["index"], "category" : record["category"],
-							"is_list" : record["is_list"], }
+							"is_list" : record["is_list"], "readonly" : record["readonly"], }
 		for _, dest := range dest_id {
 			if id == "" { id = dest 
 			} else { id = "," + dest  }
 		}
-		schemas, err := s.Domain.Schema(record)
-		if err != nil && len(schemas) == 0 { continue }
+		schemas, err := s.Domain.Schema(record, true)
+		if err != nil || len(schemas) == 0 { continue }
 		tName := fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
-		through, err := s.Domain.Schema(tool.Record{  entities.RootID(entities.DBSchema.Name) : record["through_perms"] })
+		through, err := s.Domain.Schema(tool.Record{  entities.RootID(entities.DBSchema.Name) : record["through_perms"] }, true)
 		sqlFilter := ""
 		if err == nil && len(through) > 0 { 
 			sqlFilter += "id IN (SELECT " + entities.RootID(tName) 
 			sqlFilter += " FROM " + fmt.Sprintf("%v", through[0][entities.NAMEATTR])
 			sqlFilter += " WHERE " + entities.RootID(entities.DBUser.Name) 
-			sqlFilter += " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")" 
+			sqlFilter += " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
 			sqlFilter += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
 			sqlFilter += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
 			sqlFilter += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
-			sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")))"
+			sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")))"
 		}
 		path, params := s.Domain.GeneratePathFilter("/" + tool.MAIN_PREFIX + "/" + tName, 
 		                                            record, tool.Params{ tool.RootTableParam : tName, 
@@ -69,7 +68,7 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 		if id != "" { params[tool.RootRowsParam] = id }
 		rec["link_path"]=s.Domain.BuildPath(fmt.Sprintf(entities.DBView.Name), fmt.Sprintf("%v", record[tool.SpecialIDParam]))
 		if s.Domain.IsShallowed() { res = append(res, rec); continue }	
-		datas, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
+		datas, err := s.Domain.PermsSuperCall( params, tool.Record{}, tool.SELECT, "Get")
 		empty, ok := record["is_empty"]
 		treated := s.Domain.PostTreat(datas, tName, ok && empty.(bool), []string{ sqlFilter }...)
 		if len(treated) > 0 {
@@ -77,14 +76,15 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 				if _, ok := rec[k]; !ok { 
 					if k == "items" && len(path) > 0 && path[:1] == "/" && record["is_list"].(bool) {
 						for _, item := range v.([]interface{}) {
-							nP := "/" + tool.MAIN_PREFIX
-							nP += path 
-							values := item.(map[string]interface{})["values"]
-							if valID, ok := values.(map[string]interface{})[tool.SpecialIDParam]; ok {
-								nP += "&" + tool.RootDestTableIDParam + "=" + fmt.Sprintf("%v", valID)
+							if strings.Contains(path, entities.DBView.Name) {
+								nP :=  "/" + tool.MAIN_PREFIX + path 
+								values := item.(map[string]interface{})["values"]
+								if valID, ok := values.(map[string]interface{})[tool.SpecialIDParam]; ok {
+									nP += "&" + tool.RootDestTableIDParam + "=" + fmt.Sprintf("%v", valID)
+								}
+								item.(map[string]interface{})["link_path"] = nP
+								item.(map[string]interface{})["data_path"] = ""
 							}
-							item.(map[string]interface{})["link_path"] = nP
-							item.(map[string]interface{})["data_path"] = ""
 						}
 						rec[k]=v 
 					} else if k == "schema" { 

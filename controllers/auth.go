@@ -20,11 +20,10 @@ func (l *AuthController) Login() {
 	body := l.body(false) // extracting body
 	if log, ok := body["login"]; ok { // search for login in body 
 		params := l.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name, 
-												  tool.RootRowsParam : tool.ReservedParam, 
-												  "login" : log.(string) })
+												  tool.RootRowsParam : tool.ReservedParam, })
 		d := domain.Domain(false, log.(string), false) // create a new domain with current permissions of user
 		d.Specialization = false // when launching call disable every auth check up (don't forget you are not logged)
-		response, err := d.Call(params, tool.Record{}, tool.SELECT, false, "Get")
+		response, err := d.Call(params, tool.Record{}, tool.SELECT, false, "Get", "name='" + log.(string) + "' OR email='" + log.(string) + "'")
 		if err != nil {  l.response(response, err); return }
 		if len(response) == 0 {  l.response(response, errors.New("AUTH : username/email invalid")); return }
 		// if no problem check if logger is authorized to work on API and properly registered
@@ -59,5 +58,5 @@ func (l *AuthController) Logout() {
 	login, superAdmin, err := l.authorized() // check if already connected
 	if err != nil { l.response(nil, err) }
 	l.session(login, superAdmin, true) // update session variables
-	l.response(tool.Results{ tool.Record { "login" : login }}, nil)
+	l.response(tool.Results{ tool.Record { "name" : login }}, nil)
 }

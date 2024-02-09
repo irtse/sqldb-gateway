@@ -21,8 +21,8 @@ func (s *RoleService) ConfigureFilter(tableName string) (string, string) {
 	restr := "id IN (SELECT "+ entities.RootID(entities.DBRole.Name) + " FROM " +  entities.DBRoleAttribution.Name + " " 
 	restr += "WHERE " + entities.RootID(entities.DBEntity.Name) + " IN ("
 	restr += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
-	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")) "
+	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")) "
 	restr += "OR " + entities.RootID(entities.DBUser.Name) + " IN ("
-	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")) "
+	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")) "
 	return s.Domain.ViewDefinition(tableName, restr)
 }

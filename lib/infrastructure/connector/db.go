@@ -77,17 +77,15 @@ func (db *Db) Prepare(query string) (*sql.Stmt, error) {
 func (db *Db) QueryRow(query string) (int64, error) {
     id := 0
 	if db.LogQueries { log.Info().Msg(query) }
-	// fmt.Printf("QUERY : %s\n", query)
 	err := db.Conn.QueryRow(query + " RETURNING id").Scan(&id)
-	if err != nil { 
-		return int64(id), err
-	}
+	fmt.Printf("QUERY : %s %v \n", query, err)
+	if err != nil { return int64(id), err }
 	return int64(id), err
 }
 
 func (db *Db) Query(query string) (error) {
 	if db.LogQueries { log.Info().Msg(query) }
-	// fmt.Printf("QUERY : %s\n", query)
+	if strings.Contains(query, "UPDATE") && strings.Contains(query, "dbpermission") { fmt.Printf("QUERY : %s\n", query) }
 	rows, err := db.Conn.Query(query)
 	if err != nil { 
 		// fmt.Printf("QUERY : %s\n", query)
@@ -98,10 +96,13 @@ func (db *Db) Query(query string) (error) {
 }
 
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
-    if strings.Contains(query, "<nil>") { return nil, errors.New("not found")}
+    if strings.Contains(query, "<nil>") { 
+		fmt.Printf("PROBLEM %s \n", query)
+		return nil, errors.New("not found")}
 	rows, err := db.Conn.Query(query)
-	
+	//if strings.Contains(query, "dbview") { fmt.Printf("QUERY %v \n", query) }
 	if err != nil { 
+		fmt.Printf("PROBLEM %s \n", query)
 		return nil, err 
 	}
 	defer rows.Close()

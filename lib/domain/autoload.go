@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"fmt"
+	"strings"
 	"encoding/json"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
@@ -17,6 +19,9 @@ func Load() {
 			rec := tool.Record{}
 			data, _:= json.Marshal(table)
 			json.Unmarshal(data, &rec)
+			if typ, ok := rec[entities.TYPEATTR]; ok && strings.ToLower(fmt.Sprintf("%v", typ)) == "manytomany" {
+				continue
+			}
 			service := infrastructure.Table(database, true, "", table.Name, tool.Params{}, rec, tool.CREATE)
 			service.NoLog = true
 			service.CreateOrUpdate()
@@ -50,15 +55,15 @@ func Load() {
 	// Generate an root superadmin (ready to use...)
 	found, err := d.SuperCall(tool.Params{ 
 		tool.RootTableParam: entities.DBUser.Name,
-		tool.RootRowsParam: tool.ReservedParam,
-	"login" : "root" }, 
-	tool.Record{ }, tool.SELECT, "Get")
-	if err == nil && found != nil {
+		tool.RootRowsParam: tool.ReservedParam, }, 
+		tool.Record{ }, tool.SELECT, "Get", "name='root'")
+	if err != nil || len(found) == 0 {
 		d.SuperCall(tool.Params{ 
 			tool.RootTableParam: entities.DBUser.Name,
 			tool.RootRowsParam: tool.ReservedParam, }, 
 			tool.Record{
-				"login" : "root",
+				"name" : "root",
+				"email" : "admin@super.com",
 				"super_admin" : true, // oh well think about "backin to the future"
 				"password" : "$argon2id$v=19$m=65536,t=3,p=4$JooiEtVXatRxSz16N9uo2g$Y2dAHdLAK06013FhDHQ/xhd+UL2yInwDAvRS1+KKD3c",
 			}, tool.CREATE, "CreateOrUpdate")

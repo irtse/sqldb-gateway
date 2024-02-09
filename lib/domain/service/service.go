@@ -1,10 +1,10 @@
 package service
 
 import ( 
-	"fmt"
+	// "fmt"
 	tool "sqldb-ws/lib" 
-	"sqldb-ws/lib/entities" 
-	conn "sqldb-ws/lib/infrastructure/connector" 
+	// "sqldb-ws/lib/entities" 
+	// conn "sqldb-ws/lib/infrastructure/connector" 
 	task "sqldb-ws/lib/domain/service/task_service" 
 	user "sqldb-ws/lib/domain/service/user_service"
 	schema "sqldb-ws/lib/domain/service/schema_service" 
@@ -19,14 +19,11 @@ var SERVICES = []tool.SpecializedService{
 	&task.TaskAssigneeService{}, 
 	&task.TaskVerifyerService{}, 
 	&task.TaskService{},
-	&task.TaskWatcherService{},
 	&user.UserEntityService{},
 	&user.HierarchyService{},
 	&user.RoleAttributionService{},
 	&user.RoleService{},
-	&user.EntityService{},
 	&user.PermissionService{},
-	&user.UserService{},
 }
 // funct to get specialized service depending on table reached
 func SpecializedService(name string) tool.SpecializedService {
@@ -54,11 +51,12 @@ func (s *CustomService) PostTreatment(results tool.Results, tableName string, de
 }
 // default have a right to access to whatever is in dbuser_entry database... (sets at creation)
 func (s *CustomService) ConfigureFilter(tableName string) (string, string) {
+	/*
 	restr := "id IN (SELECT " + fmt.Sprintf("%v",  entities.RootID("dest_table")) + " FROM " + entities.DBUserEntry.Name 
 	restr += " WHERE " + fmt.Sprintf("%v", entities.RootID(entities.DBSchema.Name))  + " IN ("
-	restr += "SELECT id FROM " + entities.DBSchema.Name + " WHERE name=" + tableName + ") "
+	restr += "SELECT id FROM " + entities.DBSchema.Name + " WHERE name=" + conn.Quote(tableName) + ") "
 	restr += "AND " + fmt.Sprintf("%v",  entities.RootID(entities.DBUser.Name)) + " IN (SELECT id FROM " + entities.DBUser.Name 
-	restr += " WHERE login=" + conn.Quote(s.Domain.GetUser()) + "))"
-	return s.Domain.ViewDefinition(tableName, restr)
+	restr += " WHERE name=" + conn.Quote(s.Domain.GetUser()) + "))" */
+	return s.Domain.ViewDefinition(tableName)
 }	
 // to set up ConfigureFilter

@@ -43,6 +43,7 @@ func (p *PermissionInfo) GeneratePerms(res tool.Results) {
 	p.ColsPartialResults = ""
 	del := []string{}
 	if len(res) == 0 { return }
+	p.Perms =  map[string]tool.Record{}
 	for _, r := range res {
 		if r[entities.COLNAMEATTR] == nil { p.generatePerm(r[entities.TABLENAMEATTR].(string), r, del)
 		} else { p.generatePerm(r[entities.TABLENAMEATTR].(string) + ":" + r[entities.COLNAMEATTR].(string), r, del) }
@@ -58,7 +59,7 @@ func (p *PermissionInfo) generatePerm(name string, record tool.Record, del []str
 				permission[perm]=true 
 			}
 		}
-	} else { p.Perms[name]= record }
+	} else { p.Perms[name] = record }
 }
 
 func (p *PermissionInfo) Template(restriction... string) (interface{}, error) { return p.Get(restriction...) }

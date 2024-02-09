@@ -11,7 +11,7 @@ type TaskService struct { tool.AbstractSpecializedService }
 
 func (s *TaskService) Entity() tool.SpecializedServiceInfo { return entities.DBTask }
 func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
-	schemas, err := s.Domain.Schema(record)
+	schemas, err := s.Domain.Schema(record, true)
 	if err != nil && len(schemas) == 0 { return record, false, false }
 	id := int64(-1)
 	if idFromRec, ok := record[tool.SpecialIDParam]; ok { id = idFromRec.(int64) }
@@ -26,7 +26,7 @@ func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool
 	if state, ok := record["state"]; ok && (state == "in progress" || create) { 
 		params := tool.Params{ tool.RootTableParam : entities.DBUser.Name, 
 			                   tool.RootRowsParam : tool.ReservedParam, 
-			                   "login" : s.Domain.GetUser(),
+			                   "name" : s.Domain.GetUser(),
 		}
 		user, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 		if err != nil || len(user) == 0 { return record, false, false }
@@ -72,7 +72,7 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 				}
 				tasks, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 				if err != nil || len(tasks) == 0 { continue }
-				dbs := []string{entities.DBTaskAssignee.Name, entities.DBTaskVerifyer.Name,entities.DBTaskWatcher.Name}
+				dbs := []string{entities.DBTaskAssignee.Name, entities.DBTaskVerifyer.Name, entities.DBTaskWatcher.Name}
 				for _, dbName := range dbs {
 					s.Domain.SuperCall( 
 					            tool.Params{ 
@@ -89,7 +89,7 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 }
 func (s *TaskService) WriteRowAutomation(record tool.Record, tableName string) {
 	// task creation automation.
-	schemas, err := s.Domain.Schema(record)
+	schemas, err := s.Domain.Schema(record, true)
 	if err != nil && len(schemas) == 0 { return }
 	params := tool.Params{ tool.RootTableParam : schemas[0][entities.NAMEATTR].(string), 
 			              tool.RootRowsParam : tool.ReservedParam, } // empty record
@@ -102,24 +102,24 @@ func (s *TaskService) WriteRowAutomation(record tool.Record, tableName string) {
 	s.Domain.WriteRow(tableName, record)
 }
 
-func (s *TaskService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
+func (s *TaskService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 
 	return s.Domain.PostTreat( results, tableName, false) 
 }
 
 func (s *TaskService) ConfigureFilter(tableName string) (string, string) {
 	restr := "id IN (SELECT " + entities.RootID(entities.DBTask.Name) + " FROM " + entities.DBTaskWatcher.Name + " WHERE "
-	restr += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")" 
+	restr += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
 	restr += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
 	restr += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
 	restr += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
-	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")))"
+	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")))"
 	restr += " OR id IN (SELECT " + entities.RootID(entities.DBTask.Name) + " FROM " + entities.DBTaskAssignee.Name + " WHERE "
-	restr += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")" 
+	restr += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
 	restr += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("
 	restr += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
 	restr += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
-	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + ")))"
+	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")))"
 	restr += " OR id IN (SELECT " + entities.RootID(entities.DBTask.Name) + " FROM " + entities.DBTaskVerifyer.Name + " WHERE "
-	restr += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE login=" + conn.Quote(s.Domain.GetUser()) + "'))" 
+	restr += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))" 
 	return s.Domain.ViewDefinition(tableName, restr)
 }	
