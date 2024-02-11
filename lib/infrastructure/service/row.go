@@ -167,7 +167,7 @@ func (t *TableRowInfo) Update(restriction... string) (tool.Results, error) {
 
 func (t *TableRowInfo) CreateOrUpdate(restriction... string) (tool.Results, error) {
 	_, ok := t.Params[tool.SpecialIDParam]
-	if ok == false { return t.Create() 
+	if ok == false && t.Method != tool.UPDATE { return t.Create() 
 	} else { return t.Update(restriction...) }
 }
 

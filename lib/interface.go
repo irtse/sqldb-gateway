@@ -31,6 +31,7 @@ type DomainITF interface {
 	WriteRow(tableName string, record Record)
 	ViewDefinition(tableName string, innerRestriction... string) (string, string)
 	Schema(record Record, p bool) (Results, error)
+	GetParams() Params
 	PostTreat(results Results, tableName string, shallow bool,  additonnalRestriction ...string) Results
 } 
 

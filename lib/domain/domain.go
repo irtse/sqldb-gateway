@@ -32,6 +32,7 @@ type MainService struct {
 	Empty               bool
 	Method				tool.Method
 	PermService			tool.InfraServiceItf
+	Params 				tool.Params
 	Db					*conn.Db
 }
 // generate a new domain controller. 
@@ -51,6 +52,7 @@ func (d *MainService) IsSuperAdmin() bool { return d.SuperAdmin }
 func (d *MainService) IsSuperCall() bool { return d.Super && d.SuperAdmin }
 func (d *MainService) IsShallowed() bool { return d.Shallowed }
 func (d *MainService) IsRawView() bool { return d.RawView }
+func (d *MainService) GetParams() tool.Params { return d.Params }
 func (d *MainService) GetDB() tool.DbITF { return d.Db }
 
 // Infra func caller with admin view && superadmin right (not a structured view made around data for view reason)
@@ -72,6 +74,7 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 	var service tool.InfraServiceItf // generate an empty var for a casual infra service ITF (interface) to embedded any service.
 	res := tool.Results{}
 	d.Method = method
+	d.Params = params
 	if adm, ok := params[tool.RootEmpty]; ok && adm == "enable" { d.Empty = true } // set up admin view
 	if adm, ok := params[tool.RootSuperCall]; ok && adm == "enable" { d.Super = true } // set up admin view
 	if adm, ok := params[tool.RootRawView]; ok && adm == "enable" { d.RawView = true } // set up admin view
@@ -121,6 +124,7 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			service.SetAuth(auth)
 			res, err := d.invoke(service, funcName, args...)
 			if specializedService != nil && postTreat {
+				fmt.Printf("DEST ID %v \n", params[tool.RootDestTableIDParam])
 				if dest_id, ok := params[tool.RootDestTableIDParam]; ok {
 					return specializedService.PostTreatment(res, tablename, dest_id), nil
 				}
@@ -269,9 +273,8 @@ func (d *MainService) PostTreatRecord(record tool.Record, tableName string,
 		for _, field := range cols {
 			if d.Db.GetSQLView() != "" && !strings.Contains(d.Db.GetSQLView(), field.Name){ continue }
 			if strings.Contains(field.Name, entities.DBSchema.Name) && !shallow { 
-				dest, ok := record[entities.RootID("dest_table")]
+				dest, ok := record[entities.RootID("dest_table")] // IT'S A WRAPPER !
 				id, ok2 := record[field.Name]
-				fmt.Printf("ID %v %v \n", id, shallow)
 				if ok2 && ok && dest != nil && id != nil {
 					schemas, err := d.Schema(tool.Record{ entities.RootID(entities.DBSchema.Name) : id }, true)
 					if err != nil || len(schemas) == 0 { continue }

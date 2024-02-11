@@ -107,6 +107,11 @@ func (s *TaskService) PostTreatment(results tool.Results, tableName string, dest
 }
 
 func (s *TaskService) ConfigureFilter(tableName string) (string, string) {
+	rows, ok := s.Domain.GetParams()[tool.RootRowsParam]
+	ids, ok2 := s.Domain.GetParams()[tool.SpecialIDParam]
+	if (ok && fmt.Sprintf("%v", rows) != tool.ReservedParam) || (ok2 && ids != "") {
+		return s.Domain.ViewDefinition(tableName)
+	}
 	restr := "id IN (SELECT " + entities.RootID(entities.DBTask.Name) + " FROM " + entities.DBTaskWatcher.Name + " WHERE "
 	restr += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
 	restr += " OR " + entities.RootID(entities.DBEntity.Name) + " IN ("

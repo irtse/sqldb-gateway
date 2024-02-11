@@ -177,14 +177,15 @@ func (t *AbstractController) session(userId string, superAdmin bool, delete bool
 		token, err := tokenService.Create(userId, superAdmin); 
 		if err != nil { t.response(tool.Results{}, err); return } // then update user with its brand new token.
 		params := t.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name,
-			                                      tool.RootRowsParam : tool.ReservedParam, 
-												  "name" : userId })
-		domain.Domain(false, userId, false).Call(
+			                                      tool.RootRowsParam : tool.ReservedParam, })
+		sqlFilter := "name='" + userId + "' OR email='" + userId + "'"
+		_, err = domain.Domain(false, userId, false).Call(
 			params, 
 			tool.Record{ "token" : token }, 
 			tool.UPDATE, 
 			false,
-			"CreateOrUpdate",
+			"CreateOrUpdate", 
+			sqlFilter,
 		)
 	} // launch a 24h session timer after this session will be killed.
 	timer := time.AfterFunc(time.Hour * 24, delFunc)

@@ -12,23 +12,32 @@ type ViewService struct { tool.AbstractSpecializedService }
 
 func (s *ViewService) Entity() tool.SpecializedServiceInfo { return entities.DBView }
 func (s *ViewService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
-	if _, ok := record["through_perms"]; !ok { return record, false, false }
-	schemas, err := s.Domain.Schema(tool.Record{ 
-		entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", record["through_perms"]) }, true)	
-	if err != nil && len(schemas) == 0 { return record, false, false }
-	params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
-	                       tool.RootRowsParam : tool.ReservedParam, 
-						   entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", schemas[0][tool.SpecialIDParam]),
-						   entities.NAMEATTR : entities.RootID(entities.DBUser.Name),
-						 }
-	userScheme, _ := s.Domain.SuperCall(params, tool.Record{}, tool.SELECT, "Get")
-	params[entities.NAMEATTR] = entities.RootID(entities.DBEntity.Name)
-	entityScheme, _ := s.Domain.SuperCall(params, tool.Record{}, tool.SELECT, "Get")
-	found := false 
-	if len(userScheme) > 0 { found = true }
-	if len(entityScheme) > 0 { found = true }
-    if found { return record, true, false }
-	return nil, false, false
+	if _, ok := record["through_perms"]; ok { 
+		schemas, err := s.Domain.Schema(tool.Record{ 
+			entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", record["through_perms"]) }, true)	
+		if err != nil && len(schemas) == 0 { return record, false, false }
+		params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
+							tool.RootRowsParam : tool.ReservedParam, 
+							entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", schemas[0][tool.SpecialIDParam]),
+							entities.NAMEATTR : entities.RootID(entities.DBUser.Name),
+							}
+		userScheme, _ := s.Domain.SuperCall(params, tool.Record{}, tool.SELECT, "Get")
+		params[entities.NAMEATTR] = entities.RootID(entities.DBEntity.Name)
+		entityScheme, _ := s.Domain.SuperCall(params, tool.Record{}, tool.SELECT, "Get")
+		found := false 
+		if len(userScheme) > 0 { found = true }
+		if len(entityScheme) > 0 { found = true }
+		if found { return record, true, false }
+		return nil, false, false
+	}
+	if wrapperID, ok := record[entities.RootID("wrapper")]; ok && wrapperID != nil {
+		schemas, err := s.Domain.Schema(tool.Record{ entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", wrapperID) }, true);
+		if err != nil && len(schemas) == 0 { return record, false, false }
+		if _, ok := schemas[0]["columns"].(map[string]interface{})[entities.RootID("dest_table")]; ok {
+			return record, true, false
+		} else { return record, true, false }
+	} 
+	return record, true, false
 }
 func (s *ViewService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *ViewService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
@@ -51,6 +60,16 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 		if err != nil || len(schemas) == 0 { continue }
 		tName := fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
 		through, err := s.Domain.Schema(tool.Record{  entities.RootID(entities.DBSchema.Name) : record["through_perms"] }, true)
+		path, params := s.Domain.GeneratePathFilter("/" + tool.MAIN_PREFIX + "/" + tName, 
+		                                            record, tool.Params{ tool.RootTableParam : tName, 
+			                                        tool.RootRowsParam: tool.ReservedParam, })
+		if id != "" { params[tool.RootRowsParam] = id }
+		fmt.Printf("PARAMS %v \n", params)
+		rec["link_path"]=s.Domain.BuildPath(fmt.Sprintf(entities.DBView.Name), fmt.Sprintf("%v", record[tool.SpecialIDParam]))
+		if s.Domain.IsShallowed() { res = append(res, rec); continue }	
+		datas, err := s.Domain.PermsSuperCall( params, tool.Record{}, tool.SELECT, "Get")
+		fmt.Printf("datas ??? %v \n", datas)
+		empty, ok := record["is_empty"]
 		sqlFilter := ""
 		if err == nil && len(through) > 0 { 
 			sqlFilter += "id IN (SELECT " + entities.RootID(tName) 
@@ -62,29 +81,32 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 			sqlFilter += "WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
 			sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")))"
 		}
-		path, params := s.Domain.GeneratePathFilter("/" + tool.MAIN_PREFIX + "/" + tName, 
-		                                            record, tool.Params{ tool.RootTableParam : tName, 
-			                                        tool.RootRowsParam: tool.ReservedParam, })
-		if id != "" { params[tool.RootRowsParam] = id }
-		rec["link_path"]=s.Domain.BuildPath(fmt.Sprintf(entities.DBView.Name), fmt.Sprintf("%v", record[tool.SpecialIDParam]))
-		if s.Domain.IsShallowed() { res = append(res, rec); continue }	
-		datas, err := s.Domain.PermsSuperCall( params, tool.Record{}, tool.SELECT, "Get")
-		empty, ok := record["is_empty"]
 		treated := s.Domain.PostTreat(datas, tName, ok && empty.(bool), []string{ sqlFilter }...)
 		if len(treated) > 0 {
 			for k, v := range treated[0] { 
 				if _, ok := rec[k]; !ok { 
 					if k == "items" && len(path) > 0 && path[:1] == "/" && record["is_list"].(bool) {
 						for _, item := range v.([]interface{}) {
-							if strings.Contains(path, entities.DBView.Name) {
-								nP :=  "/" + tool.MAIN_PREFIX + path 
-								values := item.(map[string]interface{})["values"]
-								if valID, ok := values.(map[string]interface{})[tool.SpecialIDParam]; ok {
-									nP += "&" + tool.RootDestTableIDParam + "=" + fmt.Sprintf("%v", valID)
+							if list, ok := record["is_list"]; ok && list.(bool) {
+								if strings.Contains(path, entities.DBView.Name) {
+									nP :=  "/" + tool.MAIN_PREFIX + path 
+									values := item.(map[string]interface{})["values"]
+									if valID, ok := values.(map[string]interface{})[tool.SpecialIDParam]; ok {
+										nP += "&" + tool.RootDestTableIDParam + "=" + fmt.Sprintf("%v", valID)
+									}
+									item.(map[string]interface{})["link_path"] = nP
+									item.(map[string]interface{})["data_path"] = ""
+								} else {
+									nP :=  "/" + tool.MAIN_PREFIX + "/" + tName 
+									values := item.(map[string]interface{})["values"]
+									if valID, ok := values.(map[string]interface{})[tool.SpecialIDParam]; ok {
+										nP += "?" + tool.RootRowsParam + "=" + fmt.Sprintf("%v", valID)
+									}
+									item.(map[string]interface{})["link_path"] = nP
+									item.(map[string]interface{})["data_path"] = ""
 								}
-								item.(map[string]interface{})["link_path"] = nP
-								item.(map[string]interface{})["data_path"] = ""
 							}
+							
 						}
 						rec[k]=v 
 					} else if k == "schema" { 
@@ -111,6 +133,11 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 				rec["actions"] = append(rec["actions"].(tool.Results), action) 
 			}
 		}
+		/*if id, ok := rec[entities.RootID("wrapper")] {
+			schemas, err := s.Domain.Schema(tool.Record{ tool.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", id)}, true)
+			if err != nil || len(schemas) == 0 { continue }
+			// TODO BY ITEMS WRAPPER "wrap" {} found proper wrapping if not list empty = empty wrapper.
+		}*/
 		res = append(res,  rec)
 	}
 	return res

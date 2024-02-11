@@ -1,6 +1,7 @@
 package service
 
 import (
+	"slices"
 	"strings"
 	"encoding/json"
 	tool "sqldb-ws/lib"
@@ -13,9 +14,11 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db, permsCols strin
 	db = ClearFilter(db)
 	fields := prepareRowField(tableName, db) 	// retrive all fields from schema...
 	db = ClearFilter(db)
+	already := []string{}
     for key, element := range params {
 		field, ok := fields[key]
-		if ok || key == "id" { 
+		if (ok || key == "id") && !slices.Contains(already, key){ 
+			already = append(already, key)
 			// TODO if AND or OR define truncature
 			if strings.Contains(element, ",") { 
 				els := ""
@@ -39,7 +42,7 @@ func ToFilter(tableName string, params tool.Params, db *conn.Db, permsCols strin
 		}
 	}
 	for _, restr := range restriction {
-		if len(restr) > 0 {
+		if len(restr) > 0 && !strings.Contains(db.SQLRestriction, restr) {
 			if len(db.SQLRestriction) == 0 { db.SQLRestriction = restr
 			} else { db.SQLRestriction += " AND " + restr }
 		}

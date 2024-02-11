@@ -1,6 +1,7 @@
 package user_service
 
 import (
+	"fmt"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
 	conn "sqldb-ws/lib/infrastructure/connector"
@@ -18,6 +19,11 @@ func (s *PermissionService) PostTreatment(results tool.Results, tableName string
 	return s.Domain.PostTreat( results, tableName, false) 
 }
 func (s *PermissionService) ConfigureFilter(tableName string) (string, string) {
+	rows, ok := s.Domain.GetParams()[tool.RootRowsParam]
+	ids, ok2 := s.Domain.GetParams()[tool.SpecialIDParam]
+	if (ok && fmt.Sprintf("%v", rows) != tool.ReservedParam) || (ok2 && ids != "") {
+		return s.Domain.ViewDefinition(tableName)
+	}
 	restr := "id IN (SELECT " + entities.DBPermission.Name + "_id FROM " 
 	restr += entities.DBRolePermission.Name + " WHERE " + entities.DBRole.Name + "_id IN ("
 	restr += "SELECT " + entities.DBRole.Name + "_id FROM " 
