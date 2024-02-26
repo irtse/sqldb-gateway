@@ -2,46 +2,26 @@ package domain
 
 import (
 	"fmt"
+	"sort"
+	"slices"
+	"errors"
 	"strings"
 	"encoding/json"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
 	conn "sqldb-ws/lib/infrastructure/connector"
 )
-// main func delete Row in user Entry
-func (d *MainService) DeleteRow(tableName string, results tool.Results) {
-	/*for _, record := range results {
-		params := tool.Params{ tool.RootTableParam : entities.DBUserEntry.Name, 
-			                   tool.RootRowsParam: fmt.Sprintf("%v", record[tool.SpecialIDParam]), }
-		d.SuperCall(params, tool.Record{}, tool.DELETE, "Delete")
-	}*/	
-}
-// main func add Row in user Entry
-func (d *MainService) WriteRow(tableName string, record tool.Record) {}
+
 // define filter whatever what happen on sql...
 func (d *MainService) ViewDefinition(tableName string, innerRestriction... string) (string, string) {
-	SQLview := ""; SQLrestriction := ""; auth := true
-	if d.IsRawView() && d.IsSuperCall() { 
-		return SQLrestriction, SQLview // admin can see all on admin view
-	}
-	if d.Method == tool.SELECT {
-		for _, exception := range entities.PERMISSIONEXCEPTION {
-			if tableName == exception.Name { auth = false; break }
-		}
-	}
+	SQLview := ""; SQLrestriction := ""
+	if d.IsSuperCall() { return SQLrestriction, SQLview } // admin can see all on admin view
 	SQLrestriction = d.ByEntityUser(tableName)
-	if auth { 
-		restr, v := d.byFields(tableName) 
-		SQLview = v
-		if len(strings.TrimSpace(restr)) > 0 {
-			if len(SQLrestriction) > 0 { SQLrestriction += " AND " + restr
-	    	} else {  SQLrestriction = restr }
-		}
-	}
+	SQLview = d.byFields(tableName)
 	if len(innerRestriction) > 0 {
 		for _, restr := range innerRestriction {
 			if len(strings.TrimSpace(restr)) > 0 {
-				if len(SQLrestriction) > 0 { SQLrestriction += " AND " + restr 
+				if len(SQLrestriction) > 0 { SQLrestriction += " AND (" + restr + ")"
 				} else { SQLrestriction = restr  }
 			}
 		}
@@ -49,15 +29,18 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 	return SQLrestriction, SQLview
 }
 
-func (s *MainService) ByEntityUser(tableName string) (string) {
+func (s *MainService) ByEntityUser(tableName string, extra ...string) (string) {
 	schemas, err := s.Schema(tool.Record{ entities.NAMEATTR : tableName }, false)
 	restr := ""
+	if len(extra) > 1 {
+		restr += "id IN (SELECT " + entities.RootID(extra[1]) + " FROM " + tableName + " WHERE "
+	}
 	if err != nil && schemas != nil && len(schemas) > 0 { 
 		userID := entities.RootID(entities.DBUser.Name)
 		entityID := entities.RootID(entities.DBEntity.Name)
 		if _, ok := schemas[0][userID]; ok || tableName == entities.DBUser.Name {
 			if tableName == entities.DBUser.Name  { userID = tool.SpecialIDParam }
-			restr := userID + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")" 
+			restr += userID + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")" 
 			if _, ok := schemas[0][entityID]; ok || tableName == entities.DBEntity.Name  {
 				if tableName == entities.DBEntity.Name  { entityID = tool.SpecialIDParam }
 				if len(restr) > 0 { restr +=  " OR " }
@@ -66,39 +49,46 @@ func (s *MainService) ByEntityUser(tableName string) (string) {
 			}
 		}
 	}
+	if len(extra) > 1 { restr += ")" }
 	return restr
 }
 
-func (d *MainService) byFields(tableName string) (string, string) {
-	SQLview := ""
-	for _, restricted := range entities.DBRESTRICTED {
-		if restricted.Name == tableName { return "id=-1", "" }
+func (d *MainService) byFields(tableName string) (string) {
+	SQLview := "id,"
+	sqlFilter := entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM " + entities.DBSchema.Name + " WHERE name='" + tableName + "')"
+	p := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, tool.RootRowsParam : tool.ReservedParam,}
+	fields, err := d.SuperCall( p, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+	if err != nil || len(fields) == 0 { return "" }
+	views := []string{}
+	if params, ok := d.Params[tool.RootColumnsParam]; ok { 
+		views = strings.Split(params, ",") 
 	}
-	p := tool.Params{ tool.RootTableParam : entities.DBSchema.Name,
-	                  tool.RootRowsParam : tool.ReservedParam,
-				      entities.NAMEATTR : tableName }
-	schemas, err := d.SuperCall( p, tool.Record{}, tool.SELECT, "Get")
-	if err != nil || len(schemas) == 0 { return "id=-1", "" }
-	d.SuperCall( p, tool.Record{}, tool.SELECT, "Get")
-	p = tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name,
-	                 tool.RootRowsParam : tool.ReservedParam,
-				     entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", schemas[0][tool.SpecialIDParam]) }
-	fields, err := d.SuperCall( p, tool.Record{}, tool.SELECT, "Get")
-	if err != nil || len(fields) == 0 { return "id=-1", "" }
-	return "", SQLview
+	for _, field := range fields {
+		if len(views) > 0 && !slices.Contains(views, field.GetString(entities.NAMEATTR)) { continue }
+		if strings.Contains(strings.ToLower(fmt.Sprintf("%v", field[entities.TYPEATTR])) , "many") { continue }
+		if d.PermsCheck(tableName, fmt.Sprintf("%v", field[entities.NAMEATTR]), fmt.Sprintf("%v", field["read_level"]), tool.SELECT) {
+			SQLview += fmt.Sprintf("%v",field[entities.NAMEATTR]) + ","
+		}
+	}
+	if len(SQLview) > 0 { SQLview = SQLview[:len(SQLview) - 1] }
+	return SQLview
 }
 
 func (d *MainService) Schema(record tool.Record, permitted bool) (tool.Results, error) { // check schema auth access
 	params := tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
 			               tool.RootRowsParam : tool.ReservedParam }
 	sqlFilter := ""
-	// fmt.Printf("RECORD %v \n ", record)
 	if id, ok := record[entities.RootID(entities.DBSchema.Name)]; ok {
 		sqlFilter += "id=" + fmt.Sprintf("%v", id)
 	} else if name, ok := record[entities.NAMEATTR]; ok {
 		sqlFilter += "name='" + fmt.Sprintf("%v", name) + "'"
 	}
-	return d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+	schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+	if err == nil && len(schemas) > 0 && permitted && !d.PermsCheck(
+		fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]), "", "", tool.SELECT) {
+		return nil, errors.New("not authorized")
+	}
+	return schemas, err
 }
 
 type Filter struct {
@@ -133,4 +123,68 @@ func (d *MainService) GeneratePathFilter(path string, record tool.Record, params
 		delete(record, entities.RootID(entities.DBView.Name))
 	}
 	return path, params
+}
+
+func (d *MainService) BuildPath(tableName string, rows string, extra... string) string {
+	path := "/" + tool.MAIN_PREFIX + "/" + tableName + "?rows=" + rows
+	for _, ext := range extra { path += "&" + ext }
+	return path
+}
+
+func (d *MainService) GetScheme(tableName string, isId bool) (map[string]interface{}, int64, []string, map[string]entities.SchemaColumnEntity) {
+	cols := map[string]entities.SchemaColumnEntity{}
+	keysOrdered := []string{}
+	sqlFilter := ""
+	if isId { sqlFilter += entities.RootID(entities.DBSchema.Name) + "=" + tableName
+	} else { 
+		sqlFilter += entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM "
+		sqlFilter += entities.DBSchema.Name + " WHERE name=" + conn.Quote(tableName) + ")" }
+	// retrive all fields from schema...
+	params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
+						   tool.RootRowsParam: tool.ReservedParam, }
+	schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+	var id int64
+	schemes := map[string]interface{}{}
+	if err != nil || len(schemas) == 0 { return schemes, id, keysOrdered, cols }
+	for _, r := range schemas {
+		var scheme entities.SchemaColumnEntity
+		var shallowField entities.ShallowSchemaColumnEntity
+		b, _ := json.Marshal(r)
+		json.Unmarshal(b, &scheme)
+		if !d.PermsCheck(tableName, scheme.Name, scheme.Level, tool.SELECT) { 
+			fmt.Printf("TABLE COL %v %v %v \n", tableName,  scheme.Name, scheme.Level)
+			continue 
+		}
+		cols[scheme.Name]=scheme
+		id = scheme.SchemaId
+		json.Unmarshal(b, &shallowField)
+		shallowField.ActionPath = ""
+		shallowField.Actions=[]string{}
+		if scheme.Link != "" {
+			shallowField.LinkPath = "/" + tool.MAIN_PREFIX + "/" + scheme.Link + "?rows=all"
+			if scheme.LinkView != "" { shallowField.LinkPath += "&" + tool.RootColumnsParam + "=" + scheme.LinkView  
+			} else if !strings.Contains(scheme.Type, "many") { shallowField.LinkPath += "&" + tool.RootShallow + "=enable" 
+			} else {
+				isSkipped := false
+				for _, meth := range []tool.Method{ tool.SELECT, tool.CREATE, tool.UPDATE, tool.DELETE } {
+					if d.PermsCheck(scheme.Link, "", "", meth) { 
+						sch, _, ordered, _ := d.GetScheme(scheme.Link, false)
+						shallowField.DataSchema = sch
+						shallowField.DataSchemaOrder = ordered
+						shallowField.ActionPath = "/" + tool.MAIN_PREFIX + "/" + scheme.Link + "?rows=" + tool.ReservedParam
+						shallowField.Actions=append(shallowField.Actions, meth.Method())
+					} else if meth == tool.UPDATE { shallowField.Readonly = true 
+					} else if meth == tool.SELECT { isSkipped = true }
+				} 
+				if isSkipped { continue }
+			}
+			if scheme.LinkOrder != "" { shallowField.LinkPath += "&" + tool.RootOrderParam + "=" + scheme.LinkOrder  }
+		}
+		keysOrdered = append(keysOrdered, scheme.Name)
+		schemes[scheme.Name]=shallowField
+	}
+	sort.SliceStable(keysOrdered, func(i, j int) bool{
+        return schemes[keysOrdered[i]].(entities.ShallowSchemaColumnEntity).Index <= schemes[keysOrdered[j]].(entities.ShallowSchemaColumnEntity).Index
+    })
+	return schemes, id, keysOrdered, cols
 }

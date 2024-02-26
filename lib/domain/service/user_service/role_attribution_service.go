@@ -23,7 +23,7 @@ func (s *RoleAttributionService) DeleteRowAutomation(results tool.Results, table
 func (s *RoleAttributionService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *RoleAttributionService) WriteRowAutomation(record tool.Record, tableName string) { }
 func (s *RoleAttributionService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
-	return s.Domain.PostTreat( results, tableName, false) 
+	return s.Domain.PostTreat( results, tableName ) 
 }
 func (s *RoleAttributionService) ConfigureFilter(tableName string) (string, string) {
 	return s.Domain.ViewDefinition(tableName)

@@ -19,6 +19,7 @@ func RootName(name string) string { return "db" + name }
 
 type TableEntity struct { // define a db table 
 	Name    string              		 `json:"name" validate:"required"`
+	Label   string						 `json:"label"`
 	Columns []TableColumnEntity 		 `json:"columns"`
 }
 
@@ -26,6 +27,7 @@ func (t TableEntity) GetName() string { return t.Name }
 
 type ShallowTableEntity struct { // lightest definition a db table 
 	Name    string              		 `json:"name"`
+	Label   string						 `json:"label"`
 	Columns []TableColumnEntity 		 `json:"columns"`
 }
 func (t ShallowTableEntity) GetName() string { return t.Name }
@@ -33,10 +35,11 @@ func (t ShallowTableEntity) GetName() string { return t.Name }
 
 type TableColumnEntity struct { // definition a db table columns
 	Name string         `json:"name" validate:"required"`
+	Label string         `json:"label"`
 	Type string         `json:"type"`
 	Index int64         `json:"-"`
 	Default interface{} `json:"default_value"`
-	Hidden bool         `json:"hidden"`
+	Level 	string 		`json:"read_level"`
 	ForeignTable string `json:"link"`
 	Readonly bool		`json:"readonly"`
 	Constraint string   `json:"constraint"`
@@ -48,6 +51,7 @@ type TableColumnEntity struct { // definition a db table columns
 func (t TableColumnEntity) GetName() string { return t.Name }
 
 type SchemaColumnEntity struct { // struct based on dbschema_columns in root
+	ID 						int64 						 `json:"id"`
 	Label 					string 						 `json:"label" validate:"required"`
 	Name    				string          			 `json:"name" validate:"required"`
 	Type 					string 		 				 `json:"type" validate:"required"`
@@ -55,7 +59,7 @@ type SchemaColumnEntity struct { // struct based on dbschema_columns in root
 	Description 			string				 		 `json:"description"`
 	Placeholder 			string				 		 `json:"placeholder"`
 	Default 				interface{}					 `json:"default_value"`
-	Hidden 					bool 		 			 	 `json:"hidden"`
+	Level 					string 		 			 	 `json:"read_level"`
 	Required 				bool 		 			 	 `json:"required"`
 	Readonly 				bool 		 			 	 `json:"readonly"`
 	SchemaId 				int64 		 			 	 `json:"dbschema_id"`
@@ -76,5 +80,9 @@ type ShallowSchemaColumnEntity struct {// lightest struct based on dbschema_colu
 	Required 				bool 		 			 	 `json:"required"`
 	Readonly 				bool 		 			 	 `json:"readonly"`
 	LinkPath 				string 		 			 	 `json:"values_path"`
+	ActionPath		 		string 		 		 	 	 `json:"action_path"`
+	Actions		 			[]string 		 		 	 `json:"actions"`
+	DataSchemaOrder 		[]string 		 		 	 `json:"data_schema_order"`
+	DataSchema 				map[string]interface{} 		 `json:"data_schema"`
 }
 func (t ShallowSchemaColumnEntity) GetName() string { return t.Label }

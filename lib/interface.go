@@ -3,7 +3,6 @@ package lib
 // API COMMON INTERFACE
 // Defined infrastructure service functions
 type InfraServiceItf interface {
-	SetAuth(bool)
 	Verify(string)              					(string, bool)
 	Save(restriction... string) 			        (error)
 	Get(restriction... string)  					(Results, error)
@@ -17,22 +16,22 @@ type InfraServiceItf interface {
 type DomainITF interface {
 	PermsSuperCall(params Params, record Record, method Method, funcName string, args... interface{}) (Results, error)
 	SuperCall(params Params, rec Record, m Method, funcName string, args... interface{}) (Results, error)
-	Call(params Params, rec Record, m Method, auth bool, funcName string, args... interface{}) (Results, error)
+	Call(params Params, rec Record, m Method, funcName string, args... interface{}) (Results, error)
     SetIsCustom(isCustom bool)
 	IsSuperCall() bool
 	GetUser() string
 	IsShallowed() bool 
-	IsRawView() bool
+	SetEmpty(empty bool)
+	GetEmpty() bool
 	BuildPath(tableName string, rows string, extra... string) string
 	GeneratePathFilter(path string, record Record, params Params) (string, Params)
 	IsSuperAdmin() bool
-	GetPermission() InfraServiceItf
-	DeleteRow(tableName string, results Results)
-	WriteRow(tableName string, record Record)
 	ViewDefinition(tableName string, innerRestriction... string) (string, string)
 	Schema(record Record, p bool) (Results, error)
 	GetParams() Params
-	PostTreat(results Results, tableName string, shallow bool,  additonnalRestriction ...string) Results
+	ByEntityUser(tableName string, extra ...string) (string)
+	PostTreat(results Results, tableName string) Results
+	PermsCheck(tableName string, colName string, level string, method Method) bool
 } 
 
 type DbITF interface {
@@ -55,3 +54,4 @@ type SpecializedService interface {
 
 type AbstractSpecializedService struct { Domain DomainITF }
 func (s *AbstractSpecializedService) SetDomain(d DomainITF) {  s.Domain = d  }
+

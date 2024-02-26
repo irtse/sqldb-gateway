@@ -31,8 +31,9 @@ type MainService struct {
 	Specialization		bool
 	Empty               bool
 	Method				tool.Method
-	PermService			tool.InfraServiceItf
 	Params 				tool.Params
+	Perms				map[string]map[string]Perms
+	notAllowedFields	[]string
 	Db					*conn.Db
 }
 // generate a new domain controller. 
@@ -45,13 +46,13 @@ func Domain(superAdmin bool, user string, isGenericService bool) *MainService {
 	}
 }
 // Main accessor defined by DomainITF interface
-func (d *MainService) GetPermission() tool.InfraServiceItf { return d.PermService }
 func (d *MainService) SetIsCustom(isCustom bool) { d.isGenericService = isCustom }
+func (d *MainService) SetEmpty(empty bool) { d.Empty = empty }
+func (d *MainService) GetEmpty() bool { return d.Empty }
 func (d *MainService) GetUser() string { return d.User }
 func (d *MainService) IsSuperAdmin() bool { return d.SuperAdmin }
 func (d *MainService) IsSuperCall() bool { return d.Super && d.SuperAdmin }
 func (d *MainService) IsShallowed() bool { return d.Shallowed }
-func (d *MainService) IsRawView() bool { return d.RawView }
 func (d *MainService) GetParams() tool.Params { return d.Params }
 func (d *MainService) GetDB() tool.DbITF { return d.Db }
 
@@ -59,25 +60,24 @@ func (d *MainService) GetDB() tool.DbITF { return d.Db }
 func (d *MainService) SuperCall(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
 	params[tool.RootRawView]="enable"
 	params[tool.RootSuperCall]="enable"
-	return Domain(true, d.User, d.isGenericService).call(false, params, record, method, true, funcName, args...)
+	return Domain(true, d.User, d.isGenericService).call(params, record, method, funcName, args...)
 }
 func (d *MainService) PermsSuperCall(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
 	params[tool.RootRawView]="enable"
-	return Domain(true, d.User, d.isGenericService).call(false, params, record, method, true, funcName, args...)
+	return Domain(true, d.User, d.isGenericService).call(params, record, method, funcName, args...)
 }
 // Infra func caller with current option view and user rights.
-func (d *MainService) Call(params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
-	return d.call(true, params, record, method, auth, funcName, args...)
+func (d *MainService) Call(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
+	return d.call(params, record, method, funcName, args...)
 }
 // Main process to call an Infra function
-func (d *MainService) call(postTreat bool, params tool.Params, record tool.Record, method tool.Method, auth bool, funcName string, args... interface{}) (tool.Results, error) {
+func (d *MainService) call(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
 	var service tool.InfraServiceItf // generate an empty var for a casual infra service ITF (interface) to embedded any service.
 	res := tool.Results{}
 	d.Method = method
 	d.Params = params
-	if adm, ok := params[tool.RootEmpty]; ok && adm == "enable" { d.Empty = true } // set up admin view
+	d.notAllowedFields = []string{}
 	if adm, ok := params[tool.RootSuperCall]; ok && adm == "enable" { d.Super = true } // set up admin view
-	if adm, ok := params[tool.RootRawView]; ok && adm == "enable" { d.RawView = true } // set up admin view
 	if shallow, ok := params[tool.RootShallow]; ok && shallow == "enable" { d.Shallowed = true }  // set up shallow option (lighter version of results)
 	if tablename, ok := params[tool.RootTableParam]; ok { // retrieve tableName in query (not optionnal)
 		var specializedService tool.SpecializedService
@@ -85,53 +85,30 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			specializedService = &domain.CustomService{}
 			if !d.isGenericService { specializedService = domain.SpecializedService(tablename) }
 			specializedService.SetDomain(d)
-			if d.Method == tool.SELECT {
-				for _, exception := range entities.PERMISSIONEXCEPTION {
-					if tablename == exception.Name { auth = false; break }
-				}
-			}
 		}
 		d.Db = conn.Open() // open base
 		defer d.Db.Conn.Close() // close when finished
+		d.PermsBuilder()
+		if !d.PermsCheck(tablename, "", "", d.Method) {
+			return res, errors.New("not authorized to " + method.String() + " " + tablename + " datas")
+		}
 		// load the highest entity avaiable Table level.
 		table := infrastructure.Table(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename), params, record, method)
 		delete(params, tool.RootTableParam)
 		service=table
 		tablename = strings.ToLower(tablename)
-		d.PermService = infrastructure.Permission(d.Db, 
-			d.SuperAdmin, 
-			d.User,
-			params, 
-			record,
-			method)
-		if res, err := d.PermService.(*infrastructure.PermissionInfo).Get(); res != nil && err == nil { 
-			d.PermService.(*infrastructure.PermissionInfo).GeneratePerms(res) 
-		}
-		table.PermService=d.PermService.(*infrastructure.PermissionInfo)
 		if rowName, ok := params[tool.RootRowsParam]; ok { // rows override columns
-			if tablename == tool.ReservedParam { 
-				return res, errors.New("can't load table as " + tool.ReservedParam) 
-			}
-			if auth {
-			   	if _, ok := d.PermService.Verify(tablename); !ok { 
-					return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
-			    }
-			}
+			if tablename == tool.ReservedParam { return res, errors.New("can't load table as " + tool.ReservedParam) }
 			params[tool.SpecialIDParam]=strings.ToLower(rowName) 
 			delete(params, tool.RootRowsParam)
 			if params[tool.SpecialIDParam] == tool.ReservedParam { delete(params, tool.SpecialIDParam) }
 			service = table.TableRow(specializedService)
-			service.SetAuth(auth)
 			res, err := d.invoke(service, funcName, args...)
-			if specializedService != nil && postTreat {
-				fmt.Printf("DEST ID %v \n", params[tool.RootDestTableIDParam])
+			if specializedService != nil && params[tool.RootRawView] != "enable" && !d.IsSuperCall() {
 				if dest_id, ok := params[tool.RootDestTableIDParam]; ok {
 					return specializedService.PostTreatment(res, tablename, dest_id), nil
 				}
 				return specializedService.PostTreatment(res, tablename), nil
-			}
-			if (d.PermService.(*infrastructure.PermissionInfo).PartialResults != "") {
-				return res, errors.New(d.PermService.(*infrastructure.PermissionInfo).PartialResults)
 			}
 			return res, err
 		}
@@ -146,7 +123,6 @@ func (d *MainService) call(postTreat bool, params tool.Params, record tool.Recor
 			params[tool.RootColumnsParam]=strings.ToLower(col)
 			service = table.TableColumn() 
 		}
-		service.SetAuth(auth)
 		return d.invoke(service, funcName, args...)
 	}
 	return res, errors.New("no service avaiblable")
@@ -172,133 +148,155 @@ func (d *MainService) invoke(service tool.InfraServiceItf, funcName string, args
 }
 
 type View struct {
-	Name  		 string 					`json:"name"`
-	SchemaName   string 					`json:"schema_name"`
-	Description  string 					`json:"description"`
-	Path		 string 					`json:"link_path"`
-	Schema		 tool.Record 				`json:"schema"`
-	Items		 []tool.Record 				`json:"items"`
-	Actions		 []map[string]interface{} 	`json:"actions"`
+	Name  		 	string 						`json:"name"`
+	SchemaID		int64						`json:"schema_id"`
+	SchemaName   	string 						`json:"schema_name"`
+	Description  	string 						`json:"description"`
+	Path		 	string 						`json:"link_path"`
+	Order		 	[]string 					`json:"order"`
+	Schema		 	tool.Record 				`json:"schema"`
+	Items		 	[]tool.Record 				`json:"items"`
+	Actions		 	[]map[string]interface{} 	`json:"actions"`
+	Parameters 		[]string 					`json:"parameters"`
 }
 
 type ViewItem struct {
-	Path 	   string					 	`json:"link_path"`
-	Values 	   map[string]interface{} 	    `json:"values"`
-	DataPaths  string				        `json:"data_path"`
-	ValuePaths map[string]string			`json:"values_path"`
+	Path 	   	   string					 	`json:"link_path"`
+	Values 	   	   map[string]interface{} 	    `json:"values"`
+	DataPaths  	   string				        `json:"data_path"`
+	ValueShallow   map[string]interface{}		`json:"values_shallow"`
+	ValueMany      map[string]tool.Results		`json:"values_many"`
 }
 
-func (d *MainService) PostTreat(results tool.Results, tableName string, shallow bool, 
-	                            additonnalRestriction ...string) tool.Results {
-	if shallow || d.Empty { shallow = true }
-	cols := map[string]entities.SchemaColumnEntity{}
-	sqlFilter := entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM "
-	sqlFilter += entities.DBSchema.Name + " WHERE name=" + conn.Quote(tableName) + ")"
+func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Results {
 	// retrive all fields from schema...
-	params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
-		                   tool.RootRowsParam: tool.ReservedParam, }
-	schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
-	if err != nil || len(schemas) == 0 { return tool.Results{} }
 	var view View
-	if !d.IsShallowed() && !d.IsRawView() {
-		schemes := map[string]interface{}{}
-		for _, r := range schemas {
-			var scheme entities.SchemaColumnEntity
-			var shallowField entities.ShallowSchemaColumnEntity
-			b, _ := json.Marshal(r)
-			json.Unmarshal(b, &scheme)
-			if scheme.Name == "password" { continue }
-			cols[scheme.Name]=scheme
-			json.Unmarshal(b, &shallowField)
-			if scheme.Link != "" {
-				shallowField.LinkPath = "/" + tool.MAIN_PREFIX + "/" + scheme.Link + "?rows=all"
-				if scheme.LinkView != "" { shallowField.LinkPath += "&" + tool.RootColumnsParam + "=" + scheme.LinkView  
-				} else { shallowField.LinkPath += "&" + tool.RootShallow + "=enable" }
-				if scheme.LinkOrder != "" { shallowField.LinkPath += "&" + tool.RootOrderParam + "=" + scheme.LinkOrder  }
-			}
-			schemes[scheme.Name]=shallowField
-		}
-		view = View{ Name : tableName, Description : tableName + " datas", 
-	                  Path : "", 
-					  Schema : schemes,
-					  SchemaName: tableName, 
-					  Actions : []map[string]interface{}{},
-					  Items : []tool.Record{} }	
+	if !d.IsShallowed() {
+		schemes, id, order, cols := d.GetScheme(tableName, false) 
+		view = View{ Name : tableName, Description : tableName + " datas",  Path : "", 
+					 Schema : schemes, 
+					 Order : order,
+					 SchemaID: id,
+					 SchemaName: tableName, 
+					 Actions : []map[string]interface{}{},  Items : []tool.Record{} }	
 		res := tool.Results{} 
-		
 		for _, record := range results { 
-			rec := d.PostTreatRecord(record, tableName, cols, shallow)
+			rec := d.PostTreatRecord(record, tableName, cols, d.Empty)
 			if rec == nil { continue }
 			view.Items = append(view.Items, rec)
 		}
 		r := tool.Record{}
 		b, _ := json.Marshal(view)
 		json.Unmarshal(b, &r)
+		r["action_path"] = "/" + tool.MAIN_PREFIX + "/" + tableName + "?rows=" + tool.ReservedParam
+		r["actions"]=[]string{}
+		for _, meth := range []tool.Method{ tool.SELECT, tool.CREATE, tool.UPDATE, tool.DELETE } {
+			if d.PermsCheck(tableName, "", "", meth) { r["actions"]=append(r["actions"].([]string), meth.Method())
+			} else if meth == tool.UPDATE { r["readonly"] = true }
+		} 
 		res = append(res, r)
 		return res
 	} else { 
-		if d.Shallowed {
-			res := tool.Results{}
-			for _, record := range results {
-				if _, ok := record[entities.NAMEATTR]; ok {
-					res = append(res, tool.Record{ tool.SpecialIDParam : record[tool.SpecialIDParam ],
-													entities.NAMEATTR : record[ entities.NAMEATTR ], })
-				} else { res = append(res, tool.Record{ tool.SpecialIDParam : record[tool.SpecialIDParam ], }) }
-			}
-			return res
-		} else { 
-			for _, record := range results {
-				if _, ok := record["password"]; ok { delete(record, "password") }
-			}
-			return results 
+		res := tool.Results{}
+		for _, record := range results {
+			if n, ok := record[entities.NAMEATTR]; ok {
+				label := fmt.Sprintf("%v", n)
+				if l, ok2 := record["label"]; ok2 { label = fmt.Sprintf("%v", l) }
+				if record[entities.RootID(entities.DBSchema.Name)] != nil { // SCHEMA ? 
+					schemas, err := d.Schema(record, true)
+					actionPath := "/" + tool.MAIN_PREFIX + "/" + tableName + "?rows=" + tool.ReservedParam
+					actions := []string{}
+					readonly := false
+					for _, meth := range []tool.Method{ tool.SELECT, tool.CREATE, tool.UPDATE, tool.DELETE } {
+						if d.PermsCheck(schemas[0].GetString(entities.NAMEATTR), "", "", meth) { 
+							actions=append(actions, meth.Method())
+						} else if meth == tool.UPDATE { readonly = true }
+					} 
+					if err == nil || len(schemas) > 0 { 
+						schema, id, order,  _ := d.GetScheme(schemas[0].GetString(entities.NAMEATTR), false)
+						res = append(res, tool.Record{ 
+							tool.SpecialIDParam : record[tool.SpecialIDParam],
+							entities.NAMEATTR : n,
+							"label": label, 
+							"order" : order,
+							"schema_id" : id,
+							"actions" : actions,
+							"action_path" : actionPath,
+							"readonly" : readonly,
+							"link_path" : "/" + tool.MAIN_PREFIX + "/" + schemas[0].GetString(entities.NAMEATTR) + "?rows=" + tool.ReservedParam,
+							"schema_name" : schemas[0].GetString(entities.NAMEATTR),
+							"schema" : schema, })	
+						continue
+					}	
+				}
+				res = append(res, tool.Record{ tool.SpecialIDParam : record[tool.SpecialIDParam], 
+					                           entities.NAMEATTR : n, "label": label,})	
+			} else { res = append(res, record) }
 		}
-	}
+		return res
+	} 
+	return results
 }
 
-func (d *MainService) PostTreatRecord(record tool.Record, tableName string, 
-									  cols map[string]entities.SchemaColumnEntity, shallow bool) tool.Record {
-	if d.IsShallowed() {
-		if _, ok := record[entities.NAMEATTR]; ok {
-			return tool.Record{ 
-				tool.SpecialIDParam : record[tool.SpecialIDParam ],
-				entities.NAMEATTR : record[ entities.NAMEATTR ],
-			}
-		} else { return record }
-	} else {
-		if d.IsRawView() { return record } // if admin view avoid.
+func (d *MainService) PostTreatRecord(record tool.Record, tableName string,  cols map[string]entities.SchemaColumnEntity, shallow bool) tool.Record {
 		vals := map[string]interface{}{}
-		contentPaths := map[string]string{}
+		shallowVals := map[string]interface{}{}
+		manyVals := map[string]tool.Results{}
 		datapath := ""
 		if !shallow { vals[tool.SpecialIDParam]=fmt.Sprintf("%v", record[tool.SpecialIDParam]) }
 		for _, field := range cols {
-			if d.Db.GetSQLView() != "" && !strings.Contains(d.Db.GetSQLView(), field.Name){ continue }
-			if strings.Contains(field.Name, entities.DBSchema.Name) && !shallow { 
-				dest, ok := record[entities.RootID("dest_table")] // IT'S A WRAPPER !
+			if strings.Contains(field.Name, entities.DBSchema.Name) { 
+				dest, ok := record[entities.RootID("dest_table")]
 				id, ok2 := record[field.Name]
 				if ok2 && ok && dest != nil && id != nil {
 					schemas, err := d.Schema(tool.Record{ entities.RootID(entities.DBSchema.Name) : id }, true)
 					if err != nil || len(schemas) == 0 { continue }
-					datapath=d.BuildPath(fmt.Sprintf("%v",schemas[0][entities.NAMEATTR]), fmt.Sprintf("%v", dest))			
+					if dest != nil {
+						datapath=d.BuildPath(fmt.Sprintf("%v",schemas[0][entities.NAMEATTR]), fmt.Sprintf("%v", dest))			
+					}
 				}
+			}
+			if f, ok:= record[field.Name]; ok && field.Link != "" && f != nil && !shallow && !strings.Contains(field.Type, "many") { 
+				params := tool.Params{ tool.RootTableParam : field.Link, tool.RootRowsParam: fmt.Sprintf("%v", f), tool.RootShallow : "enable" }
+				r, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
+				if err != nil || len(r) == 0 { continue }
+				shallowVals[field.Name]=r[0]
 				continue
 			}
-			if f, ok:= record[field.Name]; ok && field.Link != "" && f != nil && !shallow { 
-				contentPaths[field.Name]=d.BuildPath(field.Link, fmt.Sprintf("%v", f), "shallow=enable")
+			if field.Link != "" && !shallow && strings.Contains(field.Type, "many") { 
+				params := tool.Params{ tool.RootTableParam : field.Link, tool.RootRowsParam: tool.ReservedParam, tool.RootShallow : "enable",
+									   entities.RootID(tableName) : record.GetString(tool.SpecialIDParam), }
+				r, err := d.Call( params, tool.Record{}, tool.SELECT, "Get")
+				if err != nil || len(r) == 0 { continue }
+				ids := map[string]string{}
+				for _, r2 := range r {
+					fmt.Printf("qsdqds %v \n", r2)
+					for field2, _ := range r2 {
+						if !strings.Contains(field2, tableName) && field2 != "id" && strings.Contains(field2, "_id") {
+							if i , ok := ids[strings.Replace(field2, "_id", "", -1)]; !ok || i == "" {
+								ids[strings.Replace(field2, "_id", "", -1)]=""
+							}
+							ids[strings.Replace(field2, "_id", "", -1)] += r2.GetString(field2) + ","
+						}
+					}
+				}
+				for id, idstr := range ids {
+					params = tool.Params{ tool.RootTableParam : id, tool.RootRowsParam: idstr[:len(idstr) - 1], tool.RootShallow : "enable", }
+					r, err = d.Call( params, tool.Record{}, tool.SELECT, "Get")
+					if err != nil || len(r) == 0 { continue }
+					if _, ok := manyVals[field.Name]; !ok { manyVals[field.Name] = tool.Results{} }
+					manyVals[field.Name]= append(manyVals[field.Name], r...)
+				}
 				continue
 			}
 			if shallow { vals[field.Name]=nil 
 			} else if v, ok:=record[field.Name]; ok { vals[field.Name]=v }
 		}
-		view := ViewItem{ Values : vals, Path : "", DataPaths :  datapath, ValuePaths : contentPaths, }
+		view := ViewItem{ Values : vals, Path : "", DataPaths :  datapath, ValueShallow : shallowVals, ValueMany: manyVals }
 		var newRec tool.Record
 		b, _ := json.Marshal(view)
 		json.Unmarshal(b, &newRec)
 		return newRec
-	}
 }
 
-func (d *MainService) BuildPath(tableName string, rows string, extra... string) string {
-		path := "/" + tool.MAIN_PREFIX + "/" + tableName + "?rows=" + rows
-		for _, ext := range extra { path += "&" + ext }
-		return path
-}
+

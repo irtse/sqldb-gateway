@@ -8,7 +8,7 @@ import (
 	"sqldb-ws/lib/entities"
 )
 
-type validable interface { entities.TableEntity | entities.ShallowTableEntity | entities.TableColumnEntity | Info | map[string]interface{} }
+type validable interface { entities.TableEntity | entities.ShallowTableEntity | entities.TableColumnEntity | map[string]interface{} }
 type DBValidator[T validable] struct { data T }
 
 func Validator[T validable]() *DBValidator[T] {

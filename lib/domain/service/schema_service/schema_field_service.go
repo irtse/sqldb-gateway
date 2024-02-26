@@ -3,7 +3,6 @@ package schema_service
 import (
 	"fmt"
 	"strings"
-	"encoding/json"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
 )
@@ -12,7 +11,6 @@ type SchemaFields struct { tool.AbstractSpecializedService }
 
 func (s *SchemaFields) Entity() tool.SpecializedServiceInfo {return entities.DBSchemaField }
 func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) {
-	schemas, err := s.Domain.Schema(record, true)
 	newRecord := tool.Record{}
 	if !create {
 		for k, v := range record {
@@ -39,11 +37,14 @@ func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (too
 				} else { newRecord[k] = v  }
 			}
 		}
-		if _, ok := newRecord["label"]; !ok {
+		if label, ok := newRecord["label"]; !ok || label == "" {
 			newRecord["label"] = strings.Replace(fmt.Sprintf("%v", newRecord["name"]), "_", " ", -1)
 		}
+		if nullable, ok := newRecord["nullable"]; !ok || nullable == nil {
+			newRecord["nullable"] = true
+		}
 	}
-	return newRecord, err == nil && schemas != nil && len(schemas) > 0, true
+	return newRecord, true, true
 }
 func (s *SchemaFields) WriteRowAutomation(record tool.Record, tableName string) { 
 	res, err := s.Domain.SuperCall(
@@ -53,21 +54,28 @@ func (s *SchemaFields) WriteRowAutomation(record tool.Record, tableName string) 
 		tool.SELECT, 
 		"Get",
 	)
-	if err != nil { return }
-	var data entities.TableColumnEntity
-	b, _:= json.Marshal(record)
-	json.Unmarshal(b, &data)
-    var rec tool.Record 
-	b, _= json.Marshal(data)
-	json.Unmarshal(b, &rec)
-	if len(res) > 0 {
-		s.Domain.SuperCall(
-			tool.Params{ tool.RootTableParam : res[0][entities.NAMEATTR].(string), 
-				         tool.RootColumnsParam: tool.ReservedParam }, 
-			rec, 
-			tool.CREATE, 
-			"CreateOrUpdate")
+	if err != nil || len(res) == 0 { return }
+	for role, mainPerms := range tool.MAIN_PERMS {
+			read_levels := []string{entities.LEVELNORMAL}
+			if level, ok := record["read_level"]; ok && level != "" {
+				read_levels = append(read_levels, strings.Replace(fmt.Sprintf("%v", level), "'", "", -1))
+			}
+			for _, l := range read_levels {
+				rec := tool.Record{ 
+					entities.NAMEATTR : fmt.Sprintf("%v", res[0][entities.NAMEATTR]) + ":" + fmt.Sprintf("%v", record[entities.NAMEATTR]) + ":" + l + ":" + role, 
+				}
+				for perms, value := range mainPerms { rec[perms]=value }
+				rec[tool.SELECT.String()]=l
+				s.Domain.SuperCall(
+					tool.Params{ tool.RootTableParam : entities.DBPermission.Name, tool.RootRowsParam : tool.ReservedParam }, 
+					rec, tool.CREATE, "CreateOrUpdate",)
+			}
 	}
+	s.Domain.SuperCall(tool.Params{ tool.RootTableParam : res[0][entities.NAMEATTR].(string), 
+				       tool.RootColumnsParam: tool.ReservedParam }, 
+						record, 
+						tool.CREATE, 
+						"CreateOrUpdate")
 }
 func (s *SchemaFields) UpdateRowAutomation(results tool.Results, record tool.Record) {
 	for _, r := range results {
@@ -78,7 +86,23 @@ func (s *SchemaFields) UpdateRowAutomation(results tool.Results, record tool.Rec
 			tool.SELECT, 
 			"Get",
 		)
-		if err != nil || res == nil || len(res) == 0 { return }
+		if err != nil || len(res) == 0 { return }
+		for role, mainPerms := range tool.MAIN_PERMS {
+			read_levels := []string{entities.LEVELNORMAL}
+			if level, ok := record["read_level"]; ok && level != "" {
+				read_levels = append(read_levels,strings.Replace( fmt.Sprintf("%v", level), "'", "", -1))
+			}
+			for _, l := range read_levels {
+				rec := tool.Record{ 
+					entities.NAMEATTR : fmt.Sprintf("%v", res[0][entities.NAMEATTR]) + ":" + fmt.Sprintf("%v", record[entities.NAMEATTR]) + ":" + l + ":" + role, 
+				}
+				for perms, value := range mainPerms { rec[perms]=value }
+				rec[tool.SELECT.String()]=l
+				s.Domain.SuperCall(
+					tool.Params{ tool.RootTableParam : entities.DBPermission.Name, tool.RootRowsParam : tool.ReservedParam }, 
+					rec, tool.CREATE, "CreateOrUpdate",)
+			}
+		}
 		newRecord := tool.Record{}
 		for k, v := range record {
 			newRecord[k] = v 
@@ -93,6 +117,7 @@ func (s *SchemaFields) UpdateRowAutomation(results tool.Results, record tool.Rec
 			tool.UPDATE, 
 			"CreateOrUpdate",
 		)
+		
 	}
 }
 func (s *SchemaFields) DeleteRowAutomation(results tool.Results, tableName string) { 
@@ -112,10 +137,24 @@ func (s *SchemaFields) DeleteRowAutomation(results tool.Results, tableName strin
 			tool.DELETE, 
 			"Delete",
 		)
+		
+		s.Domain.SuperCall(
+			tool.Params{ tool.RootTableParam : entities.DBPermission.Name, 
+				         tool.RootRowsParam : tool.ReservedParam, 
+						 entities.NAMEATTR : "%" + tableName + ":" + fmt.Sprintf("%v", record[entities.NAMEATTR]) + "%" }, 
+						 tool.Record{ },  tool.DELETE, "Delete", )
 	}
 }
 func (s *SchemaFields) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
-	return s.Domain.PostTreat( results, tableName, false) 
+	res := tool.Results{}
+	for _, rec := range results {
+		schemas, err := s.Domain.Schema(rec, true)
+		if err != nil && len(schemas) == 0 { continue }
+		if s.Domain.PermsCheck(fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]), "", "", tool.SELECT) {
+			res = append(res, rec)
+		}
+	}
+	return s.Domain.PostTreat( res, tableName) 
 }
 func (s *SchemaFields) ConfigureFilter(tableName string) (string, string) {
 	return s.Domain.ViewDefinition(tableName)

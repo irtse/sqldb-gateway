@@ -3,12 +3,15 @@ package connector
 import (
 	"os"
 	"fmt"
+	"slices"
 	"errors"
 	"strings"
 	"reflect"
 	"strconv"
+	"encoding/json"
 	"database/sql"
 	tool "sqldb-ws/lib"
+	"sqldb-ws/lib/entities"
 	"github.com/rs/zerolog"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -87,20 +90,17 @@ func (db *Db) Query(query string) (error) {
 	// if db.LogQueries { log.Info().Msg(query) }
 	//if strings.Contains(query, "UPDATE") { fmt.Printf("QUERY : %s\n", query) }
 	rows, err := db.Conn.Query(query)
-	if err != nil { 
-		// fmt.Printf("QUERY : %s\n", query)
-		return err 
-	}
+	if err != nil { return err }
 	err = rows.Close()
 	return err
 }
 
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
     if strings.Contains(query, "<nil>") { return nil, errors.New("not found")}
+	// if strings.Contains(query, "dbtask") { fmt.Printf("QUERY : %s\n", query) }
 	rows, err := db.Conn.Query(query)
-	if strings.Contains(query, "dbtask") { fmt.Printf("QUERY : %s\n", query) }
 	if err != nil { 
-		fmt.Printf("PROBLEM %s \n", query)
+		// fmt.Printf("QUERY : %s\n", query)
 		return nil, err 
 	}
 	defer rows.Close()
@@ -113,7 +113,7 @@ func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 	if err != nil { return nil, err }
 	columnType := make(map[string]string)
 	for _, colType := range columnTypes {
-		columnType[colType.Name()] = colType.DatabaseTypeName()
+		columnType[colType.Name()] = strings.ToUpper(colType.DatabaseTypeName())
 	}
 
 	for rows.Next() {
@@ -121,9 +121,7 @@ func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 		// and a second slice to contain pointers to each item in the columns slice.
 		columns := make([]interface{}, len(cols))
 		columnPointers := make([]interface{}, len(cols))
-		for i := range columns {
-			columnPointers[i] = &columns[i]
-		}
+		for i := range columns { columnPointers[i] = &columns[i] }
 
 		// Scan the result into the column pointers...
 		err = rows.Scan(columnPointers...)
@@ -139,10 +137,24 @@ func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 					if (*val) == nil { m[colName] = nil
 					} else { m[colName] = ValueByType(columnType[colName], *val, query) }
 				}
-				if db.Driver == PostgresDriver { m[colName] = *val }
+				if db.Driver == PostgresDriver { 
+					m[colName] = *val 
+					if m[colName] != nil { 
+						if (strings.Contains("DOUBLE", columnType[colName]) || strings.Contains("MONEY", columnType[colName]) || strings.Contains("FLOAT", columnType[colName]) || strings.Contains("NUMERIC", columnType[colName]) || strings.Contains("DECIMAL", columnType[colName])) {
+							if strings.Contains("MONEY", columnType[colName]) {
+								m[colName], _ = strconv.ParseFloat(string(m[colName].([]uint8))[1:], 64)
+							} else { m[colName], _ = strconv.ParseFloat(string(m[colName].([]uint8)), 64) }
+						}
+						if strings.Contains("TIMESTAMP", columnType[colName]) || strings.Contains("DATE", columnType[colName]) {
+							m[colName] = fmt.Sprintf("%v", m[colName])[:10]
+						}
+					}
+				}
 			} else {
 				m[colName] = *val
-				if m[colName] != nil { m[colName] = fmt.Sprintf("%v", string(m[colName].([]uint8))) }
+				if m[colName] != nil { 
+					m[colName] = fmt.Sprintf("%v", string(m[colName].([]uint8)))
+				}
 			}
 		}
 		results = append(results, m)
@@ -159,9 +171,7 @@ func (db *Db) BuildSelect(name string, view... string) string {
 	if db.SQLView == "" { 
 		if len(view) > 0 {
 			viewStr := ""
-			for _, v := range view {
-				viewStr += v + ","
-			}
+			for _, v := range view { viewStr += v + "," }
 			query = "SELECT " + viewStr[:len(viewStr) - 1] + " FROM " + name
 		} else { query = "SELECT * FROM " + name }
 	} else { query = "SELECT " + db.SQLView + " FROM " + name }
@@ -203,7 +213,7 @@ func ValueByType(typing string, defaulting interface{}, query string) interface{
 }
 
 // HELPING TOOLS FOR DB WORKS
-var SpecialTypes = []string{"char", "text", "date", "time", "interval", "var", "blob", "set", "enum", "year"}
+var SpecialTypes = []string{"char", "text", "date", "time", "interval", "var", "blob", "set", "enum", "year", "USER-DEFINED"}
 
 func Quote(s string) string { return "'" + s + "'" }
 
@@ -225,4 +235,101 @@ func FormatForSQL(datatype string, value interface{}) string {
 	}
 	return fmt.Sprint(strval)
 }
-// TODO type db to type response (usefull for input)
+func (db *Db) ToFilter(tableName string, params map[string]string, restriction... string) {
+	db.ClearFilter()
+	fields := db.prepareRowField(tableName)
+	db.ClearFilter()
+	already := []string{}
+    for key, element := range params {
+		field, ok := fields[key]
+		if (ok || key == "id") && !slices.Contains(already, key){ 
+			already = append(already, key)
+			// TODO if AND or OR define truncature
+			if strings.Contains(element, ",") { 
+				els := ""
+				for _, el := range strings.Split(element, ",") { 
+					els += FormatForSQL(field.Type, SQLInjectionProtector(el)) + "," 
+				}
+				if len(db.SQLRestriction) > 0 { 
+					db.SQLRestriction +=  " AND (" 
+					db.SQLRestriction += key + " IN (" + RemoveLastChar(els) + ")"
+					db.SQLRestriction +=  ")"
+				} else { db.SQLRestriction += key + " IN (" + RemoveLastChar(els) + ")" }
+			} else { 
+				sql := FormatForSQL(field.Type, element)
+				if len(sql) > 1 && sql[:2] == Quote("%" + sql[:len(sql) - 2] + "%") {
+					if len(db.SQLRestriction) > 0 { 
+						db.SQLRestriction +=  " AND (" 
+						db.SQLRestriction += key + " LIKE " + sql
+						db.SQLRestriction +=  ")"
+					} else { db.SQLRestriction += key + " LIKE " + sql }
+				} else { 
+					if len(db.SQLRestriction) > 0 { 
+						db.SQLRestriction +=  " AND (" 
+						db.SQLRestriction += key + "=" + sql
+						db.SQLRestriction +=  ")"
+					} else { db.SQLRestriction += key + "=" + sql }
+				}
+			}
+		}
+	}
+	for _, restr := range restriction {
+		if len(restr) > 0 && !strings.Contains(db.SQLRestriction, restr) {
+			if len(db.SQLRestriction) == 0 { db.SQLRestriction = restr
+			} else { db.SQLRestriction += " AND (" + restr + ")" }
+		}
+		continue
+	}
+	if orderBy, ok := params["order_by"]; ok {
+		direction := []string{}
+		if dir, ok2 := params["dir"]; !ok2 { 
+			direction = strings.Split(fmt.Sprintf("%v", dir), ",")
+		}
+		for i, el := range strings.Split(fmt.Sprintf("%v", orderBy), ",") {
+			if len(direction) > i { 
+				upper := strings.Replace(strings.ToUpper(direction[i]), " ", "", -1)
+				if upper == "ASC" || upper == "DESC" { db.SQLOrder += SQLInjectionProtector(el + " " + upper + ",") }
+			} 
+			db.SQLOrder += SQLInjectionProtector(el + " ASC,") 
+		}
+		db.SQLOrder = RemoveLastChar(db.SQLOrder)
+	}
+}
+
+func (db *Db) ClearFilter() {
+    db.SQLOrder=""
+	db.SQLRestriction=""
+	db.SQLView=""
+}
+
+func SQLInjectionProtector(injection string) (string) {
+	quoteCounter := strings.Count(injection, "'")
+	quoteCounter2 := strings.Count(injection, "\"")
+	if (quoteCounter % 2) != 0 || (quoteCounter2 % 2) != 0 {
+		log.Error().Msg("injection alert: strange activity of quoting founded")
+		return ""
+	}
+	notAllowedChar := []string{ "«", "#", "union", ";", ")", "%27", "%22", "%23", "%3B", "%29" }
+	for _, char := range notAllowedChar {
+		if strings.Contains(strings.ToLower(injection), char) {
+			log.Error().Msg( "injection alert: not allowed " + char + " filter" )
+			return ""
+		}
+	}
+	return injection
+}
+
+func (db *Db) prepareRowField(tableName string) map[string]entities.SchemaColumnEntity {
+	db.SQLRestriction = entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM "
+	db.SQLRestriction += entities.DBSchema.Name + " WHERE name=" + Quote(tableName) + ")"
+	res, err := db.SelectResults(entities.DBSchemaField.Name)
+	if err != nil && len(res) == 0 { return map[string]entities.SchemaColumnEntity {} }
+	fields := map[string]entities.SchemaColumnEntity{}
+	for _, rec := range res {
+		var scheme entities.SchemaColumnEntity
+		b, _ := json.Marshal(rec)
+		json.Unmarshal(b, &scheme)
+		fields[scheme.Name]=scheme
+	}
+	return fields
+}

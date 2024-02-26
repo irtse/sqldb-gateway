@@ -3,7 +3,24 @@ package lib
 import (
 	"fmt"
 	"strconv"
+	"sqldb-ws/lib/entities"
 )
+
+var ADMINROLE = "admin"
+var WRITEROLE = "manager"
+var CREATEROLE = "creator"
+var UPDATEROLE = "updater"
+var READERROLE = "reader"
+var PERMS = []string{entities.CREATEPERMS, entities.UPDATEPERMS, entities.DELETEPERMS, entities.READPERMS}
+
+var MAIN_PERMS=map[string]map[string]bool{
+	ADMINROLE: map[string]bool{ entities.CREATEPERMS : true, entities.UPDATEPERMS: true, entities.DELETEPERMS: true, },
+    WRITEROLE: map[string]bool{ entities.CREATEPERMS : true, entities.UPDATEPERMS: true, entities.DELETEPERMS: false, },
+	CREATEROLE: map[string]bool{ entities.CREATEPERMS : true, entities.UPDATEPERMS: false, entities.DELETEPERMS: false, },
+	UPDATEROLE: map[string]bool{ entities.CREATEPERMS : false, entities.UPDATEPERMS: true, entities.DELETEPERMS: false, },
+	READERROLE: map[string]bool{ entities.CREATEPERMS : false, entities.UPDATEPERMS: false, entities.DELETEPERMS: false, },
+}
+
 // API COMMON Models 
 type Method int64
 const(
@@ -17,6 +34,16 @@ func (s Method) String() string {
 		case SELECT: return "read"
 		case CREATE: return "write"
 		case UPDATE: return "update"
+		case DELETE: return "delete"
+	}
+	return "unknown"
+}
+
+func (s Method) Method() string {
+	switch s {
+		case SELECT: return "get"
+		case CREATE: return "post"
+		case UPDATE: return "put"
 		case DELETE: return "delete"
 	}
 	return "unknown"
@@ -46,6 +73,7 @@ var DATATYPE = []string {
 	"SMALLINT",
 	"MEDIUMINT",
 	"INT",
+	"MONEY",
 	"INTEGER",
 	"BIGINT",
 	"FLOAT",
@@ -64,5 +92,19 @@ var DATATYPE = []string {
 	"MEDIUMBLOB",
 	"BLOB", // ??? 
 	"ENUM",
+	"ONETOMANY", // TODO FOR REAL
 	"MANYTOMANY", // TODO FOR REAL
 }
+/*
+{
+   "name" : "contractual",
+   "type" : "boolean",
+   "required" : false,
+   "read_level": "normal",
+   "readonly": false,
+   "index": 0,
+   "dbschema_id": 309,
+   "label" : "contractual",
+   "description": "contractual status of the formalized data"
+}
+*/

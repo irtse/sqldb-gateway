@@ -28,10 +28,8 @@ func (t *TableInfo) TableRow(specializedService tool.SpecializedService) *TableR
 	row := &TableRowInfo{} 
 	row.db = t.db
 	row.NoLog = t.NoLog
-	row.PermService = t.PermService
 	row.Fill(t.Name, t.SuperAdmin, t.User, t.Params, t.Record, t.Method)
 	row.Table = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method)
-	row.PermService=t.PermService
 	row.EmptyCol = &TableColumnInfo{ } 
 	row.EmptyCol.db = t.db
 	row.EmptyCol.Name = t.Name
@@ -44,10 +42,8 @@ func (t *TableInfo) TableColumn() *TableColumnInfo {
 	col := &TableColumnInfo{ } 
 	col.db = t.db
 	col.NoLog = t.NoLog
-	col.PermService = t.PermService
 	col.Fill(t.Name, t.SuperAdmin, t.User, t.Params, t.Record, t.Method)
 	col.Row = Table(t.db, t.SuperAdmin, t.User, t.Name, tool.Params{}, tool.Record{}, t.Method,).TableRow(nil)
-	col.Row.PermService = t.PermService
     return col
 }
 
@@ -80,7 +76,7 @@ func (t *TableInfo) EmptyRecord() (tool.Record, error) {
 }
 // GetAssociativeArray : Provide table data as an associative arra
 func (t *TableInfo) Get(restriction... string) (tool.Results, error) {
-	t.db = ClearFilter(t.db)
+	t.db.ClearFilter()
 	schema, err := t.schema(t.Name)
 	if err != nil { return t.DBError(nil, err) }
 	res := tool.Results{}
@@ -137,19 +133,18 @@ func (t *TableInfo) get() (*TableInfo, error) {
 }
 
 func (t *TableInfo) Verify(name string) (string, bool) {
-	t.db = ClearFilter(t.db)
+	t.db.ClearFilter()
     schema, err :=t.schema(name)
-   	if len(schema) == 0 || err !=nil { return name, false }
+   	if len(schema) == 0 || err != nil { return name, false }
    	return name, true	
 }
 func (t *TableInfo) Create() (tool.Results, error) {
-	t.db = ClearFilter(t.db)
+	t.db.ClearFilter()
 	v := Validator[entities.TableEntity]()
 	v.data = entities.TableEntity{}
 	te, err := v.ValidateStruct(t.Record)
-	if err != nil { return nil, errors.New(
-		"Not a proper struct to create a table - expect <TableEntity> Scheme " + err.Error()) }
-	query := "CREATE TABLE " + te.Name + " ( id SERIAL PRIMARY KEY,"
+	if err != nil { return nil, errors.New("Not a proper struct to create a table - expect <TableEntity> Scheme " + err.Error()) }
+	query := "CREATE TABLE " + te.Name + " ( id SERIAL PRIMARY KEY "
 	query = query[:len(query)-1] + " )"
 	err = t.db.Query(query)
 	if err != nil { return t.DBError(nil, err) }
@@ -160,30 +155,16 @@ func (t *TableInfo) Create() (tool.Results, error) {
 			col, err := json.Marshal(rowtype)
 			if err != nil { continue }
 			json.Unmarshal(col, &tc.Record)
-			tc.CreateOrUpdate()
+			tc.Create()
 		}
 	}
 	t.Name=te.Name
 	_, err = t.Get()
-	auth := true
-	if t.Method == tool.SELECT {
-		for _, exception := range entities.PERMISSIONEXCEPTION {
-			if t.Name == exception.Name { auth = false; break }
-		}
-	}
-	if t.PermService != nil && auth {
-		t.PermService.SpecializedFill(t.Params, 
-			tool.Record{ "name" : te.Name, 
-						 "results" : t.Results, 
-						 "info" : "" }, 
-			t.Method)
-		t.PermService.CreateOrUpdate()
-	}
 	return t.Results, err
 }
 
 func (t *TableInfo) Update() (tool.Results, error) {
-	t.db = ClearFilter(t.db)
+	t.db.ClearFilter()
 	v := Validator[entities.TableEntity]()
 	v.data = entities.TableEntity{}
 	te, err := v.ValidateStruct(t.Record)
@@ -201,54 +182,26 @@ func (t *TableInfo) Update() (tool.Results, error) {
 	}
 	t.Name=te.Name
 	_, err = t.Get()
-	auth := true
-	if t.Method == tool.SELECT {
-		for _, exception := range entities.PERMISSIONEXCEPTION {
-			if t.Name == exception.Name { auth = false; break }
-		}
-	}
-	if t.PermService != nil && auth {
-		t.PermService.SpecializedFill(t.Params, 
-			tool.Record{ "name" : te.Name, 
-						 "results" : t.Results, 
-						 "info" : "" }, 
-			t.Method)
-		t.PermService.CreateOrUpdate()
-	}
 	return t.Results, err
 }
 
 func (t *TableInfo) CreateOrUpdate(restriction... string) (tool.Results, error) { 
-	if _, ok := t.Verify(t.Name); !ok && t.Name != tool.ReservedParam { return t.Create() }
+	if _, ok := t.Verify(t.Name); !ok { return t.Create() }
 	return t.Update()
 }
 
 func (t *TableInfo) Delete(restriction... string) (tool.Results, error) {
-	t.db = ClearFilter(t.db)
+	t.db.ClearFilter()
 	var err error
 	if entities.IsRootDB(t.Name) || t.Name == tool.ReservedParam { log.Error().Msg("can't delete protected root db.") }
 	if err = t.db.Query("DROP TABLE " + t.Name); err != nil { return t.DBError(nil, err) }
 	if err = t.db.Query("DROP SEQUENCE IF EXISTS sq_" + t.Name); err != nil { return t.DBError(nil, err) }
 	t.Results = append(t.Results, tool.Record{ entities.NAMEATTR : t.Name })
-	auth := true
-	if t.Method == tool.SELECT {
-		for _, exception := range entities.PERMISSIONEXCEPTION {
-			if t.Name == exception.Name { auth = false; break }
-		}
-	}
-	if auth && t.PermService != nil {
-		t.PermService.SpecializedFill(t.Params, 
-			tool.Record{ "name" : t.Name, 
-						 "results" : t.Results, 
-						 "info" : "" }, 
-			t.Method)
-		_, err = t.PermService.Delete()
-	}
 	return t.Results, err
 }
 
 func (t *TableInfo) Import(filename string, restriction... string) (tool.Results, error) {
-	t.db = ClearFilter(t.db)
+	t.db.ClearFilter()
 	var jsonSource []TableInfo
 	byteValue, _ := os.ReadFile(filename)
 	err := json.Unmarshal([]byte(byteValue), &jsonSource) 
@@ -282,7 +235,3 @@ func buildLinks(schema []TableInfo) []Link {
 	}
 	return links
 }
-
-/*func (db *Db) ListSequences() (Rows, error) {
-	return db.QueryAssociativeArray("SELECT sequence_name :: varchar FROM information_schema.sequences WHERE sequence_schema = 'public' ORDER BY sequence_name;")
-}*/

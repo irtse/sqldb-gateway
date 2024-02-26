@@ -8,6 +8,14 @@ import (
 func init() {
     beego.GlobalControllerRouter["sqldb-ws/controllers:AuthController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:AuthController"],
         beego.ControllerComments{
+            Method: "LogCheck",
+            Router: `/logcheck`,
+            AllowHTTPMethods: []string{"get"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+    beego.GlobalControllerRouter["sqldb-ws/controllers:AuthController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:AuthController"],
+        beego.ControllerComments{
             Method: "Login",
             Router: `/login`,
             AllowHTTPMethods: []string{"post"},
@@ -62,22 +70,6 @@ func init() {
             Method: "Get",
             Router: `/:table`,
             AllowHTTPMethods: []string{"get"},
-            MethodParams: param.Make(),
-            Filters: nil,
-            Params: nil})
-    beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"],
-        beego.ControllerComments{
-            Method: "Link",
-            Router: `/:table/:totable`,
-            AllowHTTPMethods: []string{"post"},
-            MethodParams: param.Make(),
-            Filters: nil,
-            Params: nil})
-    beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"],
-        beego.ControllerComments{
-            Method: "UnLink",
-            Router: `/:table/:totable/delete`,
-            AllowHTTPMethods: []string{"post"},
             MethodParams: param.Make(),
             Filters: nil,
             Params: nil})

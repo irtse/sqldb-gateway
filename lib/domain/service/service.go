@@ -14,10 +14,8 @@ import (
 var SERVICES = []tool.SpecializedService{
 	&schema.SchemaService{}, 
 	&schema.SchemaFields{}, 
-	&schema.ViewService{},
-	&schema.ActionService{},
-	&task.TaskAssigneeService{}, 
-	&task.TaskVerifyerService{}, 
+	&schema.ViewService{}, 
+	&task.RequestService{}, 
 	&task.TaskService{},
 	&user.UserEntityService{},
 	&user.HierarchyService{},
@@ -34,29 +32,17 @@ func SpecializedService(name string) tool.SpecializedService {
 }
 // Default Specialized Service. 
 type CustomService struct { tool.AbstractSpecializedService }
-func (s *CustomService) UpdateRowAutomation(results tool.Results, record tool.Record) {
-
-}
-func (s *CustomService) WriteRowAutomation(record tool.Record, tableName string) {
-	s.Domain.WriteRow(tableName, record) // call main func that link creator user and new row
-}
-func (s *CustomService) DeleteRowAutomation(results tool.Results, tableName string) {
-	s.Domain.DeleteRow(tableName, results) // call main func that unlink creator user and new row
-}
+func (s *CustomService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
+func (s *CustomService) WriteRowAutomation(record tool.Record, tableName string) {}
+func (s *CustomService) DeleteRowAutomation(results tool.Results, tableName string) {}
 func (s *CustomService) Entity() tool.SpecializedServiceInfo { return nil }
 func (s *CustomService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
 	return record, true, false }
 func (s *CustomService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 
-	return s.Domain.PostTreat( results, tableName, false) // call main post treatment
+	return s.Domain.PostTreat( results, tableName) // call main post treatment
 }
 // default have a right to access to whatever is in dbuser_entry database... (sets at creation)
 func (s *CustomService) ConfigureFilter(tableName string) (string, string) {
-	/*
-	restr := "id IN (SELECT " + fmt.Sprintf("%v",  entities.RootID("dest_table")) + " FROM " + entities.DBUserEntry.Name 
-	restr += " WHERE " + fmt.Sprintf("%v", entities.RootID(entities.DBSchema.Name))  + " IN ("
-	restr += "SELECT id FROM " + entities.DBSchema.Name + " WHERE name=" + conn.Quote(tableName) + ") "
-	restr += "AND " + fmt.Sprintf("%v",  entities.RootID(entities.DBUser.Name)) + " IN (SELECT id FROM " + entities.DBUser.Name 
-	restr += " WHERE name=" + conn.Quote(s.Domain.GetUser()) + "))" */
 	return s.Domain.ViewDefinition(tableName)
 }	
 // to set up ConfigureFilter

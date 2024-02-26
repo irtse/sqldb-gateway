@@ -16,7 +16,7 @@ func (s *PermissionService) DeleteRowAutomation(results tool.Results, tableName 
 func (s *PermissionService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *PermissionService) WriteRowAutomation(record tool.Record, tableName string) { }
 func (s *PermissionService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
-	return s.Domain.PostTreat( results, tableName, false) 
+	return s.Domain.PostTreat( results, tableName) 
 }
 func (s *PermissionService) ConfigureFilter(tableName string) (string, string) {
 	rows, ok := s.Domain.GetParams()[tool.RootRowsParam]

@@ -44,7 +44,7 @@ func (t *AbstractController) Call(auth bool, method tool.Method, funcName string
 		user, superAdmin, err = t.authorized() // will check up if allowed (or authenticated)
 		if err != nil { t.response(tool.Results{}, err); return }
 	} // then proceed to exec by calling domain
-	response, err := domain.Domain(superAdmin, user, false).Call(t.params(), t.body(true), method, true, funcName, args...)
+	response, err := domain.Domain(superAdmin, user, false).Call(t.params(), t.body(true), method, funcName, args...)
 	t.response(response, err) // send back response
 }
 // authorized is authentication check up func of the HANDLER
@@ -96,12 +96,14 @@ func (t *AbstractController) params() map[string]string {
 		params := tool.Params{ tool.RootTableParam : tablename, }
 		d := domain.Domain(true, "", false) // create a new domain with current permissions of user
 		d.Specialization = false // when launching call disable every auth check up (don't forget you are not logged)
-		response, err := d.Call(params, tool.Record{}, tool.SELECT, false, "Get")
-		if cols, ok2 := response[0]["columns"]; ok2 && err == nil {
-			for colName, _ := range cols.(map[string]entities.TableColumnEntity) {
-				queries = append(queries, colName)
+		response, err := d.Call(params, tool.Record{}, tool.SELECT, "Get")
+		if len(response) > 0 {
+			if cols, ok2 := response[0]["columns"]; ok2 && err == nil {
+				for colName, _ := range cols.(map[string]entities.TableColumnEntity) {
+					queries = append(queries, colName)
+				}
 			}
-		}
+		}	
 	}
 
 	for _, val := range queries {
@@ -132,7 +134,7 @@ func (t *AbstractController) body(hashed bool) tool.Record {
 func (t *AbstractController) response(resp tool.Results, err error) { 
 	t.Ctx.Output.SetStatus(http.StatusOK) // defaulting on absolute success
 	if err != nil { // Check nature of error if there is one
-		if strings.Contains(err.Error(), "AUTH") { t.Ctx.Output.SetStatus(http.StatusUnauthorized) }
+		//if strings.Contains(err.Error(), "AUTH") { t.Ctx.Output.SetStatus(http.StatusUnauthorized) }
 		if strings.Contains(err.Error(), "partial") { 
 			t.Ctx.Output.SetStatus(http.StatusPartialContent) 
 			t.Data[JSON]=map[string]interface{}{ DATA : resp, ERROR : err.Error() }
@@ -150,7 +152,9 @@ func (t *AbstractController) response(resp tool.Results, err error) {
 	t.ServeJSON() // then serve response by beego
 }
 // session is the main manager from Handler
-func (t *AbstractController) session(userId string, superAdmin bool, delete bool) {
+func (t *AbstractController) session(userId string, superAdmin bool, delete bool) string {
+	var err error
+	token := ""
 	delFunc := func() { // set up a lambda call back function to delete in session and token in base if needed
 		if t.GetSession(auth.SESSIONS_KEY) != nil { 
 			t.DelSession(auth.SESSIONS_KEY) // user_id key
@@ -159,23 +163,24 @@ func (t *AbstractController) session(userId string, superAdmin bool, delete bool
 		if os.Getenv("authmode") != auth.AUTHMODE[0] { // in case of token way of authenticate
 			params := t.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name, 
 				                                      tool.RootRowsParam : tool.ReservedParam, 
-													  "name" : userId })
+													})
+			sqlFilter := "name='" + userId + "' OR email='" + userId + "'"
 			domain.Domain(false, userId, false).Call( // replace token by a nil
 				params, 
 				tool.Record{ "token" : nil }, 
 				tool.UPDATE, 
-				false,
 				"CreateOrUpdate",
+				sqlFilter,
 			)
 		}
 	}
-	if delete { delFunc(); return } // if only deletion quit after launching lambda
+	if delete { delFunc(); return token } // if only deletion quit after launching lambda
 	t.SetSession(auth.SESSIONS_KEY, userId) // load superadmin and user id in session in any case
 	t.SetSession(auth.ADMIN_KEY, superAdmin)
 	if os.Getenv("authmode") != auth.AUTHMODE[0] { // if token way of authentication
 		tokenService := &auth.Token{} // generate a new token with all needed claims
-		token, err := tokenService.Create(userId, superAdmin); 
-		if err != nil { t.response(tool.Results{}, err); return } // then update user with its brand new token.
+		token, err = tokenService.Create(userId, superAdmin); 
+		if err != nil { t.response(tool.Results{}, err); return token } // then update user with its brand new token.
 		params := t.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name,
 			                                      tool.RootRowsParam : tool.ReservedParam, })
 		sqlFilter := "name='" + userId + "' OR email='" + userId + "'"
@@ -183,11 +188,11 @@ func (t *AbstractController) session(userId string, superAdmin bool, delete bool
 			params, 
 			tool.Record{ "token" : token }, 
 			tool.UPDATE, 
-			false,
 			"CreateOrUpdate", 
 			sqlFilter,
 		)
 	} // launch a 24h session timer after this session will be killed.
 	timer := time.AfterFunc(time.Hour * 24, delFunc)
 	defer timer.Stop()
+	return token
 }

@@ -21,9 +21,7 @@ type TableColumnInfo struct {
 func (t *TableColumnInfo) Template(restriction... string) (interface{}, error) { return t.Get(restriction...) }
 
 func (t *TableColumnInfo) Get(restriction... string) (tool.Results, error) {
-	if t.PermService != nil {
-		t.db = ToFilter(t.Name, t.Params, t.db, t.PermService.ColsPartialResults, restriction...)
-	} else { t.db = ToFilter(t.Name, t.Params, t.db, "", restriction...) }
+	t.db.ToFilter(t.Name, t.Params, restriction...)
 	d, err := t.db.SelectResults(t.Name)
 	t.Results = d
 	if err != nil { return t.DBError(nil, err) }
@@ -31,7 +29,7 @@ func (t *TableColumnInfo) Get(restriction... string) (tool.Results, error) {
 }
 
 func (t *TableColumnInfo) get(name string) (tool.Results, error) {
-	t.db = ClearFilter(t.db)
+	t.db.ClearFilter()
 	empty := EmptyTable(t.db, t.Name)
 	if empty == nil { return nil, errors.New("no table available...") }
 	scheme, err := empty.Get()
@@ -67,7 +65,7 @@ func (t *TableColumnInfo) Verify(name string) (string, bool) {
 	return typ, typ != "" 
 }
 func (t *TableColumnInfo) Create() (tool.Results, error) {
-	t.db = ClearFilter(t.db)
+	t.db.ClearFilter()
 	v := Validator[entities.TableColumnEntity]()
 	v.data = entities.TableColumnEntity{}
 	tcce, err := v.ValidateStruct(t.Record)
@@ -92,30 +90,16 @@ func (t *TableColumnInfo) Create() (tool.Results, error) {
 		if strings.TrimSpace(tcce.Comment) != "" { query += " COMMENT " + pq.QuoteLiteral(tcce.Comment) }
 	}
 	err = t.db.Query(query)
-	if err != nil { return t.DBError(nil, err) }
+	if err != nil { return t.Update() }
 	err = t.update(tcce)
 	if err != nil { return t.DBError(nil, err) }
-	auth := true
-	if t.Method == tool.SELECT {
-		for _, exception := range entities.PERMISSIONEXCEPTION {
-			if t.Name == exception.Name { auth = false; break }
-		}
-	}
-	if len(t.Name) > 1 && t.PermService != nil && auth {
-		t.PermService.SpecializedFill(t.Params, 
-			                          tool.Record{ "name" : t.Name, 
-									               "results" : tool.Results{t.Record}, 
-												   "info" : tcce.Name }, 
-									  t.Method)
-		t.PermService.CreateOrUpdate()
-	}
 	res, err := t.get(tcce.Name)
 	if err != nil { return nil, err }
 	return res, nil
 }
 
 func (t *TableColumnInfo) Update() (tool.Results, error) {
-	t.db = ClearFilter(t.db)
+	t.db.ClearFilter()
 	v := Validator[entities.TableColumnEntity]()
 	v.data = entities.TableColumnEntity{}
 	tcue, err := v.ValidateStruct(t.Record)
@@ -135,32 +119,12 @@ func (t *TableColumnInfo) Update() (tool.Results, error) {
 		err := t.db.Query(query)
 		if err != nil { return t.DBError(nil, err) }
 	}
-	auth := true
-	if t.Method == tool.SELECT {
-		for _, exception := range entities.PERMISSIONEXCEPTION {
-			if t.Name == exception.Name { auth = false; break }
-		}
-	}
-	if len(t.Name) > 1 && t.PermService != nil && auth {
-		t.PermService.SpecializedFill(t.Params, 
-									  tool.Record{ "name" : t.Name, 
-												   "results" : tool.Results{t.Record}, 
-												   "info" : tcue.Name }, 
-									  t.Method)
-		t.PermService.CreateOrUpdate()
-	}
 	res, err := t.get(tcue.Name)
 	if err != nil { return nil, err }
 	return res, err
 }
 
 func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
-	if strings.TrimSpace(tcce.Constraint) != "" {
-		query := "ALTER TABLE " + t.Name + " DROP CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + ";"
-		t.db.Query(query)
-		query = "ALTER TABLE " + t.Name + "  ADD CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + " " + strings.ToUpper(tcce.Constraint) + "(" + tcce.Name + ");"
-		t.db.Query(query)
-	}
 	if strings.TrimSpace(tcce.Constraint) != "" {
 		query := "ALTER TABLE " + t.Name + " DROP CONSTRAINT " + t.Name + "_" + tcce.Name + "_" + tcce.Constraint + ";"
 		t.db.Query(query)
@@ -177,9 +141,9 @@ func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
 		query := "ALTER TABLE " + t.Name + " ALTER " + tcce.Name  + " SET DEFAULT " + conn.FormatForSQL(tcce.Type, tcce.Default) + ";"
         err := t.db.Query(query)
 		if err != nil { return err } // then iterate on field to update value if null
-		record := tool.Record{ tcce.Name : tcce.Default }
+		/*record := tool.Record{ tcce.Name : tcce.Default }
 		t.Row.SpecializedFill(tool.Params{}, record, tool.UPDATE)
-		t.Row.CreateOrUpdate(tcce.Name + " IS NULL AND " +  tcce.Name + "!=FALSE AND " +  tcce.Name + "!=TRUE")
+		t.Row.CreateOrUpdate(tcce.Name + " IS NULL")*/
 	}
 	if !tcce.Null {
 		query := "ALTER TABLE " + t.Name + " ALTER COLUMN " + tcce.Name + " SET NOT NULL;"
@@ -199,35 +163,17 @@ func (t *TableColumnInfo) update(tcce *entities.TableColumnEntity) (error) {
 }
 
 func (t *TableColumnInfo) CreateOrUpdate(restriction... string) (tool.Results, error) {
-	if col, ok:= t.Record[entities.NAMEATTR]; ok {
-		if _, ok := t.Verify(col.(string)); ok { return t.Update() 
-		} else { return t.Create() }
-	}
-	return nil, errors.New("nothing to do...")
+	return t.Create()
 }
 
 func (t *TableColumnInfo) Delete(restriction... string) (tool.Results, error) {
-	t.db = ClearFilter(t.db)
+	t.db.ClearFilter()
 	if strings.Contains(t.Name, "db") { log.Error().Msg("can't delete protected root db columns.") }
 	for _, col := range strings.Split(t.Params[tool.RootColumnsParam], ",") {
 		query := "ALTER TABLE " + t.Name + " DROP " + col
 		err := t.db.Query(query)
 		if err != nil { return t.DBError(nil, err) }
-		t.Results = append(t.Results, tool.Record{ entities.NAMEATTR : col })
-		auth:=true
-		if t.Method == tool.SELECT {
-			for _, exception := range entities.PERMISSIONEXCEPTION {
-				if t.Name == exception.Name { auth = false; break }
-			}
-		}
-		if auth && t.PermService != nil {
-			t.PermService.SpecializedFill(t.Params, 
-				tool.Record{ "name" : t.Name, 
-							 "results" : t.Results, 
-							 "info" : col }, 
-				t.Method)
-			t.PermService.Delete()
-		}	
+		t.Results = append(t.Results, tool.Record{ entities.NAMEATTR : col })	
 	}
 	return t.Results, nil
 }
@@ -241,7 +187,7 @@ func (t *TableColumnInfo) Remove() (tool.Results, error) {
 }
 
 func (t *TableColumnInfo) Import(filename string, restriction... string) (tool.Results, error) {
-	t.db = ClearFilter(t.db)
+	t.db.ClearFilter()
 	var jsonSource []TableColumnInfo
 	byteValue, _ := os.ReadFile(filename)
 	err := json.Unmarshal([]byte(byteValue), &jsonSource)

@@ -9,6 +9,23 @@ import (
 )
 // Operations about login
 type AuthController struct { AbstractController }
+// @Title LogCheck
+// @Description User LogCheck
+// @Param	body		body 	Credential	true		"Credentials"
+// @Success 200 {string} success !
+// @Failure 403 user does not exist
+// @router /logcheck [get]
+func (l *AuthController) LogCheck() {
+	user_id, _, err := l.authorized();
+	if err != nil {  l.response(tool.Results{}, err); return }
+	d := domain.Domain(false, user_id, false) // create a new domain with current permissions of user
+	d.Specialization = false // when launching call disable every auth check up (don't forget you are not logged)
+	params := l.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name, 
+											  tool.RootRowsParam : tool.ReservedParam, })
+	response, err := d.SuperCall(params, tool.Record{}, tool.SELECT, "Get", "name='" + user_id + "' OR email='" + user_id + "'")
+	if len(response) == 0 {  l.response(response, errors.New("AUTH : username/email invalid")); return }
+	l.response(response, nil)
+}
 // @Title Login
 // @Description User login
 // @Param	body		body 	Credential	true		"Credentials"
@@ -23,25 +40,22 @@ func (l *AuthController) Login() {
 												  tool.RootRowsParam : tool.ReservedParam, })
 		d := domain.Domain(false, log.(string), false) // create a new domain with current permissions of user
 		d.Specialization = false // when launching call disable every auth check up (don't forget you are not logged)
-		response, err := d.Call(params, tool.Record{}, tool.SELECT, false, "Get", "name='" + log.(string) + "' OR email='" + log.(string) + "'")
+		response, err := d.SuperCall(params, tool.Record{}, tool.SELECT, "Get", "name='" + log.(string) + "' OR email='" + log.(string) + "'")
 		if err != nil {  l.response(response, err); return }
 		if len(response) == 0 {  l.response(response, errors.New("AUTH : username/email invalid")); return }
 		// if no problem check if logger is authorized to work on API and properly registered
-		user_id, _, err := l.authorized()
-		if err == nil && user_id == log.(string) { // token verify
-			l.response(response, errors.New("already log in")); return
-		}
 		pass, ok := body["password"] // then compare password founded in base and ... whatever... you know what's about
 		pwd, ok1 := response[0]["password"].(string)
 		if ok && ok1 {
 			if ok, err := argon2.VerifyEncoded([]byte(pass.(string)), []byte(pwd)); ok && err == nil{
 				// when password matching
-				l.session(log.(string), response[0]["super_admin"].(bool), false) // update session variables
+				token := l.session(log.(string), response[0]["super_admin"].(bool), false) // update session variables
+				response[0]["token"]=token
 				l.response(response, nil)
 				return
 			}
 		}	
-		l.response(response, errors.New("AUTH : password invalid"))
+		l.response(tool.Results{}, errors.New("AUTH : password invalid"))
 		return 
 	}
 	l.response(tool.Results{}, errors.New("AUTH : username/email invalid")) 
