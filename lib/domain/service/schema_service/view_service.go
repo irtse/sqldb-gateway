@@ -45,6 +45,7 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 		rec := tool.Record{ "id": record["id"], "name" : record["name"], "description" : record["description"], "is_empty" : record["is_empty"],
 		                    "index" : record["index"], "is_list" : record["is_list"], "readonly" : record["readonly"],
 						}
+		s.Domain.SetLowerRes(record["is_list"].(bool))
 		for _, dest := range dest_id {
 			if id == "" { id = dest 
 			} else { id = "," + dest  }

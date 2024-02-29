@@ -131,10 +131,12 @@ func (d *MainService) BuildPath(tableName string, rows string, extra... string) 
 	return path
 }
 
-func (d *MainService) GetScheme(tableName string, isId bool) (map[string]interface{}, int64, []string, map[string]entities.SchemaColumnEntity) {
+func (d *MainService) GetScheme(tableName string, isId bool) (
+	map[string]interface{}, int64, []string, map[string]entities.SchemaColumnEntity, []string) {
 	cols := map[string]entities.SchemaColumnEntity{}
 	keysOrdered := []string{}
 	sqlFilter := ""
+	additionnalAction := []string{}
 	if isId { sqlFilter += entities.RootID(entities.DBSchema.Name) + "=" + tableName
 	} else { 
 		sqlFilter += entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM "
@@ -145,22 +147,19 @@ func (d *MainService) GetScheme(tableName string, isId bool) (map[string]interfa
 	schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 	var id int64
 	schemes := map[string]interface{}{}
-	if err != nil || len(schemas) == 0 { return schemes, id, keysOrdered, cols }
+	if err != nil || len(schemas) == 0 { return schemes, id, keysOrdered, cols, additionnalAction }
 	for _, r := range schemas {
 		var scheme entities.SchemaColumnEntity
 		var shallowField entities.ShallowSchemaColumnEntity
 		b, _ := json.Marshal(r)
 		json.Unmarshal(b, &scheme)
-		if !d.PermsCheck(tableName, scheme.Name, scheme.Level, tool.SELECT) { 
-			fmt.Printf("TABLE COL %v %v %v \n", tableName,  scheme.Name, scheme.Level)
-			continue 
-		}
+		if !d.PermsCheck(tableName, scheme.Name, scheme.Level, tool.SELECT) { continue }
 		cols[scheme.Name]=scheme
 		id = scheme.SchemaId
 		json.Unmarshal(b, &shallowField)
 		shallowField.ActionPath = ""
 		shallowField.Actions=[]string{}
-		if scheme.Link != "" {
+		if scheme.Link != "" && !d.LowerRes {
 			shallowField.LinkPath = "/" + tool.MAIN_PREFIX + "/" + scheme.Link + "?rows=all"
 			if scheme.LinkView != "" { shallowField.LinkPath += "&" + tool.RootColumnsParam + "=" + scheme.LinkView  
 			} else if !strings.Contains(scheme.Type, "many") { shallowField.LinkPath += "&" + tool.RootShallow + "=enable" 
@@ -168,17 +167,22 @@ func (d *MainService) GetScheme(tableName string, isId bool) (map[string]interfa
 				isSkipped := false
 				for _, meth := range []tool.Method{ tool.SELECT, tool.CREATE, tool.UPDATE, tool.DELETE } {
 					if d.PermsCheck(scheme.Link, "", "", meth) { 
-						sch, _, ordered, _ := d.GetScheme(scheme.Link, false)
+						additionnalAction = append(additionnalAction, meth.Method())
+						sch, _, ordered, _, _ := d.GetScheme(scheme.Link, false)
 						shallowField.DataSchema = sch
 						shallowField.DataSchemaOrder = ordered
 						shallowField.ActionPath = "/" + tool.MAIN_PREFIX + "/" + scheme.Link + "?rows=" + tool.ReservedParam
 						shallowField.Actions=append(shallowField.Actions, meth.Method())
-					} else if meth == tool.UPDATE { shallowField.Readonly = true 
+					} else if meth == tool.UPDATE && !d.Empty { shallowField.Readonly = true 
+					} else if meth == tool.CREATE && d.Empty { shallowField.Readonly = true 
 					} else if meth == tool.SELECT { isSkipped = true }
 				} 
 				if isSkipped { continue }
 			}
 			if scheme.LinkOrder != "" { shallowField.LinkPath += "&" + tool.RootOrderParam + "=" + scheme.LinkOrder  }
+		}
+		if !d.Empty && !d.PermsCheck(tableName, scheme.Name, scheme.Level, tool.UPDATE) || d.Empty && !d.PermsCheck(tableName, scheme.Name, scheme.Level, tool.CREATE) {
+			shallowField.Readonly=true
 		}
 		keysOrdered = append(keysOrdered, scheme.Name)
 		schemes[scheme.Name]=shallowField
@@ -186,5 +190,5 @@ func (d *MainService) GetScheme(tableName string, isId bool) (map[string]interfa
 	sort.SliceStable(keysOrdered, func(i, j int) bool{
         return schemes[keysOrdered[i]].(entities.ShallowSchemaColumnEntity).Index <= schemes[keysOrdered[j]].(entities.ShallowSchemaColumnEntity).Index
     })
-	return schemes, id, keysOrdered, cols
+	return schemes, id, keysOrdered, cols, additionnalAction
 }

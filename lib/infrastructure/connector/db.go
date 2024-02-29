@@ -4,7 +4,6 @@ import (
 	"os"
 	"fmt"
 	"slices"
-	"errors"
 	"strings"
 	"reflect"
 	"strconv"
@@ -38,6 +37,7 @@ type Db struct {
 	SQLView        string 
 	SQLOrder       string 
 	SQLDir		   string
+	SQLLimit	   string
 	SQLRestriction string 	  	  
 	LogQueries     bool
 	Restricted     bool
@@ -80,15 +80,13 @@ func (db *Db) Prepare(query string) (*sql.Stmt, error) {
 func (db *Db) QueryRow(query string) (int64, error) {
     id := 0
 	if db.LogQueries { log.Info().Msg(query) }
-	err := db.Conn.QueryRow(query + " RETURNING id").Scan(&id)
+	err := db.Conn.QueryRow(query).Scan(&id)
 	// fmt.Printf("QUERY : %s %v \n", query, err)
 	if err != nil { return int64(id), err }
 	return int64(id), err
 }
 
 func (db *Db) Query(query string) (error) {
-	// if db.LogQueries { log.Info().Msg(query) }
-	//if strings.Contains(query, "UPDATE") { fmt.Printf("QUERY : %s\n", query) }
 	rows, err := db.Conn.Query(query)
 	if err != nil { return err }
 	err = rows.Close()
@@ -96,13 +94,9 @@ func (db *Db) Query(query string) (error) {
 }
 
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
-    if strings.Contains(query, "<nil>") { return nil, errors.New("not found")}
-	// if strings.Contains(query, "dbtask") { fmt.Printf("QUERY : %s\n", query) }
+	if strings.Contains(query, "<nil>") { return tool.Results{}, nil }
 	rows, err := db.Conn.Query(query)
-	if err != nil { 
-		// fmt.Printf("QUERY : %s\n", query)
-		return nil, err 
-	}
+	if err != nil { return nil, err }
 	defer rows.Close()
 	// get rows
 	results := tool.Results{}
@@ -166,6 +160,13 @@ func (db *Db) SelectResults(name string) (tool.Results, error) {
 	return db.QueryAssociativeArray(db.BuildSelect(name))
 }
 
+func (db *Db) BuildCount(name string) string {
+	var query string
+	query = "SELECT COUNT(*) FROM " + name
+	if db.SQLRestriction != "" { query += " WHERE " + db.SQLRestriction }
+	return query
+}
+
 func (db *Db) BuildSelect(name string, view... string) string {
 	var query string
 	if db.SQLView == "" { 
@@ -176,9 +177,8 @@ func (db *Db) BuildSelect(name string, view... string) string {
 		} else { query = "SELECT * FROM " + name }
 	} else { query = "SELECT " + db.SQLView + " FROM " + name }
 	if db.SQLRestriction != "" { query += " WHERE " + db.SQLRestriction }
-	if db.SQLOrder != "" { 
-		query += " ORDER BY " + db.SQLOrder 
-	}
+	if db.SQLOrder != "" { query += " ORDER BY " + db.SQLOrder }
+	if db.SQLLimit != "" { query += " " + db.SQLLimit }
 	return query
 }
 
@@ -293,6 +293,16 @@ func (db *Db) ToFilter(tableName string, params map[string]string, restriction..
 			db.SQLOrder += SQLInjectionProtector(el + " ASC,") 
 		}
 		db.SQLOrder = RemoveLastChar(db.SQLOrder)
+	}
+	if limit, ok := params["limit"]; ok {
+		i, err := strconv.Atoi(limit)
+		if err == nil { 
+			db.SQLLimit = "LIMIT " + fmt.Sprintf("%v", i)
+			if offset, ok := params["offset"]; ok {
+				i2, err := strconv.Atoi(offset)
+				if err == nil { db.SQLLimit += " OFFSET " + fmt.Sprintf("%v", i2) }
+			}
+		}
 	}
 }
 

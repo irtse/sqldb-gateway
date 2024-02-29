@@ -20,6 +20,26 @@ type TableColumnInfo struct {
 
 func (t *TableColumnInfo) Template(restriction... string) (interface{}, error) { return t.Get(restriction...) }
 
+func (t *TableColumnInfo) Count(restriction... string) (tool.Results, error) {
+	t.db.ToFilter(t.Name, t.Params, restriction...)
+	var err error; var count int64
+	if t.db.Driver == conn.PostgresDriver { 
+		count, err = t.db.QueryRow(t.db.BuildCount(t.Name))
+		if err != nil { return nil, err }
+	}
+	if t.db.Driver == conn.MySQLDriver {
+		stmt, err := t.db.Prepare(t.db.BuildCount(t.Name))
+		if err != nil { return t.DBError(nil, err) }
+		res, err := stmt.Exec()
+		if err != nil { return nil, err }
+		count, err = res.LastInsertId()
+		if err != nil { return t.DBError(nil, err) }
+	}
+	if err != nil { return t.DBError(nil, err) }
+	t.Results = append(t.Results, tool.Record{ "count" : count, })
+	return t.Results, nil
+}
+
 func (t *TableColumnInfo) Get(restriction... string) (tool.Results, error) {
 	t.db.ToFilter(t.Name, t.Params, restriction...)
 	d, err := t.db.SelectResults(t.Name)

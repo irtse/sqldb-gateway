@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"slices"
 	"errors"
 	"strings"
 	"reflect"
@@ -30,6 +31,7 @@ type MainService struct {
 	isGenericService    bool
 	Specialization		bool
 	Empty               bool
+	LowerRes            bool
 	Method				tool.Method
 	Params 				tool.Params
 	Perms				map[string]map[string]Perms
@@ -47,6 +49,7 @@ func Domain(superAdmin bool, user string, isGenericService bool) *MainService {
 }
 // Main accessor defined by DomainITF interface
 func (d *MainService) SetIsCustom(isCustom bool) { d.isGenericService = isCustom }
+func (d *MainService) SetLowerRes(empty bool) { d.LowerRes = empty }
 func (d *MainService) SetEmpty(empty bool) { d.Empty = empty }
 func (d *MainService) GetEmpty() bool { return d.Empty }
 func (d *MainService) GetUser() string { return d.User }
@@ -78,7 +81,7 @@ func (d *MainService) call(params tool.Params, record tool.Record, method tool.M
 	d.Params = params
 	d.notAllowedFields = []string{}
 	if adm, ok := params[tool.RootSuperCall]; ok && adm == "enable" { d.Super = true } // set up admin view
-	if shallow, ok := params[tool.RootShallow]; ok && shallow == "enable" { d.Shallowed = true }  // set up shallow option (lighter version of results)
+	if shallow, ok := params[tool.RootShallow]; (ok && shallow == "enable") || slices.Contains(tool.EXCEPTION_FUNC, funcName) { d.Shallowed = true }  // set up shallow option (lighter version of results)
 	if tablename, ok := params[tool.RootTableParam]; ok { // retrieve tableName in query (not optionnal)
 		var specializedService tool.SpecializedService
 		if d.Specialization {
@@ -166,13 +169,14 @@ type ViewItem struct {
 	DataPaths  	   string				        `json:"data_path"`
 	ValueShallow   map[string]interface{}		`json:"values_shallow"`
 	ValueMany      map[string]tool.Results		`json:"values_many"`
+	ValuePathMany  map[string]string			`json:"values_path_many"`
 }
 
 func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Results {
 	// retrive all fields from schema...
 	var view View
 	if !d.IsShallowed() {
-		schemes, id, order, cols := d.GetScheme(tableName, false) 
+		schemes, id, order, cols, addAction := d.GetScheme(tableName, false) 
 		view = View{ Name : tableName, Description : tableName + " datas",  Path : "", 
 					 Schema : schemes, 
 					 Order : order,
@@ -191,7 +195,8 @@ func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Res
 		r["action_path"] = "/" + tool.MAIN_PREFIX + "/" + tableName + "?rows=" + tool.ReservedParam
 		r["actions"]=[]string{}
 		for _, meth := range []tool.Method{ tool.SELECT, tool.CREATE, tool.UPDATE, tool.DELETE } {
-			if d.PermsCheck(tableName, "", "", meth) { r["actions"]=append(r["actions"].([]string), meth.Method())
+			if d.PermsCheck(tableName, "", "", meth) || slices.Contains(addAction, meth.Method()) { 
+				r["actions"]=append(r["actions"].([]string), meth.Method())
 			} else if meth == tool.UPDATE { r["readonly"] = true }
 		} 
 		res = append(res, r)
@@ -207,13 +212,14 @@ func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Res
 					actionPath := "/" + tool.MAIN_PREFIX + "/" + tableName + "?rows=" + tool.ReservedParam
 					actions := []string{}
 					readonly := false
-					for _, meth := range []tool.Method{ tool.SELECT, tool.CREATE, tool.UPDATE, tool.DELETE } {
-						if d.PermsCheck(schemas[0].GetString(entities.NAMEATTR), "", "", meth) { 
-							actions=append(actions, meth.Method())
-						} else if meth == tool.UPDATE { readonly = true }
-					} 
 					if err == nil || len(schemas) > 0 { 
-						schema, id, order,  _ := d.GetScheme(schemas[0].GetString(entities.NAMEATTR), false)
+						schema, id, order,  _, addAction := d.GetScheme(schemas[0].GetString(entities.NAMEATTR), false)
+						for _, meth := range []tool.Method{ tool.SELECT, tool.CREATE, tool.UPDATE, tool.DELETE } {
+							if d.PermsCheck(schemas[0].GetString(entities.NAMEATTR), "", "", meth) || slices.Contains(addAction, meth.Method()) { 
+								actions=append(actions, meth.Method())
+							} else if meth == tool.UPDATE { readonly = true 
+							} else if meth == tool.CREATE && d.Empty { readonly = true }
+						} 
 						res = append(res, tool.Record{ 
 							tool.SpecialIDParam : record[tool.SpecialIDParam],
 							entities.NAMEATTR : n,
@@ -241,6 +247,7 @@ func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Res
 func (d *MainService) PostTreatRecord(record tool.Record, tableName string,  cols map[string]entities.SchemaColumnEntity, shallow bool) tool.Record {
 		vals := map[string]interface{}{}
 		shallowVals := map[string]interface{}{}
+		manyPathVals := map[string]string{}
 		manyVals := map[string]tool.Results{}
 		datapath := ""
 		if !shallow { vals[tool.SpecialIDParam]=fmt.Sprintf("%v", record[tool.SpecialIDParam]) }
@@ -263,14 +270,13 @@ func (d *MainService) PostTreatRecord(record tool.Record, tableName string,  col
 				shallowVals[field.Name]=r[0]
 				continue
 			}
-			if field.Link != "" && !shallow && strings.Contains(field.Type, "many") { 
+			if field.Link != "" && !shallow && !d.LowerRes && strings.Contains(field.Type, "manytomany") { 
 				params := tool.Params{ tool.RootTableParam : field.Link, tool.RootRowsParam: tool.ReservedParam, tool.RootShallow : "enable",
 									   entities.RootID(tableName) : record.GetString(tool.SpecialIDParam), }
 				r, err := d.Call( params, tool.Record{}, tool.SELECT, "Get")
 				if err != nil || len(r) == 0 { continue }
 				ids := map[string]string{}
 				for _, r2 := range r {
-					fmt.Printf("qsdqds %v \n", r2)
 					for field2, _ := range r2 {
 						if !strings.Contains(field2, tableName) && field2 != "id" && strings.Contains(field2, "_id") {
 							if i , ok := ids[strings.Replace(field2, "_id", "", -1)]; !ok || i == "" {
@@ -289,10 +295,13 @@ func (d *MainService) PostTreatRecord(record tool.Record, tableName string,  col
 				}
 				continue
 			}
-			if shallow { vals[field.Name]=nil 
-			} else if v, ok:=record[field.Name]; ok { vals[field.Name]=v }
+			if field.Link != "" && !shallow && strings.Contains(field.Type, "onetomany") && !d.LowerRes { 
+				manyPathVals[field.Name] = "/" + tool.MAIN_PREFIX + "/" + field.Link + "?" + tool.RootRowsParam + "=" + tool.ReservedParam + "&" + tableName + "_id=" + record.GetString(tool.SpecialIDParam)
+				continue
+			}
+			if shallow { vals[field.Name]=nil } else if v, ok:=record[field.Name]; ok { vals[field.Name]=v }
 		}
-		view := ViewItem{ Values : vals, Path : "", DataPaths :  datapath, ValueShallow : shallowVals, ValueMany: manyVals }
+		view := ViewItem{ Values : vals, Path : "", DataPaths :  datapath, ValueShallow : shallowVals, ValueMany: manyVals, ValuePathMany: manyPathVals, }
 		var newRec tool.Record
 		b, _ := json.Marshal(view)
 		json.Unmarshal(b, &newRec)

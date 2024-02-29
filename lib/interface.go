@@ -5,6 +5,7 @@ package lib
 type InfraServiceItf interface {
 	Verify(string)              					(string, bool)
 	Save(restriction... string) 			        (error)
+	Count(restriction... string)  					(Results, error)
 	Get(restriction... string)  					(Results, error)
 	CreateOrUpdate(restriction... string)        	(Results, error)
 	Delete(restriction... string)                	(Results, error)
@@ -12,6 +13,7 @@ type InfraServiceItf interface {
 	Template(restriction... string)               	(interface{}, error) 
 	GenerateFromTemplate(string) error
 }
+var EXCEPTION_FUNC = []string{"Count"}
 // Defined domain service functions
 type DomainITF interface {
 	PermsSuperCall(params Params, record Record, method Method, funcName string, args... interface{}) (Results, error)
@@ -21,8 +23,9 @@ type DomainITF interface {
 	IsSuperCall() bool
 	GetUser() string
 	IsShallowed() bool 
-	SetEmpty(empty bool)
 	GetEmpty() bool
+	SetEmpty(empty bool)
+	SetLowerRes(empty bool)
 	BuildPath(tableName string, rows string, extra... string) string
 	GeneratePathFilter(path string, record Record, params Params) (string, Params)
 	IsSuperAdmin() bool

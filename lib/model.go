@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"sqldb-ws/lib/entities"
 )
-
 var ADMINROLE = "admin"
 var WRITEROLE = "manager"
 var CREATEROLE = "creator"

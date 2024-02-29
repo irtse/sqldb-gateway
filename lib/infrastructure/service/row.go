@@ -27,6 +27,33 @@ func (t *TableRowInfo) Verify(name string) (string, bool) {
 	return name, err == nil && len(res) > 0
 }
 
+func (t *TableRowInfo) Count(restriction... string) (tool.Results, error) {
+	t.db.ToFilter(t.Name, t.Params, restriction...)
+	if t.SpecializedService != nil {
+		restriction, _ := t.SpecializedService.ConfigureFilter(t.Table.Name)
+		if restriction != "" { 
+			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + restriction + ")"
+		    } else { t.db.SQLRestriction = restriction }
+		}
+	}
+	var err error; var count int64
+	if t.db.Driver == conn.PostgresDriver { 
+		count, err = t.db.QueryRow(t.db.BuildCount(t.Table.Name))
+		if err != nil { return nil, err }
+	}
+	if t.db.Driver == conn.MySQLDriver {
+		stmt, err := t.db.Prepare(t.db.BuildCount(t.Table.Name))
+		if err != nil { return t.DBError(nil, err) }
+		res, err := stmt.Exec()
+		if err != nil { return nil, err }
+		count, err = res.LastInsertId()
+		if err != nil { return t.DBError(nil, err) }
+	}
+	if err != nil { return t.DBError(nil, err) }
+	t.Results = append(t.Results, tool.Record{ "count" : count, })
+	return t.Results, nil
+}
+
 func (t *TableRowInfo) Get(restriction... string) (tool.Results, error) {
 	t.db.ToFilter(t.Name, t.Params, restriction...)
 	if t.SpecializedService != nil {
@@ -51,7 +78,6 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	values := ""
 	if t.SpecializedService != nil {
 		r, ok, forceChange := t.SpecializedService.VerifyRowAutomation(t.Record, true)
-		fmt.Printf("QUERY %v %v \n", r, ok)
 		if !ok { return nil, errors.New("verification failed.") }
 		if forceChange { t.Record = r }
 	}
@@ -59,7 +85,6 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 		v := Validator[map[string]interface{}]()
 		rec, err := v.ValidateSchema(t.Record, t.Table, false)
 		t.Record = rec
-		fmt.Printf("QUERY %v %v \n", rec, err)
 		if err != nil { return nil, errors.New("Not a proper struct to create a row " + err.Error()) }
 	} else if !entities.IsRootDB(t.Table.Name) {
 		emptyRec, err := t.Table.EmptyRecord()
@@ -77,8 +102,7 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 	}
 	query := "INSERT INTO " + t.Table.Name + "(" + conn.RemoveLastChar(columns) + ") VALUES (" + conn.RemoveLastChar(values) + ")"
 	if t.db.Driver == conn.PostgresDriver { 
-		id, err = t.db.QueryRow(query)
-		fmt.Printf("QUERY %v %v \n", query, err)
+		id, err = t.db.QueryRow(query + " RETURNING ID")
 		if err != nil { return nil, err }
 		t.db.SQLRestriction = fmt.Sprintf("id=%d", id)
 	}
@@ -136,7 +160,7 @@ func (t *TableRowInfo) Update(restriction... string) (tool.Results, error) {
 	stack = conn.RemoveLastChar(stack)
 	query := ("UPDATE " + t.Table.Name + " SET " + stack) // REMEMBER id is a restriction !
 	if restr != "" { query += " WHERE " + restr 
-    } else { return t.DBError(nil, errors.New("Should use filter on update query")) }
+    } else { return t.Create() }
 	err = t.db.Query(query)
 	if err != nil { return t.DBError(nil, err) }
 	t.db.SQLRestriction = restr

@@ -41,7 +41,9 @@ func (d *MainService) PermsBuilder() {
 		var perms Perms
 		b, _ := json.Marshal(record)
 		json.Unmarshal(b, &perms)
-		n := strings.Join(names, ":")
+		n := ""
+		if len(names) > 1 { n = names[1] 
+		} else { n = names[0] }		
 		p := d.Perms[tName][n]
 		if _, ok := d.Perms[tName][n]; !ok { d.Perms[tName][n]=perms
 		} else {
@@ -80,8 +82,18 @@ func (d *MainService) PermsCheck(tableName string, colName string, level string,
 	found := false
 	if tPerms, ok := d.Perms[tableName]; ok {
 		found = true
-		if cPerms, ok2 := tPerms[colName + ":" + level]; ok2 && colName != "" && level != "" { perms = cPerms }
-		perms = d.Perms[tableName][tableName]
+		if cPerms, ok2 := tPerms[colName]; ok2 && colName != "" && level != "" { 
+			perms = cPerms 
+		} else { 
+			perms = d.Perms[tableName][tableName]
+			if colName == "" {
+				for _, p := range tPerms {
+					if p.Create { perms.Create = true }
+					if p.Update { perms.Update = true }
+					if p.Delete { perms.Delete = true }
+				}
+			}
+		}
 	}
 	if !found { return false }
 	if method == tool.SELECT {
