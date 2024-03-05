@@ -107,6 +107,7 @@ func (d *MainService) call(params tool.Params, record tool.Record, method tool.M
 			if params[tool.SpecialIDParam] == tool.ReservedParam { delete(params, tool.SpecialIDParam) }
 			service = table.TableRow(specializedService)
 			res, err := d.invoke(service, funcName, args...)
+			if err != nil { return res, err }
 			if specializedService != nil && params[tool.RootRawView] != "enable" && !d.IsSuperCall() {
 				if dest_id, ok := params[tool.RootDestTableIDParam]; ok {
 					return specializedService.PostTreatment(res, tablename, dest_id), nil
@@ -275,20 +276,21 @@ func (d *MainService) PostTreatRecord(record tool.Record, tableName string,  col
 									   entities.RootID(tableName) : record.GetString(tool.SpecialIDParam), }
 				r, err := d.Call( params, tool.Record{}, tool.SELECT, "Get")
 				if err != nil || len(r) == 0 { continue }
-				ids := map[string]string{}
+				ids := []string{}
 				for _, r2 := range r {
 					for field2, _ := range r2 {
 						if !strings.Contains(field2, tableName) && field2 != "id" && strings.Contains(field2, "_id") {
-							if i , ok := ids[strings.Replace(field2, "_id", "", -1)]; !ok || i == "" {
-								ids[strings.Replace(field2, "_id", "", -1)]=""
+							if !slices.Contains(ids, strings.Replace(field2, "_id", "", -1)) {
+								ids = append(ids, strings.Replace(field2, "_id", "", -1))
 							}
-							ids[strings.Replace(field2, "_id", "", -1)] += r2.GetString(field2) + ","
 						}
 					}
 				}
-				for id, idstr := range ids {
-					params = tool.Params{ tool.RootTableParam : id, tool.RootRowsParam: idstr[:len(idstr) - 1], tool.RootShallow : "enable", }
-					r, err = d.Call( params, tool.Record{}, tool.SELECT, "Get")
+				for _, id := range ids {
+					params = tool.Params{ tool.RootTableParam : id, tool.RootRowsParam: tool.ReservedParam, 
+						                  tool.RootShallow : "enable", tableName + "_id": record.GetString(tool.SpecialIDParam) }
+					sqlFilter := "id IN (SELECT " + id + "_id FROM " + field.Link + " WHERE " + tableName + "_id = " + record.GetString(tool.SpecialIDParam) + " )"
+					r, err = d.Call( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 					if err != nil || len(r) == 0 { continue }
 					if _, ok := manyVals[field.Name]; !ok { manyVals[field.Name] = tool.Results{} }
 					manyVals[field.Name]= append(manyVals[field.Name], r...)

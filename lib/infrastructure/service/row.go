@@ -194,6 +194,7 @@ func (t *TableRowInfo) Delete(restriction... string) (tool.Results, error) {
 	t.Results = res
 	query := ("DELETE FROM " + t.Table.Name)
 	if t.db.SQLRestriction != "" { query += " WHERE " + t.db.SQLRestriction }
+	fmt.Printf("QUERY %v \n", query)
 	err = t.db.Query(query)
 	if err != nil { return t.DBError(nil, err) }
 	if t.SpecializedService != nil {

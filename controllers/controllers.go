@@ -105,7 +105,6 @@ func (t *AbstractController) params() map[string]string {
 			}
 		}	
 	}
-
 	for _, val := range queries {
 		name := t.Ctx.Input.Query(val)
 		if name != "" { params[val] = name }

@@ -2,6 +2,7 @@ package schema_service
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
@@ -103,14 +104,14 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 					}
 					rec[k] = newV
 				} else { rec[k]=v }
-				
 			} 
 		}	
 		res = append(res,  rec)
 	}
+	sort.SliceStable(res, func(i, j int) bool{
+        return res[i]["index"].(int64) <= res[j]["index"].(int64)
+    })
 	return res
 }
 
-func (s *ViewService) ConfigureFilter(tableName string) (string, string) { 
-	return s.Domain.ViewDefinition(tableName)
-}	
+func (s *ViewService) ConfigureFilter(tableName string) (string, string) { return s.Domain.ViewDefinition(tableName) }	
