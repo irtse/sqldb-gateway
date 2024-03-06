@@ -171,6 +171,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of id",
+      "in": "query",
+      "name": "id",
+      "type": "string"
+     },
+     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -255,6 +261,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of id",
+      "in": "query",
+      "name": "id",
+      "type": "string"
+     },
+     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -336,6 +348,12 @@
       "description": "(Optionnal) Value of super",
       "in": "query",
       "name": "super",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of id",
+      "in": "query",
+      "name": "id",
       "type": "string"
      },
      {
@@ -429,6 +447,12 @@
       "description": "(Optionnal) Value of super",
       "in": "query",
       "name": "super",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of id",
+      "in": "query",
+      "name": "id",
       "type": "string"
      },
      {
@@ -527,6 +551,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of id",
+      "in": "query",
+      "name": "id",
+      "type": "string"
+     },
+     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -620,6 +650,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of id",
+      "in": "query",
+      "name": "id",
+      "type": "string"
+     },
+     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -708,6 +744,12 @@
       "description": "(Optionnal) Value of super",
       "in": "query",
       "name": "super",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of id",
+      "in": "query",
+      "name": "id",
       "type": "string"
      },
      {

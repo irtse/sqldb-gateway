@@ -27,7 +27,7 @@ var RootParamsDesc = map[string]string{
 	RootRawView : "set 'enable' to activate a response without the main response format",
 }
 var HiddenParams = []string{RootDestTableIDParam}
-var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset, RootShallow, RootRawView, RootSuperCall}
+var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset, RootShallow, RootRawView, RootSuperCall, SpecialIDParam}
 
 const SpecialIDParam = "id" 
 var MAIN_PREFIX = "generic"

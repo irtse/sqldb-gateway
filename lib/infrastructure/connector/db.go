@@ -88,7 +88,9 @@ func (db *Db) QueryRow(query string) (int64, error) {
 
 func (db *Db) Query(query string) (error) {
 	rows, err := db.Conn.Query(query)
-	if err != nil { return err }
+	if err != nil { 
+		fmt.Printf("QUERY : %s %v \n", query, err)
+		return err }
 	err = rows.Close()
 	return err
 }
@@ -96,7 +98,9 @@ func (db *Db) Query(query string) (error) {
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 	if strings.Contains(query, "<nil>") { return tool.Results{}, nil }
 	rows, err := db.Conn.Query(query)
-	if err != nil { return nil, err }
+	if err != nil { 
+		// fmt.Printf("QUERY : %s %v \n", query, err)
+		return nil, err }
 	defer rows.Close()
 	// get rows
 	results := tool.Results{}

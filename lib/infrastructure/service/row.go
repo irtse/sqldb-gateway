@@ -161,8 +161,10 @@ func (t *TableRowInfo) Update(restriction... string) (tool.Results, error) {
 	query := ("UPDATE " + t.Table.Name + " SET " + stack) // REMEMBER id is a restriction !
 	if restr != "" { query += " WHERE " + restr 
     } else { return t.Create() }
-	err = t.db.Query(query)
-	if err != nil { return t.DBError(nil, err) }
+	if stack != "" {
+		err = t.db.Query(query)
+		if err != nil { return t.DBError(nil, err) }
+	}
 	t.db.SQLRestriction = restr
 	result, err := t.db.SelectResults(t.Table.Name)
 	if err != nil { return t.DBError(nil, err) }
@@ -194,8 +196,8 @@ func (t *TableRowInfo) Delete(restriction... string) (tool.Results, error) {
 	t.Results = res
 	query := ("DELETE FROM " + t.Table.Name)
 	if t.db.SQLRestriction != "" { query += " WHERE " + t.db.SQLRestriction }
-	fmt.Printf("QUERY %v \n", query)
 	err = t.db.Query(query)
+	fmt.Printf("DELETE QUERY %v %v \n", query, t.Params)
 	if err != nil { return t.DBError(nil, err) }
 	if t.SpecializedService != nil {
 		t.SpecializedService.DeleteRowAutomation(t.Results, t.Table.Name)
