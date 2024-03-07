@@ -163,7 +163,7 @@ func (t *TableInfo) Create() (tool.Results, error) {
 	v := Validator[entities.TableEntity]()
 	v.data = entities.TableEntity{}
 	te, err := v.ValidateStruct(t.Record)
-	if err != nil { return nil, errors.New("Not a proper struct to create a table - expect <TableEntity> Scheme " + err.Error()) }
+	if err != nil { return nil, err }
 	query := "CREATE TABLE " + te.Name + " ( id SERIAL PRIMARY KEY "
 	query = query[:len(query)-1] + " )"
 	err = t.db.Query(query)

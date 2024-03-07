@@ -89,7 +89,7 @@ func (t *TableColumnInfo) Create() (tool.Results, error) {
 	v := Validator[entities.TableColumnEntity]()
 	v.data = entities.TableColumnEntity{}
 	tcce, err := v.ValidateStruct(t.Record)
-	if err != nil { return nil, errors.New("Not a proper struct to create a column - expect <entities.TableColumnEntity> Scheme " + err.Error()) }
+	if err != nil { return nil, err }
 	found := false
 	for _, verifiedType := range tool.DATATYPE {
 		if strings.Contains(strings.ToUpper(tcce.Type), verifiedType) {
@@ -123,7 +123,7 @@ func (t *TableColumnInfo) Update() (tool.Results, error) {
 	v := Validator[entities.TableColumnEntity]()
 	v.data = entities.TableColumnEntity{}
 	tcue, err := v.ValidateStruct(t.Record)
-	if err != nil { return nil, errors.New("Not a proper struct to update a column - expect <entities.TableColumnEntity> Scheme " + err.Error()) }
+	if err != nil { return nil, err }
 	err = t.update(tcue)
 	if err != nil { return t.DBError(nil, err) }
 	found := false

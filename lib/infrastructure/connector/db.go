@@ -170,7 +170,6 @@ func (db *Db) BuildCount(name string) string {
 	if db.SQLRestriction != "" { query += " WHERE " + db.SQLRestriction }
 	return query
 }
-
 func (db *Db) BuildSelect(name string, view... string) string {
 	var query string
 	if db.SQLView == "" { 

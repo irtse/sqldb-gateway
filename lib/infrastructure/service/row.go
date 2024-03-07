@@ -85,12 +85,12 @@ func (t *TableRowInfo) Create() (tool.Results, error) {
 		v := Validator[map[string]interface{}]()
 		rec, err := v.ValidateSchema(t.Record, t.Table, false)
 		t.Record = rec
-		if err != nil { return nil, errors.New("Not a proper struct to create a row " + err.Error()) }
+		if err != nil { return nil, err }
 	} else if !entities.IsRootDB(t.Table.Name) {
 		emptyRec, err := t.Table.EmptyRecord()
 		if err != nil { return nil, errors.New("Empty record got a problem : " + err.Error()) }
 		t.Record = emptyRec
-	} else { return nil, errors.New("Empty is not a proper struct to create a row ") }
+	} else { return nil, errors.New("Empty is not a proper data") }
 	for key, element := range t.Record {
 		columns += key + ","
 		typ := ""
@@ -132,7 +132,7 @@ func (t *TableRowInfo) Update(restriction... string) (tool.Results, error) {
 	v := Validator[map[string]interface{}]()
 	rec, err := v.ValidateSchema(t.Record, t.Table, true)
 	t.Record = rec
-	if err != nil { return nil, errors.New("Not a proper struct to update a row") }
+	if err != nil { return nil, errors.New("Not a proper data.") }
 	t.db.ToFilter(t.Name, t.Params, restriction...)
 	if t.SpecializedService != nil {
 		restriction, view := t.SpecializedService.ConfigureFilter(t.Table.Name) 
