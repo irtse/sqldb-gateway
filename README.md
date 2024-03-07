@@ -27,11 +27,33 @@ before doing go mod tidy.
 
 bee generate routers
 
-Running in debug mode
----------------------
-> bee run -downdoc=true -gendoc=true
+RUN GO PROJECT 
+`sudo go run main.go` OR `sudo authmode=token go run main.go`
 
-Testing
--------
- http://localhost:8080/swagger
+RUN DB
+Prerequisite : Get docker on your local machine. 
 
+- `cd ./db`
+(Optionnal) - `cp <my file path> ./db/autoload` 
+- `<sudo> docker-compose up`
+
+You can add any sql file in ./db/autoload and db will start with your SQL at run. 
+
+Raw DB config.
+    Type : PostgresSQL
+    Host: db_pg_1
+    Database: test
+    User : test
+    Password : test
+
+Adminer : localhost:8888
+SQLDB-WS SWAGGER : [localhost:8080/swagger](http://localhost:8080/swagger)
+
+Super Admin SQLDB-WS
+username : root
+password : 2,21Gigowatts
+
+{
+  "login": "root",
+  "password": "2,21Gigowatts"
+}

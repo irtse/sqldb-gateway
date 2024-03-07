@@ -26,6 +26,10 @@ func (l *AuthController) LogCheck() {
 	if len(response) == 0 {  l.response(response, errors.New("AUTH : username/email invalid")); return }
 	l.response(response, nil)
 }
+
+// LLDAP HERE
+// func (l *AuthController) LoginLDAP() { }
+
 // @Title Login
 // @Description User login
 // @Param	body		body 	Credential	true		"Credentials"
@@ -34,6 +38,7 @@ func (l *AuthController) LogCheck() {
 // @router /login [post]
 func (l *AuthController) Login() { 
 	// login function will overide generic procedure foundable in controllers.go
+	
 	body := l.body(false) // extracting body
 	if log, ok := body["login"]; ok { // search for login in body 
 		params := l.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name, 
@@ -55,7 +60,7 @@ func (l *AuthController) Login() {
 				return
 			}
 		}	
-		l.response(tool.Results{}, errors.New("AUTH : password invalid"))
+		l.response(tool.Results{}, errors.New("AUTH : password invalid")) // API response
 		return 
 	}
 	l.response(tool.Results{}, errors.New("AUTH : username/email invalid")) 

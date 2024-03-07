@@ -92,7 +92,7 @@ func (d *MainService) call(params tool.Params, record tool.Record, method tool.M
 		d.Db = conn.Open() // open base
 		defer d.Db.Conn.Close() // close when finished
 		d.PermsBuilder()
-		if !d.PermsCheck(tablename, "", "", d.Method) {
+		if !d.SuperAdmin && !d.PermsCheck(tablename, "", "", d.Method) {
 			return res, errors.New("not authorized to " + method.String() + " " + tablename + " datas")
 		}
 		// load the highest entity avaiable Table level.
