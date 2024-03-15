@@ -53,17 +53,22 @@ func (s *MainService) ByEntityUser(tableName string, extra ...string) (string) {
 	return restr
 }
 
+var fieldsCache = map[string]tool.Results{}
+
 func (d *MainService) byFields(tableName string) (string) {
 	SQLview := "id,"
 	sqlFilter := entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM " + entities.DBSchema.Name + " WHERE name='" + tableName + "')"
-	p := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, tool.RootRowsParam : tool.ReservedParam,}
-	fields, err := d.SuperCall( p, tool.Record{}, tool.SELECT, "Get", sqlFilter)
-	if err != nil || len(fields) == 0 { return "" }
 	views := []string{}
 	if params, ok := d.Params[tool.RootColumnsParam]; ok { 
 		views = strings.Split(params, ",") 
 	}
-	for _, field := range fields {
+	if fieldsCache[tableName] == nil  {
+		p := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, tool.RootRowsParam : tool.ReservedParam,}
+		fields, err := d.SuperCall( p, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+		if err != nil || len(fields) == 0 { return "" }
+		fieldsCache[tableName] = fields
+	}
+	for _, field := range fieldsCache[tableName] {
 		if len(views) > 0 && !slices.Contains(views, field.GetString(entities.NAMEATTR)) { continue }
 		if strings.Contains(strings.ToLower(fmt.Sprintf("%v", field[entities.TYPEATTR])) , "many") { continue }
 		if d.PermsCheck(tableName, fmt.Sprintf("%v", field[entities.NAMEATTR]), fmt.Sprintf("%v", field["read_level"]), tool.SELECT) {
@@ -74,17 +79,28 @@ func (d *MainService) byFields(tableName string) (string) {
 	return SQLview
 }
 
+var schemaCache = map[string]tool.Results{}
+
 func (d *MainService) Schema(record tool.Record, permitted bool) (tool.Results, error) { // check schema auth access
 	params := tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
 			               tool.RootRowsParam : tool.ReservedParam }
+	var schemas tool.Results
+	var err error
 	sqlFilter := ""
 	if id, ok := record[entities.RootID(entities.DBSchema.Name)]; ok {
+		if schemaCache[fmt.Sprintf("%v", id)] != nil {  schemas = schemaCache[fmt.Sprintf("%v", id)] }
 		sqlFilter += "id=" + fmt.Sprintf("%v", id)
 	} else if name, ok := record[entities.NAMEATTR]; ok {
+		if schemaCache[fmt.Sprintf("%v", name)] != nil { schemas = schemaCache[fmt.Sprintf("%v", name)] }
 		sqlFilter += "name='" + fmt.Sprintf("%v", name) + "'"
 	}
-	schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
-	if err == nil && len(schemas) > 0 && permitted && !d.PermsCheck(
+	if schemas == nil {
+		schemas, err = d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+		if err != nil || len(schemas) == 0 { return nil, err }
+	}
+	if id, ok := record[entities.RootID(entities.DBSchema.Name)]; ok { schemaCache[fmt.Sprintf("%v", id)] = schemas
+	} else if name, ok := record[entities.NAMEATTR]; ok { schemaCache[fmt.Sprintf("%v", name)] = schemas }
+	if permitted && !d.PermsCheck(
 		fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]), "", "", tool.SELECT) {
 		return nil, errors.New("not authorized")
 	}
@@ -137,18 +153,22 @@ func (d *MainService) GetScheme(tableName string, isId bool) (
 	keysOrdered := []string{}
 	sqlFilter := ""
 	additionnalAction := []string{}
-	if isId { sqlFilter += entities.RootID(entities.DBSchema.Name) + "=" + tableName
-	} else { 
-		sqlFilter += entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM "
-		sqlFilter += entities.DBSchema.Name + " WHERE name=" + conn.Quote(tableName) + ")" }
-	// retrive all fields from schema...
-	params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
-						   tool.RootRowsParam: tool.ReservedParam, }
-	schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 	var id int64
 	schemes := map[string]interface{}{}
-	if err != nil || len(schemas) == 0 { return schemes, id, keysOrdered, cols, additionnalAction }
-	for _, r := range schemas {
+	if fieldsCache[tableName] == nil {
+		if isId { sqlFilter += entities.RootID(entities.DBSchema.Name) + "=" + tableName
+		} else { 
+			sqlFilter += entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM "
+			sqlFilter += entities.DBSchema.Name + " WHERE name=" + conn.Quote(tableName) + ")" 
+		}
+		// retrive all fields from schema...
+		params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
+							tool.RootRowsParam: tool.ReservedParam, }
+		schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+		if err != nil || len(fieldsCache[tableName]) == 0 { return schemes, id, keysOrdered, cols, additionnalAction }
+		fieldsCache[tableName] = schemas
+	}
+	for _, r := range fieldsCache[tableName] {
 		var scheme entities.SchemaColumnEntity
 		var shallowField entities.ShallowSchemaColumnEntity
 		b, _ := json.Marshal(r)

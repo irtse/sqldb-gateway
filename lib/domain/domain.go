@@ -185,10 +185,15 @@ func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Res
 					 SchemaName: tableName, 
 					 Actions : []map[string]interface{}{},  Items : []tool.Record{} }	
 		res := tool.Results{} 
+		channel := make(chan tool.Record, len(results))
+		defer close(channel)
 		for _, record := range results { 
-			rec := d.PostTreatRecord(record, tableName, cols, d.Empty)
+			go d.PostTreatRecord(channel, record, tableName, cols, d.Empty)			
+		}
+		for range results { 
+			rec := <-channel
 			if rec == nil { continue }
-			view.Items = append(view.Items, rec)
+			view.Items = append(view.Items, rec) 
 		}
 		r := tool.Record{}
 		b, _ := json.Marshal(view)
@@ -245,7 +250,7 @@ func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Res
 	return results
 }
 
-func (d *MainService) PostTreatRecord(record tool.Record, tableName string,  cols map[string]entities.SchemaColumnEntity, shallow bool) tool.Record {
+func (d *MainService) PostTreatRecord(channel chan tool.Record, record tool.Record, tableName string,  cols map[string]entities.SchemaColumnEntity, shallow bool) {
 		vals := map[string]interface{}{}
 		shallowVals := map[string]interface{}{}
 		manyPathVals := map[string]string{}
@@ -307,7 +312,7 @@ func (d *MainService) PostTreatRecord(record tool.Record, tableName string,  col
 		var newRec tool.Record
 		b, _ := json.Marshal(view)
 		json.Unmarshal(b, &newRec)
-		return newRec
+		channel <- newRec
 }
 
 

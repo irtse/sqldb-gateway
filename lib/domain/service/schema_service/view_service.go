@@ -59,6 +59,10 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 		                                            record, tool.Params{ tool.RootTableParam : tName, 
 			                                        tool.RootRowsParam: tool.ReservedParam, })
 		if id != "" { params[tool.RootRowsParam] = id }
+		if s.Domain.GetParams()[tool.RootLimit] != "" { params[tool.RootLimit]=s.Domain.GetParams()[tool.RootLimit] }
+		if s.Domain.GetParams()[tool.RootOffset] != "" { params[tool.RootOffset]=s.Domain.GetParams()[tool.RootOffset] }
+		if s.Domain.GetParams()[tool.RootOrderParam] != "" { params[tool.RootOrderParam]=s.Domain.GetParams()[tool.RootOrderParam] }
+		if s.Domain.GetParams()[tool.RootDirParam] != "" { params[tool.RootDirParam]=s.Domain.GetParams()[tool.RootDirParam] }
 		rec["link_path"]=s.Domain.BuildPath(fmt.Sprintf(entities.DBView.Name), fmt.Sprintf("%v", record[tool.SpecialIDParam]))
 		sqlFilter := ""
 		if _, ok := record["through_perms"]; ok { 

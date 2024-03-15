@@ -297,6 +297,7 @@ func (db *Db) ToFilter(tableName string, params map[string]string, restriction..
 		}
 		db.SQLOrder = RemoveLastChar(db.SQLOrder)
 	}
+	fmt.Printf("PARAMS %v \n", params)
 	if limit, ok := params["limit"]; ok {
 		i, err := strconv.Atoi(limit)
 		if err == nil { 
