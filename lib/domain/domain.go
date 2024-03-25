@@ -88,9 +88,9 @@ func (d *MainService) call(params tool.Params, record tool.Record, method tool.M
 			if !d.isGenericService { specializedService = domain.SpecializedService(tablename) }
 			specializedService.SetDomain(d)
 		}
-		if d.Db == nil { 
+		if d.Db == nil || d.Db.Conn == nil { 
 			d.Db = conn.Open() 
-			defer d.Db.Conn.Close() // close when finished
+			defer d.Db.Close() // close when finished
 		} // open base		
 		d.PermsBuilder()
 		if !d.SuperAdmin && !d.PermsCheck(tablename, "", "", d.Method) {

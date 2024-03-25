@@ -57,6 +57,24 @@ paths:
           description: no table
       tags:
       - auth
+  /auth/refresh:
+    get:
+      description: |-
+        Refresh Datas
+        <br>
+      operationId: AuthController.Refresh
+      parameters:
+      - description: 'Authorization Token HEADER '
+        in: header
+        name: Authorization
+        type: string
+      responses:
+        "200":
+          description: '{string} success !'
+        "403":
+          description: no table
+      tags:
+      - auth
   /generic/{table}:
     delete:
       description: |-

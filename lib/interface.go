@@ -40,6 +40,7 @@ type DomainITF interface {
 } 
 
 type DbITF interface {
+	Close()
 	GetSQLView()        string 
 	GetSQLOrder()       string 
 	GetSQLRestriction() string 	

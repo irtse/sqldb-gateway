@@ -94,3 +94,51 @@ func (l *AuthController) Logout() {
 	l.session(login, superAdmin, true) // update session variables
 	l.response(tool.Results{ tool.Record { "name" : login }}, nil)
 }
+
+// @Title Refresh
+// @Description User logout
+// @Param	body		body 	Credential	true		"Credentials"
+// @Success 200 {string} success !
+// @Failure 403 user does not exist
+// @Failure 402 user already connected
+// @router /logout [get]
+func (l *AuthController) Refresh() {
+	login, superAdmin, err := l.authorized() // check if already connected
+	if err != nil { l.response(nil, err) }
+	token := l.session(login, superAdmin, false) // update session variables
+	d := domain.Domain(superAdmin, login, false) 
+	params := tool.Params{ tool.RootTableParam : entities.DBNotification.Name, 
+						   tool.RootRowsParam : tool.ReservedParam, 
+						   tool.RootRawView : "enable",}
+	notifs, err := d.PermsSuperCall(params, tool.Record{}, tool.SELECT, "Get")
+	resp := tool.Record{}
+	n := tool.Results{}
+	fmt.Printf("NOTIF %v \n", notifs)
+	for _, notif := range notifs {
+		params := tool.Params{ tool.RootTableParam : entities.DBView.Name, 
+							   tool.RootRowsParam : tool.ReservedParam,
+							   tool.RootShallow : "enable",
+							   entities.RootID(entities.DBSchema.Name) : notif.GetString(entities.DBSchema.Name),
+							   entities.RootID("dest_table") : notif.GetString(entities.RootID("dest_table")),
+							}
+		views, _ := d.Call(params, tool.Record{}, tool.SELECT, "Get")
+		if err == nil || len(views) > 0 {
+			id := "-1"
+			for _, view := range views {
+				if view["max"] != nil && view["max"].(int64) > 0 {
+					id = fmt.Sprintf("%v", view["id"])
+					break
+				}
+			}
+			n = append(n, tool.Record{
+				entities.NAMEATTR : notif.GetString(entities.NAMEATTR),
+				"description" : notif.GetString("description"),
+				"data_ref" : "#" + id + ":" + notif.GetString(entities.RootID("dest_table")),
+			})
+		}
+	}
+	if err == nil { resp["notifications"]=n
+	} else { resp["notifications"]=[]interface{}{} }
+	resp["token"]=token
+	l.response(tool.Results{resp}, nil)
+}

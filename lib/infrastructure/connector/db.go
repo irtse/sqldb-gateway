@@ -61,6 +61,11 @@ func Open() *Db {
 	return &database
 }
 
+func (db *Db) Close() {
+	db.Conn.Close()
+	db.Conn = nil
+}
+
 func (db *Db) GetSQLRestriction() string { return db.SQLRestriction }
 func (db *Db) GetSQLOrder() string { return db.SQLOrder }
 func (db *Db) GetSQLView() string { return db.SQLView }

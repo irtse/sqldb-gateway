@@ -36,7 +36,6 @@ func (d *MainService) CountNewDataAccess(tableName string, filter string, countP
 	if len(filter) > 0 { sqlFilter += " AND " + filter }
 	p := tool.Params{ tool.RootTableParam : tableName, tool.RootRowsParam : tool.ReservedParam, 
 		              tool.RootColumnsParam : tool.SpecialIDParam, tool.RootShallow: "enable",  tool.RootRawView: "enable" }
-	fmt.Printf("sqdqd %v\n", sqlFilter)
 	res, err := d.PermsSuperCall( p, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 	ids := []string{}
 	if err != nil { return ids, 0 }

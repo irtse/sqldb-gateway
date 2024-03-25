@@ -79,6 +79,31 @@
     ]
    }
   },
+  "/auth/refresh": {
+   "get": {
+    "description": "Refresh Datas\n\u003cbr\u003e",
+    "operationId": "AuthController.Refresh",
+    "parameters": [
+     {
+      "description": "Authorization Token HEADER ",
+      "in": "header",
+      "name": "Authorization",
+      "type": "string"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "{string} success !"
+     },
+     "403": {
+      "description": "no table"
+     }
+    },
+    "tags": [
+     "auth"
+    ]
+   }
+  },
   "/generic/{table}": {
    "delete": {
     "description": "Delete Datas\n\u003cbr\u003e",
