@@ -30,4 +30,5 @@ var HiddenParams = []string{RootDestTableIDParam}
 var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset, RootShallow, RootRawView, RootSuperCall, SpecialIDParam}
 
 const SpecialIDParam = "id" 
+const SpecialSubIDParam = "subid" 
 var MAIN_PREFIX = "generic"

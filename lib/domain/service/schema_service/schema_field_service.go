@@ -150,11 +150,9 @@ func (s *SchemaFields) PostTreatment(results tool.Results, tableName string, des
 	for _, rec := range results {
 		schemas, err := s.Domain.Schema(rec, true)
 		if err != nil && len(schemas) == 0 { continue }
-		if s.Domain.PermsCheck(fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]), "", "", tool.SELECT) {
-			res = append(res, rec)
-		}
+		if s.Domain.PermsCheck(fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]), "", "", tool.SELECT) { res = append(res, rec) }
 	}
-	return s.Domain.PostTreat( res, tableName) 
+	return results
 }
 func (s *SchemaFields) ConfigureFilter(tableName string) (string, string) {
 	return s.Domain.ViewDefinition(tableName)

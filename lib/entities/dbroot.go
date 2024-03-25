@@ -208,7 +208,6 @@ var DBView = TableEntity{
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, },
 		TableColumnEntity{ Name: "is_list", Type: "boolean", Null : false, Default: true },
-		TableColumnEntity{ Name: "can_pull_schema", Type: "boolean", Null : false, Default: false },
 		TableColumnEntity{ Name: "is_empty", Type: "boolean", Null : false, Default: false },
 		TableColumnEntity{ Name: "indexable", Type: "boolean", Null : false, Default: true },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true,  Default: "no description...", },
@@ -223,8 +222,33 @@ var DBView = TableEntity{
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable : DBSchema.Name, Null : false, },
 	},
 }
+
+var DBNotification = TableEntity{
+	Name : RootName("notification"),
+	Label : "notification",
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, },
+		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true,  Default: "no description...", },
+		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, Readonly : true, Label: "user assignee", },
+		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, Null : true, Readonly : true, Label: "entity assignee", },
+		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, Null : false, Readonly : true, Label: "form attached", },
+		TableColumnEntity{ Name: RootID("dest_table"), Type: "integer", Null : true, Readonly : true, Label: "reference", },
+	},
+}
+
+var DBDataAccess = TableEntity{
+	Name : RootName("data_access"),
+	Label : "data access",
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: RootID("dest_table"), Type: "integer", Null : true, Readonly : true, Label: "reference", },
+		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, Null : false, Readonly : true, Label: "form attached", },
+		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, Readonly : true, Label: "related user", },
+	},
+}
+
 var POSTPERMISSIONEXCEPTION = []TableEntity{ DBRequest }
 var PUPERMISSIONEXCEPTION = []TableEntity{ DBTask }
-var PERMISSIONEXCEPTION = []TableEntity{ DBView, DBTask, DBRequest, DBWorkflow } // override permission checkup
-var ROOTTABLES = []TableEntity{ DBSchema, DBSchemaField, DBUser, DBPermission, DBEntity, DBRole, DBView, 
-	DBEntityUser, DBRoleAttribution, DBWorkflow, DBRequest, DBTask, DBWorkflowSchema, DBRolePermission, DBHierarchy, }
+var PERMISSIONEXCEPTION = []TableEntity{ DBView, DBTask, DBRequest, DBWorkflow, DBNotification } // override permission checkup
+var ROOTTABLES = []TableEntity{ DBSchema, DBSchemaField, DBUser, DBPermission, DBEntity, 
+	DBRole, DBView, DBDataAccess, DBNotification, DBEntityUser, DBRoleAttribution, DBWorkflow, 
+	DBRequest, DBTask, DBWorkflowSchema, DBRolePermission, DBHierarchy, }

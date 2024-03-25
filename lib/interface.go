@@ -16,6 +16,8 @@ type InfraServiceItf interface {
 var EXCEPTION_FUNC = []string{"Count"}
 // Defined domain service functions
 type DomainITF interface {
+	SetParams(params Params)
+	CountNewDataAccess(tableName string, filter string, countParams Params) ([]string, int64)
 	PermsSuperCall(params Params, record Record, method Method, funcName string, args... interface{}) (Results, error)
 	SuperCall(params Params, rec Record, m Method, funcName string, args... interface{}) (Results, error)
 	Call(params Params, rec Record, m Method, funcName string, args... interface{}) (Results, error)

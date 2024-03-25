@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"sync"
 	"sort"
 	"slices"
 	"errors"
@@ -28,6 +29,53 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 	}
 	return SQLrestriction, SQLview
 }
+func (d *MainService) CountNewDataAccess(tableName string, filter string, countParams tool.Params) ([]string, int64) {
+	sqlFilter := "id NOT IN (SELECT " + entities.RootID("dest_table") + " FROM " + entities.DBDataAccess.Name + " WHERE "
+	sqlFilter += entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM " + entities.DBSchema.Name + " WHERE name = '" + tableName + "') AND " 
+	sqlFilter += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name = '" + d.GetUser() + "' ))"
+	if len(filter) > 0 { sqlFilter += " AND " + filter }
+	p := tool.Params{ tool.RootTableParam : tableName, tool.RootRowsParam : tool.ReservedParam, 
+		              tool.RootColumnsParam : tool.SpecialIDParam, tool.RootShallow: "enable",  tool.RootRawView: "enable" }
+	fmt.Printf("sqdqd %v\n", sqlFilter)
+	res, err := d.PermsSuperCall( p, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+	ids := []string{}
+	if err != nil { return ids, 0 }
+	for _, rec := range res { ids = append(ids, rec.GetString(tool.SpecialIDParam)) }
+	sqlFilter = "id IN (SELECT " + entities.RootID("dest_table") + " FROM " + entities.DBDataAccess.Name + " WHERE "
+	sqlFilter += entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM " + entities.DBSchema.Name + " WHERE name = '" + tableName + "') AND " 
+	sqlFilter += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name = '" + d.GetUser() + "' ))"
+	if len(filter) > 0 { sqlFilter += " AND " + filter }
+	countParams[tool.RootTableParam] = tableName
+	countParams[tool.RootRowsParam] = tool.ReservedParam
+	res, err = d.PermsSuperCall( countParams, tool.Record{}, tool.SELECT, "Count", sqlFilter)
+	if len(res) == 0 || err != nil { return ids, 0 }
+	return ids, res[0]["count"].(int64) + int64(len(ids))
+}
+
+func (d *MainService) AddDataAccess(schemaID int64, destIDs []string) {
+	sqlFilter := "name='"+ d.GetUser() + "'"
+	params := tool.Params{ tool.RootTableParam : entities.DBUser.Name, tool.RootRowsParam : tool.ReservedParam,}
+	users, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+	if err == nil && len(users) > 0 {
+		for _, destID := range destIDs {
+			id := users[0].GetString(tool.SpecialIDParam)
+			sqlFilter := entities.RootID(entities.DBSchema.Name) + "=" + fmt.Sprintf("%v", schemaID) + " AND " 
+			if strings.Contains(destID, "%") {
+				sqlFilter += entities.RootID("dest_table") + "::text LIKE '" + strings.Replace(fmt.Sprintf("%v", destID), "%25", "%", -1) + "' AND "
+			} else { sqlFilter += entities.RootID("dest_table") + "=" + fmt.Sprintf("%v", destID) + " AND " }
+			sqlFilter += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name = '" + d.GetUser() + "' )"
+			p := tool.Params{ tool.RootTableParam : entities.DBDataAccess.Name, tool.RootRowsParam : tool.ReservedParam,}
+			access, err := d.SuperCall( p, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+			if err != nil || len(access) == 0 {
+				d.SuperCall( tool.Params{ tool.RootTableParam : entities.DBDataAccess.Name, tool.RootRowsParam : tool.ReservedParam,}, tool.Record{
+					entities.RootID("dest_table") : destID,
+					entities.RootID(entities.DBSchema.Name) : schemaID,
+					entities.RootID(entities.DBUser.Name) : id,
+				}, tool.CREATE, "CreateOrUpdate")
+			}
+		}
+	}	
+}
 
 func (s *MainService) ByEntityUser(tableName string, extra ...string) (string) {
 	schemas, err := s.Schema(tool.Record{ entities.NAMEATTR : tableName }, false)
@@ -53,6 +101,7 @@ func (s *MainService) ByEntityUser(tableName string, extra ...string) (string) {
 	return restr
 }
 
+var mutexFields  = sync.RWMutex{}
 var fieldsCache = map[string]tool.Results{}
 
 func (d *MainService) byFields(tableName string) (string) {
@@ -66,7 +115,9 @@ func (d *MainService) byFields(tableName string) (string) {
 		p := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, tool.RootRowsParam : tool.ReservedParam,}
 		fields, err := d.SuperCall( p, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 		if err != nil || len(fields) == 0 { return "" }
+		mutexFields.Lock()
 		fieldsCache[tableName] = fields
+		mutexFields.Unlock()
 	}
 	for _, field := range fieldsCache[tableName] {
 		if len(views) > 0 && !slices.Contains(views, field.GetString(entities.NAMEATTR)) { continue }
@@ -79,6 +130,7 @@ func (d *MainService) byFields(tableName string) (string) {
 	return SQLview
 }
 
+var mutexSchema  = sync.RWMutex{}
 var schemaCache = map[string]tool.Results{}
 
 func (d *MainService) Schema(record tool.Record, permitted bool) (tool.Results, error) { // check schema auth access
@@ -87,6 +139,7 @@ func (d *MainService) Schema(record tool.Record, permitted bool) (tool.Results, 
 	var schemas tool.Results
 	var err error
 	sqlFilter := ""
+	mutexSchema.Lock()
 	if id, ok := record[entities.RootID(entities.DBSchema.Name)]; ok {
 		if schemaCache[fmt.Sprintf("%v", id)] != nil {  schemas = schemaCache[fmt.Sprintf("%v", id)] }
 		sqlFilter += "id=" + fmt.Sprintf("%v", id)
@@ -94,12 +147,15 @@ func (d *MainService) Schema(record tool.Record, permitted bool) (tool.Results, 
 		if schemaCache[fmt.Sprintf("%v", name)] != nil { schemas = schemaCache[fmt.Sprintf("%v", name)] }
 		sqlFilter += "name='" + fmt.Sprintf("%v", name) + "'"
 	}
+	mutexSchema.Unlock()
 	if schemas == nil {
 		schemas, err = d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 		if err != nil || len(schemas) == 0 { return nil, err }
 	}
+	mutexSchema.Lock()
 	if id, ok := record[entities.RootID(entities.DBSchema.Name)]; ok { schemaCache[fmt.Sprintf("%v", id)] = schemas
 	} else if name, ok := record[entities.NAMEATTR]; ok { schemaCache[fmt.Sprintf("%v", name)] = schemas }
+	mutexSchema.Unlock()
 	if permitted && !d.PermsCheck(
 		fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]), "", "", tool.SELECT) {
 		return nil, errors.New("not authorized")
@@ -165,9 +221,12 @@ func (d *MainService) GetScheme(tableName string, isId bool) (
 		params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
 							tool.RootRowsParam: tool.ReservedParam, }
 		schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
-		if err != nil || len(fieldsCache[tableName]) == 0 { return schemes, id, keysOrdered, cols, additionnalAction }
+		if err != nil || len(schemas) == 0 { return schemes, id, keysOrdered, cols, additionnalAction }
+		mutexFields.Lock()
 		fieldsCache[tableName] = schemas
+		mutexFields.Unlock()
 	}
+	
 	for _, r := range fieldsCache[tableName] {
 		var scheme entities.SchemaColumnEntity
 		var shallowField entities.ShallowSchemaColumnEntity

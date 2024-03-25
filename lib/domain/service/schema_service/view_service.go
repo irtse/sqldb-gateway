@@ -3,6 +3,7 @@ package schema_service
 import (
 	"fmt"
 	"sort"
+	"slices"
 	"strings"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
@@ -43,9 +44,10 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 		id := ""
 		if record["is_empty"] != nil { s.Domain.SetEmpty(record["is_empty"].(bool)) }
 		if r, ok := record["readonly"]; ok && r.(bool) { readonly = true }
-		rec := tool.Record{ "id": record["id"], "name" : record["name"], "description" : record["description"], "is_empty" : record["is_empty"],
+		rec := tool.Record{ "id": record["id"], "redirect_id" : record[entities.RootID(entities.DBView.Name)],
+		                    "name" : record["name"], "description" : record["description"], "is_empty" : record["is_empty"],
 		                    "index" : record["index"], "is_list" : record["is_list"], "readonly" : record["readonly"],
-						}
+						}	
 		s.Domain.SetLowerRes(record["is_list"].(bool))
 		for _, dest := range dest_id {
 			if id == "" { id = dest 
@@ -59,30 +61,44 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 		                                            record, tool.Params{ tool.RootTableParam : tName, 
 			                                        tool.RootRowsParam: tool.ReservedParam, })
 		if id != "" { params[tool.RootRowsParam] = id }
-		if s.Domain.GetParams()[tool.RootLimit] != "" { params[tool.RootLimit]=s.Domain.GetParams()[tool.RootLimit] }
-		if s.Domain.GetParams()[tool.RootOffset] != "" { params[tool.RootOffset]=s.Domain.GetParams()[tool.RootOffset] }
-		if s.Domain.GetParams()[tool.RootOrderParam] != "" { params[tool.RootOrderParam]=s.Domain.GetParams()[tool.RootOrderParam] }
-		if s.Domain.GetParams()[tool.RootDirParam] != "" { params[tool.RootDirParam]=s.Domain.GetParams()[tool.RootDirParam] }
+		for k, v := range s.Domain.GetParams() {
+			if _, ok := params[k]; !ok { 
+				if k != "new" && !strings.Contains(k,"dest_table") {
+					if k == tool.SpecialSubIDParam { params[tool.SpecialIDParam] = v
+					} else if _, ok := params[k]; !ok { params[k] = v }
+				}
+			}
+		}
 		rec["link_path"]=s.Domain.BuildPath(fmt.Sprintf(entities.DBView.Name), fmt.Sprintf("%v", record[tool.SpecialIDParam]))
 		sqlFilter := ""
 		if _, ok := record["through_perms"]; ok { 
 			through, err := s.Domain.Schema(tool.Record{  entities.RootID(entities.DBSchema.Name) : record["through_perms"] }, true)
-			if len(through) > 0 && err == nil {
-				sqlFilter +=  s.Domain.ByEntityUser(fmt.Sprintf("%v", through[0][entities.NAMEATTR]), tName)
-			}
+			if len(through) > 0 && err == nil { sqlFilter +=  s.Domain.ByEntityUser(fmt.Sprintf("%v", through[0][entities.NAMEATTR]), tName) }
 		}
 		datas := tool.Results{tool.Record{}}
+		d := tool.Results{}
+		if restr, ok := record["sql_restriction"]; ok && restr != "" && restr != nil {
+			if len(sqlFilter) > 0 { 
+				sqlFilter +=  " AND (" 
+				sqlFilter += fmt.Sprintf("%v", restr)
+				sqlFilter +=  ")"
+			} else { sqlFilter += " " + fmt.Sprintf("%v", restr) }
+		}
+		rec["new"] = []string{}
 		if !s.Domain.GetEmpty() {
-			if restr, ok := record["sql_restriction"]; ok && restr != "" && restr != nil {
-				if len(sqlFilter) > 0 { 
-					sqlFilter +=  " AND (" 
-					sqlFilter += fmt.Sprintf("%v", restr)
-					sqlFilter +=  ")"
-				} else { sqlFilter += " " + fmt.Sprintf("%v", restr) }
-			}
-			datas, _ = s.Domain.PermsSuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+			d, _ = s.Domain.PermsSuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+		}
+		if record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(tName, sqlFilter, params) }
+		if !s.Domain.GetEmpty() {
+			datas = tool.Results{}
+			if new, ok := s.Domain.GetParams()["new"]; ok && new == "enable" {
+				for _, data := range d {
+					if slices.Contains(rec["new"].([]string), data.GetString("id")) { datas = append(datas, data) }
+				}
+			} else { datas = d }
 		}
 		treated := s.Domain.PostTreat(datas, tName)
+		// s.Domain.SetParams(params)
 		if len(treated ) > 0 {
 			for k, v := range treated[0] { 
 				if _, ok := rec[k]; ok { continue }

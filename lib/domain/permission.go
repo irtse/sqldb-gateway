@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"sync"
 	"slices"
 	"strings"
 	"encoding/json"
@@ -16,7 +17,7 @@ type Perms struct {
 	Update bool 	`json:"update"`
 	Delete bool 	`json:"delete"`
 }
-
+var mutexPerms  = sync.RWMutex{}
 func (d *MainService) PermsBuilder() {
 	d.Perms = map[string]map[string]Perms{}
 	d.Db.SQLRestriction = "id IN (SELECT " + entities.DBPermission.Name + "_id FROM " 
@@ -37,15 +38,19 @@ func (d *MainService) PermsBuilder() {
 		names = names[:len(names)-1]
 		if len(names) == 0 { continue }
 		tName := names[0]
-		if _, ok := d.Perms[tName]; !ok { d.Perms[tName] = map[string]Perms{}; }
+		
 		var perms Perms
 		b, _ := json.Marshal(record)
 		json.Unmarshal(b, &perms)
 		n := ""
 		if len(names) > 1 { n = names[1] 
 		} else { n = names[0] }		
+		
+		mutexPerms.Lock()
+		if p, ok := d.Perms[tName]; !ok || p == nil { d.Perms[tName] = map[string]Perms{}; }
 		p := d.Perms[tName][n]
-		if _, ok := d.Perms[tName][n]; !ok { d.Perms[tName][n]=perms
+		if _, ok := d.Perms[tName][n]; !ok { 
+			d.Perms[tName][n]=perms
 		} else {
 			if slices.Index(entities.READLEVELACCESS, perms.Read) > slices.Index(entities.READLEVELACCESS, p.Read) { 
 				p.Read = perms.Read 
@@ -55,6 +60,7 @@ func (d *MainService) PermsBuilder() {
 			if perms.Delete { p.Delete = true }
 			d.Perms[tName][n]=p
 		}
+		mutexPerms.Unlock()
 	}
 }
 // can redact a view based on perms. 

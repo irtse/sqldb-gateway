@@ -3,6 +3,7 @@ package connector
 import (
 	"os"
 	"fmt"
+	"sync"
 	"slices"
 	"strings"
 	"reflect"
@@ -43,6 +44,7 @@ type Db struct {
 	Restricted     bool
 	Conn           *sql.DB
 }
+var mutex = sync.RWMutex{}
 // Open the database
 func Open() *Db {
 	var database Db
@@ -59,19 +61,12 @@ func Open() *Db {
 	return &database
 }
 
-func (db *Db) GetSQLRestriction() string {
-	return db.SQLRestriction
-}
-func (db *Db) GetSQLOrder() string {
-	return db.SQLOrder
-}
-func (db *Db) GetSQLView() string {
-	return db.SQLView
-}
+func (db *Db) GetSQLRestriction() string { return db.SQLRestriction }
+func (db *Db) GetSQLOrder() string { return db.SQLOrder }
+func (db *Db) GetSQLView() string { return db.SQLView }
 
 func (db *Db) Prepare(query string) (*sql.Stmt, error) {
 	if db.LogQueries { log.Info().Msg(query) }
-	// fmt.Printf("QUERY : %s\n", query)
 	stmt, err := db.Conn.Prepare(query)
 	if err != nil { return nil, err }
 	return stmt, nil
@@ -80,17 +75,18 @@ func (db *Db) Prepare(query string) (*sql.Stmt, error) {
 func (db *Db) QueryRow(query string) (int64, error) {
     id := 0
 	if db.LogQueries { log.Info().Msg(query) }
+	mutex.Lock()
 	err := db.Conn.QueryRow(query).Scan(&id)
-	// fmt.Printf("QUERY : %s %v \n", query, err)
+	mutex.Unlock()
 	if err != nil { return int64(id), err }
 	return int64(id), err
 }
 
 func (db *Db) Query(query string) (error) {
+	mutex.Lock()
 	rows, err := db.Conn.Query(query)
-	if err != nil { 
-		fmt.Printf("QUERY : %s %v \n", query, err)
-		return err }
+	mutex.Unlock()
+	if err != nil { return err }
 	err = rows.Close()
 	return err
 }
@@ -99,8 +95,9 @@ func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 	if strings.Contains(query, "<nil>") { return tool.Results{}, nil }
 	rows, err := db.Conn.Query(query)
 	if err != nil { 
-		// fmt.Printf("QUERY : %s %v \n", query, err)
-		return nil, err }
+		fmt.Printf("%v %v \n", query, err)
+		return nil, err 
+	}
 	defer rows.Close()
 	// get rows
 	results := tool.Results{}
@@ -233,10 +230,11 @@ func FormatForSQL(datatype string, value interface{}) string {
 	for _, typ := range SpecialTypes {
 		if strings.Contains(datatype, typ) { 
 			if value == "CURRENT_TIMESTAMP" { return fmt.Sprint(value) 
-			} else { return Quote(fmt.Sprint(value))}
+			} else { return  strings.Replace(Quote(fmt.Sprint(value)), "%25", "%", -1) }
 		}
 	}
-	return fmt.Sprint(strval)
+	if strings.Contains(strval, "%") { return strings.Replace(Quote(strval), "%25", "%", -1) }
+	return strval
 }
 func (db *Db) ToFilter(tableName string, params map[string]string, restriction... string) {
 	db.ClearFilter()
@@ -259,19 +257,26 @@ func (db *Db) ToFilter(tableName string, params map[string]string, restriction..
 					db.SQLRestriction +=  ")"
 				} else { db.SQLRestriction += key + " IN (" + RemoveLastChar(els) + ")" }
 			} else { 
-				sql := FormatForSQL(field.Type, element)
-				if len(sql) > 1 && sql[:2] == Quote("%" + sql[:len(sql) - 2] + "%") {
-					if len(db.SQLRestriction) > 0 { 
-						db.SQLRestriction +=  " AND (" 
-						db.SQLRestriction += key + " LIKE " + sql
-						db.SQLRestriction +=  ")"
-					} else { db.SQLRestriction += key + " LIKE " + sql }
-				} else { 
-					if len(db.SQLRestriction) > 0 { 
-						db.SQLRestriction +=  " AND (" 
-						db.SQLRestriction += key + "=" + sql
-						db.SQLRestriction +=  ")"
-					} else { db.SQLRestriction += key + "=" + sql }
+				ands := strings.Split(element, "+")
+				for _, and := range ands {
+					if len(db.SQLRestriction) > 0 {  db.SQLRestriction += " AND ("
+					} else { db.SQLRestriction += "(" }
+					ors := strings.Split(and, "%7C")
+					count := 0
+					for _, or := range ors {
+						sql := FormatForSQL(field.Type, or)
+						if count > 0 { db.SQLRestriction +=  " OR " }
+						if field.Link != "" {
+							if strings.Contains(sql, "%") {
+								db.SQLRestriction += key + " IN (SELECT id FROM " + field.Link + " WHERE name::text LIKE " + sql + ")"
+							} else { db.SQLRestriction += key + " IN (SELECT id FROM " + field.Link + " WHERE name = " + sql + ")" }
+						} else {
+							if strings.Contains(sql, "%") { db.SQLRestriction += key + "::text LIKE " + sql
+							} else { db.SQLRestriction += key + "=" + sql }
+						}
+						count++
+					}
+					db.SQLRestriction += ")"
 				}
 			}
 		}
@@ -283,21 +288,27 @@ func (db *Db) ToFilter(tableName string, params map[string]string, restriction..
 		}
 		continue
 	}
-	if orderBy, ok := params["order_by"]; ok {
+	if orderBy, ok := params["orderby"]; ok {
 		direction := []string{}
-		if dir, ok2 := params["dir"]; !ok2 { 
+		if dir, ok2 := params["dir"]; ok2 { 
 			direction = strings.Split(fmt.Sprintf("%v", dir), ",")
 		}
 		for i, el := range strings.Split(fmt.Sprintf("%v", orderBy), ",") {
+			if _, ok := fields[el]; !ok && el != "id" { continue }
 			if len(direction) > i { 
 				upper := strings.Replace(strings.ToUpper(direction[i]), " ", "", -1)
-				if upper == "ASC" || upper == "DESC" { db.SQLOrder += SQLInjectionProtector(el + " " + upper + ",") }
+				if upper == "ASC" || upper == "DESC" { 
+					db.SQLOrder += SQLInjectionProtector(el + " " + upper + ",") 
+					continue
+				}
 			} 
 			db.SQLOrder += SQLInjectionProtector(el + " ASC,") 
 		}
 		db.SQLOrder = RemoveLastChar(db.SQLOrder)
 	}
-	fmt.Printf("PARAMS %v \n", params)
+	if db.SQLOrder == "" {
+		db.SQLOrder = "id DESC"
+	}
 	if limit, ok := params["limit"]; ok {
 		i, err := strconv.Atoi(limit)
 		if err == nil { 

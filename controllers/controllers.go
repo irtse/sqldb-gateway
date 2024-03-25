@@ -89,26 +89,14 @@ func (t *AbstractController) params() map[string]string {
 			params[key[1:]] = val
 		}
 	}
-	queries := []string{} // then we will extract query parameters
-    queries = append(queries, tool.RootParams...) // firstival we will try to found pertinent query params
-	queries = append(queries, tool.HiddenParams...)
-	if tablename, ok := params[tool.RootTableParam]; ok { // retrieve schema
-		p := tool.Params{ tool.RootTableParam : tablename, }
-		d := domain.Domain(true, "", false) // create a new domain with current permissions of user
-		d.Specialization = false // when launching call disable every auth check up (don't forget you are not logged)
-		response, err := d.SuperCall(p, tool.Record{}, tool.SELECT, "Get")
-		if len(response) > 0 {
-			if cols, ok2 := response[0]["columns"]; ok2 && err == nil {
-				for colName, _ := range cols.(map[string]entities.TableColumnEntity) {
-					queries = append(queries, colName)
-				}
-			}
-		}	
+	path := strings.Split(t.Ctx.Input.URI(), "?")
+	if len(path) >= 2 {
+		uri := strings.Split(path[1], "&")
+		for _, val := range uri {
+			kv := strings.Split(val, "=")
+			params[kv[0]]=kv[1]
+		}
 	}
-	for _, val := range queries {
-		name := t.Ctx.Input.Query(val)
-		if name != "" { params[val] = name }
-	} // GET SCHEMA PARAMETERS
 	if pass, ok := params["password"]; ok { // if any password founded hash it
 		argon := argon2.DefaultConfig()
 		hash, err := argon.HashEncoded([]byte(pass))

@@ -19,7 +19,8 @@ func (s *TaskService) VerifyRowAutomation(record tool.Record, create bool) (tool
 		if err != nil || len(user) == 0 { return record, false, false }
 		record[entities.RootID("created_by")]=user[0][tool.SpecialIDParam]  // affected create_by
 	} else {
-		if record["state"] == "completed" || record["state"] == "dismiss" { record["is_close"] = true }
+		if record["state"] == "completed" || record["state"] == "dismiss" { record["is_close"] = true 
+		} else { record["state"] = "progressing"  }
 	}
 	return record, true, true
 }

@@ -48,11 +48,9 @@ func (s *SchemaService) WriteRowAutomation(record tool.Record, tableName string)
 func (s *SchemaService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
 	res := tool.Results{}
 	for _, rec := range results {
-		if s.Domain.PermsCheck(fmt.Sprintf("%v", rec[entities.NAMEATTR]), "", "", tool.SELECT) {
-			res = append(res, rec)
-		}
+		if s.Domain.PermsCheck(fmt.Sprintf("%v", rec[entities.NAMEATTR]), "", "", tool.SELECT) { res = append(res, rec) }
 	}
-	return s.Domain.PostTreat( res, tableName) 
+	return results
 }
 func (s *SchemaService) ConfigureFilter(tableName string) (string, string) {
 	return s.Domain.ViewDefinition(tableName)

@@ -3,8 +3,6 @@ package service
 import ( 
 	// "fmt"
 	tool "sqldb-ws/lib" 
-	// "sqldb-ws/lib/entities" 
-	// conn "sqldb-ws/lib/infrastructure/connector" 
 	task "sqldb-ws/lib/domain/service/task_service" 
 	user "sqldb-ws/lib/domain/service/user_service"
 	schema "sqldb-ws/lib/domain/service/schema_service" 
@@ -22,6 +20,7 @@ var SERVICES = []tool.SpecializedService{
 	&user.RoleAttributionService{},
 	&user.RoleService{},
 	&user.PermissionService{},
+	&user.NotificationService{},
 }
 // funct to get specialized service depending on table reached
 func SpecializedService(name string) tool.SpecializedService {

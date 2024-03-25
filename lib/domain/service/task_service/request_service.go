@@ -137,8 +137,14 @@ func (s *RequestService) WriteRowAutomation(record tool.Record, tableName string
 }
 
 func (s *RequestService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
-	return s.Domain.PostTreat( results, tableName) 
+	return s.Domain.PostTreat(results, tableName) 
 }
 func (s *RequestService) ConfigureFilter(tableName string) (string, string) {
-	return s.Domain.ViewDefinition(tableName)
+	rows, ok := s.Domain.GetParams()[tool.RootRowsParam]
+	ids, ok2 := s.Domain.GetParams()[tool.SpecialIDParam]
+	if (ok && fmt.Sprintf("%v", rows) != tool.ReservedParam) || (ok2 && ids != "") {
+		return s.Domain.ViewDefinition(tableName)
+	}
+	restr := entities.RootID("created_by") + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
+	return s.Domain.ViewDefinition(tableName, restr)
 }

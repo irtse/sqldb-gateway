@@ -20,31 +20,6 @@
   "version": "1.0.0"
  },
  "paths": {
-  "/auth/logcheck": {
-   "get": {
-    "description": "LogCheck Datas\n\u003cbr\u003e",
-    "operationId": "AuthController.LogCheck",
-    "parameters": [
-     {
-      "description": "Authorization Token HEADER ",
-      "in": "header",
-      "name": "Authorization",
-      "type": "string"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "{string} success !"
-     },
-     "403": {
-      "description": "no table"
-     }
-    },
-    "tags": [
-     "auth"
-    ]
-   }
-  },
   "/auth/login": {
    "post": {
     "description": "Login Datas\n\u003cbr\u003e",

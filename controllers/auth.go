@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"errors"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
@@ -9,24 +10,6 @@ import (
 )
 // Operations about login
 type AuthController struct { AbstractController }
-// @Title LogCheck
-// @Description User LogCheck
-// @Param	body		body 	Credential	true		"Credentials"
-// @Success 200 {string} success !
-// @Failure 403 user does not exist
-// @router /logcheck [get]
-func (l *AuthController) LogCheck() {
-	user_id, _, err := l.authorized();
-	if err != nil {  l.response(tool.Results{}, err); return }
-	d := domain.Domain(false, user_id, false) // create a new domain with current permissions of user
-	d.Specialization = false // when launching call disable every auth check up (don't forget you are not logged)
-	params := l.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name, 
-											  tool.RootRowsParam : tool.ReservedParam, })
-	response, err := d.SuperCall(params, tool.Record{}, tool.SELECT, "Get", "name='" + user_id + "' OR email='" + user_id + "'")
-	if len(response) == 0 {  l.response(response, errors.New("AUTH : username/email invalid")); return }
-	l.response(response, nil)
-}
-
 // LLDAP HERE
 // func (l *AuthController) LoginLDAP() { }
 
@@ -56,6 +39,38 @@ func (l *AuthController) Login() {
 				// when password matching
 				token := l.session(log.(string), response[0]["super_admin"].(bool), false) // update session variables
 				response[0]["token"]=token
+				d := domain.Domain(false, log.(string), false) 
+				params := tool.Params{ tool.RootTableParam : entities.DBNotification.Name, 
+									   tool.RootRowsParam : tool.ReservedParam, 
+									   tool.RootRawView : "enable",}
+				notifs, err := d.PermsSuperCall(params, tool.Record{}, tool.SELECT, "Get")
+				n := tool.Results{}
+				for _, notif := range notifs {
+					params := tool.Params{ tool.RootTableParam : entities.DBView.Name, 
+										   tool.RootRowsParam : tool.ReservedParam,
+										   tool.RootShallow : "enable",
+										   entities.RootID(entities.DBSchema.Name) : notif.GetString(entities.DBSchema.Name),
+										   entities.RootID("dest_table") : notif.GetString(entities.RootID("dest_table")),
+										}
+					views, err := d.Call(params, tool.Record{}, tool.SELECT, "Get")
+					if err == nil || len(views) > 0 {
+						id := "-1"
+						for _, view := range views {
+							if view["max"] != nil && view["max"].(int64) > 0 {
+								id = fmt.Sprintf("%v", view["id"])
+								break
+							}
+						}
+						n = append(n, tool.Record{
+							entities.NAMEATTR : notif.GetString(entities.NAMEATTR),
+							"description" : notif.GetString("description"),
+							"data_ref" : "#" + id + ":" + notif.GetString(entities.RootID("dest_table")),
+						})
+					}
+					
+				}
+				if err == nil { response[0]["notifications"]=n
+				} else { response[0]["notifications"]=[]interface{}{} }
 				l.response(response, nil)
 				return
 			}
