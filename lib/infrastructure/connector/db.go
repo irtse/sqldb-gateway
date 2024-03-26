@@ -273,8 +273,12 @@ func (db *Db) ToFilter(tableName string, params map[string]string, restriction..
 						if count > 0 { db.SQLRestriction +=  " OR " }
 						if field.Link != "" {
 							if strings.Contains(sql, "%") {
-								db.SQLRestriction += key + " IN (SELECT id FROM " + field.Link + " WHERE name::text LIKE " + sql + ")"
-							} else { db.SQLRestriction += key + " IN (SELECT id FROM " + field.Link + " WHERE name = " + sql + ")" }
+								db.SQLRestriction += key + " IN (SELECT id FROM " + field.Link + " WHERE name::text LIKE " + sql + " OR id::text LIKE " + sql + ")"
+							} else { 
+								if strings.Contains(sql, "'") {
+									db.SQLRestriction += key + " IN (SELECT id FROM " + field.Link + " WHERE name = " + sql + ")" 
+								} else { db.SQLRestriction += key + " IN (SELECT id FROM " + field.Link + " WHERE id = " + sql + ")" }
+							}
 						} else {
 							if strings.Contains(sql, "%") { db.SQLRestriction += key + "::text LIKE " + sql
 							} else { db.SQLRestriction += key + "=" + sql }

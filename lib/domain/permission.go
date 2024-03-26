@@ -30,6 +30,7 @@ func (d *MainService) PermsBuilder() {
 	d.Db.SQLRestriction += entities.DBEntityUser.Name + " WHERE " + entities.DBUser.Name +"_id IN ("
 	d.Db.SQLRestriction += "SELECT id FROM " + entities.DBUser.Name + " WHERE "
 	d.Db.SQLRestriction += "name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + "))))"
+	d.Db.SQLView = ""
 	datas, err := d.Db.SelectResults(entities.DBPermission.Name)
 	if err != nil || len(datas) == 0 { return }
 	d.Db.SQLRestriction = ""
