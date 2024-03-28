@@ -113,7 +113,6 @@ func (l *AuthController) Refresh() {
 	notifs, err := d.PermsSuperCall(params, tool.Record{}, tool.SELECT, "Get")
 	resp := tool.Record{}
 	n := tool.Results{}
-	fmt.Printf("NOTIF %v \n", notifs)
 	for _, notif := range notifs {
 		params := tool.Params{ tool.RootTableParam : entities.DBView.Name, 
 							   tool.RootRowsParam : tool.ReservedParam,

@@ -48,7 +48,9 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 		                    "name" : record["name"], "description" : record["description"], "is_empty" : record["is_empty"],
 		                    "index" : record["index"], "is_list" : record["is_list"], "readonly" : record["readonly"],
 						}	
-		s.Domain.SetLowerRes(record["is_list"].(bool))
+		if record["is_list"] != nil { s.Domain.SetLowerRes(record["is_list"].(bool))
+		} else { s.Domain.SetLowerRes(false) }
+		
 		for _, dest := range dest_id {
 			if id == "" { id = dest 
 			} else { id = "," + dest  }
@@ -88,7 +90,7 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 		if !s.Domain.GetEmpty() {
 			d, _ = s.Domain.PermsSuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 		}
-		if record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(tName, sqlFilter, params) }
+		if  record["is_list"] != nil && record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(tName, sqlFilter, params) }
 		if !s.Domain.GetEmpty() {
 			datas = tool.Results{}
 			if new, ok := s.Domain.GetParams()["new"]; ok && new == "enable" {

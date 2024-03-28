@@ -58,13 +58,15 @@ func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Res
 			resResults = append(resResults, results[index:min(index + maxConcurrent, len(results))])
 			index += maxConcurrent
 		}
+		count := 0
 		for _, res := range resResults {
-			for i, record := range res { go d.PostTreatRecord(i, channel, record, tableName, cols, d.Empty) }
+			for i, record := range res { go d.PostTreatRecord(i + count, channel, record, tableName, cols, d.Empty) }
 			for range res { 
 				rec := <-channel
 				if rec == nil { continue }
 				view.Items = append(view.Items, rec) 			
 			}
+			count += len(res)
 		}
 		sort.SliceStable(view.Items, func(i, j int) bool {
 			return view.Items[i]["sort"].(int) < view.Items[j]["sort"].(int)

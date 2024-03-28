@@ -99,10 +99,7 @@ func (db *Db) Query(query string) (error) {
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 	if strings.Contains(query, "<nil>") { return tool.Results{}, nil }
 	rows, err := db.Conn.Query(query)
-	if err != nil { 
-		fmt.Printf("%v %v \n", query, err)
-		return nil, err 
-	}
+	if err != nil { return nil, err }
 	defer rows.Close()
 	// get rows
 	results := tool.Results{}
