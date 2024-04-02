@@ -56,6 +56,15 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 				} else { 
 					params = tool.Params{ tool.RootTableParam : entities.DBRequest.Name, tool.RootRowsParam: requests[0].GetString(tool.SpecialIDParam) }
 					s.Domain.PermsSuperCall( params, tool.Record{ "state" : "dismiss", "is_close": true }, tool.UPDATE, "CreateOrUpdate")
+					params := tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
+						tool.RootRowsParam : tool.ReservedParam,
+						tool.RootRawView : "enable", }
+					s.Domain.SuperCall( params, tool.Record{ 
+						entities.NAMEATTR : "Rejected " + requests[0].GetString(entities.NAMEATTR) + " request", 
+						"description" : requests[0].GetString(entities.NAMEATTR) + " request is rejected and closed.",
+						entities.RootID(entities.DBUser.Name) : requests[0].GetString(entities.RootID(entities.DBUser.Name)),
+						entities.RootID(entities.DBSchema.Name) : requests[0].GetString(entities.RootID(entities.DBSchema.Name)),
+						entities.RootID("dest_table") : requests[0].GetString("dest_table"), }, tool.CREATE, "CreateOrUpdate")
 				} // no before task close request and task
 			}
 			scheme, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get", "index=" + fmt.Sprintf("%v", current_index))
@@ -63,6 +72,15 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 			if err != nil || len(scheme) == 0 { 
 				newRecRequest["state"] = "completed"
 				newRecRequest["is_close"] = true
+				params := tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
+					tool.RootRowsParam : tool.ReservedParam,
+					tool.RootRawView : "enable", }
+				s.Domain.SuperCall( params, tool.Record{ 
+					entities.NAMEATTR : "Rejected " + requests[0].GetString(entities.NAMEATTR) + " request", 
+					"description" : requests[0].GetString(entities.NAMEATTR) + " request is rejected and closed.",
+					entities.RootID(entities.DBUser.Name) : requests[0].GetString(entities.RootID(entities.DBUser.Name)),
+					entities.RootID(entities.DBSchema.Name) : requests[0].GetString(entities.RootID(entities.DBSchema.Name)),
+					entities.RootID("dest_table") : requests[0].GetString("dest_table"), }, tool.CREATE, "CreateOrUpdate")
 			} else {
 				newRecRequest["current_index"]=current_index
 				newRecRequest["state"] = "progressing"
@@ -118,6 +136,15 @@ func (s *TaskService) WriteRowAutomation(record tool.Record, tableName string) {
 	params = tool.Params{ tool.RootTableParam : s.Entity().GetName(), 
 							  tool.RootRowsParam : tool.ReservedParam, } 
 	s.Domain.SuperCall( params, newRec, tool.UPDATE, "CreateOrUpdate")
+	params = tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
+		tool.RootRowsParam : tool.ReservedParam,
+		tool.RootRawView : "enable", }
+	s.Domain.SuperCall( params, tool.Record{ 
+		entities.NAMEATTR : "Task affected : " + record.GetString(entities.NAMEATTR), 
+		"description" : "Task is affected to you and must be treated: " + record.GetString(entities.NAMEATTR),
+		entities.RootID(entities.DBUser.Name) : record.GetString(entities.RootID(entities.DBUser.Name)),
+		entities.RootID(entities.DBSchema.Name) : record.GetString(entities.RootID(entities.DBSchema.Name)),
+		entities.RootID("dest_table") : record.GetString(entities.RootID("dest_table")), }, tool.CREATE, "CreateOrUpdate")
 }
 
 func (s *TaskService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 

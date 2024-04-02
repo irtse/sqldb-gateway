@@ -83,7 +83,9 @@ func (db *Db) QueryRow(query string) (int64, error) {
 	mutex.Lock()
 	err := db.Conn.QueryRow(query).Scan(&id)
 	mutex.Unlock()
-	if err != nil { return int64(id), err }
+	if err != nil { 
+		fmt.Printf("Error in query %s \n", query)
+		return int64(id), err }
 	return int64(id), err
 }
 
@@ -91,7 +93,9 @@ func (db *Db) Query(query string) (error) {
 	mutex.Lock()
 	rows, err := db.Conn.Query(query)
 	mutex.Unlock()
-	if err != nil { return err }
+	if err != nil { 
+		fmt.Printf("Error in query %s \n", query)
+		return err }
 	err = rows.Close()
 	return err
 }
@@ -99,7 +103,9 @@ func (db *Db) Query(query string) (error) {
 func (db *Db) QueryAssociativeArray(query string) (tool.Results, error) {
 	if strings.Contains(query, "<nil>") { return tool.Results{}, nil }
 	rows, err := db.Conn.Query(query)
-	if err != nil { return nil, err }
+	if err != nil { 
+		fmt.Printf("Error in query %s \n", query)
+		return nil, err }
 	defer rows.Close()
 	// get rows
 	results := tool.Results{}

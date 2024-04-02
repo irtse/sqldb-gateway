@@ -169,13 +169,13 @@ var DBRequest = TableEntity{
 	Label : "request",
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : true, Readonly : true,},
+		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, Label: "created by", },
 		TableColumnEntity{ Name: "state", Type: "enum('pending', 'progressing', 'rejected', 'completed')",  Null : true, Default: "pending", Level: LEVELRESPONSIBLE},
 		TableColumnEntity{ Name: "is_close", Type: "boolean",  Null : true, Default: false, Level: LEVELRESPONSIBLE },
 		TableColumnEntity{ Name: "current_index", Type: "integer",  Null : true, Default: 0, Level: LEVELRESPONSIBLE },
 		TableColumnEntity{ Name: RootID(DBWorkflow.Name), Type: "integer", ForeignTable: DBWorkflow.Name, Null : false, Label: "workflow attached", },
 		TableColumnEntity{ Name: RootID("dest_table"), Type: "integer", Null : true, Readonly : true, Level: LEVELRESPONSIBLE, Label: "reference", },
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, Null : false, Readonly : true, Level: LEVELRESPONSIBLE, Label: "form attached", },
-		TableColumnEntity{ Name: RootID("created_by"), Type: "integer", ForeignTable: DBUser.Name, Null : true, Readonly : true, Level: LEVELRESPONSIBLE },
 		TableColumnEntity{ Name: "created_date", Type: "timestamp",  Null : true, Default : "CURRENT_TIMESTAMP", Readonly : true, Level: LEVELRESPONSIBLE },
 	},
 }
