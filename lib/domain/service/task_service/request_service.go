@@ -2,6 +2,7 @@ package task_service
 
 import (
 	"fmt"
+	"time"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
 	conn "sqldb-ws/lib/infrastructure/connector"
@@ -44,11 +45,15 @@ func (s *RequestService) VerifyRowAutomation(record tool.Record, create bool) (t
 			entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%v", record[entities.RootID(entities.DBWorkflow.Name)]),
 		}
 		wf, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-		if err != nil || len(wf) == 0 { record[entities.NAMEATTR]= "Anonymous Request"
-		} else { record["name"]= wf[0].GetString(entities.NAMEATTR) + " Request" }
-		
+		if record["name"] == nil { 
+			if err != nil || len(wf) == 0 { record[entities.NAMEATTR]= "Anonymous Request"
+			} else { record["name"]= wf[0].GetString(entities.NAMEATTR) + " Request" }
+		}
 	} else {
-		if record["state"] == "completed" || record["state"] == "dismiss" { record["is_close"] = true }
+		if record["state"] == "completed" || record["state"] == "dismiss" { 
+			record["is_close"] = true 
+			record["closing_date"] = time.Now().Format(time.RFC3339)
+		}
 	}
 	return record, true, true
 }
@@ -59,8 +64,13 @@ func (s *RequestService) UpdateRowAutomation(results tool.Results, record tool.R
 			params := tool.Params{ tool.RootTableParam : entities.DBTask.Name,
 								   tool.RootRowsParam : tool.ReservedParam,
 								   tool.RootRawView : "enable",
+								   tool.SpecialIDParam : rec.GetString(tool.SpecialIDParam),
 								   entities.RootID(entities.DBRequest.Name) : rec.GetString(tool.SpecialIDParam) }
-			s.Domain.SuperCall( params, tool.Record{ "state" : "dismiss", "is_close" : true, }, tool.UPDATE, "CreateOrUpdate")
+			s.Domain.SuperCall( params, tool.Record{ 
+				"state" : "dismiss", 
+				"is_close" : true, 
+				"closing_date" : time.Now().Format(time.RFC3339),
+			}, tool.UPDATE, "CreateOrUpdate")
 			params = tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
 				tool.RootRowsParam : tool.ReservedParam,
 				tool.RootRawView : "enable", }
@@ -93,11 +103,15 @@ func (s *RequestService) WriteRowAutomation(record tool.Record, tableName string
 							   entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%v", record[entities.RootID(entities.DBWorkflow.Name)]) }
 		wfs, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
 		if err != nil || len(wfs) == 0 { return }
+		sqlFilter := "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser())
+		params = tool.Params{ tool.RootTableParam : entities.DBUser.Name, 
+							   tool.RootRowsParam : tool.ReservedParam, }
+		user, _ := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 		newTask := tool.Record{
 			entities.RootID(entities.DBSchema.Name) : wfs[0][entities.RootID(entities.DBSchema.Name)],
 			entities.RootID(entities.DBWorkflowSchema.Name) : wfs[0][tool.SpecialIDParam],
 			entities.RootID(entities.DBRequest.Name) : record[tool.SpecialIDParam],
-			entities.RootID(entities.DBUser.Name) : record[entities.RootID(entities.DBUser.Name)],
+			entities.RootID("created_by") : user[0][tool.SpecialIDParam],
 			"description" : wfs[0]["description"],
 			"urgency" : wfs[0]["urgency"],
 			"priority" : wfs[0]["priority"],
@@ -109,6 +123,7 @@ func (s *RequestService) WriteRowAutomation(record tool.Record, tableName string
 		} else {
 			schemas, err := s.Domain.Schema(tool.Record{ entities.RootID(entities.DBSchema.Name) : wfs[0][entities.RootID(entities.DBSchema.Name)] }, false)
 			if err == nil && len(schemas) > 0 {
+				fmt.Printf("CREATE 5\n")
 				vals, err := s.Domain.SuperCall( tool.Params{ tool.RootTableParam: schemas[0].GetString(entities.NAMEATTR),
 												 tool.RootRowsParam: tool.ReservedParam, }, tool.Record{}, tool.CREATE, "CreateOrUpdate")
 				if err == nil && len(vals) > 0 {
@@ -117,16 +132,30 @@ func (s *RequestService) WriteRowAutomation(record tool.Record, tableName string
 				}
 			}
 		}
-		params = tool.Params{ tool.RootTableParam : entities.DBTask.Name,
-			tool.RootRowsParam : tool.ReservedParam, }
+		params = tool.Params{ tool.RootTableParam : entities.DBTask.Name, tool.RootRowsParam : tool.ReservedParam, }
 		_, err = s.Domain.SuperCall( params, newTask, tool.CREATE, "CreateOrUpdate")
 		if err == nil {
-			s.Domain.SuperCall( params, tool.Record{ 
+			task := tool.Record{ 
 				entities.NAMEATTR : "Task affected : " + newTask.GetString(entities.NAMEATTR), 
 				"description" : "Task is affected to you and must be treated : " + newTask.GetString(entities.NAMEATTR),
-				entities.RootID(entities.DBUser.Name) : newTask.GetString(entities.RootID(entities.DBUser.Name)),
+				entities.RootID("created_by") : newTask.GetString(entities.RootID("created_by")),
 				entities.RootID(entities.DBSchema.Name) : newTask.GetString(entities.RootID(entities.DBSchema.Name)),
-				entities.RootID("dest_table") : record[entities.RootID("dest_table")], }, tool.CREATE, "CreateOrUpdate")
+				entities.RootID("dest_table") : record[entities.RootID("dest_table")], }
+			if _, ok := wfs[0]["wrapped_" + entities.RootID(entities.DBWorkflow.Name)]; ok { task["is_meta"]= true }
+			s.Domain.SuperCall( params, task, tool.CREATE, "CreateOrUpdate")
+			if id, ok := wfs[0]["wrapped_" + entities.RootID(entities.DBWorkflow.Name)]; ok {
+				params = tool.Params{ tool.RootTableParam : entities.DBRequest.Name, tool.RootRowsParam : tool.ReservedParam, }
+				newMetaRequest := tool.Record{ 
+					entities.RootID(entities.DBWorkflow.Name) : id, 
+					entities.NAMEATTR : "Meta request for " + task.GetString(entities.NAMEATTR) + " task.",
+					"current_index" : 1,
+					"is_meta": true,
+					entities.RootID(entities.DBSchema.Name) : task[entities.RootID(entities.DBSchema.Name)],
+					entities.RootID("dest_table") : task[entities.RootID("dest_table")],
+					entities.RootID("created_by") : task[entities.RootID("created_by")],
+				}
+				s.Domain.SuperCall( params, newMetaRequest, tool.CREATE, "CreateOrUpdate")
+			}
 		}
 	} else {
 		paramsNew := tool.Params{ tool.RootTableParam : entities.DBHierarchy.Name, tool.RootRowsParam: tool.ReservedParam }
@@ -138,19 +167,13 @@ func (s *RequestService) WriteRowAutomation(record tool.Record, tableName string
 		sqlFilter += entities.DBEntityUser.Name + " WHERE " + entities.DBUser.Name +"_id IN ("
 		sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE "
 		sqlFilter += "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")))"
-		hierarchy, _ := s.Domain.SuperCall( 
-								paramsNew, 
-								tool.Record{},
-								tool.SELECT,
-								"Get",
-								sqlFilter,
-							)
+		hierarchy, _ := s.Domain.SuperCall( paramsNew, tool.Record{}, tool.SELECT, "Get", sqlFilter, )
 		for _, hierarch := range hierarchy {
 			newTask := tool.Record{
 				entities.RootID(entities.DBSchema.Name) : record[entities.RootID(entities.DBSchema.Name)],
 				entities.RootID("dest_table") : record[entities.RootID("dest_table")],
 				entities.RootID(entities.DBRequest.Name) : record[tool.SpecialIDParam],
-				entities.RootID(entities.DBUser.Name) : record[entities.RootID(entities.DBUser.Name)],
+				entities.RootID("created_by") : record[entities.RootID("created_by")],
 				entities.RootID(entities.DBUser.Name) : hierarch["parent_" + entities.RootID(entities.DBUser.Name)],
 				entities.RootID(entities.DBEntity.Name) : hierarch[entities.RootID(entities.DBEntity.Name)],
 				"description" : "hierarchical verification expected by the system, workflow is currently pending.",
@@ -160,18 +183,7 @@ func (s *RequestService) WriteRowAutomation(record tool.Record, tableName string
 			}
 			params := tool.Params{ tool.RootTableParam : entities.DBTask.Name,
 				tool.RootRowsParam : tool.ReservedParam, }
-			_, err := s.Domain.SuperCall( params, newTask, tool.CREATE, "CreateOrUpdate")
-			if err == nil {
-				params = tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
-					tool.RootRowsParam : tool.ReservedParam,
-					tool.RootRawView : "enable", }
-				s.Domain.SuperCall( params, tool.Record{ 
-					entities.NAMEATTR : "Task affected : " + newTask.GetString(entities.NAMEATTR), 
-					"description" : "Task is affected to you and must be treated : " + newTask.GetString(entities.NAMEATTR),
-					entities.RootID(entities.DBUser.Name) : newTask.GetString(entities.RootID(entities.DBUser.Name)),
-					entities.RootID(entities.DBSchema.Name) : newTask.GetString(entities.RootID(entities.DBSchema.Name)),
-					entities.RootID("dest_table") : record[entities.RootID("dest_table")], }, tool.CREATE, "CreateOrUpdate")
-			}
+			s.Domain.Call( params, newTask, tool.CREATE, "CreateOrUpdate")
 		}
 	}
 }
@@ -183,6 +195,7 @@ func (s *RequestService) ConfigureFilter(tableName string) (string, string) {
 	rows, ok := s.Domain.GetParams()[tool.RootRowsParam]
 	ids, ok2 := s.Domain.GetParams()[tool.SpecialIDParam]
 	if (ok && fmt.Sprintf("%v", rows) != tool.ReservedParam) || (ok2 && ids != "") { return s.Domain.ViewDefinition(tableName) }
-	restr := entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
+	restr := "is_meta=false AND "
+	restr += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
 	return s.Domain.ViewDefinition(tableName, restr)
 }

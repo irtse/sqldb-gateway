@@ -36,6 +36,7 @@ func (s *ViewService) VerifyRowAutomation(record tool.Record, create bool) (tool
 func (s *ViewService) DeleteRowAutomation(results tool.Results, tableName string) { }
 func (s *ViewService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
 func (s *ViewService) WriteRowAutomation(record tool.Record, tableName string) { }
+
 func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 
 	if len(results) == 0 { return results }
 	res := tool.Results{}

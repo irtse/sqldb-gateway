@@ -31,6 +31,7 @@ type ViewItem struct {
 	ValueShallow   map[string]interface{}		`json:"values_shallow"`
 	ValueMany      map[string]tool.Results		`json:"values_many"`
 	ValuePathMany  map[string]string			`json:"values_path_many"`
+	Workflow  	   map[string]interface{}		`json:"workflow"`
 }
 
 func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Results {
@@ -118,12 +119,72 @@ func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Res
 						continue
 					}	
 				}
-				res = append(res, tool.Record{ tool.SpecialIDParam : record[tool.SpecialIDParam], entities.NAMEATTR : n, "label": label,})	
+				res = append(res, tool.Record{ 
+					tool.SpecialIDParam : record[tool.SpecialIDParam],
+					entities.NAMEATTR : n, "label": label,
+				})	
 			} else { res = append(res, record) }
 		}
 		return res
 	} 
 	return results
+}
+
+func (d *MainService) GetWorkFlow(record tool.Record, tableName string) tool.Record {
+	id := "";
+	currentID := "";
+	if tableName == entities.DBWorkflow.Name { id = record.GetString(tool.SpecialIDParam)
+	} else if tableName == entities.DBRequest.Name {
+		id = record.GetString(entities.RootID(entities.DBWorkflow.Name))
+		params := tool.Params {
+			tool.RootTableParam : entities.DBWorkflowSchema.Name,
+			tool.RootRowsParam : tool.ReservedParam,
+			entities.RootID(entities.DBWorkflow.Name) : id,
+			"index" : record.GetString("current_index"),
+		}
+		schemes, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
+		if err == nil && len(schemes) > 0 { currentID = schemes[0].GetString(tool.SpecialIDParam) }
+	} else if tableName == entities.DBTask.Name {
+		currentID = record.GetString(entities.RootID(entities.DBWorkflowSchema.Name))
+		params := tool.Params {
+			tool.RootTableParam : entities.DBWorkflowSchema.Name,
+			tool.RootRowsParam : tool.ReservedParam,
+			entities.RootID(entities.DBWorkflowSchema.Name) : currentID,
+		}
+		schemes, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
+		if err != nil || len(schemes) == 0 { return nil }
+		id = fmt.Sprintf("%v", schemes[0][entities.RootID(entities.DBWorkflow.Name)])
+	} else { return nil }	
+	if id == "" { return nil }
+	params := tool.Params {
+		tool.RootTableParam : entities.DBWorkflowSchema.Name,
+		tool.RootRowsParam : tool.ReservedParam,
+		entities.RootID(entities.DBWorkflow.Name) : id,
+	}
+	steps, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
+	if err == nil && len(steps) > 0 {
+		workflow := tool.Record{}
+		newSteps := map[int][]tool.Record{}
+		for _, step := range steps {
+			index := step.GetInt("index")
+			if _, ok := newSteps[index]; !ok { newSteps[index] = []tool.Record{} }
+			newStep := tool.Record{
+				tool.SpecialIDParam : step.GetString(tool.SpecialIDParam),
+				entities.NAMEATTR : step.GetString(entities.NAMEATTR),
+				"optionnal" : step["optionnal"],
+			}
+			if wrapped, ok := step["wrapped_" + entities.RootID(entities.DBWorkflow.Name)]; ok { 
+				newStep["workflow"] = d.GetWorkFlow(tool.Record{tool.SpecialIDParam : wrapped}, entities.DBWorkflow.Name) 
+			}
+			if currentID != "" && currentID == step.GetString(tool.SpecialIDParam) { 
+				workflow["current"] = currentID 
+				if hub, ok2 := step["hub"]; ok2 { workflow["current_hub"]=hub.(bool) }
+			}
+			newSteps[index] = append(newSteps[index], newStep)
+		}
+		workflow["steps"] = newSteps
+		return workflow
+	} else { return nil }
 }
 
 func (d *MainService) PostTreatRecord(index int, channel chan tool.Record, record tool.Record, tableName string,  cols map[string]entities.SchemaColumnEntity, shallow bool) {
@@ -203,7 +264,10 @@ func (d *MainService) PostTreatRecord(index int, channel chan tool.Record, recor
 			}
 			if shallow { vals[field.Name]=nil } else if v, ok:=record[field.Name]; ok { vals[field.Name]=v }
 		}
-		view := ViewItem{ Values : vals, Path : "", DataPaths :  datapath, ValueShallow : shallowVals, ValueMany: manyVals, ValuePathMany: manyPathVals, }
+		view := ViewItem{ Values : vals, Path : "", 
+			DataPaths :  datapath, ValueShallow : shallowVals, 
+			ValueMany: manyVals, ValuePathMany: manyPathVals,
+			Workflow : d.GetWorkFlow(record, tableName), }
 		var newRec tool.Record
 		b, _ := json.Marshal(view)
 		json.Unmarshal(b, &newRec)

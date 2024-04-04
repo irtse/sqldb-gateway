@@ -15,6 +15,7 @@ var SERVICES = []tool.SpecializedService{
 	&schema.ViewService{}, 
 	&task.RequestService{}, 
 	&task.TaskService{},
+	&task.WorkflowService{},
 	&user.UserEntityService{},
 	&user.HierarchyService{},
 	&user.RoleAttributionService{},

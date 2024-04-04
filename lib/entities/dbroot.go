@@ -145,6 +145,7 @@ var DBWorkflow = TableEntity{
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: NAMEATTR, Constraint : "unique", Type: "varchar(255)",  Null : false, Readonly : true, },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true, },
+		TableColumnEntity{ Name: "is_meta", Type: "boolean",  Null : true, Default: false, },
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, Null : false, Readonly : true, Label: "form entry", },
 	},
 }
@@ -161,6 +162,9 @@ var DBWorkflowSchema = TableEntity{
 		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, Null : true, Label: "entity assignee", },
 		TableColumnEntity{ Name: "urgency", Type: "enum('low', 'medium', 'high')",  Null : true, Default: "medium",},
 		TableColumnEntity{ Name: "priority", Type: "enum('low', 'medium', 'high')",  Null : true, Default: "medium", },
+		TableColumnEntity{ Name: "hub", Type: "boolean", Null : true, Default: false, },
+		TableColumnEntity{ Name: "optionnal", Type: "boolean", Null : true, Default: false, },
+		TableColumnEntity{ Name: "wrapped_" + RootID(DBWorkflow.Name), Type: "integer", ForeignTable: DBWorkflow.Name, Null : true, Readonly : true, Label: "wrapping workflow", },
 	},
 }
 
@@ -177,6 +181,8 @@ var DBRequest = TableEntity{
 		TableColumnEntity{ Name: RootID("dest_table"), Type: "integer", Null : true, Readonly : true, Level: LEVELRESPONSIBLE, Label: "reference", },
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, Null : false, Readonly : true, Level: LEVELRESPONSIBLE, Label: "form attached", },
 		TableColumnEntity{ Name: "created_date", Type: "timestamp",  Null : true, Default : "CURRENT_TIMESTAMP", Readonly : true, Level: LEVELRESPONSIBLE },
+		TableColumnEntity{ Name: "closing_date", Type: "timestamp",  Null : true, Readonly : true }, // TODO
+		TableColumnEntity{ Name: "is_meta", Type: "boolean",  Null : true, Default : false,},
 	},
 }
 
@@ -187,15 +193,17 @@ var DBTask = TableEntity{
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, Null : false, Readonly : true, Label: "form attached", },
 		TableColumnEntity{ Name: RootID(DBRequest.Name), Type: "integer", ForeignTable: DBRequest.Name, Null : false, Readonly : true, Label: "request attached", },
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, Readonly : true, Label: "user assignee", },
-		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, Null : true, Readonly : true, Label: "entity assignee", },
 		TableColumnEntity{ Name: RootID("created_by"), Type: "integer", ForeignTable: DBUser.Name, Null : true, Readonly : true, Level: LEVELRESPONSIBLE },
 		TableColumnEntity{ Name: "comment", Type: "text", Null : true, Default : "", Readonly : true, },
 		TableColumnEntity{ Name: "created_date", Type: "timestamp",  Null : true, Default : "CURRENT_TIMESTAMP", Readonly : true },
+		TableColumnEntity{ Name: "closing_date", Type: "timestamp",  Null : true, Readonly : true }, // TODO
 		TableColumnEntity{ Name: "state", Type: "enum('pending', 'progressing', 'dismiss', 'completed')",  Null : true, Default: "pending" },
 		TableColumnEntity{ Name: "is_close", Type: "boolean",  Null : true, Default: false, Level: LEVELRESPONSIBLE },
 		TableColumnEntity{ Name: "urgency", Type: "enum('low', 'medium', 'high')",  Null : true, Default: "medium", Readonly : true, },
 		TableColumnEntity{ Name: "priority", Type: "enum('low', 'medium', 'high')",  Null : true, Default: "medium", Readonly : true, },
 		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, Readonly : true },
+		TableColumnEntity{ Name: "nexts", Type: "varchar(255)",  Null : true, Default : "all" },
+		TableColumnEntity{ Name: "meta_" + RootID(DBRequest.Name), Type: "integer", ForeignTable: DBRequest.Name, Null : false, Readonly : true, Label: "meta request attached", },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true, Default: "no description...", Readonly : true, },
 		TableColumnEntity{ Name: RootID(DBWorkflowSchema.Name), Type: "integer",  ForeignTable: DBWorkflowSchema.Name, Null : true, Readonly : true, Level: LEVELRESPONSIBLE, Label: "workflow attached", },
 		TableColumnEntity{ Name: RootID("dest_table"), Type: "integer", Null : true, Readonly : true, Label: "reference", },
@@ -207,9 +215,9 @@ var DBView = TableEntity{
 	Label : "view",
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, },
-		TableColumnEntity{ Name: "is_list", Type: "boolean", Null : false, Default: true },
-		TableColumnEntity{ Name: "is_empty", Type: "boolean", Null : false, Default: false },
-		TableColumnEntity{ Name: "indexable", Type: "boolean", Null : false, Default: true },
+		TableColumnEntity{ Name: "is_list", Type: "boolean", Null : true, Default: true },
+		TableColumnEntity{ Name: "is_empty", Type: "boolean", Null : true, Default: false },
+		TableColumnEntity{ Name: "indexable", Type: "boolean", Null : true, Default: true },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true,  Default: "no description...", },
 		TableColumnEntity{ Name: "readonly", Type: "boolean", Null : false }, // SOLO VIEW OR ... 
 		TableColumnEntity{ Name: "index", Type: "integer", Null : true, Default: 1 },
