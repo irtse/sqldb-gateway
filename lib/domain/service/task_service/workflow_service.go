@@ -1,7 +1,6 @@
 package task_service
 
 import (
-	"fmt"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
 )
@@ -17,11 +16,6 @@ func (s *WorkflowService) PostTreatment(results tool.Results, tableName string, 
 	return s.Domain.PostTreat( results, tableName) 
 }
 func (s *WorkflowService) ConfigureFilter(tableName string) (string, string) {
-	rows, ok := s.Domain.GetParams()[tool.RootRowsParam]
-	ids, ok2 := s.Domain.GetParams()[tool.SpecialIDParam]
-	if (ok && fmt.Sprintf("%v", rows) != tool.ReservedParam) || (ok2 && ids != "") {
-		return s.Domain.ViewDefinition(tableName)
-	}
 	restr := "is_meta=false"
 	return s.Domain.ViewDefinition(tableName, restr)
 }

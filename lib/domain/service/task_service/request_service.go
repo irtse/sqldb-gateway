@@ -79,7 +79,7 @@ func (s *RequestService) UpdateRowAutomation(results tool.Results, record tool.R
 				"description" : rec.GetString(entities.NAMEATTR) + " request is rejected and closed.",
 				entities.RootID(entities.DBUser.Name) : rec.GetString(entities.RootID(entities.DBUser.Name)),
 				entities.RootID(entities.DBSchema.Name) : rec.GetString(entities.RootID(entities.DBSchema.Name)),
-				entities.RootID("dest_table") : rec.GetString("dest_table"), }, tool.CREATE, "CreateOrUpdate")
+				entities.RootID("dest_table") : rec.GetString(entities.RootID("dest_table")), }, tool.CREATE, "CreateOrUpdate")
 		}
 		if rec["state"] == "completed" {
 			params := tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
@@ -90,7 +90,19 @@ func (s *RequestService) UpdateRowAutomation(results tool.Results, record tool.R
 				"description" : rec.GetString(entities.NAMEATTR) + " request is approved and closed.",
 				entities.RootID(entities.DBUser.Name) : rec.GetString(entities.RootID(entities.DBUser.Name)),
 				entities.RootID(entities.DBSchema.Name) : rec.GetString(entities.RootID(entities.DBSchema.Name)),
-				entities.RootID("dest_table") : rec.GetString("dest_table"), }, tool.CREATE, "CreateOrUpdate")
+				entities.RootID("dest_table") : rec.GetString(entities.RootID("dest_table")), }, tool.CREATE, "CreateOrUpdate")
+		}
+		if rec["is_close"] == true {
+			params := tool.Params{ tool.RootTableParam : entities.DBTask.Name,
+				tool.RootRowsParam : tool.ReservedParam,
+				tool.RootRawView : "enable",
+				"meta_" + entities.RootID(entities.DBRequest.Name) : rec.GetString(tool.SpecialIDParam), }
+			s.Domain.SuperCall( params, tool.Record{ 
+				"state" : rec["state"], 
+				"is_close" : true, 
+				"closing_date" : time.Now().Format(time.RFC3339),
+			}, tool.UPDATE, "CreateOrUpdate")
+		
 		}
 	}
 }
@@ -123,7 +135,6 @@ func (s *RequestService) WriteRowAutomation(record tool.Record, tableName string
 		} else {
 			schemas, err := s.Domain.Schema(tool.Record{ entities.RootID(entities.DBSchema.Name) : wfs[0][entities.RootID(entities.DBSchema.Name)] }, false)
 			if err == nil && len(schemas) > 0 {
-				fmt.Printf("CREATE 5\n")
 				vals, err := s.Domain.SuperCall( tool.Params{ tool.RootTableParam: schemas[0].GetString(entities.NAMEATTR),
 												 tool.RootRowsParam: tool.ReservedParam, }, tool.Record{}, tool.CREATE, "CreateOrUpdate")
 				if err == nil && len(vals) > 0 {
@@ -175,7 +186,6 @@ func (s *RequestService) WriteRowAutomation(record tool.Record, tableName string
 				entities.RootID(entities.DBRequest.Name) : record[tool.SpecialIDParam],
 				entities.RootID("created_by") : record[entities.RootID("created_by")],
 				entities.RootID(entities.DBUser.Name) : hierarch["parent_" + entities.RootID(entities.DBUser.Name)],
-				entities.RootID(entities.DBEntity.Name) : hierarch[entities.RootID(entities.DBEntity.Name)],
 				"description" : "hierarchical verification expected by the system, workflow is currently pending.",
 				"urgency" : "medium",
 				"priority" : "medium",
@@ -183,7 +193,8 @@ func (s *RequestService) WriteRowAutomation(record tool.Record, tableName string
 			}
 			params := tool.Params{ tool.RootTableParam : entities.DBTask.Name,
 				tool.RootRowsParam : tool.ReservedParam, }
-			s.Domain.Call( params, newTask, tool.CREATE, "CreateOrUpdate")
+			test, err := s.Domain.Call( params, newTask, tool.CREATE, "CreateOrUpdate")
+			fmt.Printf("sqd %v %v \n", test, err)
 		}
 	}
 }

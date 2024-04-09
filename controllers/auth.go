@@ -62,8 +62,10 @@ func (l *AuthController) Login() {
 							}
 						}
 						n = append(n, tool.Record{
+							tool.SpecialIDParam : notif.GetString(tool.SpecialIDParam),
 							entities.NAMEATTR : notif.GetString(entities.NAMEATTR),
 							"description" : notif.GetString("description"),
+							"link_path" : "/" + tool.MAIN_PREFIX + "/" + entities.DBNotification.Name + "?" + tool.RootRowsParam + "=" + notif.GetString("id"),
 							"data_ref" : "#" + id + ":" + notif.GetString(entities.RootID("dest_table")),
 						})
 					}
@@ -130,8 +132,10 @@ func (l *AuthController) Refresh() {
 				}
 			}
 			n = append(n, tool.Record{
+				tool.SpecialIDParam : notif.GetString(tool.SpecialIDParam),
 				entities.NAMEATTR : notif.GetString(entities.NAMEATTR),
 				"description" : notif.GetString("description"),
+				"link_path" : "/" + tool.MAIN_PREFIX + "/" + entities.DBNotification.Name + "?" + tool.RootRowsParam + "=" + notif.GetString("id"),
 				"data_ref" : "#" + id + ":" + notif.GetString(entities.RootID("dest_table")),
 			})
 		}

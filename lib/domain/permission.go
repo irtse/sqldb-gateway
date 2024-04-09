@@ -68,6 +68,9 @@ func (d *MainService) PermsBuilder() {
 func (d *MainService) PermsCheck(tableName string, colName string, level string, method tool.Method) bool {
 	if d.SuperAdmin && method != tool.SELECT || method == tool.SELECT && d.IsSuperCall() { return true }
 	if level == "" || fmt.Sprintf("%v", level) == "<nil>" || level == entities.LEVELNORMAL {
+		for _, exception := range entities.AllPERMISSIONEXCEPTION { // permission exception allows any read
+			if tableName == exception.Name { return true }
+		}
 		if method == tool.SELECT {
 			for _, exception := range entities.PERMISSIONEXCEPTION { // permission exception allows any read
 				if tableName == exception.Name { return true }

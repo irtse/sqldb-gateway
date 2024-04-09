@@ -51,7 +51,7 @@ func (d *MainService) CountNewDataAccess(tableName string, filter string, countP
 	return ids, res[0]["count"].(int64) + int64(len(ids))
 }
 
-func (d *MainService) AddDataAccess(schemaID int64, destIDs []string) {
+func (d *MainService) DataAccess(schemaID int64, destIDs []string, delete bool) {
 	sqlFilter := "name='"+ d.GetUser() + "'"
 	params := tool.Params{ tool.RootTableParam : entities.DBUser.Name, tool.RootRowsParam : tool.ReservedParam,}
 	users, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
@@ -66,11 +66,19 @@ func (d *MainService) AddDataAccess(schemaID int64, destIDs []string) {
 			p := tool.Params{ tool.RootTableParam : entities.DBDataAccess.Name, tool.RootRowsParam : tool.ReservedParam,}
 			access, err := d.SuperCall( p, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 			if err != nil || len(access) == 0 {
-				d.SuperCall( tool.Params{ tool.RootTableParam : entities.DBDataAccess.Name, tool.RootRowsParam : tool.ReservedParam,}, tool.Record{
-					entities.RootID("dest_table") : destID,
-					entities.RootID(entities.DBSchema.Name) : schemaID,
-					entities.RootID(entities.DBUser.Name) : id,
-				}, tool.CREATE, "CreateOrUpdate")
+				if delete {
+					d.SuperCall( tool.Params{ tool.RootTableParam : entities.DBDataAccess.Name, tool.RootRowsParam : tool.ReservedParam,
+							entities.RootID("dest_table") : destID,
+							entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", schemaID),
+							entities.RootID(entities.DBUser.Name) : id,
+						}, tool.Record{}, tool.DELETE, "Delete")
+				} else {
+					d.SuperCall( tool.Params{ tool.RootTableParam : entities.DBDataAccess.Name, tool.RootRowsParam : tool.ReservedParam,}, tool.Record{
+						entities.RootID("dest_table") : destID,
+						entities.RootID(entities.DBSchema.Name) : schemaID,
+						entities.RootID(entities.DBUser.Name) : id,
+					}, tool.CREATE, "CreateOrUpdate")
+				}
 			}
 		}
 	}	

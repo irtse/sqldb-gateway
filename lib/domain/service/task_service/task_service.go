@@ -123,7 +123,6 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 						entities.RootID("dest_table") : newTask[entities.RootID("dest_table")],
 						entities.RootID("created_by") : newTask[entities.RootID("created_by")],
 					}
-					fmt.Printf("CREATE newMetaRequest : %v\n", newMetaRequest)
 					requests, err := s.Domain.Call( tool.Params{
 						tool.RootTableParam : entities.DBRequest.Name, tool.RootRowsParam : tool.ReservedParam, 
 					}, newMetaRequest, tool.CREATE, "CreateOrUpdate")
@@ -131,17 +130,21 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 						newTask["meta_" + entities.RootID(entities.DBRequest.Name)]= requests[0][tool.SpecialIDParam]
 					}		
 				}
-				params = tool.Params{ tool.RootTableParam : entities.DBTask.Name, tool.RootRowsParam : tool.ReservedParam, }
-				tasks, err := s.Domain.SuperCall( params, newTask, tool.CREATE, "CreateOrUpdate")
-				if err != nil || len(tasks) == 0 { continue }
-				params = tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
-					tool.RootRowsParam : tool.ReservedParam, tool.RootRawView : "enable", }
-				s.Domain.SuperCall( params, tool.Record{ 
-					entities.NAMEATTR : "Task affected : " + tasks[0].GetString(entities.NAMEATTR), 
-					"description" : "Task is affected to you and must be treated: " + tasks[0].GetString(entities.NAMEATTR),
-					entities.RootID("created_by") : tasks[0].GetString(entities.RootID("created_by")),
-					entities.RootID(entities.DBSchema.Name) : tasks[0].GetString(entities.RootID(entities.DBSchema.Name)),
-					entities.RootID("dest_table") : tasks[0].GetString(entities.RootID("dest_table")), }, tool.CREATE, "CreateOrUpdate")
+				if res.GetString("nexts") == "all" || strings.Contains(res.GetString("nexts"), scheme.GetString("wrapped_" + entities.RootID(entities.DBWorkflow.Name))) {
+					params = tool.Params{ tool.RootTableParam : entities.DBTask.Name, tool.RootRowsParam : tool.ReservedParam, }
+					tasks, err := s.Domain.SuperCall( params, newTask, tool.CREATE, "CreateOrUpdate")
+					if err != nil || len(tasks) == 0 { continue }
+					params = tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
+						tool.RootRowsParam : tool.ReservedParam, tool.RootRawView : "enable", }
+					s.Domain.SuperCall( params, tool.Record{ 
+						entities.NAMEATTR : "Task affected : " + tasks[0].GetString(entities.NAMEATTR), 
+						"description" : "Task is affected to you and must be treated: " + tasks[0].GetString(entities.NAMEATTR),
+						entities.RootID("created_by") : tasks[0].GetString(entities.RootID("created_by")),
+						entities.RootID(entities.DBEntity.Name) : scheme.GetString(entities.RootID(entities.DBEntity.Name)),
+						entities.RootID(entities.DBUser.Name) : scheme.GetString(entities.RootID(entities.DBUser.Name)),
+						entities.RootID(entities.DBSchema.Name) : tasks[0].GetString(entities.RootID(entities.DBSchema.Name)),
+						entities.RootID("dest_table") : tasks[0].GetString(entities.RootID("dest_table")), }, tool.CREATE, "CreateOrUpdate")
+				}
 			}
 	    }
 	}

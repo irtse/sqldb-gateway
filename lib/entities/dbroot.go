@@ -202,7 +202,7 @@ var DBTask = TableEntity{
 		TableColumnEntity{ Name: "urgency", Type: "enum('low', 'medium', 'high')",  Null : true, Default: "medium", Readonly : true, },
 		TableColumnEntity{ Name: "priority", Type: "enum('low', 'medium', 'high')",  Null : true, Default: "medium", Readonly : true, },
 		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, Readonly : true },
-		TableColumnEntity{ Name: "nexts", Type: "varchar(255)",  Null : true, Default : "all" },
+		TableColumnEntity{ Name: "nexts", Type: "varchar(255)",  Null : true, Default : "all", Level: LEVELRESPONSIBLE },
 		TableColumnEntity{ Name: "meta_" + RootID(DBRequest.Name), Type: "integer", ForeignTable: DBRequest.Name, Null : false, Readonly : true, Label: "meta request attached", },
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true, Default: "no description...", Readonly : true, },
 		TableColumnEntity{ Name: RootID(DBWorkflowSchema.Name), Type: "integer",  ForeignTable: DBWorkflowSchema.Name, Null : true, Readonly : true, Level: LEVELRESPONSIBLE, Label: "workflow attached", },
@@ -254,9 +254,10 @@ var DBDataAccess = TableEntity{
 	},
 }
 
+var AllPERMISSIONEXCEPTION = []TableEntity{ DBNotification }
 var POSTPERMISSIONEXCEPTION = []TableEntity{ DBRequest }
 var PUPERMISSIONEXCEPTION = []TableEntity{ DBTask }
-var PERMISSIONEXCEPTION = []TableEntity{ DBView, DBTask, DBRequest, DBWorkflow, DBNotification } // override permission checkup
+var PERMISSIONEXCEPTION = []TableEntity{ DBView, DBTask, DBRequest, DBWorkflow } // override permission checkup
 var ROOTTABLES = []TableEntity{ DBSchema, DBSchemaField, DBUser, DBPermission, DBEntity, 
 	DBRole, DBView, DBDataAccess, DBNotification, DBEntityUser, DBRoleAttribution, DBWorkflow, 
 	DBRequest, DBTask, DBWorkflowSchema, DBRolePermission, DBHierarchy, }
