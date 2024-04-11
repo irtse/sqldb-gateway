@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"errors"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
@@ -46,30 +45,13 @@ func (l *AuthController) Login() {
 				notifs, err := d.PermsSuperCall(params, tool.Record{}, tool.SELECT, "Get")
 				n := tool.Results{}
 				for _, notif := range notifs {
-					params := tool.Params{ tool.RootTableParam : entities.DBView.Name, 
-										   tool.RootRowsParam : tool.ReservedParam,
-										   tool.RootShallow : "enable",
-										   entities.RootID(entities.DBSchema.Name) : notif.GetString(entities.DBSchema.Name),
-										   entities.RootID("dest_table") : notif.GetString(entities.RootID("dest_table")),
-										}
-					views, err := d.Call(params, tool.Record{}, tool.SELECT, "Get")
-					if err == nil || len(views) > 0 {
-						id := "-1"
-						for _, view := range views {
-							if view["max"] != nil && view["max"].(int64) > 0 {
-								id = fmt.Sprintf("%v", view["id"])
-								break
-							}
-						}
-						n = append(n, tool.Record{
-							tool.SpecialIDParam : notif.GetString(tool.SpecialIDParam),
-							entities.NAMEATTR : notif.GetString(entities.NAMEATTR),
-							"description" : notif.GetString("description"),
-							"link_path" : "/" + tool.MAIN_PREFIX + "/" + entities.DBNotification.Name + "?" + tool.RootRowsParam + "=" + notif.GetString("id"),
-							"data_ref" : "#" + id + ":" + notif.GetString(entities.RootID("dest_table")),
-						})
-					}
-					
+					n = append(n, tool.Record{
+						tool.SpecialIDParam : notif.GetString(tool.SpecialIDParam),
+						entities.NAMEATTR : notif.GetString(entities.NAMEATTR),
+						"description" : notif.GetString("description"),
+						"link_path" : "/" + tool.MAIN_PREFIX + "/" + entities.DBNotification.Name + "?" + tool.RootRowsParam + "=" + notif.GetString("id"),
+						"data_ref" : "/" + tool.MAIN_PREFIX + "/" + notif.GetString("link") + "?" + tool.RootRowsParam + "=" + notif.GetString(entities.RootID("dest_table")),
+					})
 				}
 				if err == nil { response[0]["notifications"]=n
 				} else { response[0]["notifications"]=[]interface{}{} }
@@ -116,29 +98,13 @@ func (l *AuthController) Refresh() {
 	resp := tool.Record{}
 	n := tool.Results{}
 	for _, notif := range notifs {
-		params := tool.Params{ tool.RootTableParam : entities.DBView.Name, 
-							   tool.RootRowsParam : tool.ReservedParam,
-							   tool.RootShallow : "enable",
-							   entities.RootID(entities.DBSchema.Name) : notif.GetString(entities.DBSchema.Name),
-							   entities.RootID("dest_table") : notif.GetString(entities.RootID("dest_table")),
-							}
-		views, _ := d.Call(params, tool.Record{}, tool.SELECT, "Get")
-		if err == nil || len(views) > 0 {
-			id := "-1"
-			for _, view := range views {
-				if view["max"] != nil && view["max"].(int64) > 0 {
-					id = fmt.Sprintf("%v", view["id"])
-					break
-				}
-			}
-			n = append(n, tool.Record{
-				tool.SpecialIDParam : notif.GetString(tool.SpecialIDParam),
-				entities.NAMEATTR : notif.GetString(entities.NAMEATTR),
-				"description" : notif.GetString("description"),
-				"link_path" : "/" + tool.MAIN_PREFIX + "/" + entities.DBNotification.Name + "?" + tool.RootRowsParam + "=" + notif.GetString("id"),
-				"data_ref" : "#" + id + ":" + notif.GetString(entities.RootID("dest_table")),
-			})
-		}
+		n = append(n, tool.Record{
+			tool.SpecialIDParam : notif.GetString(tool.SpecialIDParam),
+			entities.NAMEATTR : notif.GetString(entities.NAMEATTR),
+			"description" : notif.GetString("description"),
+			"link_path" : "/" + tool.MAIN_PREFIX + "/" + entities.DBNotification.Name + "?" + tool.RootRowsParam + "=" + notif.GetString("id"),
+			"data_ref" : "/" + tool.MAIN_PREFIX + "/" + notif.GetString("link") + "?" + tool.RootRowsParam + "=" + notif.GetString(entities.RootID("dest_table")),
+		})
 	}
 	if err == nil { resp["notifications"]=n
 	} else { resp["notifications"]=[]interface{}{} }

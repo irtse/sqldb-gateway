@@ -41,10 +41,10 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 	if len(results) == 0 { return results }
 	res := tool.Results{}
 	for _, record := range results {
-		readonly := false 
+		// readonly := false 
 		id := ""
 		if record["is_empty"] != nil { s.Domain.SetEmpty(record["is_empty"].(bool)) }
-		if r, ok := record["readonly"]; ok && r.(bool) { readonly = true }
+		// if r, ok := record["readonly"]; ok && r.(bool) { readonly = true }
 		rec := tool.Record{ "id": record["id"], "redirect_id" : record[entities.RootID(entities.DBView.Name)],
 		                    "name" : record["name"], "description" : record["description"], "is_empty" : record["is_empty"],
 		                    "index" : record["index"], "is_list" : record["is_list"], "readonly" : record["readonly"],
@@ -102,7 +102,7 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 		}
 		treated := s.Domain.PostTreat(datas, tName)
 		// s.Domain.SetParams(params)
-		if len(treated ) > 0 {
+		if len(treated) > 0 {
 			for k, v := range treated[0] { 
 				if _, ok := rec[k]; ok { continue }
 				if k == "items"  {
@@ -120,7 +120,8 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 				} else if k == "schema" { 
 					newV := map[string]interface{}{}
 					for fieldName, field := range v.(map[string]interface{}) {
-						if readonly { field.(map[string]interface{})["readonly"] = true }
+						// if readonly { field["readonly"] = true }
+						if  fieldName == entities.NAMEATTR && tName == entities.DBRequest.Name  { continue }
 						if view, ok := params[tool.RootColumnsParam]; !ok || view == "" || strings.Contains(view, fieldName) { 
 							newV[fieldName] = field 
 						}

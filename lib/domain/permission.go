@@ -92,6 +92,7 @@ func (d *MainService) PermsCheck(tableName string, colName string, level string,
 	found := false
 	if tPerms, ok := d.Perms[tableName]; ok {
 		found = true
+		mutexPerms.Lock()
 		if cPerms, ok2 := tPerms[colName]; ok2 && colName != "" && level != "" { 
 			perms = cPerms 
 		} else { 
@@ -104,6 +105,7 @@ func (d *MainService) PermsCheck(tableName string, colName string, level string,
 				}
 			}
 		}
+		mutexPerms.Unlock()
 	}
 	if !found { return false }
 	if method == tool.SELECT {

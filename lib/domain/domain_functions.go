@@ -115,16 +115,18 @@ func (d *MainService) byFields(tableName string) (string) {
 	SQLview := "id,"
 	sqlFilter := entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM " + entities.DBSchema.Name + " WHERE name='" + tableName + "')"
 	views := []string{}
+	mutexFields.Lock()
 	if params, ok := d.Params[tool.RootColumnsParam]; ok { 
 		views = strings.Split(params, ",") 
 	}
 	if fieldsCache[tableName] == nil  {
 		p := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, tool.RootRowsParam : tool.ReservedParam,}
 		fields, err := d.SuperCall( p, tool.Record{}, tool.SELECT, "Get", sqlFilter)
-		if err != nil || len(fields) == 0 { return "" }
-		mutexFields.Lock()
+		if err != nil || len(fields) == 0 { 
+			mutexFields.Unlock()
+			return ""
+		}
 		fieldsCache[tableName] = fields
-		mutexFields.Unlock()
 	}
 	for _, field := range fieldsCache[tableName] {
 		if len(views) > 0 && !slices.Contains(views, field.GetString(entities.NAMEATTR)) { continue }
@@ -133,6 +135,7 @@ func (d *MainService) byFields(tableName string) (string) {
 			SQLview += fmt.Sprintf("%v",field[entities.NAMEATTR]) + ","
 		}
 	}
+	mutexFields.Unlock()
 	if len(SQLview) > 0 { SQLview = SQLview[:len(SQLview) - 1] }
 	return SQLview
 }

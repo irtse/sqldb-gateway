@@ -75,22 +75,22 @@ func (s *RequestService) UpdateRowAutomation(results tool.Results, record tool.R
 				tool.RootRowsParam : tool.ReservedParam,
 				tool.RootRawView : "enable", }
 			s.Domain.SuperCall( params, tool.Record{ 
-				entities.NAMEATTR : "Rejected " + rec.GetString(entities.NAMEATTR) + " request", 
-				"description" : rec.GetString(entities.NAMEATTR) + " request is rejected and closed.",
-				entities.RootID(entities.DBUser.Name) : rec.GetString(entities.RootID(entities.DBUser.Name)),
-				entities.RootID(entities.DBSchema.Name) : rec.GetString(entities.RootID(entities.DBSchema.Name)),
-				entities.RootID("dest_table") : rec.GetString(entities.RootID("dest_table")), }, tool.CREATE, "CreateOrUpdate")
+				entities.NAMEATTR : "Rejected " + rec.GetString(entities.NAMEATTR), 
+				"description" : rec.GetString(entities.NAMEATTR) + " is rejected and closed.",
+				entities.RootID(entities.DBUser.Name) : rec[entities.RootID(entities.DBUser.Name)],
+				"link" : entities.DBRequest.Name,
+				entities.RootID("dest_table") : rec[tool.SpecialIDParam], }, tool.CREATE, "CreateOrUpdate")
 		}
 		if rec["state"] == "completed" {
 			params := tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
 				tool.RootRowsParam : tool.ReservedParam,
 				tool.RootRawView : "enable", }
 			s.Domain.SuperCall( params, tool.Record{ 
-				entities.NAMEATTR : "Validated " + rec.GetString(entities.NAMEATTR) + " request", 
-				"description" : rec.GetString(entities.NAMEATTR) + " request is approved and closed.",
-				entities.RootID(entities.DBUser.Name) : rec.GetString(entities.RootID(entities.DBUser.Name)),
-				entities.RootID(entities.DBSchema.Name) : rec.GetString(entities.RootID(entities.DBSchema.Name)),
-				entities.RootID("dest_table") : rec.GetString(entities.RootID("dest_table")), }, tool.CREATE, "CreateOrUpdate")
+				entities.NAMEATTR : "Validated " + rec.GetString(entities.NAMEATTR), 
+				"description" : rec.GetString(entities.NAMEATTR) + " is approved and closed.",
+				entities.RootID(entities.DBUser.Name) : rec[entities.RootID(entities.DBUser.Name)],
+				"link" : entities.DBRequest.Name,
+				entities.RootID("dest_table") : rec[tool.SpecialIDParam], }, tool.CREATE, "CreateOrUpdate")
 		}
 		if rec["is_close"] == true {
 			params := tool.Params{ tool.RootTableParam : entities.DBTask.Name,
@@ -179,22 +179,40 @@ func (s *RequestService) WriteRowAutomation(record tool.Record, tableName string
 		sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE "
 		sqlFilter += "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")))"
 		hierarchy, _ := s.Domain.SuperCall( paramsNew, tool.Record{}, tool.SELECT, "Get", sqlFilter, )
-		for _, hierarch := range hierarchy {
-			newTask := tool.Record{
-				entities.RootID(entities.DBSchema.Name) : record[entities.RootID(entities.DBSchema.Name)],
-				entities.RootID("dest_table") : record[entities.RootID("dest_table")],
-				entities.RootID(entities.DBRequest.Name) : record[tool.SpecialIDParam],
-				entities.RootID("created_by") : record[entities.RootID("created_by")],
-				entities.RootID(entities.DBUser.Name) : hierarch["parent_" + entities.RootID(entities.DBUser.Name)],
-				"description" : "hierarchical verification expected by the system, workflow is currently pending.",
-				"urgency" : "medium",
-				"priority" : "medium",
-				entities.NAMEATTR : "hierarchical verification",
-			}
-			params := tool.Params{ tool.RootTableParam : entities.DBTask.Name,
-				tool.RootRowsParam : tool.ReservedParam, }
-			test, err := s.Domain.Call( params, newTask, tool.CREATE, "CreateOrUpdate")
-			fmt.Printf("sqd %v %v \n", test, err)
+		sqlFilter = "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser())
+		params := tool.Params{ 
+			tool.RootTableParam : entities.DBUser.Name, 
+			tool.RootRowsParam : tool.ReservedParam, 
+		}
+		user, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+		if err == nil && len(user) > 0 {
+			for _, hierarch := range hierarchy {
+				newTask := tool.Record{
+					entities.RootID(entities.DBSchema.Name) : record[entities.RootID(entities.DBSchema.Name)],
+					entities.RootID("dest_table") : record[entities.RootID("dest_table")],
+					entities.RootID(entities.DBRequest.Name) : record[tool.SpecialIDParam],
+					entities.RootID("created_by") : user[0][tool.SpecialIDParam],
+					entities.RootID(entities.DBUser.Name) : hierarch["parent_" + entities.RootID(entities.DBUser.Name)],
+					"description" : "hierarchical verification expected by the system, workflow is currently pending.",
+					"urgency" : "medium",
+					"priority" : "medium",
+					entities.NAMEATTR : "hierarchical verification",
+				}
+				params := tool.Params{ tool.RootTableParam : entities.DBTask.Name,
+					tool.RootRowsParam : tool.ReservedParam, }
+				res, err := s.Domain.PermsSuperCall( params, newTask, tool.CREATE, "CreateOrUpdate")
+				if err == nil && len(res) > 0 {
+					params = tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
+						tool.RootRowsParam : tool.ReservedParam,
+						tool.RootRawView : "enable", }
+					s.Domain.SuperCall( params, tool.Record{ 
+						entities.NAMEATTR : "Hierarchical verification on " + record.GetString(entities.NAMEATTR) + " request", 
+						"description" : record.GetString(entities.NAMEATTR) + " request need a hierarchical verification.",
+						entities.RootID(entities.DBUser.Name) : hierarch["parent_" + entities.RootID(entities.DBUser.Name)],
+						"link" : entities.DBTask.Name,
+						entities.RootID("dest_table") : res[0][tool.SpecialIDParam], }, tool.CREATE, "CreateOrUpdate")
+				}
+			}	
 		}
 	}
 }
@@ -206,7 +224,7 @@ func (s *RequestService) ConfigureFilter(tableName string) (string, string) {
 	rows, ok := s.Domain.GetParams()[tool.RootRowsParam]
 	ids, ok2 := s.Domain.GetParams()[tool.SpecialIDParam]
 	if (ok && fmt.Sprintf("%v", rows) != tool.ReservedParam) || (ok2 && ids != "") { return s.Domain.ViewDefinition(tableName) }
-	restr := "is_meta=false AND "
-	restr += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
+	restr := entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
+	restr += " AND is_meta=false"
 	return s.Domain.ViewDefinition(tableName, restr)
 }

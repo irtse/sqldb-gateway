@@ -239,7 +239,7 @@ var DBNotification = TableEntity{
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true,  Default: "no description...", },
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, Readonly : true, Label: "user assignee", },
 		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, Null : true, Readonly : true, Label: "entity assignee", },
-		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, Null : false, Readonly : true, Label: "form attached", },
+		TableColumnEntity{ Name: "link", Type: "varchar(255)", Readonly : true, Label: "form attached", },
 		TableColumnEntity{ Name: RootID("dest_table"), Type: "integer", Null : true, Readonly : true, Label: "reference", },
 	},
 }

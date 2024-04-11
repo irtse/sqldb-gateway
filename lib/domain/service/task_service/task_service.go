@@ -79,7 +79,7 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 				newRecRequest["state"] = "progressing"
 				newRecRequest["is_close"] = false
 			} 
-			_,err = s.Domain.Call( tool.Params{ tool.RootTableParam : entities.DBRequest.Name, tool.RootRowsParam : tool.ReservedParam, }, 
+			_, err = s.Domain.PermsSuperCall( tool.Params{ tool.RootTableParam : entities.DBRequest.Name, tool.RootRowsParam : tool.ReservedParam, }, 
 				                                newRecRequest, tool.UPDATE, "CreateOrUpdate")
 			if err != nil || len(schemes) == 0 { continue }
 			for _, scheme := range schemes {
@@ -139,11 +139,11 @@ func (s *TaskService) UpdateRowAutomation(results tool.Results, record tool.Reco
 					s.Domain.SuperCall( params, tool.Record{ 
 						entities.NAMEATTR : "Task affected : " + tasks[0].GetString(entities.NAMEATTR), 
 						"description" : "Task is affected to you and must be treated: " + tasks[0].GetString(entities.NAMEATTR),
-						entities.RootID("created_by") : tasks[0].GetString(entities.RootID("created_by")),
-						entities.RootID(entities.DBEntity.Name) : scheme.GetString(entities.RootID(entities.DBEntity.Name)),
-						entities.RootID(entities.DBUser.Name) : scheme.GetString(entities.RootID(entities.DBUser.Name)),
-						entities.RootID(entities.DBSchema.Name) : tasks[0].GetString(entities.RootID(entities.DBSchema.Name)),
-						entities.RootID("dest_table") : tasks[0].GetString(entities.RootID("dest_table")), }, tool.CREATE, "CreateOrUpdate")
+						entities.RootID("created_by") : tasks[0][entities.RootID("created_by")],
+						entities.RootID(entities.DBEntity.Name) : scheme[entities.RootID(entities.DBEntity.Name)],
+						entities.RootID(entities.DBUser.Name) : scheme[entities.RootID(entities.DBUser.Name)],
+						"link" : entities.DBTask.Name,						
+						entities.RootID("dest_table") : tasks[0][tool.SpecialIDParam], }, tool.CREATE, "CreateOrUpdate")
 				}
 			}
 	    }
@@ -175,8 +175,7 @@ func (s *TaskService) ConfigureFilter(tableName string) (string, string) {
 	if (ok && fmt.Sprintf("%v", rows) != tool.ReservedParam) || (ok2 && ids != "") {
 		return s.Domain.ViewDefinition(tableName)
 	}
-	restr := "meta_" + entities.RootID(entities.DBRequest.Name) + " IS NULL AND "
-	restr += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ") OR "
+	restr := entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ") OR "
 	restr += entities.RootID(entities.DBRequest.Name) + " IN (SELECT id FROM " + entities.DBRequest.Name + " WHERE "
 	restr += entities.RootID(entities.DBWorkflowSchema.Name) + " IN (SELECT id FROM " + entities.DBWorkflowSchema.Name + " WHERE "
 	restr += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
@@ -184,5 +183,6 @@ func (s *TaskService) ConfigureFilter(tableName string) (string, string) {
 	restr += "SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " "
 	restr += " WHERE " + entities.RootID(entities.DBUser.Name) + " IN ("
 	restr += "SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))))"
+	restr += " AND meta_" + entities.RootID(entities.DBRequest.Name) + " IS NULL"
 	return s.Domain.ViewDefinition(tableName, restr)
 }	
