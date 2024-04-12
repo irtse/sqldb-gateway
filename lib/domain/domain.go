@@ -24,6 +24,7 @@ type MainService struct {
 	User				string
 	Shallowed			bool
 	SuperAdmin			bool
+	ExternalSuperAdmin	bool
 	RawView				bool
 	Super				bool
 	isGenericService    bool
@@ -49,10 +50,11 @@ func Domain(superAdmin bool, user string, isGenericService bool) *MainService {
 func (d *MainService) SetIsCustom(isCustom bool) { d.isGenericService = isCustom }
 func (d *MainService) SetLowerRes(empty bool) { d.LowerRes = empty }
 func (d *MainService) SetEmpty(empty bool) { d.Empty = empty }
+func (d *MainService) SetExternalSuperAdmin(external bool) { d.ExternalSuperAdmin = external }
 func (d *MainService) GetEmpty() bool { return d.Empty }
 func (d *MainService) GetUser() string { return d.User }
 func (d *MainService) IsSuperAdmin() bool { return d.SuperAdmin }
-func (d *MainService) IsSuperCall() bool { return d.Super && d.SuperAdmin }
+func (d *MainService) IsSuperCall() bool { return d.Super && d.SuperAdmin || d.ExternalSuperAdmin }
 func (d *MainService) IsShallowed() bool { return d.Shallowed }
 func (d *MainService) SetParams(params tool.Params) { d.Params = params }
 func (d *MainService) GetParams() tool.Params { return d.Params }

@@ -13,10 +13,10 @@ type ViewService struct { tool.AbstractSpecializedService }
 
 func (s *ViewService) Entity() tool.SpecializedServiceInfo { return entities.DBView }
 func (s *ViewService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
-	if _, ok := record["through_perms"]; ok { 
+	if d, ok := record["through_perms"];ok && d != nil { 
 		schemas, err := s.Domain.Schema(tool.Record{ 
 			entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", record["through_perms"]) }, true)	
-		if err != nil && len(schemas) == 0 { return record, false, false }
+		if err != nil || len(schemas) == 0 { return record, false, false }
 		params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
 							tool.RootRowsParam : tool.ReservedParam, 
 							entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", schemas[0][tool.SpecialIDParam]),
@@ -100,6 +100,7 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 				}
 			} else { datas = d }
 		}
+		fmt.Printf("datas: %v\n", datas)
 		treated := s.Domain.PostTreat(datas, tName)
 		// s.Domain.SetParams(params)
 		if len(treated) > 0 {

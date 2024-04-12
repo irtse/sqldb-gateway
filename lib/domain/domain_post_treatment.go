@@ -79,6 +79,7 @@ func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Res
 		r["action_path"] = "/" + tool.MAIN_PREFIX + "/" + tableName + "?rows=" + tool.ReservedParam
 		r["actions"]=[]string{}
 		for _, meth := range []tool.Method{ tool.SELECT, tool.CREATE, tool.UPDATE, tool.DELETE } {
+			if d.Empty && meth != tool.CREATE { continue }
 			if d.PermsCheck(tableName, "", "", meth) || slices.Contains(addAction, meth.Method()) { 
 				r["actions"]=append(r["actions"].([]string), meth.Method())
 			} else if meth == tool.UPDATE { r["readonly"] = true }
@@ -104,7 +105,6 @@ func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Res
 							} else if meth == tool.UPDATE { readonly = true 
 							} else if meth == tool.CREATE && d.Empty { readonly = true }
 						} 
-						fmt.Printf("RECORD %v - %v \n", tableName, record)
 						res = append(res, tool.Record{ 
 							tool.SpecialIDParam : record[tool.SpecialIDParam],
 							entities.NAMEATTR : n,
@@ -146,7 +146,6 @@ func (d *MainService) GetWorkFlow(record tool.Record, tableName string) tool.Rec
 		workflow["current"] = record.GetString("current_index")
 		workflow["is_close"]=record.GetString("state") == "completed" || record.GetString("state") == "dismiss"
 	} else if tableName == entities.DBTask.Name {
-		fmt.Printf("REC %v \n", record)
 		params := tool.Params {
 			tool.RootTableParam : entities.DBTask.Name,
 			tool.RootRowsParam : record.GetString(tool.SpecialIDParam),
@@ -192,7 +191,6 @@ func (d *MainService) GetWorkFlow(record tool.Record, tableName string) tool.Rec
 				entities.NAMEATTR : step.GetString(entities.NAMEATTR),
 				"optionnal" : step["optionnal"],
 			}
-			fmt.Printf("NEXTS %v %v %v \n", nexts, step.GetString("wrapped_" + entities.RootID(entities.DBWorkflow.Name)))
 			newStep["is_set"]= !step["optionnal"].(bool) || slices.Contains(nexts, step.GetString("wrapped_" + entities.RootID(entities.DBWorkflow.Name)))
 			if workflow["current"] != "" {
 				params = tool.Params {

@@ -26,6 +26,5 @@ func (s *NotificationService) ConfigureFilter(tableName string) (string, string)
 	}
 	restr := entities.RootID(entities.DBUser.Name)  + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ") OR " 
 	restr += entities.RootID(entities.DBEntity.Name) + " IN (SELECT " + entities.RootID(entities.DBEntity.Name) + " FROM " + entities.DBEntityUser.Name + " WHERE " + entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))" 
-	fmt.Printf("REST %v\n", restr)
 	return s.Domain.ViewDefinition(tableName, restr)
 }

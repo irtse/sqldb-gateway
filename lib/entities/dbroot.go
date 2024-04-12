@@ -42,7 +42,7 @@ var DBSchemaField = TableEntity{
 		 TableColumnEntity{ Name: "label", Type: "varchar(255)", Null : false },
 		 TableColumnEntity{ Name: "placeholder", Type: "varchar(255)", Null : true, Default : "" },
 		 TableColumnEntity{ Name: "default_value", Type: "varchar(255)", Null : true, },
-		 TableColumnEntity{ Name: "description", Type: "varchar(255)", Null : true, Default : "no description..." },
+		 TableColumnEntity{ Name: "description", Type: "varchar(255)", Null : true, },
         // link define a select.
 		 TableColumnEntity{ Name: "constraint", Type: "varchar(255)", Null : true, Level: LEVELRESPONSIBLE, },
 		 TableColumnEntity{ Name: "link", Type: "varchar(255)", Null : true, Level: LEVELRESPONSIBLE, },
@@ -69,7 +69,7 @@ var DBRole = TableEntity{
 	Label : "role",
 	Columns : []TableColumnEntity{
 		 TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)", Constraint: "unique", Null : false, Readonly : true },
-		 TableColumnEntity{ Name: "description", Type: "text", Null : true, Default : "no description..." },
+		 TableColumnEntity{ Name: "description", Type: "text", Null : true, },
 	},
 }
 
@@ -147,8 +147,10 @@ var DBWorkflow = TableEntity{
 		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true, },
 		TableColumnEntity{ Name: "is_meta", Type: "boolean",  Null : true, Default: false, },
 		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable: DBSchema.Name, Null : false, Readonly : true, Label: "form entry", },
+		TableColumnEntity{ Name: "steps", Type: "onetomany",  ForeignTable: RootName("workflow_schema"), Null : true, },
 	},
 }
+
 var DBWorkflowSchema = TableEntity{
 	Name : RootName("workflow_schema"),
 	Label : "workflow schema attribution",
@@ -194,7 +196,7 @@ var DBTask = TableEntity{
 		TableColumnEntity{ Name: RootID(DBRequest.Name), Type: "integer", ForeignTable: DBRequest.Name, Null : false, Readonly : true, Label: "request attached", },
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, Readonly : true, Label: "user assignee", },
 		TableColumnEntity{ Name: RootID("created_by"), Type: "integer", ForeignTable: DBUser.Name, Null : true, Readonly : true, Level: LEVELRESPONSIBLE },
-		TableColumnEntity{ Name: "comment", Type: "text", Null : true, Default : "", Readonly : true, },
+		TableColumnEntity{ Name: "comment", Type: "text", Null : true, },
 		TableColumnEntity{ Name: "created_date", Type: "timestamp",  Null : true, Default : "CURRENT_TIMESTAMP", Readonly : true },
 		TableColumnEntity{ Name: "closing_date", Type: "timestamp",  Null : true, Readonly : true }, // TODO
 		TableColumnEntity{ Name: "state", Type: "enum('pending', 'progressing', 'dismiss', 'completed')",  Null : true, Default: "pending" },
@@ -204,7 +206,7 @@ var DBTask = TableEntity{
 		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, Readonly : true },
 		TableColumnEntity{ Name: "nexts", Type: "varchar(255)",  Null : true, Default : "all", Level: LEVELRESPONSIBLE },
 		TableColumnEntity{ Name: "meta_" + RootID(DBRequest.Name), Type: "integer", ForeignTable: DBRequest.Name, Null : false, Readonly : true, Label: "meta request attached", },
-		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true, Default: "no description...", Readonly : true, },
+		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true },
 		TableColumnEntity{ Name: RootID(DBWorkflowSchema.Name), Type: "integer",  ForeignTable: DBWorkflowSchema.Name, Null : true, Readonly : true, Level: LEVELRESPONSIBLE, Label: "workflow attached", },
 		TableColumnEntity{ Name: RootID("dest_table"), Type: "integer", Null : true, Readonly : true, Label: "reference", },
 	},
@@ -214,11 +216,11 @@ var DBView = TableEntity{
 	Name : RootName("view"),
 	Label : "view",
 	Columns : []TableColumnEntity{
-		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, },
+		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, Constraint: "unique" },
 		TableColumnEntity{ Name: "is_list", Type: "boolean", Null : true, Default: true },
 		TableColumnEntity{ Name: "is_empty", Type: "boolean", Null : true, Default: false },
 		TableColumnEntity{ Name: "indexable", Type: "boolean", Null : true, Default: true },
-		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true,  Default: "no description...", },
+		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true, },
 		TableColumnEntity{ Name: "readonly", Type: "boolean", Null : false }, // SOLO VIEW OR ... 
 		TableColumnEntity{ Name: "index", Type: "integer", Null : true, Default: 1 },
 		TableColumnEntity{ Name: "sql_restriction", Type: "varchar(255)", Null : true, },
@@ -236,7 +238,7 @@ var DBNotification = TableEntity{
 	Label : "notification",
 	Columns : []TableColumnEntity{
 		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, },
-		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true,  Default: "no description...", },
+		TableColumnEntity{ Name: "description", Type: "varchar(255)",  Null : true, },
 		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable: DBUser.Name, Null : true, Readonly : true, Label: "user assignee", },
 		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable: DBEntity.Name, Null : true, Readonly : true, Label: "entity assignee", },
 		TableColumnEntity{ Name: "link", Type: "varchar(255)", Readonly : true, Label: "form attached", },

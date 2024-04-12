@@ -162,14 +162,17 @@ func (d *MainService) Schema(record tool.Record, permitted bool) (tool.Results, 
 		schemas, err = d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
 		if err != nil || len(schemas) == 0 { return nil, err }
 	}
-	mutexSchema.Lock()
-	if id, ok := record[entities.RootID(entities.DBSchema.Name)]; ok { schemaCache[fmt.Sprintf("%v", id)] = schemas
-	} else if name, ok := record[entities.NAMEATTR]; ok { schemaCache[fmt.Sprintf("%v", name)] = schemas }
-	mutexSchema.Unlock()
-	if permitted && !d.PermsCheck(
-		fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]), "", "", tool.SELECT) {
-		return nil, errors.New("not authorized")
+	if !d.SuperAdmin {
+		mutexSchema.Lock()
+		if id, ok := record[entities.RootID(entities.DBSchema.Name)]; ok { schemaCache[fmt.Sprintf("%v", id)] = schemas
+		} else if name, ok := record[entities.NAMEATTR]; ok { schemaCache[fmt.Sprintf("%v", name)] = schemas }
+		mutexSchema.Unlock()
+		if permitted && !d.PermsCheck(
+			fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]), "", "", tool.SELECT) {
+			return nil, errors.New("not authorized")
+		}
 	}
+	
 	return schemas, err
 }
 
@@ -242,7 +245,7 @@ func (d *MainService) GetScheme(tableName string, isId bool) (
 		var shallowField entities.ShallowSchemaColumnEntity
 		b, _ := json.Marshal(r)
 		json.Unmarshal(b, &scheme)
-		if !d.PermsCheck(tableName, scheme.Name, scheme.Level, tool.SELECT) { continue }
+		if !d.SuperAdmin && !d.PermsCheck(tableName, scheme.Name, scheme.Level, tool.SELECT) { continue }
 		cols[scheme.Name]=scheme
 		id = scheme.SchemaId
 		json.Unmarshal(b, &shallowField)

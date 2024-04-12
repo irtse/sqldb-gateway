@@ -44,7 +44,9 @@ func (t *AbstractController) Call(auth bool, method tool.Method, funcName string
 		user, superAdmin, err = t.authorized() // will check up if allowed (or authenticated)
 		if err != nil { t.response(tool.Results{}, err); return }
 	} // then proceed to exec by calling domain
-	response, err := domain.Domain(superAdmin, user, false).Call(t.params(), t.body(true), method, funcName, args...)
+	d := domain.Domain(superAdmin, user, false)
+	d.SetExternalSuperAdmin(superAdmin)
+	response, err := d.Call(t.params(), t.body(true), method, funcName, args...)
 	t.response(response, err) // send back response
 }
 // authorized is authentication check up func of the HANDLER

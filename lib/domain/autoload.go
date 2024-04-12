@@ -58,5 +58,21 @@ func Load() {
 				"password" : "$argon2id$v=19$m=65536,t=3,p=4$JooiEtVXatRxSz16N9uo2g$Y2dAHdLAK06013FhDHQ/xhd+UL2yInwDAvRS1+KKD3c",
 			}, tool.CREATE, "CreateOrUpdate")
 	}
+	addRootDatas(entities.DBRootViews, entities.DBView.Name)
+	addRootDatas(entities.DBRootWorkflows, entities.DBWorkflow.Name)
 	database.Conn.Close()
+}
+func addRootDatas(flattenedSubArray []map[string]interface{}, name string) {
+	d := Domain(true, "superadmin", false)
+	for _, root := range flattenedSubArray {
+		if _, ok := root["link"]; ok {
+			params := tool.Params{ tool.RootTableParam: entities.DBSchema.Name, tool.RootRowsParam: tool.ReservedParam, tool.RootRawView: "enable" }
+			schemas, err := d.SuperCall(params, tool.Record{}, tool.SELECT, "Get", "name='" + fmt.Sprintf("%v", root["link"]) + "'")
+			if err != nil || len(schemas) == 0 { continue }
+			root[entities.RootID(entities.DBSchema.Name)] = schemas[0][tool.SpecialIDParam]
+			delete(root, "link")
+			params = tool.Params{ tool.RootTableParam: name, tool.RootRowsParam: tool.ReservedParam, tool.RootRawView: "enable" }
+			d.SuperCall(params, root, tool.CREATE, "CreateOrUpdate")
+		}
+	}
 }

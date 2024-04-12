@@ -168,7 +168,6 @@ func (s *TaskService) PostTreatment(results tool.Results, tableName string, dest
 	return s.Domain.PostTreat(results, tableName) 
 }
 
-
 func (s *TaskService) ConfigureFilter(tableName string) (string, string) {
 	rows, ok := s.Domain.GetParams()[tool.RootRowsParam]
 	ids, ok2 := s.Domain.GetParams()[tool.SpecialIDParam]

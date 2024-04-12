@@ -90,6 +90,7 @@ func (d *MainService) PermsCheck(tableName string, colName string, level string,
 	if len(d.Perms) == 0 { d.PermsBuilder() }
 	var perms Perms
 	found := false
+	fmt.Printf("qsdd %v \n", d.Perms[tableName])
 	if tPerms, ok := d.Perms[tableName]; ok {
 		found = true
 		mutexPerms.Lock()

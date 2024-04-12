@@ -21,7 +21,7 @@ func (s *RoleService) PostTreatment(results tool.Results, tableName string, dest
 func (s *RoleService) ConfigureFilter(tableName string) (string, string) {
 	rows, ok := s.Domain.GetParams()[tool.RootRowsParam]
 	ids, ok2 := s.Domain.GetParams()[tool.SpecialIDParam]
-	if (ok && fmt.Sprintf("%v", rows) != tool.ReservedParam) || (ok2 && ids != "") {
+	if (ok && fmt.Sprintf("%v", rows) != tool.ReservedParam) || (ok2 && ids != "") || s.Domain.IsSuperAdmin() {
 		return s.Domain.ViewDefinition(tableName)
 	}
 	restr := "id IN (SELECT "+ entities.RootID(entities.DBRole.Name) + " FROM " +  entities.DBRoleAttribution.Name + " " 

@@ -232,10 +232,10 @@ func FormatForSQL(datatype string, value interface{}) string {
 	for _, typ := range SpecialTypes {
 		if strings.Contains(datatype, typ) { 
 			if value == "CURRENT_TIMESTAMP" { return fmt.Sprint(value) 
-			} else { return  strings.Replace(Quote(fmt.Sprint(value)), "%25", "%", -1) }
+			} else { return strings.Replace(Quote(strings.Replace(fmt.Sprint(value), "'", "''", -1)), "%25", "%", -1) }
 		}
 	}
-	if strings.Contains(strval, "%") { return strings.Replace(Quote(strval), "%25", "%", -1) }
+	if strings.Contains(strval, "%") { return strings.Replace(Quote(strings.Replace(fmt.Sprint(value), "'", "''", -1)), "%25", "%", -1) }
 	return strval
 }
 func (db *Db) ToFilter(tableName string, params map[string]string, restriction... string) {
