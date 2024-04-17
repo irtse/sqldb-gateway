@@ -48,7 +48,17 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 		rec := tool.Record{ "id": record["id"], "redirect_id" : record[entities.RootID(entities.DBView.Name)],
 		                    "name" : record["name"], "description" : record["description"], "is_empty" : record["is_empty"],
 		                    "index" : record["index"], "is_list" : record["is_list"], "readonly" : record["readonly"],
-						}	
+							"filter_path" : "/" + tool.MAIN_PREFIX + "/" + entities.DBFilter.Name + "?" + tool.RootRowsParam + "=" + tool.ReservedParam, }	
+		u, _ := s.Domain.PermsSuperCall( tool.Params{ tool.RootTableParam: entities.DBUser.Name, tool.RootRowsParam : tool.ReservedParam,
+													  tool.RootRawView: "enable",
+													  entities.NAMEATTR : s.Domain.GetUser() }, tool.Record{}, tool.SELECT, "Get")
+		if len(u) > 0 { 
+			rec["favorize_path"] = "/" + tool.MAIN_PREFIX + "/" + entities.DBViewAttribution.Name + "?" + tool.RootRowsParam + "=" + tool.ReservedParam + "&" + entities.RootID(entities.DBUser.Name) + "=" + fmt.Sprintf("%v", u[0][tool.SpecialIDParam])
+			u, _ = s.Domain.PermsSuperCall( tool.Params{ tool.RootTableParam: entities.DBViewAttribution.Name, tool.RootRowsParam : tool.ReservedParam,
+													 tool.RootRawView: "enable",
+			   										 entities.RootID(entities.DBUser.Name) : fmt.Sprintf("%v", u[0][tool.SpecialIDParam]) }, tool.Record{}, tool.SELECT, "Get")
+			if len(u) > 0 { rec["is_favorize"] = true }
+		}
 		if record["is_list"] != nil { s.Domain.SetLowerRes(record["is_list"].(bool))
 		} else { s.Domain.SetLowerRes(false) }
 		
@@ -89,7 +99,11 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 		}
 		rec["new"] = []string{}
 		if !s.Domain.GetEmpty() {
-			d, _ = s.Domain.PermsSuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+			if !s.Domain.IsSuperAdmin() { 
+				d, _ = s.Domain.PermsSuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+			} else {
+				d, _ = s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+			}
 		}
 		if  record["is_list"] != nil && record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(tName, sqlFilter, params) }
 		if !s.Domain.GetEmpty() {
@@ -100,7 +114,6 @@ func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest
 				}
 			} else { datas = d }
 		}
-		fmt.Printf("datas: %v\n", datas)
 		treated := s.Domain.PostTreat(datas, tName)
 		// s.Domain.SetParams(params)
 		if len(treated) > 0 {

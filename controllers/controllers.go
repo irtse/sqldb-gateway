@@ -2,19 +2,22 @@
 package controllers
 import (
 	"os"
+	"fmt"
 	"time"
 	"errors"
 	"strings"
 	"net/http"
+	"encoding/csv"
 	"encoding/json"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/domain"
 	"sqldb-ws/lib/domain/auth"
 	"github.com/rs/zerolog/log"
 	"github.com/golang-jwt/jwt/v5"
+	entities "sqldb-ws/lib/entities"
+	"github.com/thedatashed/xlsxreader"
 	"github.com/matthewhartstonge/argon2"
 	beego "github.com/beego/beego/v2/server/web"
-	entities "sqldb-ws/lib/entities"
 )
 /*
 	AbstractController defines main procedure that a generic Handler would get. 
@@ -46,8 +49,24 @@ func (t *AbstractController) Call(auth bool, method tool.Method, funcName string
 	} // then proceed to exec by calling domain
 	d := domain.Domain(superAdmin, user, false)
 	d.SetExternalSuperAdmin(superAdmin)
-	response, err := d.Call(t.params(), t.body(true), method, funcName, args...)
-	t.response(response, err) // send back response
+	p, asLabel := t.params()
+	files, err := t.formFile(asLabel)
+	fmt.Printf("FILES : %v\n", files)
+	if err == nil && len(files) > 0 {
+		resp := tool.Results{}; var error error
+		for _, file := range files {
+			response, err := d.Call(p, file, method, funcName, args...)
+			resp = append(resp, response...)
+			if err != nil { 
+				if error == nil { error = err } else { error = errors.New(error.Error() + " | " + err.Error()) }
+			}
+		}
+		t.response(resp, error) // send back response
+	} else {
+		response, err := d.Call(p, t.body(true), method, funcName, args...)
+		if format, ok := p[tool.RootExport]; ok { t.download(format, p[tool.RootFilename], asLabel, response, err); return }
+		t.response(response, err) // send back response
+	}	
 }
 // authorized is authentication check up func of the HANDLER
 func (t *AbstractController) authorized() (string, bool, error) {
@@ -77,13 +96,64 @@ func (t *AbstractController) authorized() (string, bool, error) {
 }
 // paramsOver is an overide of params applying a manual addition of parameters into Params struct
 func (t *AbstractController) paramsOver(override map[string]string) map[string]string {
-	params := t.params() // get initial params
+	params, _ := t.params() // get initial params
 	for k, v := range override { params[k]=v } // add custom params
 	return params
 }
+func (t *AbstractController) formFile(asLabel map[string]string) (tool.Results, error) {
+	file, header, err := t.Ctx.Request.FormFile("file")
+	if err == nil {
+		defer file.Close()
+		cols := []string{}
+		results := tool.Results{}
+		if strings.Contains(header.Filename, ".csv") {
+			reader := csv.NewReader(file) // check if file is a CSV
+			records, err := reader.ReadAll() 
+			if err != nil || len(records) == 1 { return nil, err }
+			cols = records[0]
+			for _, col := range cols {
+				for k, label := range asLabel {
+					if col == label { col = strings.Replace(k, "_aslabel", "", -1) }
+				}
+			}
+			fmt.Printf("FILE : %v %v \n", file, records[1:])
+			for _, rec := range records[1:] {
+				newRecord := tool.Record{}
+				for i, col := range cols { newRecord[col] = rec[i] }
+				results = append(results, newRecord)
+			}
+			return results, nil
+		} else if strings.Contains(header.Filename, ".xlsx") {
+			b := []byte{}
+			_, err := file.Read(b)
+			if err != nil { return nil, err }
+			xl, err := xlsxreader.NewReader(b)
+			if err != nil { return nil, err }
+			first := true
+			for row := range xl.ReadRows(xl.Sheets[0]){
+				if first {
+					first = false
+					for i, cell := range row.Cells {
+						for k, label := range asLabel {
+							if cell.Value == label { cols = append(cols, strings.Replace(k, "_aslabel", "", -1)) }
+						}
+						if len(cols) < i + 1 { cols = append(cols, cell.Value) }
+					}
+				} else {
+					newRecord := tool.Record{}
+					for i, cell := range row.Cells { newRecord[cols[i]] = cell.Value }
+					results = append(results, newRecord)
+				}
+			}
+			return results, nil
+		}
+	}
+	return nil, err
+}
 // params will produce a Params struct compose of url & query parameters
-func (t *AbstractController) params() map[string]string {
-	if t.paramsOverload != nil { return t.paramsOverload }
+func (t *AbstractController) params() (map[string]string, map[string]string) {
+	paramsAsLabel := map[string]string{}
+	if t.paramsOverload != nil { return t.paramsOverload, paramsAsLabel }
 	params := map[string]string{} 
 	rawParams := t.Ctx.Input.Params() // extract all params from url and fill params
 	for key, val := range rawParams {
@@ -96,7 +166,8 @@ func (t *AbstractController) params() map[string]string {
 		uri := strings.Split(path[1], "&")
 		for _, val := range uri {
 			kv := strings.Split(val, "=")
-			params[kv[0]]=kv[1]
+			if strings.Contains(kv[0], "_aslabel") { paramsAsLabel[kv[0]]=kv[1]
+			} else { params[kv[0]]=kv[1] }
 		}
 	}
 	if pass, ok := params["password"]; ok { // if any password founded hash it
@@ -105,7 +176,12 @@ func (t *AbstractController) params() map[string]string {
 		if err != nil { log.Error().Msg(err.Error()) }
 		params["password"] = string(hash)
 	}
-	return params
+	if t, ok := params[tool.RootTableParam]; !ok || t == entities.DBView.Name { delete(params, tool.RootExport) }
+	if _, ok := params[tool.RootExport]; ok { 
+		params[tool.RootRawView] = "" 
+		if _, ok := params[tool.RootFilename]; !ok { params[tool.RootFilename] = params[tool.RootTableParam] }
+	}
+	return params, paramsAsLabel
 }
 // body is the main body extracter from the controller
 func (t *AbstractController) body(hashed bool) tool.Record {
@@ -139,6 +215,61 @@ func (t *AbstractController) response(resp tool.Results, err error) {
 		}
 	}
 	t.ServeJSON() // then serve response by beego
+}
+
+func (t *AbstractController) download(format string, name string, mapping map[string]string, resp tool.Results, error error) {
+	cols, results := t.mapping(mapping, resp) // mapping
+	t.Ctx.ResponseWriter.Header().Set("Content-Type", "text/" + format)
+	t.Ctx.ResponseWriter.Header().Set("Content-Disposition", "attachment; filename=" + name + "_" + strings.Replace(time.Now().Format(time.RFC3339), " ", "_", -1) + "." + format)
+	data := t.csv(cols, results) // rationalize to CSV
+	if format == "csv" { 
+		csv.NewWriter(t.Ctx.ResponseWriter).WriteAll(data) 
+	} else { 
+		t.response(results, error)
+	}
+}
+func (t *AbstractController) mapping(mapping map[string]string, resp tool.Results) ([]string, tool.Results) {
+	cols := []string{}; results := tool.Results{}
+	if len(resp) == 0 { return cols, results }
+	r := resp[0]
+	order := r["order"].([]interface{})
+	schema := r["schema"].(map[string]interface{})
+	for _, o := range order {
+		key := o.(string)
+		if scheme, ok := schema[o.(string)]; !ok && strings.Contains(scheme.(map[string]interface{})["type"].(string), "many") { continue }
+		label := strings.Replace(schema[key].(map[string]interface{})["label"].(string), "_", " ", -1)
+		if mapKey, ok := mapping[key]; ok && mapKey != "" { label = mapKey }	
+		cols = append(cols, strings.ToUpper(label))
+	}
+	for _, item := range r["items"].([]interface{}) {
+		record := tool.Record{}
+		for _, o := range order {
+			key := o.(string)
+			it := item.(map[string]interface{})
+			if scheme, ok := schema[key]; !ok && strings.Contains(scheme.(map[string]interface{})["type"].(string), "many") { continue }
+			label := strings.Replace(schema[key].(map[string]interface{})["label"].(string), "_", " ", -1)
+			if mapKey, ok := mapping[key]; ok && mapKey != "" { label = mapKey }	
+			label = strings.ToUpper(label)
+			if v, ok := it["values_shallow"].(map[string]interface{})[key]; ok { record[label] = v.(map[string]interface{})["name"].(string)
+			} else if v, ok := it["values"].(map[string]interface{})[key]; ok && v != nil { record[label] = fmt.Sprintf("%v", v) 
+			} else { record[label] = "" }
+		}
+		results = append(results, record)
+	}
+	return cols, results
+}
+func (t *AbstractController) csv(cols []string, results tool.Results) [][]string {
+	var data [][]string
+	data = append(data, cols)
+	for _, r := range results {
+		var row []string
+		for _, c := range cols { 
+			if v, ok := r[c]; !ok || v == nil  { row = append(row, ""); continue }
+			row = append(row, fmt.Sprintf("%v", r[c])) 
+		}
+		data = append(data, row)
+	}
+	return data
 }
 // session is the main manager from Handler
 func (t *AbstractController) session(userId string, superAdmin bool, delete bool) string {

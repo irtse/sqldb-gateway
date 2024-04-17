@@ -1,7 +1,6 @@
 package service
 
 import (
-	"os"
 	"fmt"
 	"errors"
 	"strings"
@@ -218,20 +217,6 @@ func (t *TableInfo) Delete(restriction... string) (tool.Results, error) {
 	if err = t.db.Query("DROP SEQUENCE IF EXISTS sq_" + t.Name); err != nil { return t.DBError(nil, err) }
 	t.Results = append(t.Results, tool.Record{ entities.NAMEATTR : t.Name })
 	return t.Results, err
-}
-
-func (t *TableInfo) Import(filename string, restriction... string) (tool.Results, error) {
-	t.db.ClearFilter()
-	var jsonSource []TableInfo
-	byteValue, _ := os.ReadFile(filename)
-	err := json.Unmarshal([]byte(byteValue), &jsonSource) 
-	if err != nil { return t.DBError(nil, err) }
-	for _, ti := range jsonSource {
-		ti.db = t.db
-		if t.Method == tool.DELETE { ti.Delete() 
-		} else { ti.Create() }
-	}
-	return t.Results, nil
 }
 // Generate templates from a scheme
 type Link struct {

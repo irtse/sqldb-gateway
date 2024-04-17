@@ -124,7 +124,7 @@ func (d *MainService) call(params tool.Params, record tool.Record, method tool.M
 			service = table.TableRow(specializedService)
 			res, err := d.invoke(service, funcName, args...)
 			if err != nil { return res, err }
-			if specializedService != nil && params[tool.RootRawView] != "enable" && !d.IsSuperCall() {
+			if specializedService != nil && params[tool.RootRawView] != "enable" && !d.Super {
 				if dest_id, ok := params[tool.RootDestTableIDParam]; ok {
 					return specializedService.PostTreatment(res, tablename, dest_id), nil
 				}

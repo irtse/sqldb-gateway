@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"errors"
 	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/entities"
@@ -41,8 +42,9 @@ func (l *AuthController) Login() {
 				d := domain.Domain(false, log.(string), false) 
 				params := tool.Params{ tool.RootTableParam : entities.DBNotification.Name, 
 									   tool.RootRowsParam : tool.ReservedParam, 
-									   tool.RootRawView : "enable",}
+									   tool.RootRawView : "enable", }
 				notifs, err := d.PermsSuperCall(params, tool.Record{}, tool.SELECT, "Get")
+				fmt.Printf("NOTF : %v\n", notifs)
 				n := tool.Results{}
 				for _, notif := range notifs {
 					n = append(n, tool.Record{

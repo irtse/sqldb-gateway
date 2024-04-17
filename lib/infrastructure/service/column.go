@@ -1,7 +1,6 @@
 package service
 
 import (
-    "os"
 	"errors"
 	"strings"
 	"encoding/json"
@@ -204,18 +203,4 @@ func (t *TableColumnInfo) Add() (tool.Results, error) {
 
 func (t *TableColumnInfo) Remove() (tool.Results, error) { 
 	return nil, errors.New("not implemented...")
-}
-
-func (t *TableColumnInfo) Import(filename string, restriction... string) (tool.Results, error) {
-	t.db.ClearFilter()
-	var jsonSource []TableColumnInfo
-	byteValue, _ := os.ReadFile(filename)
-	err := json.Unmarshal([]byte(byteValue), &jsonSource)
-	if err != nil { return t.DBError(nil, err) }
-	for _, col := range jsonSource {
-		col.db = t.db
-		if t.Method == tool.DELETE { col.Delete() 
-		} else { col.CreateOrUpdate(restriction...) }
-	}
-	return t.Results, nil
 }

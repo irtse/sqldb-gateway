@@ -100,7 +100,7 @@ var DBUser = TableEntity{
 		 TableColumnEntity{ Name: "email", Type: "varchar(255)", Constraint: "unique", Null : false, Readonly : true },
 		 TableColumnEntity{ Name: "password", Type: "varchar(255)", Null : false, Level: LEVELRESPONSIBLE },
 		 TableColumnEntity{ Name: "token", Type: "varchar(255)", Null : true, Default : "" },
-		 TableColumnEntity{ Name: "super_admin", Type: "boolean", Null : false,  },
+		 TableColumnEntity{ Name: "super_admin", Type: "boolean", Null : true, Default : false },
 	},
 }
 // Note rules : HIERARCHY IS NOT INNER ROLE. HIERARCHY DEFINE MASTER OF AN ENTITY OR A USER. IT'S AN AUTO WATCHER ON USER ASSIGNEE TASK.
@@ -233,6 +233,39 @@ var DBView = TableEntity{
 	},
 }
 
+var DBViewAttribution = TableEntity{
+	Name : RootName("view_attribution"),
+	Label : "view_attribution",
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: RootID(DBView.Name), Type: "integer", ForeignTable : DBView.Name, Null : false, },
+		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable : DBUser.Name, Null : true, },
+		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable : DBEntity.Name, Null : true, },
+	},
+}
+
+var DBFilter = TableEntity{
+	Name : RootName("filter"),
+	Label : "filter",
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: NAMEATTR, Type: "varchar(255)",  Null : false, Constraint: "unique" },
+		TableColumnEntity{ Name: "sql_restriction", Type: "varchar(255)", Null : true, },
+		TableColumnEntity{ Name: "sql_order", Type: "varchar(255)", Null : true, },
+		TableColumnEntity{ Name: "sql_view", Type: "varchar(255)", Null : true, },
+		TableColumnEntity{ Name: "sql_dir", Type: "varchar(255)", Null : true, },
+		TableColumnEntity{ Name: RootID(DBSchema.Name), Type: "integer", ForeignTable : DBSchema.Name, Null : false, },
+	},
+}
+
+var DBFilterAttribution = TableEntity{
+	Name : RootName("filter_attribution"),
+	Label : "filter_attribution",
+	Columns : []TableColumnEntity{
+		TableColumnEntity{ Name: RootID(DBFilter.Name), Type: "integer", ForeignTable : DBFilter.Name, Null : false, },
+		TableColumnEntity{ Name: RootID(DBUser.Name), Type: "integer", ForeignTable : DBUser.Name, Null : true, },
+		TableColumnEntity{ Name: RootID(DBEntity.Name), Type: "integer", ForeignTable : DBEntity.Name, Null : true, },
+	},
+}
+
 var DBNotification = TableEntity{
 	Name : RootName("notification"),
 	Label : "notification",
@@ -256,10 +289,10 @@ var DBDataAccess = TableEntity{
 	},
 }
 
-var AllPERMISSIONEXCEPTION = []TableEntity{ DBNotification }
+var AllPERMISSIONEXCEPTION = []TableEntity{ DBNotification, DBViewAttribution, DBFilter, DBFilterAttribution }
 var POSTPERMISSIONEXCEPTION = []TableEntity{ DBRequest }
 var PUPERMISSIONEXCEPTION = []TableEntity{ DBTask }
 var PERMISSIONEXCEPTION = []TableEntity{ DBView, DBTask, DBRequest, DBWorkflow } // override permission checkup
 var ROOTTABLES = []TableEntity{ DBSchema, DBSchemaField, DBUser, DBPermission, DBEntity, 
 	DBRole, DBView, DBDataAccess, DBNotification, DBEntityUser, DBRoleAttribution, DBWorkflow, 
-	DBRequest, DBTask, DBWorkflowSchema, DBRolePermission, DBHierarchy, }
+	DBRequest, DBTask, DBWorkflowSchema, DBRolePermission, DBHierarchy, DBViewAttribution, DBFilter, DBFilterAttribution }

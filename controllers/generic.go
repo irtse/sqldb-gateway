@@ -71,12 +71,12 @@ func (t *GenericController) Count() { t.SafeCall(tool.SELECT, "Count") }
 // @Param	table			path 	string	true		"Name of the table"
 // @Success 200 {string} success !
 // @Failure 403 no table
-// @router /:table/import/:filename [post]
-func (t *GenericController) Importated() { t.SafeCall(tool.CREATE, "Import", t.GetString(":filename")) }
+// @router /:table/import/:format [post]
+func (t *GenericController) Importated() { t.SafeCall(tool.CREATE, "Import", t.GetString(":format")) }
 // @Title Delete by Import
 // @Description delete Import
 // @Param	table path 	string true "Name of the table"
 // @Success 200 {string} success !
 // @Failure 403 no table
-// @router /:table/import/:filename [delete]
-func (t *GenericController) NotImportated() { t.SafeCall(tool.DELETE, "Import", t.GetString(":filename")) }
+// @router /:table/import/:format [delete]
+func (t *GenericController) NotImportated() { t.SafeCall(tool.DELETE, "Import", t.GetString(":format")) }

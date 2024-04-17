@@ -1,11 +1,9 @@
 package service
 
 import (
-	"os"
 	"fmt"
 	"strings"
 	"errors"
-	"encoding/json"
 	tool "sqldb-ws/lib"
 	_ "github.com/go-sql-driver/mysql"
 	"sqldb-ws/lib/entities"
@@ -200,19 +198,6 @@ func (t *TableRowInfo) Delete(restriction... string) (tool.Results, error) {
 	if err != nil { return t.DBError(nil, err) }
 	if t.SpecializedService != nil {
 		t.SpecializedService.DeleteRowAutomation(t.Results, t.Table.Name)
-	}
-	return t.Results, nil
-}
-
-func (t *TableRowInfo) Import(filename string, restriction... string) (tool.Results, error)  {
-	var jsonSource []TableRowInfo
-	byteValue, _ := os.ReadFile(filename)
-	err := json.Unmarshal([]byte(byteValue), &jsonSource)
-	if err != nil { return t.DBError(nil, err) }
-	for _, row := range jsonSource {
-		row.db = t.db
-		if t.Method == tool.DELETE { row.Delete(restriction...) 
-		} else { row.Create() }
 	}
 	return t.Results, nil
 }

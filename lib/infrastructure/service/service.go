@@ -2,7 +2,6 @@ package service
 
 import (
 	"os"
-	"encoding/json"
 	"html/template"
 	tool "sqldb-ws/lib"
 	"github.com/rs/zerolog/log"
@@ -38,14 +37,6 @@ func (service *InfraService) Fill(name string, admin bool, user string, params t
 	service.Params = params
 	service.User = user
 	service.SuperAdmin = admin
-}
-// Common Service action of saving (TO USE)
-func (service *InfraService) Save(restriction... string) error {
-	res, err := service.Get(restriction...)
-	if err != nil { return err  }
-	file, err := json.MarshalIndent(res, "", " ")
-	if err != nil { return err }
-	return os.WriteFile(service.Name, file, 0644)
 }
 // Common Service action of generation by template (TO USE)
 func (service *InfraService) GenerateFromTemplate(templateName string) error {

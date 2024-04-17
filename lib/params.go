@@ -11,6 +11,8 @@ const RootColumnsParam = "columns"
 const RootOrderParam = "orderby" 
 const RootDirParam = "dir"
 const RootRawView = "rawview"
+const RootExport = "export"
+const RootFilename = "filename"
 const RootShallow = "shallow"
 const RootSuperCall = "super"
 const RootDestTableIDParam = "dest_table_id" 
@@ -27,7 +29,7 @@ var RootParamsDesc = map[string]string{
 	RootRawView : "set 'enable' to activate a response without the main response format",
 }
 var HiddenParams = []string{RootDestTableIDParam}
-var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset, RootShallow, RootRawView, RootSuperCall, SpecialIDParam}
+var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset, RootShallow, RootRawView, RootExport, RootFilename, RootSuperCall, SpecialIDParam}
 
 const SpecialIDParam = "id" 
 const SpecialSubIDParam = "subid" 
