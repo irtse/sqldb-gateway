@@ -7,9 +7,8 @@ import (
 	"strings"
 	"reflect"
 	"encoding/json"
-	tool "sqldb-ws/lib"
-
 	"github.com/ghodss/yaml"
+	utils "sqldb-ws/lib/domain/utils"
 	beego "github.com/beego/beego/v2/server/web"
 )
 
@@ -45,7 +44,7 @@ func (d *Docs) generateDocsOnRun() map[string]interface{} {
 			parameters := []string{}
             queries := []string{}
 			if strings.Contains(strings.ToLower(key), "generic") { 
-				queries = append(queries, tool.RootParams...) 
+				queries = append(queries, utils.RootParams...) 
 			}
             paths := strings.Split(entry.Router, "/")
 			tag := ""
@@ -89,7 +88,7 @@ func (d *Docs) generateDocsOnRun() map[string]interface{} {
 						"description": "(Optionnal) Value of " + query,
 						"type": "string",
 					}
-					if desc, ok := tool.RootParamsDesc[query]; ok {
+					if desc, ok := utils.RootParamsDesc[query]; ok {
 						sets["description"]=desc
 					}
 					pars= append(pars, sets)

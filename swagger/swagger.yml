@@ -132,6 +132,14 @@ paths:
         in: query
         name: filename
         type: string
+      - description: set filter identifier to activate a specific restrictive filter
+        in: query
+        name: filter
+        type: string
+      - description: set view filter identifier to activate a specific view filter
+        in: query
+        name: view_filter
+        type: string
       - description: (Optionnal) Value of super
         in: query
         name: super
@@ -207,6 +215,14 @@ paths:
         in: query
         name: filename
         type: string
+      - description: set filter identifier to activate a specific restrictive filter
+        in: query
+        name: filter
+        type: string
+      - description: set view filter identifier to activate a specific view filter
+        in: query
+        name: view_filter
+        type: string
       - description: (Optionnal) Value of super
         in: query
         name: super
@@ -281,6 +297,14 @@ paths:
       - description: (Optionnal) Value of filename
         in: query
         name: filename
+        type: string
+      - description: set filter identifier to activate a specific restrictive filter
+        in: query
+        name: filter
+        type: string
+      - description: set view filter identifier to activate a specific view filter
+        in: query
+        name: view_filter
         type: string
       - description: (Optionnal) Value of super
         in: query
@@ -363,6 +387,14 @@ paths:
         in: query
         name: filename
         type: string
+      - description: set filter identifier to activate a specific restrictive filter
+        in: query
+        name: filter
+        type: string
+      - description: set view filter identifier to activate a specific view filter
+        in: query
+        name: view_filter
+        type: string
       - description: (Optionnal) Value of super
         in: query
         name: super
@@ -444,6 +476,14 @@ paths:
       - description: (Optionnal) Value of filename
         in: query
         name: filename
+        type: string
+      - description: set filter identifier to activate a specific restrictive filter
+        in: query
+        name: filter
+        type: string
+      - description: set view filter identifier to activate a specific view filter
+        in: query
+        name: view_filter
         type: string
       - description: (Optionnal) Value of super
         in: query

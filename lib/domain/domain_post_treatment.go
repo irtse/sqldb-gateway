@@ -6,54 +6,31 @@ import (
 	"slices"
 	"strings"
 	"strconv"
-	"encoding/json"
-	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/entities"
 	"runtime"
+	"sqldb-ws/lib/domain/utils"
+	schserv "sqldb-ws/lib/domain/schema"
 )
 
-type View struct {
-	Name  		 	string 						`json:"name"`
-	SchemaID		int64						`json:"schema_id"`
-	SchemaName   	string 						`json:"schema_name"`
-	Description  	string 						`json:"description"`
-	Path		 	string 						`json:"link_path"`
-	Order		 	[]string 					`json:"order"`
-	Schema		 	tool.Record 				`json:"schema"`
-	Items		 	[]tool.Record 				`json:"items"`
-	Actions		 	[]map[string]interface{} 	`json:"actions"`
-}
-
-type ViewItem struct {
-	Path 	   	   string					 	`json:"link_path"`
-	Values 	   	   map[string]interface{} 	    `json:"values"`
-	DataPaths  	   string				        `json:"data_path"`
-	ValueShallow   map[string]interface{}		`json:"values_shallow"`
-	ValueMany      map[string]tool.Results		`json:"values_many"`
-	ValuePathMany  map[string]string			`json:"values_path_many"`
-	Workflow  	   map[string]interface{}		`json:"workflow"`
-}
-
-func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Results {
-	// retrive all fields from schema...
-	var view View
+func (d *MainService) PostTreat(results utils.Results, tableName string, isWorflow bool) utils.Results {
+	// retrieve all fields from schema...
+	schema, err := schserv.GetSchema(tableName)
+	if ids, ok := d.Params[utils.SpecialIDParam]; (ok || d.Method != utils.SELECT) && err == nil { 
+		d.NewDataAccess(schema.ID, strings.Split(ids, ","), d.Method) }
 	if !d.IsShallowed() {
-		schemes, id, order, cols, addAction := d.GetScheme(tableName, false) 
-		if ids, ok := d.Params[tool.SpecialIDParam]; ok { d.DataAccess(id, strings.Split(ids, ","), false) }
-		view = View{ Name : tableName, 
-					 Description : tableName + " datas",  
-					 Path : "", 
-					 Schema : schemes, 
-					 Order : order,
-					 SchemaID: id,
-					 SchemaName: tableName, 
-					 Actions : []map[string]interface{}{},  Items : []tool.Record{} }	
-		res := tool.Results{} 
-		runtime.GOMAXPROCS(5)
-		channel := make(chan tool.Record, len(results))
-		defer close(channel)
+		schemes, id, order, cols, addAction, readonly := d.GetViewFields(tableName, false) 
+		view := schserv.ViewModel{ ID: id, Name : tableName, Label : tableName, Description : tableName + " datas", Schema : schemes,
+			SchemaID: id, SchemaName: tableName, ActionPath : d.BuildPath(tableName, utils.ReservedParam), Readonly : readonly,
+			Order : order, Actions : addAction,  Items : []schserv.ViewItemModel{} }
 		maxConcurrent := 5
-		resResults := []tool.Results{} 
+		runtime.GOMAXPROCS(maxConcurrent)
+		channel := make(chan schserv.ViewItemModel, len(results))
+		defer close(channel)
+		defer func() {
+			if err := recover(); err != nil {
+				fmt.Printf("panic occurred: %v\n", err)
+			}
+		}()
+		resResults := []utils.Results{} 
 		index := 0
 		for index < len(results) {
 			resResults = append(resResults, results[index:min(index + maxConcurrent, len(results))])
@@ -61,247 +38,179 @@ func (d *MainService) PostTreat(results tool.Results, tableName string) tool.Res
 		}
 		count := 0
 		for _, res := range resResults {
-			for i, record := range res { go d.PostTreatRecord(i + count, channel, record, tableName, cols, d.Empty) }
+			for i, record := range res { go d.PostTreatRecord(i + count, channel, record, tableName, cols, d.Empty, isWorflow) }
 			for range res { 
 				rec := <-channel
-				if rec == nil { continue }
-				view.Items = append(view.Items, rec) 			
+				if !rec.IsEmpty { view.Items = append(view.Items, rec) }			
 			}
 			count += len(res)
 		}
-		sort.SliceStable(view.Items, func(i, j int) bool {
-			return view.Items[i]["sort"].(int) < view.Items[j]["sort"].(int)
-		})
-		for _, item := range view.Items { delete(item, "sort") }
-		r := tool.Record{}
-		b, _ := json.Marshal(view)
-		json.Unmarshal(b, &r)
-		r["action_path"] = "/" + tool.MAIN_PREFIX + "/" + tableName + "?rows=" + tool.ReservedParam
-		r["actions"]=[]string{}
-		for _, meth := range []tool.Method{ tool.SELECT, tool.CREATE, tool.UPDATE, tool.DELETE } {
-			if d.Empty && meth != tool.CREATE { continue }
-			if d.PermsCheck(tableName, "", "", meth) || slices.Contains(addAction, meth.Method()) { 
-				r["actions"]=append(r["actions"].([]string), meth.Method())
-			} else if meth == tool.UPDATE { r["readonly"] = true }
-		} 
-		res = append(res, r)
-		return res
+		sort.SliceStable(view.Items, func(i, j int) bool { return view.Items[i].Sort < view.Items[j].Sort })
+		return utils.Results{ view.ToRecord() } 
 	} else { 
-		res := tool.Results{}
+		res := utils.Results{}
 		for _, record := range results {
-			if n, ok := record[entities.NAMEATTR]; ok {
-				label := fmt.Sprintf("%v", n)
-				if l, ok2 := record["label"]; ok2 { label = fmt.Sprintf("%v", l) }
-				if record[entities.RootID(entities.DBSchema.Name)] != nil { // SCHEMA ? 
-					schemas, err := d.Schema(record, true)
-					actionPath := "/" + tool.MAIN_PREFIX + "/" + tableName + "?rows=" + tool.ReservedParam
-					actions := []string{}
-					readonly := false
-					if err == nil || len(schemas) > 0 { 
-						schema, id, order,  _, addAction := d.GetScheme(schemas[0].GetString(entities.NAMEATTR), false)
-						for _, meth := range []tool.Method{ tool.SELECT, tool.CREATE, tool.UPDATE, tool.DELETE } {
-							if d.PermsCheck(schemas[0].GetString(entities.NAMEATTR), "", "", meth) || slices.Contains(addAction, meth.Method()) { 
-								actions=append(actions, meth.Method())
-							} else if meth == tool.UPDATE { readonly = true 
-							} else if meth == tool.CREATE && d.Empty { readonly = true }
-						} 
-						res = append(res, tool.Record{ 
-							tool.SpecialIDParam : record[tool.SpecialIDParam],
-							entities.NAMEATTR : n,
-							"label": label, 
-							"order" : order,
-							"schema_id" : id,
-							"actions" : actions,
-							"action_path" : actionPath,
-							"readonly" : readonly,
-							"workflow" : d.GetWorkFlow(record, tableName),
-							"link_path" : "/" + tool.MAIN_PREFIX + "/" + schemas[0].GetString(entities.NAMEATTR) + "?rows=" + tool.ReservedParam,
-							"schema_name" : schemas[0].GetString(entities.NAMEATTR),
-							"schema" : schema, })	
-						continue
-					}	
-				}
-				res = append(res, tool.Record{ 
-					tool.SpecialIDParam : record[tool.SpecialIDParam],
-					entities.NAMEATTR : n, 
-					"label": label,
-					"workflow" : d.GetWorkFlow(record, tableName),
-				})	
-			} else { res = append(res, record) }
+			if record.GetString(schserv.NAMEKEY) == "" { res = append(res, record); continue }
+			label := record.GetString(schserv.NAMEKEY)
+			if record.GetString(schserv.LABELKEY) == "" { label = record.GetString(schserv.LABELKEY) }
+			if record[schserv.RootID(schserv.DBSchema.Name)] != nil { // SCHEMA ? 
+				sch, err := schserv.GetSchemaByID(record.GetInt(schserv.RootID(schserv.DBSchema.Name)))
+				if err != nil { continue }
+				schema, id, order,  _, addAction, readonly := d.GetViewFields(sch.Name, false)
+				res = append(res, schserv.ViewModel{ ID: record.GetInt(utils.SpecialIDParam), 
+					Name : record.GetString(schserv.NAMEKEY), Label : label, Description : tableName + " shallowed datas",  
+					Path: d.BuildPath(sch.Name, utils.ReservedParam),
+					Schema : schema, SchemaID: id, SchemaName: tableName, Actions : addAction,
+					ActionPath : d.BuildPath(sch.Name, utils.ReservedParam), Readonly : readonly,
+					Order : order, Workflow: d.BuildWorkFlow(record, tableName, isWorflow) }.ToRecord())
+			} else { res = append(res, schserv.ViewModel{ ID: record.GetInt(utils.SpecialIDParam), Name : record.GetString(schserv.NAMEKEY), Label : label, 
+														  Workflow : d.BuildWorkFlow(record, tableName, isWorflow) }.ToRecord()) }
 		}
 		return res
 	} 
 	return results
 }
 
-func (d *MainService) GetWorkFlow(record tool.Record, tableName string) tool.Record {
-	id := ""; requestID := ""
-	nexts := []string{}
-	workflow := tool.Record{}
-	if tableName == entities.DBWorkflow.Name { id = record.GetString(tool.SpecialIDParam)
-	} else if tableName == entities.DBRequest.Name {
-		id = record.GetString(entities.RootID(entities.DBWorkflow.Name))
-		requestID = record.GetString(tool.SpecialIDParam)
-		workflow["is_dismiss"]=record.GetString("state") == "dismiss"
-		workflow["current"] = record.GetString("current_index")
-		workflow["is_close"]=record.GetString("state") == "completed" || record.GetString("state") == "dismiss"
-	} else if tableName == entities.DBTask.Name {
-		params := tool.Params {
-			tool.RootTableParam : entities.DBTask.Name,
-			tool.RootRowsParam : record.GetString(tool.SpecialIDParam),
+func (d *MainService) PostTreatRecord(index int, channel chan schserv.ViewItemModel, record utils.Record, tableName string, cols map[string]schserv.FieldModel, shallow bool, isWorkflow bool) {
+		vals := map[string]interface{}{}; shallowVals := map[string]interface{}{}; manyPathVals := map[string]string{}; manyVals := map[string]utils.Results{}
+		datapath := ""; historyPath := ""
+		if !shallow { 
+			schema, err := schserv.GetSchema(tableName)
+			if err == nil {
+				historyPath = d.BuildPath(schserv.DBDataAccess.Name, utils.ReservedParam, utils.RootOrderParam + "=access_date", 
+					utils.RootDirParam + "=asc", utils.RootDestTableIDParam + "=" + record.GetString(utils.SpecialIDParam), 
+					schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
+			}
+			vals[utils.SpecialIDParam]=record.GetString(utils.SpecialIDParam) 
 		}
-		t, _ := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-		if len(t) > 0 && t[0]["nexts"] != "all" && t[0]["nexts"] != "" && t[0]["nexts"] != nil { nexts = strings.Split(t[0].GetString("nexts"), ",") }
-		requestID = record.GetString(entities.RootID(entities.DBRequest.Name))
-		workflow["current_dismiss"]=record["state"] == "dismiss"
-		workflow["current_close"]=record["state"] == "completed" && record["state"] == "dismiss"
-		params = tool.Params {
-			tool.RootTableParam : entities.DBWorkflowSchema.Name,
-			tool.RootRowsParam : record.GetString(entities.RootID(entities.DBWorkflowSchema.Name)),
-		}
-		schemes, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-		if err != nil || len(schemes) == 0 { return nil }
-		workflow["current"] = schemes[0].GetString("index")
-		id = fmt.Sprintf("%v", schemes[0][entities.RootID(entities.DBWorkflow.Name)])
-	} else { return nil }	
-	if id == "" { return nil }
-	params := tool.Params {
-		tool.RootTableParam : entities.DBWorkflowSchema.Name,
-		tool.RootRowsParam : tool.ReservedParam,
-		entities.RootID(entities.DBWorkflow.Name) : id,
-	}
-	steps, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-	if err == nil && len(steps) > 0 {	
-		newSteps := map[int][]tool.Record{}
-		for _, step := range steps {
-			index := step.GetInt("index")
-			if workflow["current"] != "" && workflow["current"] == step.GetString("index") && tableName == entities.DBTask.Name { 
-				params := tool.Params {
-					tool.RootTableParam : entities.DBWorkflowSchema.Name,
-					tool.RootRowsParam : record.GetString(entities.RootID(entities.DBWorkflowSchema.Name)),
-				}
-				ownSteps, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-				if err == nil && len(ownSteps) > 0 {
-					if hub, ok2 := ownSteps[0]["hub"]; ok2 { workflow["current_hub"]=hub.(bool) }
-				}
-			}
-			if _, ok := newSteps[index]; !ok { newSteps[index] = []tool.Record{} }
-			newStep := tool.Record{
-				tool.SpecialIDParam : step.GetString(tool.SpecialIDParam),
-				entities.NAMEATTR : step.GetString(entities.NAMEATTR),
-				"optionnal" : step["optionnal"],
-			}
-			newStep["is_set"]= !step["optionnal"].(bool) || slices.Contains(nexts, step.GetString("wrapped_" + entities.RootID(entities.DBWorkflow.Name)))
-			if workflow["current"] != "" {
-				params = tool.Params {
-					tool.RootTableParam : entities.DBTask.Name,
-					tool.RootRowsParam : tool.ReservedParam,
-					entities.RootID(entities.DBWorkflowSchema.Name) : step.GetString(tool.SpecialIDParam),
-					entities.RootID(entities.DBRequest.Name) : requestID,
-				}
-				tasks, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-				if err == nil && len(tasks) > 0 {
-					newStep["is_close"]=tasks[0]["is_close"]
-					newStep["is_current"]=tasks[0]["state"] == "pending"
-					newStep["is_dismiss"]=tasks[0]["is_dismiss"] == "dismiss"
-				}
-			}
-			if wrapped, ok := step["wrapped_" + entities.RootID(entities.DBWorkflow.Name)]; ok { 
-				newStep["workflow"] = d.GetWorkFlow(tool.Record{tool.SpecialIDParam : wrapped}, entities.DBWorkflow.Name)
-			}
-			newSteps[index] = append(newSteps[index], newStep)
-		}
-		workflow["id"]=id
-		workflow["steps"] = newSteps
-		return workflow
-	} else { return tool.Record{ "steps" : map[string]interface{}{}, } }
-}
-
-func (d *MainService) PostTreatRecord(index int, channel chan tool.Record, record tool.Record, tableName string,  cols map[string]entities.SchemaColumnEntity, shallow bool) {
-		vals := map[string]interface{}{}
-		shallowVals := map[string]interface{}{}
-		manyPathVals := map[string]string{}
-		manyVals := map[string]tool.Results{}
-		datapath := ""
-		if !shallow { vals[tool.SpecialIDParam]=fmt.Sprintf("%v", record[tool.SpecialIDParam]) }
 		for _, field := range cols {
-			if strings.Contains(field.Name, entities.DBSchema.Name) { 
-				dest, ok := record[entities.RootID("dest_table")]
+			if strings.Contains(field.Name, schserv.DBSchema.Name) { 
+				dest, ok := record[schserv.RootID("dest_table")]
 				id, ok2 := record[field.Name]
-				if ok2 && ok && dest != nil && id != nil {
-					schemas, err := d.Schema(tool.Record{ entities.RootID(entities.DBSchema.Name) : id }, true)
-					if err != nil || len(schemas) == 0 { continue }
-					if dest != nil {
-						datapath=d.BuildPath(fmt.Sprintf("%v",schemas[0][entities.NAMEATTR]), fmt.Sprintf("%v", dest))
-						params := tool.Params{ tool.RootTableParam : fmt.Sprintf("%v",schemas[0][entities.NAMEATTR]), tool.RootRowsParam: fmt.Sprintf("%v", dest), tool.RootShallow : "enable" }
-						if _, ok := d.Params[entities.RootID("dest_table")]; ok {
-							if _, err := strconv.Atoi(strings.Replace(strings.Replace(fmt.Sprintf("%v", d.Params[entities.RootID("dest_table")]), "%25", "", -1), "%", "", -1)); err == nil {
-								params[tool.SpecialIDParam] = d.Params[entities.RootID("dest_table")]
-							} else { params[entities.NAMEATTR] = d.Params[entities.RootID("dest_table")] }
+				if !ok2 && !ok && dest != nil && id != nil {
+					schema, err := schserv.GetSchemaByID(record.GetInt(field.Name))
+					if dest != nil && err == nil {
+						datapath=d.BuildPath(schema.Name, fmt.Sprintf("%v", dest))
+						params := utils.Params{ utils.RootTableParam : schema.Name, utils.RootRowsParam: fmt.Sprintf("%v", dest), utils.RootShallow : "enable" }
+						if _, ok := d.Params[schserv.RootID("dest_table")]; ok {
+							if _, err := strconv.Atoi(strings.Replace(strings.Replace(fmt.Sprintf("%v", d.Params[schserv.RootID("dest_table")]), "%25", "", -1), "%", "", -1)); err == nil {
+								params[utils.SpecialIDParam] = d.Params[schserv.RootID("dest_table")]
+							} else { params[schserv.NAMEKEY] = d.Params[schserv.RootID("dest_table")] }
 						}
-						r, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-						if _, ok := d.Params[entities.RootID("dest_table")]; ok && (err != nil || len(r) == 0) { 
-							channel <- nil
-							return 
+						r, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
+						if _, ok := d.Params[schserv.RootID("dest_table")]; ok && (err != nil || len(r) == 0) { 
+							channel <- schserv.ViewItemModel{ IsEmpty: true }; return 
 						}
 						if err != nil || len(r) == 0 { continue }
-						ids, _ := strconv.Atoi(fmt.Sprintf("%v",r[0][tool.SpecialIDParam]))
-						shallowVals["db" + tool.RootDestTableIDParam]=tool.Record{ 
+						ids, _ := strconv.Atoi(fmt.Sprintf("%v",r[0][utils.SpecialIDParam]))
+						shallowVals["db" + utils.RootDestTableIDParam]=utils.Record{ 
 							"id": ids,
-							"name" : fmt.Sprintf("%v",r[0][entities.NAMEATTR]),
+							"name" : fmt.Sprintf("%v",r[0][schserv.NAMEKEY]),
 						}
 					}
 				}
-			}
-			if f, ok:= record[field.Name]; ok && field.Link != "" && f != nil && !shallow && !strings.Contains(field.Type, "many") { 
-				params := tool.Params{ tool.RootTableParam : field.Link, tool.RootRowsParam: fmt.Sprintf("%v", f), tool.RootShallow : "enable" }
-				r, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-				if err != nil || len(r) == 0 { continue }
-				shallowVals[field.Name]=r[0]
 				continue
 			}
-			
-			if field.Link != "" && !shallow && !d.LowerRes && strings.Contains(field.Type, "manytomany") { 
-				params := tool.Params{ tool.RootTableParam : field.Link, tool.RootRowsParam: tool.ReservedParam, tool.RootShallow : "enable",
-									   entities.RootID(tableName) : record.GetString(tool.SpecialIDParam), }
-				r, err := d.Call( params, tool.Record{}, tool.SELECT, "Get")
+			if record.GetString(field.Name) != "" && field.Link > 0 && !shallow { 
+				link := schserv.GetTablename(fmt.Sprintf("%v", field.Link))
+				params := utils.Params{ utils.RootTableParam : link, utils.RootRowsParam: record.GetString(field.Name), utils.RootShallow : "enable" }
+				if strings.Contains(field.Type, "MANY") {
+					params[utils.RootRowsParam] = utils.ReservedParam
+					params[schserv.RootID(tableName)] = record.GetString(utils.SpecialIDParam)
+				}
+				r, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
 				if err != nil || len(r) == 0 { continue }
-				ids := []string{}
-				for _, r2 := range r {
-					for field2, _ := range r2 {
-						if !strings.Contains(field2, tableName) && field2 != "id" && strings.Contains(field2, "_id") {
-							if !slices.Contains(ids, strings.Replace(field2, "_id", "", -1)) {
-								ids = append(ids, strings.Replace(field2, "_id", "", -1))
-							}
+				if !strings.Contains(field.Type, "MANY")  { shallowVals[field.Name]=r[0]; continue 
+				} else if field.Type == schserv.MANYTOMANY.String() && !d.LowerRes {
+					for _, r2 := range r {
+						for field2, _ := range r2 {
+							if strings.Contains(field2, tableName) || field2 != "id" || !strings.Contains(field2, "_id") { continue }
+							id := strings.Replace(field2, "_id", "", -1)
+							params[utils.RootTableParam] = id
+							sqlFilter := "id IN (SELECT " + id + "_id FROM " + link + " WHERE " + schserv.RootID(tableName) + " = " + record.GetString(utils.SpecialIDParam) + " )"
+							r, err = d.Call( params, utils.Record{}, utils.SELECT, sqlFilter)
+							if err != nil || len(r) == 0 { continue }
+							if _, ok := manyVals[field.Name]; !ok { manyVals[field.Name] = utils.Results{} }
+							manyVals[field.Name]= append(manyVals[field.Name], r...)
 						}
 					}
+					continue	
+				} else if field.Type == schserv.ONETOMANY.String() && !d.LowerRes {
+					manyPathVals[field.Name] = d.BuildPath(link, utils.ReservedParam, schserv.RootID(tableName) + "=" + record.GetString(utils.SpecialIDParam))
+					continue
 				}
-				for _, id := range ids {
-					params = tool.Params{ tool.RootTableParam : id, tool.RootRowsParam: tool.ReservedParam, 
-						                  tool.RootShallow : "enable", tableName + "_id": record.GetString(tool.SpecialIDParam) }
-					sqlFilter := "id IN (SELECT " + id + "_id FROM " + field.Link + " WHERE " + tableName + "_id = " + record.GetString(tool.SpecialIDParam) + " )"
-					r, err = d.Call( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
-					if err != nil || len(r) == 0 { continue }
-					if _, ok := manyVals[field.Name]; !ok { manyVals[field.Name] = tool.Results{} }
-					manyVals[field.Name]= append(manyVals[field.Name], r...)
-				}
-				continue
-			}
-			if field.Link != "" && !shallow && strings.Contains(field.Type, "onetomany") && !d.LowerRes { 
-				manyPathVals[field.Name] = "/" + tool.MAIN_PREFIX + "/" + field.Link + "?" + tool.RootRowsParam + "=" + tool.ReservedParam + "&" + tableName + "_id=" + record.GetString(tool.SpecialIDParam)
-				continue
 			}
 			if shallow { vals[field.Name]=nil } else if v, ok:=record[field.Name]; ok { vals[field.Name]=v }
 		}
-		view := ViewItem{ Values : vals, Path : "", 
-			DataPaths :  datapath, ValueShallow : shallowVals, 
-			ValueMany: manyVals, ValuePathMany: manyPathVals,
-			Workflow : d.GetWorkFlow(record, tableName), }
-		var newRec tool.Record
-		b, _ := json.Marshal(view)
-		json.Unmarshal(b, &newRec)
-		newRec["sort"]=index
-		channel <- newRec
+		channel <- schserv.ViewItemModel{ Values : vals,  DataPaths :  datapath, ValueShallow : shallowVals, Sort: int64(index),
+			HistoryPath : historyPath, ValueMany: manyVals, ValuePathMany: manyPathVals, Workflow : d.BuildWorkFlow(record, tableName, isWorkflow), }
 }
 
+func (d *MainService) BuildWorkFlow(record utils.Record, tableName string, isWorflow bool) *schserv.WorkflowModel {
+	var workflow schserv.WorkflowModel
+	if !isWorflow{ return nil  }
+	id := ""; requestID := ""; nexts := []string{}
+	if tableName == schserv.DBWorkflow.Name { id = record.GetString(utils.SpecialIDParam)
+	} else if tableName == schserv.DBRequest.Name { // TODO AS SPECIALIZED
+		id = record.GetString(schserv.RootID(schserv.DBWorkflow.Name))
+		requestID = record.GetString(utils.SpecialIDParam)
+		workflow = schserv.WorkflowModel{ IsDismiss : record.GetString("state") == "dismiss", Current : record.GetString("current_index"), 
+			IsClose : record.GetString("state") == "completed" || record.GetString("state") == "dismiss" }
+	} else if tableName == schserv.DBTask.Name {
+		params := utils.Params { utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : record.GetString(utils.SpecialIDParam), }
+		t, _ := d.SuperCall( params, utils.Record{}, utils.SELECT)
+		if len(t) > 0 && t[0]["nexts"] != "all" && t[0]["nexts"] != "" && t[0]["nexts"] != nil { nexts = strings.Split(t[0].GetString("nexts"), ",") }
+		requestID = record.GetString(schserv.RootID(schserv.DBRequest.Name))
+		workflow = schserv.WorkflowModel{ CurrentDismiss : record["state"] == "dismiss", CurrentClose : record["state"] == "completed" || record["state"] == "dismiss" }
+		params = utils.Params { utils.RootTableParam : schserv.DBWorkflowSchema.Name,
+			utils.RootRowsParam : record.GetString(schserv.RootID(schserv.DBWorkflowSchema.Name)), }
+		schemes, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
+		if err != nil || len(schemes) == 0 { return nil }
+		workflow.Current = schemes[0].GetString("index")
+		id = fmt.Sprintf("%v", schemes[0][schserv.RootID(schserv.DBWorkflow.Name)])
+	} else { return nil }
 
+	if id == "" { return nil }
+	params := utils.Params {
+		utils.RootTableParam : schserv.DBWorkflowSchema.Name,
+		utils.RootRowsParam : utils.ReservedParam,
+		schserv.RootID(schserv.DBWorkflow.Name) : id,
+	}
+	steps, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
+	if err == nil && len(steps) > 0 {	
+		newSteps := map[string][]schserv.WorkflowStepModel{}
+		for _, step := range steps {
+			index := step.GetString("index")
+			if workflow.Current != "" && workflow.Current == step.GetString("index") && tableName == schserv.DBTask.Name { 
+				params := utils.Params { utils.RootTableParam : schserv.DBWorkflowSchema.Name,
+					utils.RootRowsParam : record.GetString(schserv.RootID(schserv.DBWorkflowSchema.Name)), }
+				ownSteps, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
+				if hub, ok2 := ownSteps[0]["hub"]; ok2 && err == nil && len(ownSteps) > 0 { workflow.CurrentHub=hub.(bool) }
+			}
+			if _, ok := newSteps[index]; !ok { newSteps[index] = []schserv.WorkflowStepModel{} }
+			newStep := schserv.WorkflowStepModel{ 
+				ID : step.GetInt(utils.SpecialIDParam), Name: step.GetString(schserv.NAMEKEY), Optionnal : step["optionnal"].(bool), 
+				IsSet : !step["optionnal"].(bool) || slices.Contains(nexts, step.GetString("wrapped_" + schserv.RootID(schserv.DBWorkflow.Name))),
+			}
+			if workflow.Current != "" {
+				params = utils.Params { utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : utils.ReservedParam,
+					schserv.RootID(schserv.DBWorkflowSchema.Name) : step.GetString(utils.SpecialIDParam),
+					schserv.RootID(schserv.DBRequest.Name) : requestID,
+				}
+				tasks, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
+				if err == nil && len(tasks) > 0 {
+					newStep.IsClose=tasks[0]["is_close"].(bool)
+					newStep.IsCurrent=tasks[0]["state"] == "pending"
+					newStep.IsDismiss=tasks[0]["is_dismiss"] == "dismiss"
+				}
+			}
+			if wrapped, ok := step["wrapped_" + schserv.RootID(schserv.DBWorkflow.Name)]; ok { 
+				newStep.Workflow = d.BuildWorkFlow(utils.Record{utils.SpecialIDParam : wrapped}, schserv.DBWorkflow.Name, isWorflow)
+			}
+			newSteps[index] = append(newSteps[index], newStep)
+		}
+		workflow.ID=id
+		workflow.Steps = newSteps
+		return &workflow
+	} else { return &schserv.WorkflowModel{ Steps : map[string][]schserv.WorkflowStepModel{}, } }
+}

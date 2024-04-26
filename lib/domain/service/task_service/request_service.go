@@ -3,228 +3,187 @@ package task_service
 import (
 	"fmt"
 	"time"
-	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/entities"
+	utils "sqldb-ws/lib/domain/utils"
+	schserv "sqldb-ws/lib/domain/schema"
 	conn "sqldb-ws/lib/infrastructure/connector"
 )
 
-type RequestService struct { tool.AbstractSpecializedService }
+type RequestService struct { 
+	utils.SpecializedService
+}
 
-func (s *RequestService) Entity() tool.SpecializedServiceInfo { return entities.DBRequest }
-func (s *RequestService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
-	if create { 
+func (s *RequestService) GetHierarchical() (utils.Results, error) {
+	paramsNew := utils.Params{ utils.RootTableParam : schserv.DBHierarchy.Name, utils.RootRowsParam: utils.ReservedParam }
+	sqlFilter := "id IN (SELECT id FROM " + schserv.DBHierarchy.Name + " WHERE "
+	sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IN ("
+	sqlFilter += "SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")"
+	sqlFilter += " OR " + schserv.DBEntity.Name + "_id IN ("
+	sqlFilter += "SELECT " + schserv.DBEntity.Name + "_id FROM "
+	sqlFilter += schserv.DBEntityUser.Name + " WHERE " + schserv.DBUser.Name +"_id IN ("
+	sqlFilter += "SELECT id FROM " + schserv.DBUser.Name + " WHERE "
+	sqlFilter += "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")))"
+	return s.Domain.SuperCall( paramsNew, utils.Record{}, utils.SELECT, sqlFilter )
+}
+
+func (s *RequestService) Entity() utils.SpecializedServiceInfo { return schserv.DBRequest }
+func (s *RequestService) DeleteRowAutomation(results []map[string]interface{}, tableName string) { }
+func (s *RequestService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) { 
+	if s.Domain.GetMethod() == utils.CREATE { 
+		// set up name
 		sqlFilter := "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser())
-		params := tool.Params{ 
-			tool.RootTableParam : entities.DBUser.Name, 
-			tool.RootRowsParam : tool.ReservedParam, 
-		}
-		user, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+		params := utils.Params{ utils.RootTableParam : schserv.DBUser.Name, utils.RootRowsParam : utils.ReservedParam, }
+		user, err := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT, sqlFilter)
 		if err != nil || len(user) == 0 { return record, false, true }
-		record[entities.RootID(entities.DBUser.Name)]=user[0][tool.SpecialIDParam] 
-		paramsNew := tool.Params{ tool.RootTableParam : entities.DBHierarchy.Name, tool.RootRowsParam: tool.ReservedParam }
-		sqlFilter = "id IN (SELECT id FROM " + entities.DBHierarchy.Name + " WHERE "
-		sqlFilter += entities.RootID(entities.DBUser.Name) + " IN ("
-		sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")"
-		sqlFilter += " OR " + entities.DBEntity.Name + "_id IN ("
-		sqlFilter += "SELECT " + entities.DBEntity.Name + "_id FROM "
-		sqlFilter += entities.DBEntityUser.Name + " WHERE " + entities.DBUser.Name +"_id IN ("
-		sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE "
-		sqlFilter += "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")))"
-		hierarchy, err := s.Domain.SuperCall( 
-								paramsNew, 
-								tool.Record{},
-								tool.SELECT,
-								"Get",
-								sqlFilter,
-							)
-		if err != nil || len(hierarchy) > 0 { record["current_index"]=0 
-		} else { record["current_index"]=1 }
-		params = tool.Params{ 
-			tool.RootTableParam : entities.DBWorkflow.Name, 
-			tool.RootRowsParam : tool.ReservedParam, 
-			entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%v", record[entities.RootID(entities.DBWorkflow.Name)]),
-		}
-		wf, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-		if record["name"] == nil { 
-			if err != nil || len(wf) == 0 { record[entities.NAMEATTR]= "Anonymous Request"
-			} else { record["name"]= wf[0].GetString(entities.NAMEATTR) + " Request" }
-		}
-	} else {
+		record[schserv.RootID(schserv.DBUser.Name)]=user[0][utils.SpecialIDParam] 
+		hierarchy, err := s.GetHierarchical()
+		if err != nil || len(hierarchy) > 0 { record["current_index"]=0 } else { record["current_index"]=1 }
+		params = utils.Params{ utils.RootTableParam : schserv.DBWorkflow.Name, 
+			utils.RootRowsParam : utils.GetString(record, schserv.RootID(schserv.DBWorkflow.Name)) }
+		wf, err := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT)
+		if err != nil || len(wf) == 0 { return record, false, false }
+		record["name"]=wf[0][schserv.NAMEKEY]
+		record[schserv.RootID(schserv.DBSchema.Name)]=wf[0][schserv.RootID(schserv.DBSchema.Name)]
+	} else if s.Domain.GetMethod() == utils.UPDATE {
 		if record["state"] == "completed" || record["state"] == "dismiss" { 
 			record["is_close"] = true 
 			record["closing_date"] = time.Now().Format(time.RFC3339)
 		}
 	}
+	if s.Domain.GetMethod() != utils.DELETE {
+		rec, err := s.Domain.ValidateBySchema(record, tablename)
+		if err != nil && !s.Domain.GetAutoload() { return rec, false, false } else { rec = record }
+		return rec, true, true
+	}
 	return record, true, true
 }
-func (s *RequestService) DeleteRowAutomation(results tool.Results, tableName string) { }
-func (s *RequestService) UpdateRowAutomation(results tool.Results, record tool.Record) {
+func (s *RequestService) UpdateRowAutomation(results []map[string]interface{}, record map[string]interface{}) {
 	for _, rec := range results {
 		if rec["state"] == "dismiss" { 
-			params := tool.Params{ tool.RootTableParam : entities.DBTask.Name,
-								   tool.RootRowsParam : tool.ReservedParam,
-								   tool.RootRawView : "enable",
-								   tool.SpecialIDParam : rec.GetString(tool.SpecialIDParam),
-								   entities.RootID(entities.DBRequest.Name) : rec.GetString(tool.SpecialIDParam) }
-			s.Domain.SuperCall( params, tool.Record{ 
-				"state" : "dismiss", 
-				"is_close" : true, 
-				"closing_date" : time.Now().Format(time.RFC3339),
-			}, tool.UPDATE, "CreateOrUpdate")
-			params = tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
-				tool.RootRowsParam : tool.ReservedParam,
-				tool.RootRawView : "enable", }
-			s.Domain.SuperCall( params, tool.Record{ 
-				entities.NAMEATTR : "Rejected " + rec.GetString(entities.NAMEATTR), 
-				"description" : rec.GetString(entities.NAMEATTR) + " is rejected and closed.",
-				entities.RootID(entities.DBUser.Name) : rec[entities.RootID(entities.DBUser.Name)],
-				"link" : entities.DBRequest.Name,
-				entities.RootID("dest_table") : rec[tool.SpecialIDParam], }, tool.CREATE, "CreateOrUpdate")
+			params := utils.Params{ utils.RootTableParam : schserv.DBTask.Name,
+								   utils.RootRowsParam : utils.ReservedParam,
+								   utils.SpecialIDParam : utils.GetString(rec, utils.SpecialIDParam),
+								   schserv.RootID(schserv.DBRequest.Name) : utils.GetString(rec, utils.SpecialIDParam) }
+			s.Domain.SuperCall( params, utils.Record{ "state" : "dismiss", "is_close" : true, 
+				"closing_date" : time.Now().Format(time.RFC3339),}, utils.UPDATE)
+			schema, err := schserv.GetSchema(schserv.DBRequest.Name)
+			if err == nil { 
+				s.Domain.SuperCall( utils.AllParams(schserv.DBNotification.Name), utils.Record{ "link_id" : schema.ID,
+					schserv.NAMEKEY : "Rejected " + utils.GetString(rec, schserv.NAMEKEY), 
+					"description" : utils.GetString(rec, schserv.NAMEKEY) + " is rejected and closed.",
+					schserv.RootID(schserv.DBUser.Name) : rec[schserv.RootID(schserv.DBUser.Name)],
+					schserv.RootID("dest_table") : rec[utils.SpecialIDParam], }, utils.CREATE)
+			}
 		}
 		if rec["state"] == "completed" {
-			params := tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
-				tool.RootRowsParam : tool.ReservedParam,
-				tool.RootRawView : "enable", }
-			s.Domain.SuperCall( params, tool.Record{ 
-				entities.NAMEATTR : "Validated " + rec.GetString(entities.NAMEATTR), 
-				"description" : rec.GetString(entities.NAMEATTR) + " is approved and closed.",
-				entities.RootID(entities.DBUser.Name) : rec[entities.RootID(entities.DBUser.Name)],
-				"link" : entities.DBRequest.Name,
-				entities.RootID("dest_table") : rec[tool.SpecialIDParam], }, tool.CREATE, "CreateOrUpdate")
-		}
-		if rec["is_close"] == true {
-			params := tool.Params{ tool.RootTableParam : entities.DBTask.Name,
-				tool.RootRowsParam : tool.ReservedParam,
-				tool.RootRawView : "enable",
-				"meta_" + entities.RootID(entities.DBRequest.Name) : rec.GetString(tool.SpecialIDParam), }
-			s.Domain.SuperCall( params, tool.Record{ 
-				"state" : rec["state"], 
-				"is_close" : true, 
-				"closing_date" : time.Now().Format(time.RFC3339),
-			}, tool.UPDATE, "CreateOrUpdate")
-		
+			schema, err := schserv.GetSchema(schserv.DBRequest.Name)
+			if err == nil {
+				s.Domain.SuperCall( utils.AllParams(schserv.DBNotification.Name), utils.Record{ "link_id" : schema.ID,
+					schserv.NAMEKEY : "Validated " + utils.GetString(rec, schserv.NAMEKEY), 
+					"description" : utils.GetString(rec, schserv.NAMEKEY) + " is approved and closed.",
+					schserv.RootID(schserv.DBUser.Name) : rec[schserv.RootID(schserv.DBUser.Name)],
+					schserv.RootID("dest_table") : rec[utils.SpecialIDParam], }, utils.CREATE)
+			}
+			params := utils.Params{ utils.RootTableParam : schserv.DBTask.Name,
+				utils.RootRowsParam : utils.ReservedParam,
+				"meta_" + schserv.RootID(schserv.DBRequest.Name) : utils.GetString(rec, utils.SpecialIDParam), }
+			s.Domain.SuperCall( params, utils.Record{ "state" : rec["state"], "is_close" : true, 
+				"closing_date" : time.Now().Format(time.RFC3339), }, utils.UPDATE)
 		}
 	}
 }
 
-func (s *RequestService) WriteRowAutomation(record tool.Record, tableName string) {
+func (s *RequestService) WriteRowAutomation(record map[string]interface{}, tableName string) {
 	if record["current_index"].(int64) == 1 {
-		params := tool.Params{ tool.RootTableParam : entities.DBWorkflowSchema.Name,
-		                       tool.RootRowsParam : tool.ReservedParam,
+		params := utils.Params{ utils.RootTableParam : schserv.DBWorkflowSchema.Name,
+		                       utils.RootRowsParam : utils.ReservedParam,
 							   "index": "1", // lauch workflow
-							   entities.RootID(entities.DBWorkflow.Name) : fmt.Sprintf("%v", record[entities.RootID(entities.DBWorkflow.Name)]) }
-		wfs, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get")
-		if err != nil || len(wfs) == 0 { return }
-		sqlFilter := "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser())
-		params = tool.Params{ tool.RootTableParam : entities.DBUser.Name, 
-							   tool.RootRowsParam : tool.ReservedParam, }
-		user, _ := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
-		newTask := tool.Record{
-			entities.RootID(entities.DBSchema.Name) : wfs[0][entities.RootID(entities.DBSchema.Name)],
-			entities.RootID(entities.DBWorkflowSchema.Name) : wfs[0][tool.SpecialIDParam],
-			entities.RootID(entities.DBRequest.Name) : record[tool.SpecialIDParam],
-			entities.RootID("created_by") : user[0][tool.SpecialIDParam],
-			"description" : wfs[0]["description"],
-			"urgency" : wfs[0]["urgency"],
-			"priority" : wfs[0]["priority"],
-			entities.NAMEATTR : wfs[0][entities.NAMEATTR],
+							   schserv.RootID(schserv.DBWorkflow.Name) : fmt.Sprintf("%v", record[schserv.RootID(schserv.DBWorkflow.Name)]) }
+		wfs, err := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT)
+		if err != nil || len(wfs) == 0 { 
+			params := utils.Params{ utils.RootTableParam : schserv.DBRequest.Name, utils.RootRowsParam : utils.GetString(record, utils.SpecialIDParam), }
+			s.Domain.SuperCall( params, utils.Record{}, utils.DELETE); return 
 		}
-		if fmt.Sprintf("%v", wfs[0][entities.RootID(entities.DBSchema.Name)]) == fmt.Sprintf("%v", record[entities.RootID(entities.DBSchema.Name)]) {
-			newTask[entities.RootID(entities.DBSchema.Name)] = record[entities.RootID(entities.DBSchema.Name)]
-			newTask[entities.RootID("dest_table")] = record[entities.RootID("dest_table")]
-		} else {
-			schemas, err := s.Domain.Schema(tool.Record{ entities.RootID(entities.DBSchema.Name) : wfs[0][entities.RootID(entities.DBSchema.Name)] }, false)
-			if err == nil && len(schemas) > 0 {
-				vals, err := s.Domain.SuperCall( tool.Params{ tool.RootTableParam: schemas[0].GetString(entities.NAMEATTR),
-												 tool.RootRowsParam: tool.ReservedParam, }, tool.Record{}, tool.CREATE, "CreateOrUpdate")
-				if err == nil && len(vals) > 0 {
-					newTask[entities.RootID(entities.DBSchema.Name)] = wfs[0][entities.RootID(entities.DBSchema.Name)]
-					newTask[entities.RootID("dest_table")] = vals[0][tool.ReservedParam]
+		sqlFilter := "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser())
+		user, _ := s.Domain.SuperCall( utils.AllParams(schserv.DBUser.Name), utils.Record{}, utils.SELECT, sqlFilter)
+		for _, newTask := range wfs {
+			newTask[schserv.RootID(schserv.DBWorkflowSchema.Name)] = newTask[utils.SpecialIDParam]
+			delete(newTask, utils.SpecialIDParam)
+			newTask[schserv.RootID(schserv.DBRequest.Name)] = record[utils.SpecialIDParam]
+			newTask[schserv.RootID(schserv.DBUser.Name)] = user[0][utils.SpecialIDParam]
+			if newTask.GetString(schserv.RootID(schserv.DBSchema.Name)) == utils.GetString(record, schserv.RootID(schserv.DBSchema.Name)) {
+				newTask[schserv.RootID(schserv.DBSchema.Name)] = record[schserv.RootID(schserv.DBSchema.Name)]
+				newTask[schserv.RootID("dest_table")] = record[schserv.RootID("dest_table")]
+			} else {
+				schema, err := schserv.GetSchemaByID(newTask.GetInt(schserv.RootID(schserv.DBSchema.Name)))
+				if err == nil {
+					vals, err := s.Domain.SuperCall( utils.Params{ utils.RootTableParam: schema.Name, utils.RootRowsParam: utils.ReservedParam, }, 
+													 utils.Record{}, utils.CREATE)
+					if err == nil && len(vals) > 0 { newTask[schserv.RootID("dest_table")] = vals[0][utils.ReservedParam] }
 				}
 			}
-		}
-		params = tool.Params{ tool.RootTableParam : entities.DBTask.Name, tool.RootRowsParam : tool.ReservedParam, }
-		_, err = s.Domain.SuperCall( params, newTask, tool.CREATE, "CreateOrUpdate")
-		if err == nil {
-			task := tool.Record{ 
-				entities.NAMEATTR : "Task affected : " + newTask.GetString(entities.NAMEATTR), 
-				"description" : "Task is affected to you and must be treated : " + newTask.GetString(entities.NAMEATTR),
-				entities.RootID("created_by") : newTask.GetString(entities.RootID("created_by")),
-				entities.RootID(entities.DBSchema.Name) : newTask.GetString(entities.RootID(entities.DBSchema.Name)),
-				entities.RootID("dest_table") : record[entities.RootID("dest_table")], }
-			if _, ok := wfs[0]["wrapped_" + entities.RootID(entities.DBWorkflow.Name)]; ok { task["is_meta"]= true }
-			s.Domain.SuperCall( params, task, tool.CREATE, "CreateOrUpdate")
-			if id, ok := wfs[0]["wrapped_" + entities.RootID(entities.DBWorkflow.Name)]; ok {
-				params = tool.Params{ tool.RootTableParam : entities.DBRequest.Name, tool.RootRowsParam : tool.ReservedParam, }
-				newMetaRequest := tool.Record{ 
-					entities.RootID(entities.DBWorkflow.Name) : id, 
-					entities.NAMEATTR : "Meta request for " + task.GetString(entities.NAMEATTR) + " task.",
-					"current_index" : 1,
-					"is_meta": true,
-					entities.RootID(entities.DBSchema.Name) : task[entities.RootID(entities.DBSchema.Name)],
-					entities.RootID("dest_table") : task[entities.RootID("dest_table")],
-					entities.RootID("created_by") : task[entities.RootID("created_by")],
+			tasks, err := s.Domain.SuperCall( utils.AllParams(schserv.DBTask.Name), newTask, utils.CREATE)
+			if err == nil {
+				task := utils.Record{ 
+					schserv.NAMEKEY : "Task affected : " + newTask.GetString(schserv.NAMEKEY), 
+					"description" : "Task is affected : " + newTask.GetString(schserv.NAMEKEY),
+					schserv.RootID(schserv.DBUser.Name) : newTask.GetString(schserv.RootID(schserv.DBUser.Name)),
+					schserv.RootID(schserv.DBSchema.Name) : newTask.GetString(schserv.RootID(schserv.DBSchema.Name)),
+					schserv.RootID("dest_table") : record[schserv.RootID("dest_table")], }
+				if _, ok := newTask["wrapped_" + schserv.RootID(schserv.DBWorkflow.Name)]; ok { task["is_meta"]= true }
+				s.Domain.SuperCall( utils.AllParams(schserv.DBTask.Name), task, utils.CREATE)
+				if id, ok := newTask["wrapped_" + schserv.RootID(schserv.DBWorkflow.Name)]; ok {
+					newMetaRequest := utils.Record{ 
+						schserv.RootID(schserv.DBWorkflow.Name) : id, 
+						schserv.NAMEKEY : "Meta request for " + task.GetString(schserv.NAMEKEY) + " task.",
+						"current_index" : 1, "is_meta": true,
+						schserv.RootID(schserv.DBSchema.Name) : task[schserv.RootID(schserv.DBSchema.Name)],
+						schserv.RootID("dest_table") : task[schserv.RootID("dest_table")],
+						schserv.RootID(schserv.DBUser.Name) : task[schserv.RootID(schserv.DBUser.Name)],
+					}
+					s.Domain.SuperCall( utils.AllParams(schserv.DBRequest.Name), newMetaRequest, utils.CREATE)
 				}
-				s.Domain.SuperCall( params, newMetaRequest, tool.CREATE, "CreateOrUpdate")
+			}
+			if err == nil && len(tasks) > 0 {
+				schema, err := schserv.GetSchema(schserv.DBTask.Name)
+				if err == nil {
+					s.Domain.SuperCall( utils.AllParams(schserv.DBNotification.Name), utils.Record{ "link_id" : schema.ID,
+						schserv.NAMEKEY : "Task is affected : " + tasks[0].GetString(schserv.NAMEKEY), 
+						"description" : "Task is affected : " + tasks[0].GetString(schserv.NAMEKEY),
+						schserv.RootID(schserv.DBEntity.Name) : newTask[schserv.RootID(schserv.DBEntity.Name)],
+						schserv.RootID(schserv.DBUser.Name) : newTask[schserv.RootID(schserv.DBUser.Name)],
+						schserv.RootID("dest_table") : tasks[0][utils.SpecialIDParam], }, utils.CREATE)
+				}
 			}
 		}
 	} else {
-		paramsNew := tool.Params{ tool.RootTableParam : entities.DBHierarchy.Name, tool.RootRowsParam: tool.ReservedParam }
-		sqlFilter := "id IN (SELECT id FROM " + entities.DBHierarchy.Name + " WHERE "
-		sqlFilter += entities.RootID(entities.DBUser.Name) + " IN ("
-		sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")"
-		sqlFilter += " OR " + entities.DBEntity.Name + "_id IN ("
-		sqlFilter += "SELECT " + entities.DBEntity.Name + "_id FROM "
-		sqlFilter += entities.DBEntityUser.Name + " WHERE " + entities.DBUser.Name +"_id IN ("
-		sqlFilter += "SELECT id FROM " + entities.DBUser.Name + " WHERE "
-		sqlFilter += "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")))"
-		hierarchy, _ := s.Domain.SuperCall( paramsNew, tool.Record{}, tool.SELECT, "Get", sqlFilter, )
-		sqlFilter = "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser())
-		params := tool.Params{ 
-			tool.RootTableParam : entities.DBUser.Name, 
-			tool.RootRowsParam : tool.ReservedParam, 
-		}
-		user, err := s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+		hierarchy, _ := s.GetHierarchical()
+		user, err := s.Domain.SuperCall( utils.AllParams(schserv.DBUser.Name), utils.Record{}, utils.SELECT,
+			"name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()))
 		if err == nil && len(user) > 0 {
 			for _, hierarch := range hierarchy {
-				newTask := tool.Record{
-					entities.RootID(entities.DBSchema.Name) : record[entities.RootID(entities.DBSchema.Name)],
-					entities.RootID("dest_table") : record[entities.RootID("dest_table")],
-					entities.RootID(entities.DBRequest.Name) : record[tool.SpecialIDParam],
-					entities.RootID("created_by") : user[0][tool.SpecialIDParam],
-					entities.RootID(entities.DBUser.Name) : hierarch["parent_" + entities.RootID(entities.DBUser.Name)],
-					"description" : "hierarchical verification expected by the system, workflow is currently pending.",
+				newTask := utils.Record{
+					schserv.RootID(schserv.DBSchema.Name) : record[schserv.RootID(schserv.DBSchema.Name)],
+					schserv.RootID("dest_table") : record[schserv.RootID("dest_table")],
+					schserv.RootID(schserv.DBRequest.Name) : record[utils.SpecialIDParam],
+					schserv.RootID(schserv.DBUser.Name) : user[0][utils.SpecialIDParam],
+					schserv.RootID(schserv.DBUser.Name) : hierarch["parent_" + schserv.RootID(schserv.DBUser.Name)],
+					"description" : "hierarchical verification expected by the system.",
 					"urgency" : "medium",
 					"priority" : "medium",
-					entities.NAMEATTR : "hierarchical verification",
+					schserv.NAMEKEY : "hierarchical verification",
 				}
-				params := tool.Params{ tool.RootTableParam : entities.DBTask.Name,
-					tool.RootRowsParam : tool.ReservedParam, }
-				res, err := s.Domain.PermsSuperCall( params, newTask, tool.CREATE, "CreateOrUpdate")
+				res, err := s.Domain.PermsSuperCall( utils.AllParams(schserv.DBTask.Name), newTask, utils.CREATE)
 				if err == nil && len(res) > 0 {
-					params = tool.Params{ tool.RootTableParam : entities.DBNotification.Name,
-						tool.RootRowsParam : tool.ReservedParam,
-						tool.RootRawView : "enable", }
-					s.Domain.SuperCall( params, tool.Record{ 
-						entities.NAMEATTR : "Hierarchical verification on " + record.GetString(entities.NAMEATTR) + " request", 
-						"description" : record.GetString(entities.NAMEATTR) + " request need a hierarchical verification.",
-						entities.RootID(entities.DBUser.Name) : hierarch["parent_" + entities.RootID(entities.DBUser.Name)],
-						"link" : entities.DBTask.Name,
-						entities.RootID("dest_table") : res[0][tool.SpecialIDParam], }, tool.CREATE, "CreateOrUpdate")
+					schema, err := schserv.GetSchema(schserv.DBTask.Name)
+					if err == nil {
+						s.Domain.SuperCall( utils.AllParams(schserv.DBNotification.Name), utils.Record{ 
+							schserv.NAMEKEY : "Hierarchical verification on " + utils.GetString(record, schserv.NAMEKEY) + " request", 
+							"description" : utils.GetString(record, schserv.NAMEKEY) + " request need a hierarchical verification.",
+							schserv.RootID(schserv.DBUser.Name) : hierarch["parent_" + schserv.RootID(schserv.DBUser.Name)],
+							"link_id" : schema.ID, schserv.RootID("dest_table") : res[0][utils.SpecialIDParam], }, utils.CREATE)
+					}
 				}
 			}	
 		}
 	}
-}
-
-func (s *RequestService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
-	return s.Domain.PostTreat(results, tableName) 
-}
-func (s *RequestService) ConfigureFilter(tableName string) (string, string) {
-	rows, ok := s.Domain.GetParams()[tool.RootRowsParam]
-	ids, ok2 := s.Domain.GetParams()[tool.SpecialIDParam]
-	if (ok && fmt.Sprintf("%v", rows) != tool.ReservedParam) || (ok2 && ids != "") { return s.Domain.ViewDefinition(tableName) }
-	restr := entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
-	restr += " AND is_meta=false"
-	return s.Domain.ViewDefinition(tableName, restr)
 }

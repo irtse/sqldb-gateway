@@ -1,12 +1,14 @@
 package domain
 
 import (
+	"time"
 	"slices"
 	"errors"
 	"strings"
 	"reflect"
-	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/entities"
+	"encoding/json"
+	"sqldb-ws/lib/domain/utils"
+	schserv "sqldb-ws/lib/domain/schema"
 	domain "sqldb-ws/lib/domain/service"
 	conn "sqldb-ws/lib/infrastructure/connector"
 	infrastructure "sqldb-ws/lib/infrastructure/service"
@@ -14,13 +16,13 @@ import (
 /*
 	Domain is defined as the DDD patterns will suggest it.
 	It's the specialized part of the API, it concive particular behavior on datas (in our cases, particular Root DB declares in entity)
-	
-	Main Service at a Domain level, it follows the DOMAIN ITF from tool. 
+	Main Service at a Domain level, it follows the DOMAIN ITF from schserv. 
 	Domain interact at a "Model" level with generic and abstract infra services. 
 	Main service give the main process to interact with Infra. 
 */
+var EXCEPTION_FUNC = []string{"Count"}
 type MainService struct {
-	name                string
+	AutoLoad			bool
 	User				string
 	Shallowed			bool
 	SuperAdmin			bool
@@ -31,8 +33,8 @@ type MainService struct {
 	Specialization		bool
 	Empty               bool
 	LowerRes            bool
-	Method				tool.Method
-	Params 				tool.Params
+	Method				utils.Method
+	Params 				utils.Params
 	Perms				map[string]map[string]Perms
 	notAllowedFields	[]string
 	Db					*conn.Db
@@ -50,106 +52,95 @@ func Domain(superAdmin bool, user string, isGenericService bool) *MainService {
 func (d *MainService) SetIsCustom(isCustom bool) { d.isGenericService = isCustom }
 func (d *MainService) SetLowerRes(empty bool) { d.LowerRes = empty }
 func (d *MainService) SetEmpty(empty bool) { d.Empty = empty }
+func (d *MainService) GetAutoload() bool { return d.AutoLoad }
 func (d *MainService) SetExternalSuperAdmin(external bool) { d.ExternalSuperAdmin = external }
+func (d *MainService) GetMethod() utils.Method { return d.Method }
 func (d *MainService) GetEmpty() bool { return d.Empty }
 func (d *MainService) GetUser() string { return d.User }
 func (d *MainService) IsSuperAdmin() bool { return d.SuperAdmin }
 func (d *MainService) IsSuperCall() bool { return d.Super && d.SuperAdmin || d.ExternalSuperAdmin }
 func (d *MainService) IsShallowed() bool { return d.Shallowed }
-func (d *MainService) SetParams(params tool.Params) { d.Params = params }
-func (d *MainService) GetParams() tool.Params { return d.Params }
-func (d *MainService) GetDB() tool.DbITF { return d.Db }
-
+func (d *MainService) GetParams() utils.Params { return d.Params }
+func (d *MainService) GetDb() *conn.Db { return d.Db }
 // Infra func caller with admin view && superadmin right (not a structured view made around data for view reason)
-func (d *MainService) SuperCall(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
-	params[tool.RootRawView]="enable"
-	params[tool.RootSuperCall]="enable"
-	return Domain(true, d.User, d.isGenericService).call(params, record, method, funcName, args...)
+func (d *MainService) SuperCall(params utils.Params, record utils.Record, method utils.Method, args... interface{}) (utils.Results, error) {
+	params[utils.RootRawView]="enable"; params[utils.RootSuperCall]="enable"
+	d2 := Domain(true, d.User, d.isGenericService)
+	d2.ExternalSuperAdmin = d.ExternalSuperAdmin
+	return d2.call(params, record, method, args...)
 }
-func (d *MainService) PermsSuperCall(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
-	params[tool.RootRawView]="enable"
-	return Domain(true, d.User, d.isGenericService).call(params, record, method, funcName, args...)
+func (d *MainService) PermsSuperCall(params utils.Params, record utils.Record, method utils.Method, args... interface{}) (utils.Results, error) {
+	params[utils.RootRawView]="enable"
+	d2 := Domain(true, d.User, d.isGenericService)
+	d2.ExternalSuperAdmin = d.ExternalSuperAdmin
+	return d2.call(params, record, method, args...)
 }
 // Infra func caller with current option view and user rights.
-func (d *MainService) Call(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
-	return d.call(params, record, method, funcName, args...)
+func (d *MainService) Call(params utils.Params, record utils.Record, method utils.Method, args... interface{}) (utils.Results, error) {
+	return d.call(params, record, method, args...)
 }
 // Main process to call an Infra function
-func (d *MainService) call(params tool.Params, record tool.Record, method tool.Method, funcName string, args... interface{}) (tool.Results, error) {
-	var service tool.InfraServiceItf // generate an empty var for a casual infra service ITF (interface) to embedded any service.
-	res := tool.Results{}
-	d.Method = method
-	d.Params = params
-	d.notAllowedFields = []string{}
-	if adm, ok := params[tool.RootSuperCall]; ok && adm == "enable" { d.Super = true } // set up admin view
-	if shallow, ok := params[tool.RootShallow]; (ok && shallow == "enable") || slices.Contains(tool.EXCEPTION_FUNC, funcName) { d.Shallowed = true }  // set up shallow option (lighter version of results)
-	if tablename, ok := params[tool.RootTableParam]; ok { // retrieve tableName in query (not optionnal)
-		var specializedService tool.SpecializedService
+func (d *MainService) call(params utils.Params, record utils.Record, method utils.Method, args... interface{}) (utils.Results, error) {
+	var service infrastructure.InfraServiceItf // generate an empty var for a casual infra service ITF (interface) to embedded any service.
+	d.Method = method; d.notAllowedFields = []string{}
+	if adm, ok := params[utils.RootSuperCall]; ok && adm == "enable" { d.Super = true } // set up admin view
+	if shallow, ok := params[utils.RootShallow]; (ok && shallow == "enable") { d.Shallowed = true }  // set up shallow option (lighter version of results)
+	if tablename, ok := params[utils.RootTableParam]; ok { // retrieve tableName in query (not optionnal)
+		tablename := schserv.GetTablename(tablename)
+		if raw, ok := params[utils.RootRawView]; (!ok || raw != "enable") { d.ClearDeprecatedDatas(tablename) }
+		var specializedService utils.SpecializedServiceITF
 		if d.Specialization {
 			specializedService = &domain.CustomService{}
 			if !d.isGenericService { specializedService = domain.SpecializedService(tablename) }
 			specializedService.SetDomain(d)
 		}
-		if d.Db == nil || d.Db.Conn == nil { 
-			d.Db = conn.Open() 
-			defer d.Db.Close() // close when finished
-		} // open base		
-		d.PermsBuilder()
-		if !d.SuperAdmin && !d.PermsCheck(tablename, "", "", d.Method) {
-			return res, errors.New("not authorized to " + method.String() + " " + tablename + " datas")
+		if d.Db == nil || d.Db.Conn == nil { d.Db = conn.Open(); defer d.Db.Close() } // open base		
+		if !d.SuperAdmin && !d.PermsCheck(tablename, "", "", d.Method) && !d.AutoLoad {
+			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + tablename + " datas")
 		}
 		// load the highest entity avaiable Table level.
-		table := infrastructure.Table(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename), params, record, method)
-		delete(params, tool.RootTableParam)
-		service=table
+		table := infrastructure.Table(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename), record)
+		delete(params, utils.RootTableParam)
 		tablename = strings.ToLower(tablename)
-		if rowName, ok := params[tool.RootRowsParam]; ok { // rows override columns
-			if tablename == entities.DBView.Name {
-				if strings.ToLower(rowName) == tool.ReservedParam {
-					table = infrastructure.Table(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename), tool.Params{}, record, method)
-				} else {
-					table = infrastructure.Table(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename), tool.Params{
-						tool.SpecialIDParam: strings.ToLower(rowName),
-					}, record, method)
-				}
-			} else {
-				delete(params, "new")
-				if _, ok := params[tool.SpecialIDParam]; !ok {
-					params[tool.SpecialIDParam]=strings.ToLower(rowName) 
-					delete(params, tool.RootRowsParam)
-					if params[tool.SpecialIDParam] == tool.ReservedParam { delete(params, tool.SpecialIDParam) }
-				}
+		if rowName, ok := params[utils.RootRowsParam]; ok { // rows override columns
+			if d.Method == utils.DELETE && !d.SuperAdmin {
+				method = utils.UPDATE
+				record = utils.Record{ "active" : false }
 			}
-			
+			if _, ok := params[utils.SpecialIDParam]; !ok {
+				params[utils.SpecialIDParam]=strings.ToLower(rowName) 
+				delete(params, utils.RootRowsParam)
+				if params[utils.SpecialIDParam] == utils.ReservedParam { delete(params, utils.SpecialIDParam) 
+				} else if table.Record != nil { table.Record[utils.SpecialIDParam] = params[utils.SpecialIDParam] }
+			}
 			service = table.TableRow(specializedService)
-			res, err := d.invoke(service, funcName, args...)
-			if err != nil { return res, err }
-			if specializedService != nil && params[tool.RootRawView] != "enable" && !d.Super {
-				if dest_id, ok := params[tool.RootDestTableIDParam]; ok {
+			utils.ParamsMutex.Lock()
+			d.Params = params
+			utils.ParamsMutex.Unlock()
+			res, err := d.invoke(service, method.Calling(), args...)
+			if err == nil && specializedService != nil && params[utils.RootRawView] != "enable" && !d.Super && !slices.Contains(EXCEPTION_FUNC, method.Calling()) {
+				if dest_id, ok := params[utils.RootDestTableIDParam]; ok {
 					return specializedService.PostTreatment(res, tablename, dest_id), nil
 				}
 				return specializedService.PostTreatment(res, tablename), nil
 			}
 			return res, err
 		}
-		if !d.SuperAdmin { 
-			return res, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
+		if !d.SuperAdmin || method == utils.DELETE { 
+			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
 		}
-		if col, ok := params[tool.RootColumnsParam]; ok { 
-			if tablename == tool.ReservedParam { 
-				d.Db.Conn.Close()
-				return res, errors.New("can't load table as " + tool.ReservedParam) 
-			}
-			params[tool.RootColumnsParam]=strings.ToLower(col)
-			service = table.TableColumn() 
-		}
-		return d.invoke(service, funcName, args...)
+		if col, ok := params[utils.RootColumnsParam]; ok { 
+			if tablename == utils.ReservedParam { return utils.Results{}, errors.New("can't load table as " + utils.ReservedParam) }
+			params[utils.RootColumnsParam]=strings.ToLower(col)
+			service = table.TableColumn(specializedService, params[utils.RootColumnsParam]) 
+		} else { service=table }
+		return d.invoke(service, method.Calling(), args...)
 	}
-	return res, errors.New("no service available")
+	return utils.Results{}, errors.New("no service available")
 }
-func (d *MainService) invoke(service tool.InfraServiceItf, funcName string, args... interface{}) (tool.Results, error) {
+func (d *MainService) invoke(service infrastructure.InfraServiceItf, funcName string, args... interface{}) (utils.Results, error) {
     var err error
-	res := tool.Results{}
+	res := utils.Results{}
 	clazz := reflect.ValueOf(service).MethodByName(funcName)
 	if !clazz.IsValid() { return res, errors.New("not implemented <"+ funcName +"> (invalid)") }
 	if clazz.IsZero() { return res, errors.New("not implemented <"+ funcName +"> (zero)") }
@@ -159,10 +150,54 @@ func (d *MainService) invoke(service tool.InfraServiceItf, funcName string, args
 		for _, arg := range args { vals = append(vals, reflect.ValueOf(arg)) }
 		values = clazz.Call(vals)
 	} else { values = clazz.Call(nil) }
-	if len(values) > 0 { res = values[0].Interface().(tool.Results) }
+	if len(values) > 0 { 
+		data, _:= json.Marshal(values[0].Interface())
+		json.Unmarshal(data, &res)
+	}
 	if len(values) > 1 { 
 		if values[1].Interface() == nil { err = nil
 		} else { err = values[1].Interface().(error) } 
 	}
 	return res, err
+}
+
+func (d *MainService) ValidateBySchema(data utils.Record, tableName string) (utils.Record, error) {
+	if d.Method == utils.DELETE || d.Method == utils.SELECT { return data, nil }
+	schema, err := schserv.GetSchema(tableName)
+	if err != nil { return data,  errors.New("no schema corresponding to reference") }
+	newData := utils.Record{}
+	if d.Method == utils.UPDATE {
+		for _, field := range schema.Fields {
+			if v, ok := data[field.Name]; ok { newData[field.Name]=v }
+		}
+		return newData, nil
+	}
+	for _, field := range schema.Fields {
+		if field.Required && field.Default == nil {
+			if _, ok := data[field.Name]; ok || field.Name == utils.SpecialIDParam { continue }
+			if field.Label != "" { return data, errors.New("Missing a required field " + field.Label + " (can't see it ? you probably missing permissions)")
+			} else { return data, errors.New("Missing a required field " + field.Name + " (can't see it ? you probably missing permissions)") }
+		}
+		if v, ok := data[field.Name]; ok { 
+			newData[field.Name]=v 
+			if field.Name == schserv.FOREIGNTABLEKEY { 
+				schema, err :=schserv.GetSchema(v.(string)) 
+				if err != nil { newData[schserv.LINKKEY] = schema.ID}
+			}
+		}
+	}
+	return newData, nil
+}
+
+func  (d *MainService) ClearDeprecatedDatas(tableName string) {
+	schema, err := schserv.GetSchema(tableName)
+	if err != nil { return }
+	if schema.HasField(schserv.STARTKEY) && schema.HasField(schserv.ENDKEY) {
+		currentTime := time.Now()
+		sqlFilter := "'" + currentTime.Format("2000-01-01") + "' < start_date OR " 
+		sqlFilter += "'" + currentTime.Format("2000-01-01") + "' > end_date"
+		p := utils.AllParams(tableName)
+		p[utils.RootRawView] = "enable"
+		d.Call(p, utils.Record{}, utils.DELETE, sqlFilter)
+	}
 }

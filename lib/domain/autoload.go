@@ -2,10 +2,9 @@ package domain
 
 import (
 	"fmt"
-	"strings"
 	"encoding/json"
-	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/entities"
+	utils "sqldb-ws/lib/domain/utils"
+	schserv "sqldb-ws/lib/domain/schema"
 	conn "sqldb-ws/lib/infrastructure/connector"
 	infrastructure "sqldb-ws/lib/infrastructure/service"
 )
@@ -13,66 +12,202 @@ import (
 func Load() {
 	database := conn.Open()
 	defer database.Conn.Close()
-	for _, table := range []entities.TableEntity{ entities.DBSchema, entities.DBSchemaField, entities.DBPermission } {
-			rec := tool.Record{}
+	for _, table := range []schserv.SchemaModel{ schserv.DBSchema, schserv.DBSchemaField, schserv.DBPermission, schserv.DBView, schserv.DBWorkflow } {
+			rec := map[string]interface{}{}
 			data, _:= json.Marshal(table)
 			json.Unmarshal(data, &rec)
-			if typ, ok := rec[entities.TYPEATTR]; ok && strings.Contains(strings.ToLower(fmt.Sprintf("%v", typ)), "many") {
-				continue
-			}
-			service := infrastructure.Table(database, true, "", table.Name, tool.Params{}, rec, tool.CREATE)
+			service := infrastructure.Table(database, true, "", table.Name, rec)
 			service.NoLog = true
 			service.CreateOrUpdate()
 	}
 	d := Domain(true, "superadmin", false)
-	for _, table := range entities.ROOTTABLES {
-			rec := tool.Record{}
-			data, _:= json.Marshal(table)
+	d.AutoLoad = true
+	schserv.LoadCache(utils.ReservedParam, database)
+	roots := schserv.ROOTTABLES
+	roots = append(roots, schserv.DEMOROOTTABLES...)
+	for _, t := range roots {
+			rec := utils.Record{}
+			data, _:= json.Marshal(t)
 			json.Unmarshal(data, &rec) 
-			res, err := d.SuperCall(tool.Params{ tool.RootTableParam: entities.DBSchema.Name,
-									tool.RootRowsParam: tool.ReservedParam, }, 
-									rec, tool.CREATE, "CreateOrUpdate")
-			
-			if err != nil || len(res) == 0 { continue }
-			for _, col := range rec["columns"].([]interface{}) {
-				c := col.(map[string]interface{})
-				c[entities.RootID(entities.DBSchema.Name)] = res[0][tool.SpecialIDParam]
-				d.SuperCall(tool.Params{ tool.RootTableParam: entities.DBSchemaField.Name,
-										 		   tool.RootRowsParam: tool.ReservedParam, }, 
-									  c, tool.CREATE, "CreateOrUpdate")
+			_, err := schserv.GetSchema(t.Name)
+			if err != nil {
+				p := utils.AllParams(schserv.DBSchema.Name) 
+				p[utils.RootRawView] = "enable"
+				res, err := d.Call(p, rec, utils.CREATE)
+				if err != nil && len(res) == 0 { continue }
+				if t.Name == schserv.DBView.Name || t.Name == schserv.DBWorkflow.Name {
+					addFields(t, d, schserv.SchemaModel{}.Deserialize(res[0]), false)
+				}
+				schserv.LoadCache(t.Name, database)
 			}
 	}
-	// Generate an root superadmin (ready to use...)
-	found, err := d.SuperCall(tool.Params{ 
-		tool.RootTableParam: entities.DBUser.Name,
-		tool.RootRowsParam: tool.ReservedParam, }, 
-		tool.Record{ }, tool.SELECT, "Get", "name='root'")
-	if err != nil || len(found) == 0 {
-		d.SuperCall(tool.Params{ 
-			tool.RootTableParam: entities.DBUser.Name,
-			tool.RootRowsParam: tool.ReservedParam, }, 
-			tool.Record{
-				"name" : "root",
-				"email" : "admin@super.com",
-				"super_admin" : true, // oh well think about "backin to the future"
-				"password" : "$argon2id$v=19$m=65536,t=3,p=4$JooiEtVXatRxSz16N9uo2g$Y2dAHdLAK06013FhDHQ/xhd+UL2yInwDAvRS1+KKD3c",
-			}, tool.CREATE, "CreateOrUpdate")
+	for _, t := range roots {
+		schema, err := schserv.GetSchema(t.Name)
+		if err != nil { continue }
+		if t.Name == schserv.DBWorkflow.Name {
+			params := utils.Params{ utils.RootTableParam: schserv.DBView.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
+			newWF := utils.Record{ schserv.NAMEKEY : t.Name, "indexable" : true, "description": "View description for " + t.Name + " datas.", 
+				"is_empty": false, "index": 0, "is_list": true, "readonly": false, schserv.RootID(schserv.DBSchema.Name) : schema.ID }
+			d.Call(params, newWF, utils.CREATE)
+			continue
+		}
+		if t.Name == schserv.DBView.Name {
+			params := utils.Params{ utils.RootTableParam: schserv.DBWorkflow.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
+			newView := utils.Record{ schserv.NAMEKEY : "create " + t.Name, "description": "new " + t.Name + " workflow", schserv.RootID(schserv.DBSchema.Name) : schema.ID }
+			d.Call(params, newView, utils.CREATE)
+		}
+		addFields(t, d, schema, true)
 	}
-	addRootDatas(entities.DBRootViews, entities.DBView.Name)
-	addRootDatas(entities.DBRootWorkflows, entities.DBWorkflow.Name)
-	database.Conn.Close()
+	// Generate an root superadmin (ready to use...)
+	p := utils.AllParams(schserv.DBUser.Name)
+	p[utils.RootRawView] = "enable"
+	d.Call(p, utils.Record{ "name" : "root", "email" : "admin@super.com", "super_admin" : true, // oh well think about "backin to the future"
+			"password" : "$argon2id$v=19$m=65536,t=3,p=4$JooiEtVXatRxSz16N9uo2g$Y2dAHdLAK06013FhDHQ/xhd+UL2yInwDAvRS1+KKD3c" }, utils.CREATE)
+	addRootDatas(DBRootViews, schserv.DBView.Name)
+	for name, datas := range schserv.DEMODATASENUM {
+		for _, data := range datas {
+			params := utils.Params{ utils.RootTableParam: name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
+			d.Call(params, utils.Record{ "name" : data }, utils.CREATE)
+		}
+	}
 }
+func addFields(t schserv.SchemaModel, d *MainService, schema schserv.SchemaModel, ok bool) {
+	for _, col := range t.Fields {
+		if schema.HasField(col.Name) && ok { continue }
+		c := utils.Record{}
+		b, _:= json.Marshal(col)
+		json.Unmarshal(b, &c)
+		if col.ForeignTable != "" {
+			foreign, err := schserv.GetSchema(col.ForeignTable)
+			if err == nil { c["link_id"]=foreign.ID }
+		}
+		c[schserv.RootID(schserv.DBSchema.Name)] = schema.ID
+		d.AutoLoad = true
+		d.Call(utils.AllParams(schserv.DBSchemaField.Name), c, utils.CREATE)
+		
+	}
+}
+
 func addRootDatas(flattenedSubArray []map[string]interface{}, name string) {
 	d := Domain(true, "superadmin", false)
 	for _, root := range flattenedSubArray {
 		if _, ok := root["link"]; ok {
-			params := tool.Params{ tool.RootTableParam: entities.DBSchema.Name, tool.RootRowsParam: tool.ReservedParam, tool.RootRawView: "enable" }
-			schemas, err := d.SuperCall(params, tool.Record{}, tool.SELECT, "Get", "name='" + fmt.Sprintf("%v", root["link"]) + "'")
-			if err != nil || len(schemas) == 0 { continue }
-			root[entities.RootID(entities.DBSchema.Name)] = schemas[0][tool.SpecialIDParam]
+			schema, err := schserv.GetSchema(fmt.Sprintf("%v", root["link"]))
+			if err != nil { continue }
+			root[schserv.RootID(schserv.DBSchema.Name)] = schema.ID
 			delete(root, "link")
-			params = tool.Params{ tool.RootTableParam: name, tool.RootRowsParam: tool.ReservedParam, tool.RootRawView: "enable" }
-			d.SuperCall(params, root, tool.CREATE, "CreateOrUpdate")
+			if filter, ok := root["filter"]; ok {
+				params := utils.Params{ utils.RootTableParam: schserv.DBFilter.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
+				filter.(map[string]interface{})[schserv.RootID(schserv.DBSchema.Name)] = schema.ID
+				f, err := d.Call(params, filter.(map[string]interface{}), utils.CREATE)
+				if len(f) > 0 && err == nil {
+					fields := filter.(map[string]interface{})["fields"]
+					root[schserv.RootID(schserv.DBFilter.Name)] = f[0][utils.SpecialIDParam]
+					for _, field := range fields.([]map[string]interface{}) {
+						params := utils.Params{ utils.RootTableParam: schserv.DBFilterField.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
+						field[schserv.RootID(schserv.DBFilter.Name)] = f[0][utils.SpecialIDParam]
+						cacheField, _ := schema.GetField(fmt.Sprintf("%v", field["name"]))
+						field[schserv.RootID(schserv.DBSchemaField.Name)] = cacheField.ID
+						delete(field, "name")
+						d.Call(params, field, utils.CREATE)
+					}
+				}
+			}
+			if filter, ok := root["viewfilter"]; ok {
+				params := utils.Params{ utils.RootTableParam: schserv.DBFilter.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
+				filter.(map[string]interface{})[schserv.RootID(schserv.DBSchema.Name)] = schema.ID
+				f, err := d.Call(params, filter.(map[string]interface{}), utils.CREATE)
+				if len(f) > 0 && err == nil {
+					fields := filter.(map[string]interface{})["fields"]
+					root["view_" + schserv.RootID(schserv.DBFilter.Name)] = f[0][utils.SpecialIDParam]
+					for _, field := range fields.([]map[string]interface{}) {
+						params := utils.Params{ utils.RootTableParam: schserv.DBFilterField.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
+						field[schserv.RootID(schserv.DBFilter.Name)] = f[0][utils.SpecialIDParam]
+						cacheField, _ := schema.GetField(fmt.Sprintf("%v", field["name"]))
+						field[schserv.RootID(schserv.DBSchemaField.Name)] = cacheField.ID
+						delete(field, "name")
+						res ,err := d.Call(params, field, utils.CREATE)
+						fmt.Println(res, err)
+					}
+				}
+			}
+			params := utils.Params{ utils.RootTableParam: name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
+			fmt.Println(root)
+			d.Call(params, root, utils.CREATE)
 		}
 	}
+}
+
+var DBRootViews = []map[string]interface{}{ 
+	map[string]interface{} { schserv.NAMEKEY : "submit a data",
+	"is_list" : false,
+	"indexable" : true,
+	"description" : "select a form to submit an entry.",
+	"readonly" : false,
+	"index" : 0,
+	"link" : schserv.DBRequest.Name,
+	"is_empty" : true, 
+	"viewfilter" : map[string]interface{}{
+		"name" : "submit form",
+		"fields" : []map[string]interface{}{
+			map[string]interface{}{ "name" : "dbworkflow_id", "index" : 0 },
+		},
+	},
+	},
+	map[string]interface{} { schserv.NAMEKEY : "my unvalidated datas",
+	"is_list" : true,
+	"indexable" : true,
+	"description" : nil,
+	"readonly" : true,
+	"index" : 1,
+	"link" : schserv.DBRequest.Name,
+	"is_empty" : false,
+	"filter" : map[string]interface{}{
+		"name" : "unvalidated requests",
+		"fields" : []map[string]interface{}{
+			map[string]interface{}{ "name" : "state", "value" : "completed", "dir" : "ASC", "index" : 0, "operator" : "!=", "separator" : "and" },
+		},
+	}, },
+	map[string]interface{} { schserv.NAMEKEY : "my validated datas",
+	"is_list" : true,
+	"indexable" : true,
+	"description" : nil,
+	"readonly" : true,
+	"index" : 1,
+	"link" : schserv.DBRequest.Name,
+	"is_empty" : false,
+	"filter" : map[string]interface{}{
+		"name" : "validated requests",
+		"fields" : []map[string]interface{}{
+			map[string]interface{}{ "name" : "state", "value" : "completed", "dir" : "ASC", "index" : 0, "operator" : "=", "separator" : "and" },
+		},
+	}, },
+	map[string]interface{} { schserv.NAMEKEY : "assigned activity",
+	"is_list" : true,
+	"indexable" : true,
+	"description" : nil,
+	"readonly" : false,
+	"index" : 1,
+	"link" : schserv.DBTask.Name,
+	"is_empty" : false,
+	"filter" : map[string]interface{}{
+		"name" : "unvalidated tasks",
+		"fields" : []map[string]interface{}{
+			map[string]interface{}{ "name" : "state", "value" : "completed", "dir" : "ASC", "index" : 0, "operator" : "!=", "separator" : "and" },
+		},
+	}, },
+	map[string]interface{} { schserv.NAMEKEY : "archived activity",
+	"is_list" : true,
+	"indexable" : true,
+	"description" : nil,
+	"readonly" : true,
+	"index" : 1,
+	"link" : schserv.DBTask.Name,
+	"is_empty" : false,
+	"filter" : map[string]interface{}{
+		"name" : "validated tasks",
+		"fields" : []map[string]interface{}{
+			map[string]interface{}{ "name" : "state", "value" : "completed", "dir" : "ASC", "index" : 0, "operator" : "=", "separator" : "and" },
+		},
+	}},
 }

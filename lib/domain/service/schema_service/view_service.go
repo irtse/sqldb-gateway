@@ -5,151 +5,122 @@ import (
 	"sort"
 	"slices"
 	"strings"
-	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/entities"
+	"runtime"
+	"sqldb-ws/lib/domain/utils"
+	schserv "sqldb-ws/lib/domain/schema"
+	infrastructure "sqldb-ws/lib/infrastructure/service"
 )
-//WORKING BUT NEED A CLEAN UP
-type ViewService struct { tool.AbstractSpecializedService }
-
-func (s *ViewService) Entity() tool.SpecializedServiceInfo { return entities.DBView }
-func (s *ViewService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
-	if d, ok := record["through_perms"];ok && d != nil { 
-		schemas, err := s.Domain.Schema(tool.Record{ 
-			entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", record["through_perms"]) }, true)	
-		if err != nil || len(schemas) == 0 { return record, false, false }
-		params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
-							tool.RootRowsParam : tool.ReservedParam, 
-							entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", schemas[0][tool.SpecialIDParam]),
-							entities.NAMEATTR : entities.RootID(entities.DBUser.Name),
-						}
-		userScheme, _ := s.Domain.SuperCall(params, tool.Record{}, tool.SELECT, "Get")
-		params[entities.NAMEATTR] = entities.RootID(entities.DBEntity.Name)
-		entityScheme, _ := s.Domain.SuperCall(params, tool.Record{}, tool.SELECT, "Get")
-		found := false 
-		if len(userScheme) > 0 { found = true }
-		if len(entityScheme) > 0 { found = true }
-		if found { return record, true, false }
-		return nil, false, false
-	}
-	return record, true, false
+type ViewService struct { 
+	utils.AbstractSpecializedService 
+	infrastructure.InfraSpecializedService
 }
-func (s *ViewService) DeleteRowAutomation(results tool.Results, tableName string) { }
-func (s *ViewService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
-func (s *ViewService) WriteRowAutomation(record tool.Record, tableName string) { }
 
-func (s *ViewService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 
+func (s *ViewService) Entity() utils.SpecializedServiceInfo { return schserv.DBView }
+func (s *ViewService) ConfigureFilter(tableName string) (string, string, string, string) { return s.Domain.ViewDefinition(tableName) }	
+func (s *ViewService) PostTreatment(results utils.Results, tableName string, dest_id... string) utils.Results { 
 	if len(results) == 0 { return results }
-	res := tool.Results{}
-	for _, record := range results {
-		// readonly := false 
-		id := ""
-		if record["is_empty"] != nil { s.Domain.SetEmpty(record["is_empty"].(bool)) }
-		// if r, ok := record["readonly"]; ok && r.(bool) { readonly = true }
-		rec := tool.Record{ "id": record["id"], "redirect_id" : record[entities.RootID(entities.DBView.Name)],
-		                    "name" : record["name"], "description" : record["description"], "is_empty" : record["is_empty"],
-		                    "index" : record["index"], "is_list" : record["is_list"], "readonly" : record["readonly"],
-							"filter_path" : "/" + tool.MAIN_PREFIX + "/" + entities.DBFilter.Name + "?" + tool.RootRowsParam + "=" + tool.ReservedParam, }	
-		u, _ := s.Domain.PermsSuperCall( tool.Params{ tool.RootTableParam: entities.DBUser.Name, tool.RootRowsParam : tool.ReservedParam,
-													  tool.RootRawView: "enable",
-													  entities.NAMEATTR : s.Domain.GetUser() }, tool.Record{}, tool.SELECT, "Get")
-		if len(u) > 0 { 
-			rec["favorize_path"] = "/" + tool.MAIN_PREFIX + "/" + entities.DBViewAttribution.Name + "?" + tool.RootRowsParam + "=" + tool.ReservedParam + "&" + entities.RootID(entities.DBUser.Name) + "=" + fmt.Sprintf("%v", u[0][tool.SpecialIDParam])
-			u, _ = s.Domain.PermsSuperCall( tool.Params{ tool.RootTableParam: entities.DBViewAttribution.Name, tool.RootRowsParam : tool.ReservedParam,
-													 tool.RootRawView: "enable",
-			   										 entities.RootID(entities.DBUser.Name) : fmt.Sprintf("%v", u[0][tool.SpecialIDParam]) }, tool.Record{}, tool.SELECT, "Get")
-			if len(u) > 0 { rec["is_favorize"] = true }
-		}
-		if record["is_list"] != nil { s.Domain.SetLowerRes(record["is_list"].(bool))
-		} else { s.Domain.SetLowerRes(false) }
-		
-		for _, dest := range dest_id {
-			if id == "" { id = dest 
-			} else { id = "," + dest  }
-		}
-		schemas, err := s.Domain.Schema(record, true)
-		if err != nil || len(schemas) == 0 { continue }
-		rec["category"]=schemas[0]["label"]
-		tName := fmt.Sprintf("%v", schemas[0][entities.NAMEATTR])
-		path, params := s.Domain.GeneratePathFilter("/" + tool.MAIN_PREFIX + "/" + tName, 
-		                                            record, tool.Params{ tool.RootTableParam : tName, 
-			                                        tool.RootRowsParam: tool.ReservedParam, })
-		if id != "" { params[tool.RootRowsParam] = id }
-		for k, v := range s.Domain.GetParams() {
-			if _, ok := params[k]; !ok { 
-				if k != "new" && !strings.Contains(k,"dest_table") {
-					if k == tool.SpecialSubIDParam { params[tool.SpecialIDParam] = v
-					} else if _, ok := params[k]; !ok { params[k] = v }
-				}
+	res := utils.Results{}
+	runtime.GOMAXPROCS(5)
+	channel := make(chan utils.Record, len(results))
+	for _, record := range results { go s.PostTreat(record, channel, dest_id...) }
+	for range results {
+		rec := <-channel
+		if rec != nil { res = append(res, rec)  }
+	}
+	sort.SliceStable(res, func(i, j int) bool{  return int64(res[i]["index"].(float64)) <= int64(res[j]["index"].(float64))  })
+	return res
+}
+
+func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, dest_id... string) {
+	id := ""
+	if record["is_empty"] != nil { s.Domain.SetEmpty(record["is_empty"].(bool)) }
+	rec := utils.Record{ "id": record["id"], "name" : record["name"], "description" : record["description"], "is_empty" : record["is_empty"],
+						"index" : record["index"], "is_list" : record["is_list"], "readonly" : record["readonly"],
+						"filter_path" : "/" + utils.MAIN_PREFIX + "/" + schserv.DBFilter.Name + "?" + utils.RootRowsParam + "=" + utils.ReservedParam, }	
+	u, _ := s.Domain.PermsSuperCall( utils.Params{ utils.RootTableParam: schserv.DBUser.Name, utils.RootRowsParam : utils.ReservedParam,
+												  utils.RootRawView: "enable", schserv.NAMEKEY : s.Domain.GetUser() }, utils.Record{}, utils.SELECT)
+	if len(u) > 0 { 
+		rec["favorize_path"] = "/" + utils.MAIN_PREFIX + "/" + schserv.DBViewAttribution.Name + "?" + utils.RootRowsParam + "=" + utils.ReservedParam + "&" + schserv.RootID(schserv.DBUser.Name) + "=" + fmt.Sprintf("%v", u[0][utils.SpecialIDParam])
+		u, _ = s.Domain.PermsSuperCall( utils.Params{ utils.RootTableParam: schserv.DBViewAttribution.Name, utils.RootRowsParam : utils.ReservedParam,
+			utils.RootRawView: "enable", schserv.RootID(schserv.DBUser.Name) : fmt.Sprintf("%v", u[0][utils.SpecialIDParam]) }, utils.Record{}, utils.SELECT)
+		if len(u) > 0 { rec["is_favorize"] = true }
+	}
+	if record["is_list"] != nil { s.Domain.SetLowerRes(record["is_list"].(bool)) } else { s.Domain.SetLowerRes(false) }
+	
+	for _, dest := range dest_id {
+		if id == "" { id = dest } else { id = "," + dest  }
+	}
+	schema, err := schserv.GetSchemaByID(utils.GetInt(record, schserv.RootID(schserv.DBSchema.Name)))
+	if err != nil { channel <- nil; return }
+	rec["category"]=schema.Label
+	path := "/" + utils.MAIN_PREFIX + "/" + schema.Name
+	params := utils.AllParams(schema.Name)
+	if id != "" { params[utils.RootRowsParam] = id }
+	for k, v := range s.Domain.GetParams() {
+		if _, ok := params[k]; !ok { 
+			if k != "new" && !strings.Contains(k,"dest_table") && k != "id" {
+				if k == utils.SpecialSubIDParam { params[utils.SpecialIDParam] = v
+				} else if _, ok := params[k]; !ok { params[k] = v }
 			}
 		}
-		rec["link_path"]=s.Domain.BuildPath(fmt.Sprintf(entities.DBView.Name), fmt.Sprintf("%v", record[tool.SpecialIDParam]))
-		sqlFilter := ""
-		if _, ok := record["through_perms"]; ok { 
-			through, err := s.Domain.Schema(tool.Record{  entities.RootID(entities.DBSchema.Name) : record["through_perms"] }, true)
-			if len(through) > 0 && err == nil { sqlFilter +=  s.Domain.ByEntityUser(fmt.Sprintf("%v", through[0][entities.NAMEATTR]), tName) }
-		}
-		datas := tool.Results{tool.Record{}}
-		d := tool.Results{}
-		if restr, ok := record["sql_restriction"]; ok && restr != "" && restr != nil {
-			if len(sqlFilter) > 0 { 
-				sqlFilter +=  " AND (" 
-				sqlFilter += fmt.Sprintf("%v", restr)
-				sqlFilter +=  ")"
-			} else { sqlFilter += " " + fmt.Sprintf("%v", restr) }
-		}
-		rec["new"] = []string{}
-		if !s.Domain.GetEmpty() {
-			if !s.Domain.IsSuperAdmin() { 
-				d, _ = s.Domain.PermsSuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
-			} else {
-				d, _ = s.Domain.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+	}
+	datas := utils.Results{utils.Record{}}
+	d := utils.Results{}
+	filter := record.GetString(schserv.RootID(schserv.DBFilter.Name))
+	viewFilter := record.GetString("view_" + schserv.RootID(schserv.DBFilter.Name))
+	sqlFilter, view, order, dir := s.Domain.GetFilter(filter, viewFilter, utils.GetString(record, schserv.RootID(schserv.DBSchema.Name)))
+	if view != "" { params[utils.RootColumnsParam] = view }
+	if order != "" { params[utils.RootOrderParam] = order }
+	if dir != "" { params[utils.RootDirParam] = dir }
+	rec["new"] = []string{}
+	if !s.Domain.GetEmpty() { d, _ = s.Domain.PermsSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter) }
+	if  record["is_list"] != nil && record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(schema.Name, sqlFilter, params) }
+	if !s.Domain.GetEmpty() {
+		datas = utils.Results{}
+		if new, ok := s.Domain.GetParams()["new"]; ok && new == "enable" {
+			for _, data := range d {
+				if slices.Contains(rec["new"].([]string), data.GetString("id")) { datas = append(datas, data) }
 			}
-		}
-		if  record["is_list"] != nil && record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(tName, sqlFilter, params) }
-		if !s.Domain.GetEmpty() {
-			datas = tool.Results{}
-			if new, ok := s.Domain.GetParams()["new"]; ok && new == "enable" {
-				for _, data := range d {
-					if slices.Contains(rec["new"].([]string), data.GetString("id")) { datas = append(datas, data) }
-				}
-			} else { datas = d }
-		}
-		treated := s.Domain.PostTreat(datas, tName)
-		// s.Domain.SetParams(params)
+		} else { datas = d }
+	}
+	if !s.Domain.IsShallowed() {
+		treated := s.Domain.PostTreat(datas, schema.Name, false)
 		if len(treated) > 0 {
 			for k, v := range treated[0] { 
-				if _, ok := rec[k]; ok { continue }
-				if k == "items"  {
+				if k == "items" && v != nil {
 					for _, item := range v.([]interface{}) {
 						values := item.(map[string]interface{})["values"]
 						if list, ok := record["is_list"]; ok && list.(bool) && len(path) > 0 && path[:1] == "/" {
 							nP := ""
-							if strings.Contains(path, entities.DBView.Name) { nP =  "/" + tool.MAIN_PREFIX + path + "&" + tool.RootDestTableIDParam + "=" + fmt.Sprintf("%v", values.(map[string]interface{})[tool.SpecialIDParam])
-							} else { nP =  "/" + tool.MAIN_PREFIX + "/" + tName + "?" + tool.RootRowsParam + "=" + fmt.Sprintf("%v", values.(map[string]interface{})[tool.SpecialIDParam]) }
+							if strings.Contains(path, schserv.DBView.Name) { nP =  "/" + utils.MAIN_PREFIX + path + "&" + utils.RootDestTableIDParam + "=" + fmt.Sprintf("%v", values.(map[string]interface{})[utils.SpecialIDParam])
+							} else { nP =  "/" + utils.MAIN_PREFIX + "/" + schema.Name + "?" + utils.RootRowsParam + "=" + fmt.Sprintf("%v", values.(map[string]interface{})[utils.SpecialIDParam]) }
 							item.(map[string]interface{})["link_path"] = nP
 							item.(map[string]interface{})["data_path"] = ""
 						}	
 					}
 					rec[k]=v 
-				} else if k == "schema" { 
+				} else if k == "schema" && v != nil { 
 					newV := map[string]interface{}{}
 					for fieldName, field := range v.(map[string]interface{}) {
-						// if readonly { field["readonly"] = true }
-						if  fieldName == entities.NAMEATTR && tName == entities.DBRequest.Name  { continue }
-						if view, ok := params[tool.RootColumnsParam]; !ok || view == "" || strings.Contains(view, fieldName) { 
+						if  fieldName == schserv.NAMEKEY && schema.Name == schserv.DBRequest.Name  { continue }
+						if view, ok := params[utils.RootColumnsParam]; !ok || view == "" || strings.Contains(view, fieldName) { 
 							newV[fieldName] = field 
 						}
 					}
 					rec[k] = newV
-				} else { rec[k]=v }
+				} else if k != "id" && k != "description" && k != "label" { rec[k]=v }
 			} 
 		}	
-		res = append(res,  rec)
 	}
-	sort.SliceStable(res, func(i, j int) bool{
-        return res[i]["index"].(int64) <= res[j]["index"].(int64)
-    })
-	return res
+	rec["link_path"]=s.Domain.BuildPath(fmt.Sprintf(schserv.DBView.Name), fmt.Sprintf("%v", record[utils.SpecialIDParam]))
+	channel <- rec
 }
-
-func (s *ViewService) ConfigureFilter(tableName string) (string, string) { return s.Domain.ViewDefinition(tableName) }	
+func (s *ViewService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) { 
+	if s.Domain.GetMethod() != utils.DELETE {
+		rec, err := s.Domain.ValidateBySchema(record, tablename)
+		if err != nil && !s.Domain.GetAutoload() { return rec, false, false } else { rec = record }
+		return rec, true, false 
+	}
+	return record, true, true
+}
+// TODO : filter service ? (not in the same service) on own

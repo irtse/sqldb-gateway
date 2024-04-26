@@ -3,157 +3,93 @@ package schema_service
 import (
 	"fmt"
 	"strings"
-	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/entities"
+	"strconv"
+	"sqldb-ws/lib/domain/utils"
+	schserv "sqldb-ws/lib/domain/schema"
 )
 
-type SchemaFields struct { tool.AbstractSpecializedService }
-
-func (s *SchemaFields) Entity() tool.SpecializedServiceInfo {return entities.DBSchemaField }
-func (s *SchemaFields) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) {
-	newRecord := tool.Record{}
-	if !create {
-		for k, v := range record {
-			if k == "name" { newRecord["label"] = v 
-			} else if k != "type" { newRecord[k] = v }
-		}
-	} else {
-		for k, v := range record {
-			if k != "type" { newRecord[k] = v 
-			} else { 
-				if strings.Contains(fmt.Sprintf("%v", v), "enum") {
-					typ := fmt.Sprintf("%v", v)
-					typ = strings.Replace(typ, " ", "", -1)
-					typ = strings.Replace(typ, "'", "", -1)
-					typ = strings.Replace(typ, "(", ":", -1)
-					typ = strings.Replace(typ, ")", "", -1)
-					found := false
-					for _, verifiedType := range tool.DATATYPE {
-						if strings.Contains(strings.ToUpper(typ), verifiedType) {
-							found = true; break;
-						}
-					}
-					if found { newRecord[k] = strings.ToLower(typ) }
-				} else { newRecord[k] = v  }
-			}
-		}
-		if label, ok := newRecord["label"]; !ok || label == "" {
-			newRecord["label"] = strings.Replace(fmt.Sprintf("%v", newRecord["name"]), "_", " ", -1)
-		}
-		if nullable, ok := newRecord["nullable"]; !ok || nullable == nil {
-			newRecord["nullable"] = true
-		}
+type SchemaFields struct { utils.SpecializedService }
+func (s *SchemaFields) Entity() utils.SpecializedServiceInfo {return schserv.DBSchemaField }
+func (s *SchemaFields) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) {
+	if s.Domain.GetMethod() == utils.DELETE { 
+		i, err := strconv.Atoi(s.Domain.GetParams()[utils.RootRowsParam])
+		if err != nil { return record, false, false }
+		schema, err := schserv.GetSchemaByFieldID(int64(i))
+		if err != nil { return record, false, false }
+		return record, !schserv.IsRootDB(schema.Name), false 
 	}
-	return newRecord, true, true
+	if typ, ok := record[schserv.TYPEKEY]; ok && strings.Contains(fmt.Sprintf("%v", typ), "enum") {
+		typ2 := strings.Replace(fmt.Sprintf("%v", typ), " ", "", -1)
+		typ2 = strings.Replace(typ2, "'", "", -1)
+		typ2 = strings.Replace(typ2, "(", "__", -1)
+		typ2 = strings.Replace(typ2, ",", "_", -1)
+		typ2 = strings.Replace(typ2, ")", "", -1)
+		record[schserv.TYPEKEY] = strings.ToLower(typ2)
+	}
+	if label, ok := record[schserv.LABELKEY]; !ok || label == "" {
+		record[schserv.LABELKEY] = strings.Replace(fmt.Sprintf("%v", record[schserv.NAMEKEY]), "_", " ", -1)
+	}
+	rec, err := s.Domain.ValidateBySchema(record, tablename)
+	if err != nil && !s.Domain.GetAutoload() { return rec, false, false } else { rec = record } 
+	return rec, true, true
 }
-func (s *SchemaFields) WriteRowAutomation(record tool.Record, tableName string) { 
-	res, err := s.Domain.SuperCall(
-		tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-			         tool.RootRowsParam: fmt.Sprintf("%v", record[entities.RootID(entities.DBSchema.Name)]) }, 
-		tool.Record{}, 
-		tool.SELECT, 
-		"Get",
-	)
-	if err != nil || len(res) == 0 { return }
-	for role, mainPerms := range tool.MAIN_PERMS {
-			read_levels := []string{entities.LEVELNORMAL}
-			if level, ok := record["read_level"]; ok && level != "" {
+func (s *SchemaFields) WriteRowAutomation(record map[string]interface{}, tableName string) { 
+	schema, err := schserv.GetSchemaByID(record[schserv.RootID(schserv.DBSchema.Name)].(int64))
+	if err != nil { return }
+	for role, mainPerms := range schserv.MAIN_PERMS {
+			read_levels := []string{schserv.LEVELNORMAL}
+			if level, ok := record["read_level"]; ok && level != "" && level != schserv.LEVELOWN {
 				read_levels = append(read_levels, strings.Replace(fmt.Sprintf("%v", level), "'", "", -1))
 			}
 			for _, l := range read_levels {
-				rec := tool.Record{ 
-					entities.NAMEATTR : fmt.Sprintf("%v", res[0][entities.NAMEATTR]) + ":" + fmt.Sprintf("%v", record[entities.NAMEATTR]) + ":" + l + ":" + role, 
+				rec := map[string]interface{}{ 
+					schserv.NAMEKEY : schema.Name + ":" + fmt.Sprintf("%v", record[schserv.NAMEKEY]) + ":" + l + ":" + role, 
 				}
 				for perms, value := range mainPerms { rec[perms]=value }
-				rec[tool.SELECT.String()]=l
-				s.Domain.SuperCall(
-					tool.Params{ tool.RootTableParam : entities.DBPermission.Name, tool.RootRowsParam : tool.ReservedParam }, 
-					rec, tool.CREATE, "CreateOrUpdate",)
+				rec[utils.SELECT.String()]=l
+				s.Domain.SuperCall(utils.AllParams(schserv.DBPermission.Name), rec, utils.CREATE)
 			}
 	}
-	s.Domain.SuperCall(tool.Params{ tool.RootTableParam : res[0][entities.NAMEATTR].(string), 
-				       tool.RootColumnsParam: tool.ReservedParam }, 
-						record, 
-						tool.CREATE, 
-						"CreateOrUpdate")
+	s.Domain.SuperCall(utils.Params{ utils.RootTableParam : schema.Name, 
+		utils.RootColumnsParam : fmt.Sprintf("%v", record[schserv.NAMEKEY])}, record, utils.CREATE)
+	schserv.LoadCache(schema.Name, s.Domain.GetDb())
 }
-func (s *SchemaFields) UpdateRowAutomation(results tool.Results, record tool.Record) {
+func (s *SchemaFields) UpdateRowAutomation(results []map[string]interface{}, record map[string]interface{}) {
 	for _, r := range results {
-		res, err := s.Domain.SuperCall(
-			tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-				    tool.RootRowsParam: fmt.Sprintf("%s", r[entities.RootID(entities.DBSchema.Name)]) }, 
-			tool.Record{}, 
-			tool.SELECT, 
-			"Get",
-		)
-		if err != nil || len(res) == 0 { return }
-		for role, mainPerms := range tool.MAIN_PERMS {
-			read_levels := []string{entities.LEVELNORMAL}
-			if level, ok := record["read_level"]; ok && level != "" {
+		schema, err := schserv.GetSchemaByID(r[schserv.RootID(schserv.DBSchema.Name)].(int64))
+		if err != nil { continue }
+		for role, mainPerms := range schserv.MAIN_PERMS {
+			read_levels := []string{schserv.LEVELNORMAL}
+			if level, ok := record["read_level"]; ok && level != "" && level != schserv.LEVELOWN {
 				read_levels = append(read_levels,strings.Replace( fmt.Sprintf("%v", level), "'", "", -1))
 			}
 			for _, l := range read_levels {
-				rec := tool.Record{ 
-					entities.NAMEATTR : fmt.Sprintf("%v", res[0][entities.NAMEATTR]) + ":" + fmt.Sprintf("%v", record[entities.NAMEATTR]) + ":" + l + ":" + role, 
+				rec := map[string]interface{}{ 
+					schserv.NAMEKEY : schema.Name + ":" + fmt.Sprintf("%v", record[schserv.NAMEKEY]) + ":" + l + ":" + role, 
 				}
 				for perms, value := range mainPerms { rec[perms]=value }
-				rec[tool.SELECT.String()]=l
-				s.Domain.SuperCall(
-					tool.Params{ tool.RootTableParam : entities.DBPermission.Name, tool.RootRowsParam : tool.ReservedParam }, 
-					rec, tool.CREATE, "CreateOrUpdate",)
+				rec[utils.SELECT.String()]=l
+				s.Domain.SuperCall(utils.AllParams(schserv.DBPermission.Name), rec, utils.CREATE)
 			}
 		}
-		newRecord := tool.Record{}
-		for k, v := range record {
-			newRecord[k] = v 
-		}
-		newRecord[entities.TYPEATTR] = r[entities.TYPEATTR]
-		newRecord[entities.NAMEATTR] = r[entities.NAMEATTR]
-		_, err = s.Domain.SuperCall(
-			tool.Params{ 
-				tool.RootTableParam : res[0][entities.NAMEATTR].(string), 
-				tool.RootColumnsParam: r[entities.NAMEATTR].(string) }, 
-			newRecord, 
-			tool.UPDATE, 
-			"CreateOrUpdate",
-		)
-		
+		newRecord := utils.Record{}
+		for k, v := range record { newRecord[k] = v }
+		newRecord[schserv.TYPEKEY] = r[schserv.TYPEKEY]
+		newRecord[schserv.NAMEKEY] = r[schserv.NAMEKEY]
+		s.Domain.SuperCall(utils.Params{ utils.RootTableParam : schema.Name, 
+			utils.RootColumnsParam: r[schserv.NAMEKEY].(string) }, newRecord, utils.UPDATE)
+		schserv.LoadCache(schema.Name, s.Domain.GetDb())
 	}
+	
 }
-func (s *SchemaFields) DeleteRowAutomation(results tool.Results, tableName string) { 
+func (s *SchemaFields) DeleteRowAutomation(results []map[string]interface{}, tableName string) { 
 	for _, record := range results { 
-		res, err := s.Domain.SuperCall(
-			tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-				    tool.RootRowsParam: fmt.Sprintf("%v", record[entities.RootID(entities.DBSchema.Name)]) }, 
-			tool.Record{}, 
-			tool.SELECT, 
-			"Get",
-		)
-		if err != nil || res == nil || len(res) == 0 { continue }
-	    s.Domain.SuperCall(
-			tool.Params{ tool.RootTableParam : res[0][entities.NAMEATTR].(string), 
-				    tool.RootColumnsParam: record[entities.NAMEATTR].(string) }, 
-			tool.Record{}, 
-			tool.DELETE, 
-			"Delete",
-		)
-		
-		s.Domain.SuperCall(
-			tool.Params{ tool.RootTableParam : entities.DBPermission.Name, 
-				         tool.RootRowsParam : tool.ReservedParam, 
-						 entities.NAMEATTR : "%" + tableName + ":" + fmt.Sprintf("%v", record[entities.NAMEATTR]) + "%" }, 
-						 tool.Record{ },  tool.DELETE, "Delete", )
+		schema, err := schserv.GetSchemaByID(record[schserv.RootID(schserv.DBSchema.Name)].(int64))
+		if err == nil { continue }
+	    s.Domain.SuperCall( utils.Params{ utils.RootTableParam : schema.Name, 
+			utils.RootColumnsParam: record[schserv.NAMEKEY].(string) }, utils.Record{},  utils.DELETE)
+		s.Domain.SuperCall(utils.Params{ utils.RootTableParam : schserv.DBPermission.Name, 
+			utils.RootRowsParam : utils.ReservedParam, schserv.NAMEKEY : "%" + tableName + ":" + fmt.Sprintf("%v", record[schserv.NAMEKEY]) + "%" }, 
+			utils.Record{ },  utils.DELETE)
 	}
-}
-func (s *SchemaFields) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 	
-	res := tool.Results{}
-	for _, rec := range results {
-		schemas, err := s.Domain.Schema(rec, true)
-		if err != nil && len(schemas) == 0 { continue }
-		if s.Domain.PermsCheck(fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]), "", "", tool.SELECT) { res = append(res, rec) }
-	}
-	return results
-}
-func (s *SchemaFields) ConfigureFilter(tableName string) (string, string) {
-	return s.Domain.ViewDefinition(tableName)
 }	

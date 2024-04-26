@@ -1,0 +1,54 @@
+package schema_service
+
+import (
+	"fmt"
+	"sqldb-ws/lib/domain/utils"
+	schserv "sqldb-ws/lib/domain/schema"
+)
+
+type SchemaService struct { utils.SpecializedService }
+// ADD IN THE FUTURE IN CACHE
+func (s *SchemaService) Entity() utils.SpecializedServiceInfo { return schserv.DBSchema }
+func (s *SchemaService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) { 
+	if s.Domain.GetMethod() == utils.DELETE { 
+		tableName := schserv.GetTablename(s.Domain.GetParams()[utils.RootRowsParam])
+		if tableName == "" { return record, false, false }
+		schema, err := schserv.GetSchema(tableName)
+		return record, err == nil && !schserv.IsRootDB(schema.Name), false 
+	}
+	rec, err := s.Domain.ValidateBySchema(record, tablename)
+	if err != nil && !s.Domain.GetAutoload() { return rec, false, false } else { rec = record }
+	return rec, true, false 
+}
+func (s *SchemaService) DeleteRowAutomation(results []map[string]interface{}, tableName string) { 
+	s.Domain.SetIsCustom(true)
+	s.Domain.SuperCall( utils.Params{ utils.RootTableParam : schserv.DBPermission.Name, 
+		utils.RootRowsParam : utils.ReservedParam,  schserv.NAMEKEY : "%" + tableName + "%" },  utils.Record{},  utils.DELETE)
+}
+func (s *SchemaService) UpdateRowAutomation(datas []map[string]interface{}, record map[string]interface{}) {
+	if datas != nil { schserv.LoadCache(utils.ReservedParam, s.Domain.GetDb()) }
+	for role, mainPerms := range schserv.MAIN_PERMS {
+		for _, level := range []string{schserv.LEVELOWN, schserv.LEVELNORMAL} {
+			rec := utils.Record{ schserv.NAMEKEY : fmt.Sprintf("%v", record[schserv.NAMEKEY]) + ":" + level + ":" + role , }
+			for perms, value := range mainPerms { rec[perms]=value }
+			rec[utils.SELECT.String()]=level
+			s.Domain.SuperCall(utils.AllParams(schserv.DBPermission.Name), rec, utils.CREATE)
+		}
+	}
+}
+func (s *SchemaService) WriteRowAutomation(record map[string]interface{}, tableName string) { 
+	s.Domain.SuperCall(utils.Params{ utils.RootTableParam : record[schserv.NAMEKEY].(string), }, 
+		utils.Record{ schserv.NAMEKEY : record[schserv.NAMEKEY], "fields": []interface{}{} }, utils.CREATE)
+	schema := schserv.SchemaModel{}.Deserialize(record)
+	name := schema.Label
+	if schema.Name != schserv.DBView.Name && schema.Name != schserv.DBViewAttribution.Name {
+		newView := utils.Record{ schserv.NAMEKEY : name, "indexable" : true, "description": "View description for " + name + " datas.", 
+							 "is_empty": false, "index": 0, "is_list": true, "readonly": false, schserv.RootID(schserv.DBSchema.Name) : schema.ID }
+		s.Domain.SuperCall(utils.AllParams(schserv.DBView.Name), newView, utils.CREATE)
+	}
+	if schema.Name != schserv.DBTask.Name && schema.Name != schserv.DBRequest.Name {
+		newWF := utils.Record{ schserv.NAMEKEY : "create " + name, "description": "new " + name + " workflow", schserv.RootID(schserv.DBSchema.Name) : schema.ID }
+		s.Domain.SuperCall(utils.AllParams(schserv.DBWorkflow.Name), newWF, utils.CREATE)
+	}
+	s.UpdateRowAutomation(nil, record)
+}

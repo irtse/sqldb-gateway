@@ -1,48 +1,38 @@
 package service
 
 import ( 
-	// "fmt"
-	tool "sqldb-ws/lib" 
+	"sqldb-ws/lib/domain/utils" 
 	task "sqldb-ws/lib/domain/service/task_service" 
-	user "sqldb-ws/lib/domain/service/user_service"
 	schema "sqldb-ws/lib/domain/service/schema_service" 
+	infrastructure "sqldb-ws/lib/infrastructure/service"
 )
-
 // export all specialized services available per domain
-var SERVICES = []tool.SpecializedService{
+var SERVICES = []utils.SpecializedServiceITF{
 	&schema.SchemaService{}, 
 	&schema.SchemaFields{}, 
 	&schema.ViewService{}, 
 	&task.RequestService{}, 
 	&task.TaskService{},
 	&task.WorkflowService{},
-	&user.UserEntityService{},
-	&user.HierarchyService{},
-	&user.RoleAttributionService{},
-	&user.RoleService{},
-	&user.PermissionService{},
-	&user.NotificationService{},
 }
 // funct to get specialized service depending on table reached
-func SpecializedService(name string) tool.SpecializedService {
+func SpecializedService(name string) utils.SpecializedServiceITF {
 	for _, service := range SERVICES {
 		if service.Entity().GetName() == name { return service }
 	}
 	return &CustomService{}
 }
 // Default Specialized Service. 
-type CustomService struct { tool.AbstractSpecializedService }
-func (s *CustomService) UpdateRowAutomation(results tool.Results, record tool.Record) {}
-func (s *CustomService) WriteRowAutomation(record tool.Record, tableName string) {}
-func (s *CustomService) DeleteRowAutomation(results tool.Results, tableName string) {}
-func (s *CustomService) Entity() tool.SpecializedServiceInfo { return nil }
-func (s *CustomService) VerifyRowAutomation(record tool.Record, create bool) (tool.Record, bool, bool) { 
-	return record, true, false }
-func (s *CustomService) PostTreatment(results tool.Results, tableName string, dest_id... string) tool.Results { 
-	return s.Domain.PostTreat( results, tableName) // call main post treatment
+type CustomService struct { 
+	utils.SpecializedService
+	infrastructure.InfraSpecializedService
 }
-// default have a right to access to whatever is in dbuser_entry database... (sets at creation)
-func (s *CustomService) ConfigureFilter(tableName string) (string, string) {
-	return s.Domain.ViewDefinition(tableName)
-}	
-// to set up ConfigureFilter
+func (s *CustomService) Entity() utils.SpecializedServiceInfo { return nil }
+func (s *CustomService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) { 
+	if s.Domain.GetMethod() != utils.DELETE {
+		rec, err := s.Domain.ValidateBySchema(record, tablename)
+		if err != nil && !s.Domain.GetAutoload() { return rec, false, false } else { rec = record }
+		return rec, true, false 
+	}
+	return record, true, true
+}

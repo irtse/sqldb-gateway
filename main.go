@@ -5,7 +5,7 @@ import (
 	"fmt"
 	_ "sqldb-ws/routers"
 	"github.com/spf13/viper"
-	"sqldb-ws/lib/domain/auth"
+	auth "sqldb-ws/controllers"
 	domain "sqldb-ws/lib/domain"
 	beego "github.com/beego/beego/v2/server/web"
 )
@@ -48,7 +48,7 @@ func main() {
 	if os.Getenv("dbname") == "" { os.Setenv("dbname", "test") }
 	if os.Getenv("dbssl") == "" { os.Setenv("dbssl", "disable") }
 	if os.Getenv("log") == "" { os.Setenv("log", "disable") }
-	fmt.Printf("%s\n", "Checking for root DBBases... \nWait for server to launch...")
+	fmt.Printf("%s\n", "Checking for root DBBases... \nWait for server to launch... (may take a while on first start)")
 	domain.Load()
 	os.Setenv("log", "enable")
 	beego.Run()

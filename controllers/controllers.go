@@ -9,12 +9,11 @@ import (
 	"net/http"
 	"encoding/csv"
 	"encoding/json"
-	tool "sqldb-ws/lib"
 	"sqldb-ws/lib/domain"
-	"sqldb-ws/lib/domain/auth"
+	"sqldb-ws/lib/domain/utils"
 	"github.com/rs/zerolog/log"
+	"sqldb-ws/lib/domain/schema"
 	"github.com/golang-jwt/jwt/v5"
-	entities "sqldb-ws/lib/entities"
 	"github.com/thedatashed/xlsxreader"
 	"github.com/matthewhartstonge/argon2"
 	beego "github.com/beego/beego/v2/server/web"
@@ -31,31 +30,30 @@ type AbstractController struct {
 	beego.Controller 
 }
 // SafeCaller will ask for a authenticated procedure
-func (t *AbstractController) SafeCall(method tool.Method, funcName string, args... interface{}) {
-	t.Call(true, method, funcName, args...)
+func (t *AbstractController) SafeCall(method utils.Method, args... interface{}) {
+	t.Call(true, method, args...)
 }
 // SafeCaller will ask for a free of authentication procedure
-func (t *AbstractController) UnSafeCall(method tool.Method, funcName string, args... interface{}) {
-	t.Call(false, method, funcName, args...)
+func (t *AbstractController) UnSafeCall(method utils.Method,  args... interface{}) {
+	t.Call(false, method, args...)
 }
 // Call function invoke Domain service and ask for the proper function by function name & method
-func (t *AbstractController) Call(auth bool, method tool.Method, funcName string, args... interface{}) {
+func (t *AbstractController) Call(auth bool, method utils.Method, args... interface{}) {
 	superAdmin := false
 	var user string
 	var err error
 	if auth { // we will verify authentication and status if auth is expected
 		user, superAdmin, err = t.authorized() // will check up if allowed (or authenticated)
-		if err != nil { t.response(tool.Results{}, err); return }
+		if err != nil { t.response(utils.Results{}, err); return }
 	} // then proceed to exec by calling domain
 	d := domain.Domain(superAdmin, user, false)
 	d.SetExternalSuperAdmin(superAdmin)
 	p, asLabel := t.params()
 	files, err := t.formFile(asLabel)
-	fmt.Printf("FILES : %v\n", files)
 	if err == nil && len(files) > 0 {
-		resp := tool.Results{}; var error error
+		resp := utils.Results{}; var error error
 		for _, file := range files {
-			response, err := d.Call(p, file, method, funcName, args...)
+			response, err := d.Call(p, file, method, args...)
 			resp = append(resp, response...)
 			if err != nil { 
 				if error == nil { error = err } else { error = errors.New(error.Error() + " | " + err.Error()) }
@@ -63,34 +61,34 @@ func (t *AbstractController) Call(auth bool, method tool.Method, funcName string
 		}
 		t.response(resp, error) // send back response
 	} else {
-		response, err := d.Call(p, t.body(true), method, funcName, args...)
-		if format, ok := p[tool.RootExport]; ok { t.download(format, p[tool.RootFilename], asLabel, response, err); return }
+		response, err := d.Call(p, t.body(true), method, args...)
+		if format, ok := p[utils.RootExport]; ok { t.download(format, p[utils.RootFilename], asLabel, response, err); return }
 		t.response(response, err) // send back response
 	}	
 }
 // authorized is authentication check up func of the HANDLER
 func (t *AbstractController) authorized() (string, bool, error) {
 	found := false
-	for _, mode := range auth.AUTHMODE { // above all check for kind of auth (token in authorization header, or session API)
+	for _, mode := range AUTHMODE { // above all check for kind of auth (token in authorization header, or session API)
 		if mode == os.Getenv("authmode") { found = true }
 	} // if none found give an error
 	if !found { return "", false, errors.New("authmode not allowed <" + os.Getenv("authmode") + ">") }
 	// session auth will look in session variables in API ONLY
-	if os.Getenv("authmode") == auth.AUTHMODE[0] {
-		if t.GetSession(auth.SESSIONS_KEY) != nil { 
-			return t.GetSession(auth.SESSIONS_KEY).(string), t.GetSession(auth.ADMIN_KEY).(bool), nil 
+	if os.Getenv("authmode") == AUTHMODE[0] {
+		if t.GetSession(SESSIONS_KEY) != nil { 
+			return t.GetSession(SESSIONS_KEY).(string), t.GetSession(ADMIN_KEY).(bool), nil 
 		}
 		return "", false, errors.New("user not found in session")
 	} // TOKEN verification is a little bit verbose by extractin token in Authorization Header and look after its properties
 	header := t.Ctx.Request.Header
 	a, ok := header["Authorization"] // extract token in HEADER
 	if !ok { return "", false, errors.New("No authorization in header") }
-	tokenService := &auth.Token{}
+	tokenService := &Token{}
 	token, err := tokenService.Verify(a[0]) // Verify if token is valid
 	if err != nil { return "", false, err }
 	claims := token.Claims.(jwt.MapClaims)
-	if user_id, ok := claims[auth.SESSIONS_KEY]; ok { // if all in claims send back super mode and user as confirmation
-		return user_id.(string), claims[auth.ADMIN_KEY].(bool), nil 
+	if user_id, ok := claims[SESSIONS_KEY]; ok { // if all in claims send back super mode and user as confirmation
+		return user_id.(string), claims[ADMIN_KEY].(bool), nil 
 	}
 	return "", false, errors.New("user not found in token")
 }
@@ -100,12 +98,12 @@ func (t *AbstractController) paramsOver(override map[string]string) map[string]s
 	for k, v := range override { params[k]=v } // add custom params
 	return params
 }
-func (t *AbstractController) formFile(asLabel map[string]string) (tool.Results, error) {
+func (t *AbstractController) formFile(asLabel map[string]string) (utils.Results, error) {
 	file, header, err := t.Ctx.Request.FormFile("file")
 	if err == nil {
 		defer file.Close()
 		cols := []string{}
-		results := tool.Results{}
+		results := utils.Results{}
 		if strings.Contains(header.Filename, ".csv") {
 			reader := csv.NewReader(file) // check if file is a CSV
 			records, err := reader.ReadAll() 
@@ -116,9 +114,8 @@ func (t *AbstractController) formFile(asLabel map[string]string) (tool.Results, 
 					if col == label { col = strings.Replace(k, "_aslabel", "", -1) }
 				}
 			}
-			fmt.Printf("FILE : %v %v \n", file, records[1:])
 			for _, rec := range records[1:] {
-				newRecord := tool.Record{}
+				newRecord := utils.Record{}
 				for i, col := range cols { newRecord[col] = rec[i] }
 				results = append(results, newRecord)
 			}
@@ -140,7 +137,7 @@ func (t *AbstractController) formFile(asLabel map[string]string) (tool.Results, 
 						if len(cols) < i + 1 { cols = append(cols, cell.Value) }
 					}
 				} else {
-					newRecord := tool.Record{}
+					newRecord := utils.Record{}
 					for i, cell := range row.Cells { newRecord[cols[i]] = cell.Value }
 					results = append(results, newRecord)
 				}
@@ -176,16 +173,16 @@ func (t *AbstractController) params() (map[string]string, map[string]string) {
 		if err != nil { log.Error().Msg(err.Error()) }
 		params["password"] = string(hash)
 	}
-	if t, ok := params[tool.RootTableParam]; !ok || t == entities.DBView.Name { delete(params, tool.RootExport) }
-	if _, ok := params[tool.RootExport]; ok { 
-		params[tool.RootRawView] = "" 
-		if _, ok := params[tool.RootFilename]; !ok { params[tool.RootFilename] = params[tool.RootTableParam] }
+	if t, ok := params[utils.RootTableParam]; !ok || t == schema.DBView.Name { delete(params, utils.RootExport) }
+	if _, ok := params[utils.RootExport]; ok { 
+		params[utils.RootRawView] = "" 
+		if _, ok := params[utils.RootFilename]; !ok { params[utils.RootFilename] = params[utils.RootTableParam] }
 	}
 	return params, paramsAsLabel
 }
 // body is the main body extracter from the controller
-func (t *AbstractController) body(hashed bool) tool.Record {
-	var res tool.Record 
+func (t *AbstractController) body(hashed bool) utils.Record {
+	var res utils.Record 
 	json.Unmarshal(t.Ctx.Input.RequestBody, &res)
 	if pass, ok := res["password"]; ok { // if any password founded hash it
 		argon := argon2.DefaultConfig()
@@ -196,7 +193,7 @@ func (t *AbstractController) body(hashed bool) tool.Record {
 	return res
 }
 // response rules every http response 
-func (t *AbstractController) response(resp tool.Results, err error) { 
+func (t *AbstractController) response(resp utils.Results, err error) { 
 	t.Ctx.Output.SetStatus(http.StatusOK) // defaulting on absolute success
 	if err != nil { // Check nature of error if there is one
 		//if strings.Contains(err.Error(), "AUTH") { t.Ctx.Output.SetStatus(http.StatusUnauthorized) }
@@ -205,19 +202,19 @@ func (t *AbstractController) response(resp tool.Results, err error) {
 			t.Data[JSON]=map[string]interface{}{ DATA : resp, ERROR : err.Error() }
 		} else {
 			log.Error().Msg(err.Error())
-			t.Data[JSON]=map[string]interface{}{ DATA : tool.Results{}, ERROR : err.Error() }
+			t.Data[JSON]=map[string]interface{}{ DATA : utils.Results{}, ERROR : err.Error() }
 		}
 	} else { // if success precise an error if no datas is founded
 		if len(resp) == 0 { t.Data[JSON] = map[string]interface{}{ DATA : resp, ERROR : "datas not found" } 			
 		} else { t.Data[JSON] = map[string]interface{}{ DATA : resp, ERROR : nil } }
-		for _, json := range t.Data[JSON].(map[string]interface{})[DATA].(tool.Results) {
+		for _, json := range t.Data[JSON].(map[string]interface{})[DATA].(utils.Results) {
 			if _, ok := json["password"]; ok { delete(json, "password") } // never send back a password in any manner
 		}
 	}
 	t.ServeJSON() // then serve response by beego
 }
 
-func (t *AbstractController) download(format string, name string, mapping map[string]string, resp tool.Results, error error) {
+func (t *AbstractController) download(format string, name string, mapping map[string]string, resp utils.Results, error error) {
 	cols, results := t.mapping(mapping, resp) // mapping
 	t.Ctx.ResponseWriter.Header().Set("Content-Type", "text/" + format)
 	t.Ctx.ResponseWriter.Header().Set("Content-Disposition", "attachment; filename=" + name + "_" + strings.Replace(time.Now().Format(time.RFC3339), " ", "_", -1) + "." + format)
@@ -228,8 +225,8 @@ func (t *AbstractController) download(format string, name string, mapping map[st
 		t.response(results, error)
 	}
 }
-func (t *AbstractController) mapping(mapping map[string]string, resp tool.Results) ([]string, tool.Results) {
-	cols := []string{}; results := tool.Results{}
+func (t *AbstractController) mapping(mapping map[string]string, resp utils.Results) ([]string, utils.Results) {
+	cols := []string{}; results := utils.Results{}
 	if len(resp) == 0 { return cols, results }
 	r := resp[0]
 	order := r["order"].([]interface{})
@@ -239,17 +236,17 @@ func (t *AbstractController) mapping(mapping map[string]string, resp tool.Result
 		if scheme, ok := schema[o.(string)]; !ok && strings.Contains(scheme.(map[string]interface{})["type"].(string), "many") { continue }
 		label := strings.Replace(schema[key].(map[string]interface{})["label"].(string), "_", " ", -1)
 		if mapKey, ok := mapping[key]; ok && mapKey != "" { label = mapKey }	
-		cols = append(cols, strings.ToUpper(label))
+		cols = append(cols, label)
 	}
 	for _, item := range r["items"].([]interface{}) {
-		record := tool.Record{}
+		record := utils.Record{}
 		for _, o := range order {
 			key := o.(string)
 			it := item.(map[string]interface{})
 			if scheme, ok := schema[key]; !ok && strings.Contains(scheme.(map[string]interface{})["type"].(string), "many") { continue }
 			label := strings.Replace(schema[key].(map[string]interface{})["label"].(string), "_", " ", -1)
 			if mapKey, ok := mapping[key]; ok && mapKey != "" { label = mapKey }	
-			label = strings.ToUpper(label)
+			label = label
 			if v, ok := it["values_shallow"].(map[string]interface{})[key]; ok { record[label] = v.(map[string]interface{})["name"].(string)
 			} else if v, ok := it["values"].(map[string]interface{})[key]; ok && v != nil { record[label] = fmt.Sprintf("%v", v) 
 			} else { record[label] = "" }
@@ -258,7 +255,7 @@ func (t *AbstractController) mapping(mapping map[string]string, resp tool.Result
 	}
 	return cols, results
 }
-func (t *AbstractController) csv(cols []string, results tool.Results) [][]string {
+func (t *AbstractController) csv(cols []string, results utils.Results) [][]string {
 	var data [][]string
 	data = append(data, cols)
 	for _, r := range results {
@@ -276,39 +273,33 @@ func (t *AbstractController) session(userId string, superAdmin bool, delete bool
 	var err error
 	token := ""
 	delFunc := func() { // set up a lambda call back function to delete in session and token in base if needed
-		if t.GetSession(auth.SESSIONS_KEY) != nil { 
-			t.DelSession(auth.SESSIONS_KEY) // user_id key
-			t.DelSession(auth.ADMIN_KEY) // super_admin key
+		if t.GetSession(SESSIONS_KEY) != nil { 
+			t.DelSession(SESSIONS_KEY) // user_id key
+			t.DelSession(ADMIN_KEY) // super_admin key
 		} 
-		if os.Getenv("authmode") != auth.AUTHMODE[0] { // in case of token way of authenticate
-			params := t.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name, 
-				                                      tool.RootRowsParam : tool.ReservedParam, 
+		if os.Getenv("authmode") != AUTHMODE[0] { // in case of token way of authenticate
+			params := t.paramsOver(map[string]string{ utils.RootTableParam : schema.DBUser.Name, 
+				                                      utils.RootRowsParam : utils.ReservedParam, 
 													})
 			sqlFilter := "name='" + userId + "' OR email='" + userId + "'"
 			domain.Domain(false, userId, false).Call( // replace token by a nil
-				params, 
-				tool.Record{ "token" : nil }, 
-				tool.UPDATE, 
-				"CreateOrUpdate",
-				sqlFilter,
-			)
+				params, utils.Record{ "token" : nil }, utils.UPDATE, sqlFilter)
 		}
 	}
 	if delete { delFunc(); return token } // if only deletion quit after launching lambda
-	t.SetSession(auth.SESSIONS_KEY, userId) // load superadmin and user id in session in any case
-	t.SetSession(auth.ADMIN_KEY, superAdmin)
-	if os.Getenv("authmode") != auth.AUTHMODE[0] { // if token way of authentication
-		tokenService := &auth.Token{} // generate a new token with all needed claims
+	t.SetSession(SESSIONS_KEY, userId) // load superadmin and user id in session in any case
+	t.SetSession(ADMIN_KEY, superAdmin)
+	if os.Getenv("authmode") != AUTHMODE[0] { // if token way of authentication
+		tokenService := &Token{} // generate a new token with all needed claims
 		token, err = tokenService.Create(userId, superAdmin); 
-		if err != nil { t.response(tool.Results{}, err); return token } // then update user with its brand new token.
-		params := t.paramsOver(map[string]string{ tool.RootTableParam : entities.DBUser.Name,
-			                                      tool.RootRowsParam : tool.ReservedParam, })
+		if err != nil { t.response(utils.Results{}, err); return token } // then update user with its brand new token.
+		params := t.paramsOver(map[string]string{ utils.RootTableParam : schema.DBUser.Name,
+			                                      utils.RootRowsParam : utils.ReservedParam, })
 		sqlFilter := "name='" + userId + "' OR email='" + userId + "'"
 		_, err = domain.Domain(false, userId, false).Call(
 			params, 
-			tool.Record{ "token" : token }, 
-			tool.UPDATE, 
-			"CreateOrUpdate", 
+			utils.Record{ "token" : token }, 
+			utils.UPDATE, 
 			sqlFilter,
 		)
 	} // launch a 24h session timer after this session will be killed.

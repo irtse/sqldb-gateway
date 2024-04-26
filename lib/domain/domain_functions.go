@@ -2,285 +2,122 @@ package domain
 
 import (
 	"fmt"
-	"sync"
 	"sort"
 	"slices"
-	"errors"
 	"strings"
 	"encoding/json"
-	tool "sqldb-ws/lib"
-	"sqldb-ws/lib/entities"
-	conn "sqldb-ws/lib/infrastructure/connector"
+	"sqldb-ws/lib/domain/utils"
+	schserv "sqldb-ws/lib/domain/schema"
 )
-
-// define filter whatever what happen on sql...
-func (d *MainService) ViewDefinition(tableName string, innerRestriction... string) (string, string) {
-	SQLview := ""; SQLrestriction := ""
-	if d.IsSuperCall() { return SQLrestriction, SQLview } // admin can see all on admin view
-	SQLrestriction = d.ByEntityUser(tableName)
-	SQLview = d.byFields(tableName)
-	if len(innerRestriction) > 0 {
-		for _, restr := range innerRestriction {
-			if len(strings.TrimSpace(restr)) > 0 {
-				if len(SQLrestriction) > 0 { SQLrestriction += " AND (" + restr + ")"
-				} else { SQLrestriction = restr  }
-			}
-		}
-	}
-	return SQLrestriction, SQLview
-}
-func (d *MainService) CountNewDataAccess(tableName string, filter string, countParams tool.Params) ([]string, int64) {
-	sqlFilter := "id NOT IN (SELECT " + entities.RootID("dest_table") + " FROM " + entities.DBDataAccess.Name + " WHERE "
-	sqlFilter += entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM " + entities.DBSchema.Name + " WHERE name = '" + tableName + "') AND " 
-	sqlFilter += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name = '" + d.GetUser() + "' ))"
+// DONT FORGET DATA ACCESS
+func (d *MainService) CountNewDataAccess(tableName string, filter string, countParams utils.Params) ([]string, int64) {
+	sqlFilter := "id NOT IN (SELECT " + schserv.RootID("dest_table") + " FROM " + schserv.DBDataAccess.Name + " WHERE "
+	sqlFilter += schserv.RootID(schserv.DBSchema.Name) + " IN (SELECT id FROM " + schserv.DBSchema.Name + " WHERE name = '" + tableName + "') AND " 
+	sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name = '" + d.GetUser() + "' ) AND write=false AND update=false)"
 	if len(filter) > 0 { sqlFilter += " AND " + filter }
-	p := tool.Params{ tool.RootTableParam : tableName, tool.RootRowsParam : tool.ReservedParam, 
-		              tool.RootColumnsParam : tool.SpecialIDParam, tool.RootShallow: "enable",  tool.RootRawView: "enable" }
-	res, err := d.PermsSuperCall( p, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+	p := utils.Params{ utils.RootTableParam : tableName, utils.RootRowsParam : utils.ReservedParam, 
+		               utils.RootColumnsParam : utils.SpecialIDParam }
+	res, err := d.PermsSuperCall( p, utils.Record{}, utils.SELECT, sqlFilter)
 	ids := []string{}
 	if err != nil { return ids, 0 }
-	for _, rec := range res { ids = append(ids, rec.GetString(tool.SpecialIDParam)) }
-	sqlFilter = "id IN (SELECT " + entities.RootID("dest_table") + " FROM " + entities.DBDataAccess.Name + " WHERE "
-	sqlFilter += entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM " + entities.DBSchema.Name + " WHERE name = '" + tableName + "') AND " 
-	sqlFilter += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name = '" + d.GetUser() + "' ))"
+	for _, rec := range res { 
+		if !slices.Contains(ids, rec.GetString(utils.SpecialIDParam)) { 
+			ids = append(ids, rec.GetString(utils.SpecialIDParam)) 
+		}
+	}
+	sqlFilter = "id IN (SELECT " + schserv.RootID("dest_table") + " FROM " + schserv.DBDataAccess.Name + " WHERE "
+	sqlFilter += schserv.RootID(schserv.DBSchema.Name) + " IN (SELECT id FROM " + schserv.DBSchema.Name + " WHERE name = '" + tableName + "') AND " 
+	sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name = '" + d.GetUser() + "' )  AND write=false AND update=false)"
 	if len(filter) > 0 { sqlFilter += " AND " + filter }
-	countParams[tool.RootTableParam] = tableName
-	countParams[tool.RootRowsParam] = tool.ReservedParam
-	res, err = d.PermsSuperCall( countParams, tool.Record{}, tool.SELECT, "Count", sqlFilter)
-	if len(res) == 0 || err != nil { return ids, 0 }
-	return ids, res[0]["count"].(int64) + int64(len(ids))
+	countParams[utils.RootTableParam] = tableName
+	countParams[utils.RootRowsParam] = utils.ReservedParam
+	res, err = d.PermsSuperCall( countParams, utils.Record{}, utils.COUNT, sqlFilter)
+	if len(res) == 0 || err != nil || res[0]["count"] == nil { return ids, 0 }
+	return ids, int64(res[0]["count"].(float64))
 }
 
-func (d *MainService) DataAccess(schemaID int64, destIDs []string, delete bool) {
-	sqlFilter := "name='"+ d.GetUser() + "'"
-	params := tool.Params{ tool.RootTableParam : entities.DBUser.Name, tool.RootRowsParam : tool.ReservedParam,}
-	users, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+func (d *MainService) NewDataAccess(schemaID int64, destIDs []string, meth utils.Method) {
+	users, err := d.SuperCall(utils.AllParams(schserv.DBUser.Name), utils.Record{}, utils.SELECT, "name='"+ d.GetUser() + "'")
 	if err == nil && len(users) > 0 {
 		for _, destID := range destIDs {
-			id := users[0].GetString(tool.SpecialIDParam)
-			sqlFilter := entities.RootID(entities.DBSchema.Name) + "=" + fmt.Sprintf("%v", schemaID) + " AND " 
+			id := users[0].GetString(utils.SpecialIDParam)
+			sqlFilter := schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schemaID) + " AND " 
 			if strings.Contains(destID, "%") {
-				sqlFilter += entities.RootID("dest_table") + "::text LIKE '" + strings.Replace(fmt.Sprintf("%v", destID), "%25", "%", -1) + "' AND "
-			} else { sqlFilter += entities.RootID("dest_table") + "=" + fmt.Sprintf("%v", destID) + " AND " }
-			sqlFilter += entities.RootID(entities.DBUser.Name) + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name = '" + d.GetUser() + "' )"
-			p := tool.Params{ tool.RootTableParam : entities.DBDataAccess.Name, tool.RootRowsParam : tool.ReservedParam,}
-			access, err := d.SuperCall( p, tool.Record{}, tool.SELECT, "Get", sqlFilter)
+				sqlFilter += schserv.RootID("dest_table") + "::text LIKE '" + strings.Replace(fmt.Sprintf("%v", destID), "%25", "%", -1) + "' AND "
+			} else { sqlFilter += schserv.RootID("dest_table") + "=" + fmt.Sprintf("%v", destID) + " AND " }
+			sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name = '" + d.GetUser() + "' )"
+			access, err := d.SuperCall(utils.AllParams(schserv.DBDataAccess.Name), utils.Record{}, utils.SELECT, sqlFilter)
 			if err != nil || len(access) == 0 {
-				if delete {
-					d.SuperCall( tool.Params{ tool.RootTableParam : entities.DBDataAccess.Name, tool.RootRowsParam : tool.ReservedParam,
-							entities.RootID("dest_table") : destID,
-							entities.RootID(entities.DBSchema.Name) : fmt.Sprintf("%v", schemaID),
-							entities.RootID(entities.DBUser.Name) : id,
-						}, tool.Record{}, tool.DELETE, "Delete")
+				if meth == utils.DELETE {
+					d.SuperCall( utils.Params{ utils.RootTableParam : schserv.DBDataAccess.Name, utils.RootRowsParam : utils.ReservedParam,
+							schserv.RootID("dest_table") : destID,
+							schserv.RootID(schserv.DBSchema.Name) : fmt.Sprintf("%v", schemaID),
+							schserv.RootID(schserv.DBUser.Name) : id,
+						}, utils.Record{}, utils.DELETE)
 				} else {
-					d.SuperCall( tool.Params{ tool.RootTableParam : entities.DBDataAccess.Name, tool.RootRowsParam : tool.ReservedParam,}, tool.Record{
-						entities.RootID("dest_table") : destID,
-						entities.RootID(entities.DBSchema.Name) : schemaID,
-						entities.RootID(entities.DBUser.Name) : id,
-					}, tool.CREATE, "CreateOrUpdate")
+					d.SuperCall(utils.AllParams(schserv.DBDataAccess.Name), utils.Record{
+						"write" : meth == utils.CREATE,
+						"update" : meth == utils.UPDATE,
+						schserv.RootID("dest_table") : destID,
+						schserv.RootID(schserv.DBSchema.Name) : schemaID,
+						schserv.RootID(schserv.DBUser.Name) : id, }, utils.CREATE)
 				}
 			}
 		}
 	}	
 }
 
-func (s *MainService) ByEntityUser(tableName string, extra ...string) (string) {
-	schemas, err := s.Schema(tool.Record{ entities.NAMEATTR : tableName }, false)
-	restr := ""
-	if len(extra) > 1 {
-		restr += "id IN (SELECT " + entities.RootID(extra[1]) + " FROM " + tableName + " WHERE "
-	}
-	if err != nil && schemas != nil && len(schemas) > 0 { 
-		userID := entities.RootID(entities.DBUser.Name)
-		entityID := entities.RootID(entities.DBEntity.Name)
-		if _, ok := schemas[0][userID]; ok || tableName == entities.DBUser.Name {
-			if tableName == entities.DBUser.Name  { userID = tool.SpecialIDParam }
-			restr += userID + " IN (SELECT id FROM " + entities.DBUser.Name + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")" 
-			if _, ok := schemas[0][entityID]; ok || tableName == entities.DBEntity.Name  {
-				if tableName == entities.DBEntity.Name  { entityID = tool.SpecialIDParam }
-				if len(restr) > 0 { restr +=  " OR " }
-				restr += entityID + " IN (SELECT " + entityID + " FROM " + entities.DBEntityUser.Name + "WHERE " + entities.RootID(entities.DBUser.Name) + " IN (" 
-				restr += "SELECT id FROM " + userID + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")"
-			}
-		}
-	}
-	if len(extra) > 1 { restr += ")" }
-	return restr
-}
-
-var mutexFields  = sync.RWMutex{}
-var fieldsCache = map[string]tool.Results{}
-
-func (d *MainService) byFields(tableName string) (string) {
-	SQLview := "id,"
-	sqlFilter := entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM " + entities.DBSchema.Name + " WHERE name='" + tableName + "')"
-	views := []string{}
-	mutexFields.Lock()
-	if params, ok := d.Params[tool.RootColumnsParam]; ok { 
-		views = strings.Split(params, ",") 
-	}
-	if fieldsCache[tableName] == nil  {
-		p := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, tool.RootRowsParam : tool.ReservedParam,}
-		fields, err := d.SuperCall( p, tool.Record{}, tool.SELECT, "Get", sqlFilter)
-		if err != nil || len(fields) == 0 { 
-			mutexFields.Unlock()
-			return ""
-		}
-		fieldsCache[tableName] = fields
-	}
-	for _, field := range fieldsCache[tableName] {
-		if len(views) > 0 && !slices.Contains(views, field.GetString(entities.NAMEATTR)) { continue }
-		if strings.Contains(strings.ToLower(fmt.Sprintf("%v", field[entities.TYPEATTR])) , "many") { continue }
-		if d.PermsCheck(tableName, fmt.Sprintf("%v", field[entities.NAMEATTR]), fmt.Sprintf("%v", field["read_level"]), tool.SELECT) {
-			SQLview += fmt.Sprintf("%v",field[entities.NAMEATTR]) + ","
-		}
-	}
-	mutexFields.Unlock()
-	if len(SQLview) > 0 { SQLview = SQLview[:len(SQLview) - 1] }
-	return SQLview
-}
-
-var mutexSchema  = sync.RWMutex{}
-var schemaCache = map[string]tool.Results{}
-
-func (d *MainService) Schema(record tool.Record, permitted bool) (tool.Results, error) { // check schema auth access
-	params := tool.Params{ tool.RootTableParam : entities.DBSchema.Name, 
-			               tool.RootRowsParam : tool.ReservedParam }
-	var schemas tool.Results
-	var err error
-	sqlFilter := ""
-	mutexSchema.Lock()
-	if id, ok := record[entities.RootID(entities.DBSchema.Name)]; ok {
-		if schemaCache[fmt.Sprintf("%v", id)] != nil {  schemas = schemaCache[fmt.Sprintf("%v", id)] }
-		sqlFilter += "id=" + fmt.Sprintf("%v", id)
-	} else if name, ok := record[entities.NAMEATTR]; ok {
-		if schemaCache[fmt.Sprintf("%v", name)] != nil { schemas = schemaCache[fmt.Sprintf("%v", name)] }
-		sqlFilter += "name='" + fmt.Sprintf("%v", name) + "'"
-	}
-	mutexSchema.Unlock()
-	if schemas == nil {
-		schemas, err = d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
-		if err != nil || len(schemas) == 0 { return nil, err }
-	}
-	if !d.SuperAdmin {
-		mutexSchema.Lock()
-		if id, ok := record[entities.RootID(entities.DBSchema.Name)]; ok { schemaCache[fmt.Sprintf("%v", id)] = schemas
-		} else if name, ok := record[entities.NAMEATTR]; ok { schemaCache[fmt.Sprintf("%v", name)] = schemas }
-		mutexSchema.Unlock()
-		if permitted && !d.PermsCheck(
-			fmt.Sprintf("%v", schemas[0][entities.NAMEATTR]), "", "", tool.SELECT) {
-			return nil, errors.New("not authorized")
-		}
-	}
-	
-	return schemas, err
-}
-
-type Filter struct {
-	Extra				string 		 			 	 `json:"extra_path"`
-	Dir					string 		 			 	 `json:"sql_dir"`
-	Order 	 			string 		 			 	 `json:"sql_order"`
-	View				string 		 			 	 `json:"sql_view"`
-	ViewID 				int64 		 			 	 `json:"dbview_id"`
-}
-
-func (d *MainService) GeneratePathFilter(path string, record tool.Record, params tool.Params) (string, tool.Params) { // check schema auth access
-	var filter Filter
-	b, _:= json.Marshal(record)
-	json.Unmarshal(b, &filter) // GET ITS OWN FILTER
-	if filter.Extra != "" { 
-		path += "/" + filter.Extra
-	}
-	if filter.View != "" { 
-		if params != nil { params[tool.RootColumnsParam] = filter.View }
-		path += "&" + tool.RootColumnsParam + "=" + filter.View
-	}
-	if filter.Order != "" { 
-		if params != nil { params[tool.RootOrderParam] =  filter.Order }
-		path += "&" + tool.RootOrderParam + "=" + strings.Replace(filter.Order, " ", "+", -1)
-	}
-	if filter.Dir != "" { 
-		if params != nil { params[tool.RootDirParam] = filter.Dir }
-		path += "&" + tool.RootDirParam + "=" + strings.Replace(filter.Dir, " ", "+", -1)
-	}
-	if filter.ViewID > 0 {
-		path = "/" + entities.DBView.Name +"?" + tool.RootRowsParam + "=" + fmt.Sprintf("%v", filter.ViewID)
-		delete(record, entities.RootID(entities.DBView.Name))
-	}
-	return path, params
-}
-
-func (d *MainService) BuildPath(tableName string, rows string, extra... string) string {
-	path := "/" + tool.MAIN_PREFIX + "/" + tableName + "?rows=" + rows
-	for _, ext := range extra { path += "&" + ext }
-	return path
-}
-
-func (d *MainService) GetScheme(tableName string, isId bool) (
-	map[string]interface{}, int64, []string, map[string]entities.SchemaColumnEntity, []string) {
-	cols := map[string]entities.SchemaColumnEntity{}
-	keysOrdered := []string{}
-	sqlFilter := ""
-	additionnalAction := []string{}
-	var id int64
-	schemes := map[string]interface{}{}
-	if fieldsCache[tableName] == nil {
-		if isId { sqlFilter += entities.RootID(entities.DBSchema.Name) + "=" + tableName
-		} else { 
-			sqlFilter += entities.RootID(entities.DBSchema.Name) + " IN (SELECT id FROM "
-			sqlFilter += entities.DBSchema.Name + " WHERE name=" + conn.Quote(tableName) + ")" 
-		}
-		// retrive all fields from schema...
-		params := tool.Params{ tool.RootTableParam : entities.DBSchemaField.Name, 
-							tool.RootRowsParam: tool.ReservedParam, }
-		schemas, err := d.SuperCall( params, tool.Record{}, tool.SELECT, "Get", sqlFilter)
-		if err != nil || len(schemas) == 0 { return schemes, id, keysOrdered, cols, additionnalAction }
-		mutexFields.Lock()
-		fieldsCache[tableName] = schemas
-		mutexFields.Unlock()
-	}
-	
-	for _, r := range fieldsCache[tableName] {
-		var scheme entities.SchemaColumnEntity
-		var shallowField entities.ShallowSchemaColumnEntity
-		b, _ := json.Marshal(r)
-		json.Unmarshal(b, &scheme)
-		if !d.SuperAdmin && !d.PermsCheck(tableName, scheme.Name, scheme.Level, tool.SELECT) { continue }
-		cols[scheme.Name]=scheme
-		id = scheme.SchemaId
+func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[string]interface{}, int64, []string, map[string]schserv.FieldModel, []string, bool) {
+	tableName = schserv.GetTablename(tableName)
+	cols := map[string]schserv.FieldModel{}; schemes := map[string]interface{}{}
+	keysOrdered := []string{}; additionnalAction := []string{}
+	readonly := true
+	schema, err := schserv.GetSchema(tableName)
+	if err != nil { return schemes, -1, keysOrdered, cols, additionnalAction, true }
+	for _, scheme := range schema.Fields {
+		if (!d.SuperAdmin && !d.PermsCheck(tableName, scheme.Name, scheme.Level, utils.SELECT)) { continue }
+		var shallowField schserv.ViewFieldModel
+		cols[scheme.Name]=scheme		
+		b, _ := json.Marshal(scheme)
 		json.Unmarshal(b, &shallowField)
 		shallowField.ActionPath = ""
 		shallowField.Actions=[]string{}
-		if scheme.Link != "" && !d.LowerRes {
-			shallowField.LinkPath = "/" + tool.MAIN_PREFIX + "/" + scheme.Link + "?rows=all"
-			if scheme.LinkView != "" { shallowField.LinkPath += "&" + tool.RootColumnsParam + "=" + scheme.LinkView  
-			} else if !strings.Contains(scheme.Type, "many") { shallowField.LinkPath += "&" + tool.RootShallow + "=enable" 
-			} else {
-				isSkipped := false
-				for _, meth := range []tool.Method{ tool.SELECT, tool.CREATE, tool.UPDATE, tool.DELETE } {
-					if d.PermsCheck(scheme.Link, "", "", meth) { 
-						additionnalAction = append(additionnalAction, meth.Method())
-						sch, _, ordered, _, _ := d.GetScheme(scheme.Link, false)
-						shallowField.DataSchema = sch
-						shallowField.DataSchemaOrder = ordered
-						shallowField.ActionPath = "/" + tool.MAIN_PREFIX + "/" + scheme.Link + "?rows=" + tool.ReservedParam
-						shallowField.Actions=append(shallowField.Actions, meth.Method())
-					} else if meth == tool.UPDATE && !d.Empty { shallowField.Readonly = true 
-					} else if meth == tool.CREATE && d.Empty { shallowField.Readonly = true 
-					} else if meth == tool.SELECT { isSkipped = true }
+		if scheme.Link > 0 && !d.LowerRes {
+			schema, _ := schserv.GetSchemaByID(scheme.Link)
+			shallowField.LinkPath = "/" + utils.MAIN_PREFIX + "/" + schema.Name + "?rows=all"
+			if !strings.Contains(scheme.Type, "many") { shallowField.LinkPath += "&" + utils.RootShallow + "=enable" }
+		}
+		for _, meth := range []utils.Method{ utils.SELECT, utils.CREATE, utils.UPDATE, utils.DELETE } {
+			if d.PermsCheck(tableName, "", "", meth) { 
+				if !slices.Contains(additionnalAction, meth.Method()) { additionnalAction = append(additionnalAction, meth.Method()) }
+			} 
+			if scheme.Link > 0 && !noRecursive{
+				schema, _ := schserv.GetSchemaByID(scheme.Link)
+				if d.PermsCheck(schema.Name, "", "", meth) { 
+					if !slices.Contains(additionnalAction, meth.Method()) { additionnalAction = append(additionnalAction, meth.Method()) }
+					sch, _, _, _, _, _ := d.GetViewFields(schema.Name, true)
+					shallowField.DataSchema = sch
+					// shallowField.DataSchemaOrder = ordered
+					shallowField.ActionPath = "/" + utils.MAIN_PREFIX + "/" + schema.Name + "?rows=" + utils.ReservedParam
+					shallowField.Actions=append(shallowField.Actions, meth.Method())
 				} 
-				if isSkipped { continue }
 			}
-			if scheme.LinkOrder != "" { shallowField.LinkPath += "&" + tool.RootOrderParam + "=" + scheme.LinkOrder  }
-		}
-		if !d.Empty && !d.PermsCheck(tableName, scheme.Name, scheme.Level, tool.UPDATE) || d.Empty && !d.PermsCheck(tableName, scheme.Name, scheme.Level, tool.CREATE) {
-			shallowField.Readonly=true
-		}
+			if meth == utils.UPDATE && !d.Empty { 
+				readonly = false
+				shallowField.Readonly = false 
+			} else if meth == utils.CREATE && d.Empty { shallowField.Readonly = true } 
+		} 
 		keysOrdered = append(keysOrdered, scheme.Name)
 		schemes[scheme.Name]=shallowField
 	}
 	sort.SliceStable(keysOrdered, func(i, j int) bool{
-        return schemes[keysOrdered[i]].(entities.ShallowSchemaColumnEntity).Index <= schemes[keysOrdered[j]].(entities.ShallowSchemaColumnEntity).Index
+        return schemes[keysOrdered[i]].(schserv.ViewFieldModel).Index <= schemes[keysOrdered[j]].(schserv.ViewFieldModel).Index
     })
-	return schemes, id, keysOrdered, cols, additionnalAction
+	return schemes, schema.ID, keysOrdered, cols, additionnalAction, readonly
+}
+
+func (d *MainService) BuildPath(tableName string, rows string, extra... string) string {
+	path := "/" + utils.MAIN_PREFIX + "/" + tableName + "?rows=" + rows
+	for _, ext := range extra { path += "&" + ext }
+	return path
 }
