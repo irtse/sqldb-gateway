@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 	"errors"
+	"sqldb-ws/lib/domain"
 	"sqldb-ws/lib/domain/utils"
 	"sqldb-ws/lib/domain/schema"
-	domain "sqldb-ws/lib/domain"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/matthewhartstonge/argon2"
 )
@@ -27,7 +27,6 @@ func (l *AuthController) Login() {
 	if log, ok := body["login"]; ok { // search for login in body 
 		params := l.paramsOver(utils.AllParams(schema.DBUser.Name))
 		d := domain.Domain(false, log.(string), false) // create a new domain with current permissions of user
-		// d.Specialization = false // when launching call disable every auth check up (don't forget you are not logged)
 		response, err := d.SuperCall(params, utils.Record{}, utils.SELECT, "name='" + log.(string) + "' OR email='" + log.(string) + "'")
 		if err != nil {  l.response(response, err); return }
 		if len(response) == 0 {  l.response(response, errors.New("AUTH : username/email invalid")); return }
@@ -40,10 +39,7 @@ func (l *AuthController) Login() {
 				token := l.session(log.(string), response[0]["super_admin"].(bool), false) // update session variables
 				response[0]["token"]=token
 				d := domain.Domain(false, log.(string), false) 
-				params := utils.Params{ utils.RootTableParam : schema.DBNotification.Name, 
-									   utils.RootRowsParam : utils.ReservedParam, 
-									   utils.RootRawView : "enable", }
-				notifs, err := d.PermsSuperCall(params, utils.Record{}, utils.SELECT)
+				notifs, err := d.PermsSuperCall(utils.AllParams(schema.DBNotification.Name), utils.Record{}, utils.SELECT)
 				n := utils.Results{}
 				for _, notif := range notifs {
 					sch, err := schema.GetSchemaByID(int64(notif["link_id"].(float64)))
@@ -65,7 +61,7 @@ func (l *AuthController) Login() {
 		l.response(utils.Results{}, errors.New("AUTH : password invalid")) // API response
 		return 
 	}
-	l.response(utils.Results{}, errors.New("AUTH : username/email invalid")) 
+	l.response(utils.Results{}, errors.New("AUTH : can't find login data")) 
 }
 
 // @Title Logout

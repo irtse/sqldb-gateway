@@ -1,0 +1,33 @@
+default:
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+stages:
+  - build
+  - release
+
+variables:
+  # Use TLS https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#tls-enabled
+  # DOCKER_HOST: tcp://docker:2376
+  # DOCKER_TLS_CERTDIR: "/certs"
+  CONTAINER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  CONTAINER_RELEASE_IMAGE: $CI_REGISTRY_IMAGE:latest
+  BUILD_VARS_SUPERADMIN: --build-arg SUPERADMIN_NAME=$SUPERADMIN_NAME --build-arg SUPERADMIN_EMAIL=$SUPERADMIN_EMAIL --build-arg SUPERADMIN_PASSWORD=$SUPERADMIN_PASSWORD --build-arg AUTH_MODE=$AUTH_MODE 
+  BUILD_VARS_DB: --build-arg DBDRIVER=$DBDRIVER --build-arg DBHOST=$DBHOST --build-arg DBPORT=$DBPORT --build-arg DBUSER=$DBUSER --build-arg DBPWD=$DBPWD --build-arg DBNAME=$DBNAME --build-arg DBSSL=$DBSSL
+build:
+  stage: build
+  script:
+    - docker build $BUILD_VARS_SUPERADMIN $BUILD_VARS_DB --pull -t $CONTAINER_IMAGE . 
+    - docker push $CONTAINER_IMAGE
+
+release-image:
+  stage: release
+  script:
+    - docker pull $CONTAINER_IMAGE
+    - docker tag $CONTAINER_IMAGE $CONTAINER_RELEASE_IMAGE
+    - docker push $CONTAINER_RELEASE_IMAGE
+  only:
+    - main

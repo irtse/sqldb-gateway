@@ -44,11 +44,11 @@ var mutex = sync.RWMutex{}
 func Open() *Db {
 	var database Db
 	var err error
-	database.Driver = os.Getenv("driverdb")
+	database.Driver = os.Getenv("DBDRIVER")
 	if checkDriver(database.Driver) == true { 
-		database.Url = "host=" + os.Getenv("dbhost") + " port=" + os.Getenv("dbport")
-		database.Url += " user=" + os.Getenv("dbuser") + " password=" + os.Getenv("dbpwd")
-		database.Url += " dbname=" + os.Getenv("dbname") + " sslmode=" + os.Getenv("dbssl")
+		database.Url = "host=" + os.Getenv("DBHOST") + " port=" + os.Getenv("DBPORT")
+		database.Url += " user=" + os.Getenv("DBUSER") + " password=" + os.Getenv("DBPWD")
+		database.Url += " dbname=" + os.Getenv("DBNAME") + " sslmode=" + os.Getenv("DBSSL")
 		database.Conn, err = sql.Open(database.Driver, database.Url)
 		if err != nil { 
 			fmt.Println("Error opening database: ", err)

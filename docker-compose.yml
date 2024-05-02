@@ -1,0 +1,56 @@
+version: '3.1'
+
+services:
+  pg:
+    image: postgres:alpine
+    container_name: ${DBHOST:-sqldb-ws-pg}
+    restart: always
+    volumes:
+      - ./db/autoload:/docker-entrypoint-initdb.d
+      - /opt/data/containers/sqldb/pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DBNAME:-test}
+      POSTGRES_USER: ${DBUSER:-test}
+      POSTGRES_PASSWORD: ${DBPWD:-test}
+    ports: 
+      - 5432:5432
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8888:8080
+
+  sqldb-ws:
+    image: irtse/sqldb-ws:latest
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports: 
+      - 8080:8080
+    environment:
+      SUPERADMIN_NAME: ${SUPERADMIN_NAME:-root}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-morgane.roques@irt-saintexupery.com}
+      SUPERADMIN_PASSWORD: ${POSTGRES_PASSWORD:-2,21Gigowatts}
+      AUTH_MODE: ${AUTH_MODE:-token}
+      DBDRIVER : ${DBDRIVER:-postgres}
+      DBHOST : ${DBHOST:-sqldb-ws-pg}
+      DBPORT : ${DBPORT:-5432}
+      DBUSER : ${DBUSER:-test}
+      DBPWD : ${DBPWD:-test}
+      DBNAME: ${DBNAME:-test}
+      DBSSL: ${DBSSL:-disable}
+
+#  grafana:
+#    image: grafana/grafana:9.5.12
+#    restart: always
+#    environment:
+#      GF_SMTP_ENABLED: "true"
+#      GF_SMTP_HOST: "smtp.example.com"
+#    ports:
+#      - "3000:3000"
+#    volumes:
+#      - /opt/data/containers/sqldb/grafana:/var/lib/grafana
+#    depends_on:
+#      - pg

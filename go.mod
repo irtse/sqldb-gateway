@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	github.com/beego/beego v1.12.12 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect

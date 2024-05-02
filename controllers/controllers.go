@@ -70,11 +70,11 @@ func (t *AbstractController) Call(auth bool, method utils.Method, args... interf
 func (t *AbstractController) authorized() (string, bool, error) {
 	found := false
 	for _, mode := range AUTHMODE { // above all check for kind of auth (token in authorization header, or session API)
-		if mode == os.Getenv("authmode") { found = true }
+		if mode == os.Getenv("AUTH_MODE") { found = true }
 	} // if none found give an error
-	if !found { return "", false, errors.New("authmode not allowed <" + os.Getenv("authmode") + ">") }
+	if !found { return "", false, errors.New("authmode not allowed <" + os.Getenv("AUTH_MODE") + ">") }
 	// session auth will look in session variables in API ONLY
-	if os.Getenv("authmode") == AUTHMODE[0] {
+	if os.Getenv("AUTH_MODE") == AUTHMODE[0] {
 		if t.GetSession(SESSIONS_KEY) != nil { 
 			return t.GetSession(SESSIONS_KEY).(string), t.GetSession(ADMIN_KEY).(bool), nil 
 		}
@@ -277,7 +277,7 @@ func (t *AbstractController) session(userId string, superAdmin bool, delete bool
 			t.DelSession(SESSIONS_KEY) // user_id key
 			t.DelSession(ADMIN_KEY) // super_admin key
 		} 
-		if os.Getenv("authmode") != AUTHMODE[0] { // in case of token way of authenticate
+		if os.Getenv("AUTH_MODE") != AUTHMODE[0] { // in case of token way of authenticate
 			params := t.paramsOver(map[string]string{ utils.RootTableParam : schema.DBUser.Name, 
 				                                      utils.RootRowsParam : utils.ReservedParam, 
 													})
@@ -289,7 +289,7 @@ func (t *AbstractController) session(userId string, superAdmin bool, delete bool
 	if delete { delFunc(); return token } // if only deletion quit after launching lambda
 	t.SetSession(SESSIONS_KEY, userId) // load superadmin and user id in session in any case
 	t.SetSession(ADMIN_KEY, superAdmin)
-	if os.Getenv("authmode") != AUTHMODE[0] { // if token way of authentication
+	if os.Getenv("AUTH_MODE") != AUTHMODE[0] { // if token way of authentication
 		tokenService := &Token{} // generate a new token with all needed claims
 		token, err = tokenService.Create(userId, superAdmin); 
 		if err != nil { t.response(utils.Results{}, err); return token } // then update user with its brand new token.

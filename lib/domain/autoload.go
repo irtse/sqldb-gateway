@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"os"
 	"fmt"
 	"encoding/json"
 	utils "sqldb-ws/lib/domain/utils"
@@ -62,8 +63,7 @@ func Load() {
 	// Generate an root superadmin (ready to use...)
 	p := utils.AllParams(schserv.DBUser.Name)
 	p[utils.RootRawView] = "enable"
-	d.Call(p, utils.Record{ "name" : "root", "email" : "admin@super.com", "super_admin" : true, // oh well think about "backin to the future"
-			"password" : "$argon2id$v=19$m=65536,t=3,p=4$JooiEtVXatRxSz16N9uo2g$Y2dAHdLAK06013FhDHQ/xhd+UL2yInwDAvRS1+KKD3c" }, utils.CREATE)
+	d.Call(p, utils.Record{ "name" : os.Getenv("SUPERADMIN_NAME"), "email" : os.Getenv("SUPERADMIN_EMAIL"), "super_admin" : true, "password" : os.Getenv("SUPERADMIN_PASSWORD") }, utils.CREATE)
 	addRootDatas(DBRootViews, schserv.DBView.Name)
 	for name, datas := range schserv.DEMODATASENUM {
 		for _, data := range datas {
