@@ -34,10 +34,14 @@ func (t *TableColumnInfo) Template(restriction... string) (interface{}, error) {
 func (t *TableColumnInfo) Count(restriction... string) ([]map[string]interface{}, error) {
 	t.db.SQLView = t.Views
 	if t.SpecializedService != nil {
-		restriction, _, order, limit := t.SpecializedService.ConfigureFilter(t.Name)
-		if restriction != "" { 
-			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + restriction + ")"
-		    } else { t.db.SQLRestriction = restriction }
+		restr, _, order, limit := t.SpecializedService.ConfigureFilter(t.Name)
+		if restr != "" { t.db.SQLRestriction = restr }
+		if len(restriction) > 0 { 
+			for _, r := range restriction {
+				if r == "" { continue }
+				if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + r + ")"
+				} else { t.db.SQLRestriction = r }
+			}
 		}
 		if order != "" { t.db.SQLOrder = order }
 		if limit != "" { t.db.SQLLimit = limit }
@@ -63,10 +67,14 @@ func (t *TableColumnInfo) Count(restriction... string) ([]map[string]interface{}
 func (t *TableColumnInfo) Get(restriction... string) ([]map[string]interface{}, error) {
 	t.db.SQLView = t.Views
 	if t.SpecializedService != nil {
-		restriction, _, order, limit := t.SpecializedService.ConfigureFilter(t.Name)
-		if restriction != "" { 
-			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + restriction + ")"
-		    } else { t.db.SQLRestriction = restriction }
+		restr, _, order, limit := t.SpecializedService.ConfigureFilter(t.Name)
+		if restr != "" { t.db.SQLRestriction = restr }
+		if len(restriction) > 0 { 
+			for _, r := range restriction {
+				if r == "" { continue }
+				if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + r + ")"
+				} else { t.db.SQLRestriction = r }
+			}
 		}
 		if order != "" { t.db.SQLOrder = order }
 		if limit != "" { t.db.SQLLimit = limit }

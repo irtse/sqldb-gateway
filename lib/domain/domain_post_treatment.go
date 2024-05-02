@@ -14,11 +14,13 @@ import (
 func (d *MainService) PostTreat(results utils.Results, tableName string, isWorflow bool) utils.Results {
 	// retrieve all fields from schema...
 	schema, err := schserv.GetSchema(tableName)
-	if ids, ok := d.Params[utils.SpecialIDParam]; (ok || d.Method != utils.SELECT) && err == nil { 
-		d.NewDataAccess(schema.ID, strings.Split(ids, ","), d.Method) }
+	if err != nil { return results }
+	if ids, ok := d.Params[utils.SpecialIDParam]; (ok || d.Method != utils.SELECT) { 
+		d.NewDataAccess(schema.ID, strings.Split(ids, ","), d.Method) 
+	}
 	if !d.IsShallowed() {
 		schemes, id, order, cols, addAction, readonly := d.GetViewFields(tableName, false) 
-		view := schserv.ViewModel{ ID: id, Name : tableName, Label : tableName, Description : tableName + " datas", Schema : schemes,
+		view := schserv.ViewModel{ ID: id, Name : schema.Label, Label : schema.Label, Description : tableName + " datas", Schema : schemes,
 			SchemaID: id, SchemaName: tableName, ActionPath : d.BuildPath(tableName, utils.ReservedParam), Readonly : readonly,
 			Order : order, Actions : addAction,  Items : []schserv.ViewItemModel{} }
 		maxConcurrent := 5
@@ -26,9 +28,7 @@ func (d *MainService) PostTreat(results utils.Results, tableName string, isWorfl
 		channel := make(chan schserv.ViewItemModel, len(results))
 		defer close(channel)
 		defer func() {
-			if err := recover(); err != nil {
-				fmt.Printf("panic occurred: %v\n", err)
-			}
+			if err := recover(); err != nil { fmt.Printf("panic occurred: %v\n", err) }
 		}()
 		resResults := []utils.Results{} 
 		index := 0
@@ -103,24 +103,21 @@ func (d *MainService) PostTreatRecord(index int, channel chan schserv.ViewItemMo
 						}
 						if err != nil || len(r) == 0 { continue }
 						ids, _ := strconv.Atoi(fmt.Sprintf("%v",r[0][utils.SpecialIDParam]))
-						shallowVals["db" + utils.RootDestTableIDParam]=utils.Record{ 
-							"id": ids,
-							"name" : fmt.Sprintf("%v",r[0][schserv.NAMEKEY]),
-						}
+						shallowVals["db" + utils.RootDestTableIDParam]=utils.Record{ "id": ids, "name" : fmt.Sprintf("%v",r[0][schserv.NAMEKEY]) }
 					}
+					continue
 				}
-				continue
 			}
 			if record.GetString(field.Name) != "" && field.Link > 0 && !shallow { 
 				link := schserv.GetTablename(fmt.Sprintf("%v", field.Link))
 				params := utils.Params{ utils.RootTableParam : link, utils.RootRowsParam: record.GetString(field.Name), utils.RootShallow : "enable" }
-				if strings.Contains(field.Type, "MANY") {
+				if strings.Contains(field.Type, "many") {
 					params[utils.RootRowsParam] = utils.ReservedParam
 					params[schserv.RootID(tableName)] = record.GetString(utils.SpecialIDParam)
 				}
 				r, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
 				if err != nil || len(r) == 0 { continue }
-				if !strings.Contains(field.Type, "MANY")  { shallowVals[field.Name]=r[0]; continue 
+				if !strings.Contains(field.Type, "many")  { shallowVals[field.Name]=r[0]; continue 
 				} else if field.Type == schserv.MANYTOMANY.String() && !d.LowerRes {
 					for _, r2 := range r {
 						for field2, _ := range r2 {

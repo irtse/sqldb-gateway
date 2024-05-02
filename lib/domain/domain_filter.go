@@ -53,11 +53,13 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 		} else { 
 			ands := strings.Split(element, "+")
 			for _, and := range ands {
-				if len(restr) > 0 {  restr += " AND (" } else { restr += "(" }
 				ors := strings.Split(and, "%7C")
+				if len(ors) == 0 { continue }
+				if len(restr) > 0 {  restr += " AND (" } else { restr += "(" }
 				count := 0
 				for _, or := range ors {
 					sql := conn.FormatForSQL(field.Type, or)
+					sql = strings.ReplaceAll(sql, "%25", "%")
 					if count > 0 { restr +=  " OR " }
 					if field.Link > 0 {
 						foreign, _ := schserv.GetSchemaByID(field.Link)
@@ -179,7 +181,7 @@ func (s *MainService) GetFilter(filterID string, viewfilterID string, schemaID s
 		if err == nil && len(fields) > 0 {
 			for _, field := range fields {
 				f, err := schserv.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
-				if err != nil || field["value"] == nil { continue }
+				if err != nil || field["operator"] == nil || field["separator"] == nil { continue }
 				if len(filter) > 0 { filter += " " + field.GetString("separator") + " " }
 				filter += f.Name + field.GetString("operator") + conn.FormatForSQL(f.Type, field["value"])
 			}

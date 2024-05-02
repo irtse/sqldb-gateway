@@ -163,8 +163,8 @@ func (t *AbstractController) params() (map[string]string, map[string]string) {
 		uri := strings.Split(path[1], "&")
 		for _, val := range uri {
 			kv := strings.Split(val, "=")
-			if strings.Contains(kv[0], "_aslabel") { paramsAsLabel[kv[0]]=kv[1]
-			} else { params[kv[0]]=kv[1] }
+			if strings.Contains(kv[0], "_aslabel") && len(kv) > 1 { paramsAsLabel[kv[0]]=kv[1]
+			} else if len(kv) > 1 { params[kv[0]]=kv[1] }
 		}
 	}
 	if pass, ok := params["password"]; ok { // if any password founded hash it

@@ -4,6 +4,7 @@ import (
 	"sqldb-ws/lib/domain/utils" 
 	task "sqldb-ws/lib/domain/service/task_service" 
 	schema "sqldb-ws/lib/domain/service/schema_service" 
+	favorite "sqldb-ws/lib/domain/service/favorite_service" 
 	infrastructure "sqldb-ws/lib/infrastructure/service"
 )
 // export all specialized services available per domain
@@ -14,6 +15,7 @@ var SERVICES = []utils.SpecializedServiceITF{
 	&task.RequestService{}, 
 	&task.TaskService{},
 	&task.WorkflowService{},
+	&favorite.FilterService{},
 }
 // funct to get specialized service depending on table reached
 func SpecializedService(name string) utils.SpecializedServiceITF {

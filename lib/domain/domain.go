@@ -37,6 +37,7 @@ type MainService struct {
 	Params 				utils.Params
 	Perms				map[string]map[string]Perms
 	notAllowedFields	[]string
+	Service 			infrastructure.InfraServiceItf
 	Db					*conn.Db
 }
 // generate a new domain controller. 
@@ -81,7 +82,6 @@ func (d *MainService) Call(params utils.Params, record utils.Record, method util
 }
 // Main process to call an Infra function
 func (d *MainService) call(params utils.Params, record utils.Record, method utils.Method, args... interface{}) (utils.Results, error) {
-	var service infrastructure.InfraServiceItf // generate an empty var for a casual infra service ITF (interface) to embedded any service.
 	d.Method = method; d.notAllowedFields = []string{}
 	if adm, ok := params[utils.RootSuperCall]; ok && adm == "enable" { d.Super = true } // set up admin view
 	if shallow, ok := params[utils.RootShallow]; (ok && shallow == "enable") { d.Shallowed = true }  // set up shallow option (lighter version of results)
@@ -107,17 +107,15 @@ func (d *MainService) call(params utils.Params, record utils.Record, method util
 				method = utils.UPDATE
 				record = utils.Record{ "active" : false }
 			}
-			if _, ok := params[utils.SpecialIDParam]; !ok {
-				params[utils.SpecialIDParam]=strings.ToLower(rowName) 
-				delete(params, utils.RootRowsParam)
-				if params[utils.SpecialIDParam] == utils.ReservedParam { delete(params, utils.SpecialIDParam) 
-				} else if table.Record != nil { table.Record[utils.SpecialIDParam] = params[utils.SpecialIDParam] }
-			}
-			service = table.TableRow(specializedService)
+			if id, ok := params[utils.SpecialIDParam]; ok { params[utils.SpecialSubIDParam]=id }
+			if strings.ToLower(rowName) != utils.ReservedParam { params[utils.SpecialIDParam]=strings.ToLower(rowName) }
+			delete(params, utils.RootRowsParam)
+			if table.Record != nil { table.Record[utils.SpecialIDParam] = params[utils.SpecialIDParam] }
+			d.Service = table.TableRow(specializedService)
 			utils.ParamsMutex.Lock()
 			d.Params = params
 			utils.ParamsMutex.Unlock()
-			res, err := d.invoke(service, method.Calling(), args...)
+			res, err := d.invoke(method.Calling(), args...)
 			if err == nil && specializedService != nil && params[utils.RootRawView] != "enable" && !d.Super && !slices.Contains(EXCEPTION_FUNC, method.Calling()) {
 				if dest_id, ok := params[utils.RootDestTableIDParam]; ok {
 					return specializedService.PostTreatment(res, tablename, dest_id), nil
@@ -132,16 +130,16 @@ func (d *MainService) call(params utils.Params, record utils.Record, method util
 		if col, ok := params[utils.RootColumnsParam]; ok { 
 			if tablename == utils.ReservedParam { return utils.Results{}, errors.New("can't load table as " + utils.ReservedParam) }
 			params[utils.RootColumnsParam]=strings.ToLower(col)
-			service = table.TableColumn(specializedService, params[utils.RootColumnsParam]) 
-		} else { service=table }
-		return d.invoke(service, method.Calling(), args...)
+			d.Service = table.TableColumn(specializedService, params[utils.RootColumnsParam]) 
+		} else { d.Service=table }
+		return d.invoke(method.Calling(), args...)
 	}
 	return utils.Results{}, errors.New("no service available")
 }
-func (d *MainService) invoke(service infrastructure.InfraServiceItf, funcName string, args... interface{}) (utils.Results, error) {
+func (d *MainService) invoke(funcName string, args... interface{}) (utils.Results, error) {
     var err error
 	res := utils.Results{}
-	clazz := reflect.ValueOf(service).MethodByName(funcName)
+	clazz := reflect.ValueOf(d.Service).MethodByName(funcName)
 	if !clazz.IsValid() { return res, errors.New("not implemented <"+ funcName +"> (invalid)") }
 	if clazz.IsZero() { return res, errors.New("not implemented <"+ funcName +"> (zero)") }
 	var values []reflect.Value

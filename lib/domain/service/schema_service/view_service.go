@@ -16,7 +16,13 @@ type ViewService struct {
 }
 
 func (s *ViewService) Entity() utils.SpecializedServiceInfo { return schserv.DBView }
-func (s *ViewService) ConfigureFilter(tableName string) (string, string, string, string) { return s.Domain.ViewDefinition(tableName) }	
+func (s *ViewService) ConfigureFilter(tableName string) (string, string, string, string) {
+	if ids, ok := s.Domain.GetParams()[utils.SpecialIDParam]; ok { 
+		if strings.Contains(ids, ",") { return "id IN ( " + ids + " )", "", "", "" }
+		return "id=" + ids, "", "", "" 
+	}
+	return "", "", "", "" 
+}	
 func (s *ViewService) PostTreatment(results utils.Results, tableName string, dest_id... string) utils.Results { 
 	if len(results) == 0 { return results }
 	res := utils.Results{}
@@ -33,34 +39,33 @@ func (s *ViewService) PostTreatment(results utils.Results, tableName string, des
 
 func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, dest_id... string) {
 	id := ""
+	schema, err := schserv.GetSchemaByID(utils.GetInt(record, schserv.RootID(schserv.DBSchema.Name)))
+	if err != nil { channel <- nil; return }
 	if record["is_empty"] != nil { s.Domain.SetEmpty(record["is_empty"].(bool)) }
-	rec := utils.Record{ "id": record["id"], "name" : record["name"], "description" : record["description"], "is_empty" : record["is_empty"],
-						"index" : record["index"], "is_list" : record["is_list"], "readonly" : record["readonly"],
-						"filter_path" : "/" + utils.MAIN_PREFIX + "/" + schserv.DBFilter.Name + "?" + utils.RootRowsParam + "=" + utils.ReservedParam, }	
+	rec := utils.Record{ "id": record["id"], "name" : record["name"], "label" : record["name"], "description" : record["description"], "is_empty" : record["is_empty"],
+						"index" : record["index"], "is_list" : record["is_list"], "readonly" : record["readonly"], "category" : record["category"],
+						"filter_path" : "/" + utils.MAIN_PREFIX + "/" + schserv.DBFilter.Name + "?" + utils.RootRowsParam + "=" + utils.ReservedParam + "&" + utils.RootShallow + "=enable&" + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID), }	
 	u, _ := s.Domain.PermsSuperCall( utils.Params{ utils.RootTableParam: schserv.DBUser.Name, utils.RootRowsParam : utils.ReservedParam,
 												  utils.RootRawView: "enable", schserv.NAMEKEY : s.Domain.GetUser() }, utils.Record{}, utils.SELECT)
 	if len(u) > 0 { 
-		rec["favorize_path"] = "/" + utils.MAIN_PREFIX + "/" + schserv.DBViewAttribution.Name + "?" + utils.RootRowsParam + "=" + utils.ReservedParam + "&" + schserv.RootID(schserv.DBUser.Name) + "=" + fmt.Sprintf("%v", u[0][utils.SpecialIDParam])
+		rec["favorize_body"] = utils.Record{ schserv.RootID(schserv.DBUser.Name) : u[0][utils.SpecialIDParam], schserv.RootID(schserv.DBView.Name) : record[utils.SpecialIDParam] }
+		rec["favorize_path"] = "/" + utils.MAIN_PREFIX + "/" + schserv.DBViewAttribution.Name + "?" + utils.RootRowsParam + "=" + utils.ReservedParam
 		u, _ = s.Domain.PermsSuperCall( utils.Params{ utils.RootTableParam: schserv.DBViewAttribution.Name, utils.RootRowsParam : utils.ReservedParam,
-			utils.RootRawView: "enable", schserv.RootID(schserv.DBUser.Name) : fmt.Sprintf("%v", u[0][utils.SpecialIDParam]) }, utils.Record{}, utils.SELECT)
-		if len(u) > 0 { rec["is_favorize"] = true }
+			schserv.RootID(schserv.DBUser.Name) : fmt.Sprintf("%v", u[0][utils.SpecialIDParam]), schserv.RootID(schserv.DBView.Name) : record.GetString(utils.SpecialIDParam) }, utils.Record{}, utils.SELECT)
+		rec["is_favorize"] = len(u) > 0
 	}
 	if record["is_list"] != nil { s.Domain.SetLowerRes(record["is_list"].(bool)) } else { s.Domain.SetLowerRes(false) }
 	
 	for _, dest := range dest_id {
 		if id == "" { id = dest } else { id = "," + dest  }
 	}
-	schema, err := schserv.GetSchemaByID(utils.GetInt(record, schserv.RootID(schserv.DBSchema.Name)))
-	if err != nil { channel <- nil; return }
-	rec["category"]=schema.Label
 	path := "/" + utils.MAIN_PREFIX + "/" + schema.Name
 	params := utils.AllParams(schema.Name)
 	if id != "" { params[utils.RootRowsParam] = id }
 	for k, v := range s.Domain.GetParams() {
 		if _, ok := params[k]; !ok { 
 			if k != "new" && !strings.Contains(k,"dest_table") && k != "id" {
-				if k == utils.SpecialSubIDParam { params[utils.SpecialIDParam] = v
-				} else if _, ok := params[k]; !ok { params[k] = v }
+				if k == utils.SpecialSubIDParam { params[utils.SpecialIDParam] = v } else if _, ok := params[k]; !ok { params[k] = v }
 			}
 		}
 	}
@@ -72,6 +77,11 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 	if view != "" { params[utils.RootColumnsParam] = view }
 	if order != "" { params[utils.RootOrderParam] = order }
 	if dir != "" { params[utils.RootDirParam] = dir }
+	for k, p := range s.Domain.GetParams() { 
+		if k == utils.RootRowsParam || k == utils.SpecialIDParam { continue }
+		if k == utils.SpecialSubIDParam { params[utils.RootRowsParam] = p; continue }
+		params[k]=p 
+	}
 	rec["new"] = []string{}
 	if !s.Domain.GetEmpty() { d, _ = s.Domain.PermsSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter) }
 	if  record["is_list"] != nil && record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(schema.Name, sqlFilter, params) }
@@ -102,13 +112,14 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 				} else if k == "schema" && v != nil { 
 					newV := map[string]interface{}{}
 					for fieldName, field := range v.(map[string]interface{}) {
-						if  fieldName == schserv.NAMEKEY && schema.Name == schserv.DBRequest.Name  { continue }
+						if  fieldName != schserv.RootID(schserv.DBWorkflow.Name) && schema.Name == schserv.DBRequest.Name && record["is_empty"].(bool) { continue }
 						if view, ok := params[utils.RootColumnsParam]; !ok || view == "" || strings.Contains(view, fieldName) { 
-							newV[fieldName] = field 
-						}
+							field.(map[string]interface{})["active"] = true
+						} else { field.(map[string]interface{})["active"] = false }
+						newV[fieldName] = field 
 					}
 					rec[k] = newV
-				} else if k != "id" && k != "description" && k != "label" { rec[k]=v }
+				} else if rec[k] == nil || rec[k] == "" { rec[k]=v }
 			} 
 		}	
 	}

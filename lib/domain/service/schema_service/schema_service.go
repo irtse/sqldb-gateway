@@ -41,9 +41,9 @@ func (s *SchemaService) WriteRowAutomation(record map[string]interface{}, tableN
 		utils.Record{ schserv.NAMEKEY : record[schserv.NAMEKEY], "fields": []interface{}{} }, utils.CREATE)
 	schema := schserv.SchemaModel{}.Deserialize(record)
 	name := schema.Label
-	if schema.Name != schserv.DBView.Name && schema.Name != schserv.DBViewAttribution.Name {
+	if schema.Name != schserv.DBView.Name && schema.Name != schserv.DBViewAttribution.Name && schema.Name != schserv.DBNotification.Name {
 		newView := utils.Record{ schserv.NAMEKEY : name, "indexable" : true, "description": "View description for " + name + " datas.", 
-							 "is_empty": false, "index": 0, "is_list": true, "readonly": false, schserv.RootID(schserv.DBSchema.Name) : schema.ID }
+			"category" : record["category"], "is_empty": false, "index": 0, "is_list": true, "readonly": false, schserv.RootID(schserv.DBSchema.Name) : schema.ID }
 		s.Domain.SuperCall(utils.AllParams(schserv.DBView.Name), newView, utils.CREATE)
 	}
 	if schema.Name != schserv.DBTask.Name && schema.Name != schserv.DBRequest.Name {

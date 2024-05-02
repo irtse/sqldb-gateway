@@ -46,7 +46,7 @@ func (l *AuthController) Login() {
 				notifs, err := d.PermsSuperCall(params, utils.Record{}, utils.SELECT)
 				n := utils.Results{}
 				for _, notif := range notifs {
-					sch, err := schema.GetSchemaByID(notif["link_id"].(int64))
+					sch, err := schema.GetSchemaByID(int64(notif["link_id"].(float64)))
 					if err != nil { continue }
 					n = append(n, utils.Record{
 						utils.SpecialIDParam : notif.GetString(utils.SpecialIDParam),

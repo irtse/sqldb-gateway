@@ -24,10 +24,14 @@ func (t *TableRowInfo) Verify(name string) (string, bool) {
 func (t *TableRowInfo) Count(restriction... string) ([]map[string]interface{}, error) {
 	t.db.ClearFilter()
 	if t.SpecializedService != nil {
-		restriction, _, order, limit := t.SpecializedService.ConfigureFilter(t.Table.Name)
-		if restriction != "" { 
-			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + restriction + ")"
-		    } else { t.db.SQLRestriction = restriction }
+		restr, _, order, limit := t.SpecializedService.ConfigureFilter(t.Table.Name)
+		if restr != "" { t.db.SQLRestriction = restr }
+		if len(restriction) > 0 { 
+			for _, r := range restriction {
+				if r == "" { continue }
+				if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + r + ")"
+				} else { t.db.SQLRestriction = r }
+			}
 		}
 		if order != "" { t.db.SQLOrder = order }
 		if limit != "" { t.db.SQLLimit = limit }
@@ -53,11 +57,15 @@ func (t *TableRowInfo) Count(restriction... string) ([]map[string]interface{}, e
 func (t *TableRowInfo) Get(restriction... string) ([]map[string]interface{}, error) {
 	t.db.ClearFilter()
 	if t.SpecializedService != nil {
-		restriction, view, order, limit:= t.SpecializedService.ConfigureFilter(t.Table.Name)
+		restr, view, order, limit:= t.SpecializedService.ConfigureFilter(t.Table.Name)
+		if restr != "" { t.db.SQLRestriction = restr }
 		if view != "" { t.db.SQLView = view }
-		if restriction != "" { 
-			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + restriction + ")"
-		    } else { t.db.SQLRestriction = restriction }
+		if len(restriction) > 0 { 
+			for _, r := range restriction {
+				if r == "" { continue }
+				if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + r + ")"
+				} else { t.db.SQLRestriction = r }
+			}
 		}
 		if order != "" { t.db.SQLOrder = order }
 		if limit != "" { t.db.SQLLimit = limit }
@@ -79,7 +87,7 @@ func (t *TableRowInfo) Create() ([]map[string]interface{}, error) {
 		if forceChange { t.Record = r }
 	}
 	for key, element := range t.Record {
-		if (strings.Contains(key, "_id") || key == "id") && fmt.Sprintf("%v", element) == "0" { continue }
+		if ((strings.Contains(key, "_id") && (fmt.Sprintf("%v", element) == "0" || fmt.Sprintf("%v", element) == "")) || key == "id") { continue }
  		t.EmptyCol.Name = t.Name
 		typ, _ := t.EmptyCol.Verify(key) 
 		realType := strings.Split(typ, ":")[0]
@@ -115,16 +123,21 @@ func (t *TableRowInfo) Create() ([]map[string]interface{}, error) {
 
 func (t *TableRowInfo) Update(restriction... string) ([]map[string]interface{}, error) {
 	t.db.ClearFilter()
+	if id, ok := t.Record["id"]; (!ok || id == "" || fmt.Sprintf("%v", id) == "0") { return t.Create() }
 	if t.SpecializedService != nil {
 		r, ok, forceChange := t.SpecializedService.VerifyRowAutomation(t.Record, t.Name)
 		if !ok { return nil, errors.New("verification failed.") }
 		if forceChange { t.Record = r }
 	}
 	if t.SpecializedService != nil {
-		restriction, view, order, limit := t.SpecializedService.ConfigureFilter(t.Table.Name) 
-		if restriction != "" { 
-			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + restriction  + ")"
-		    } else { t.db.SQLRestriction = restriction }
+		restr, view, order, limit := t.SpecializedService.ConfigureFilter(t.Table.Name) 
+		if restr != "" { t.db.SQLRestriction = restr }
+		if len(restriction) > 0 { 
+			for _, r := range restriction {
+				if r == "" { continue }
+				if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + r + ")"
+				} else { t.db.SQLRestriction = r }
+			}
 		}
 		if view != "" { t.db.SQLView = view } 
 		if order != "" { t.db.SQLOrder = order }
@@ -132,7 +145,6 @@ func (t *TableRowInfo) Update(restriction... string) ([]map[string]interface{}, 
 	}
 	stack := ""
 	restr := t.db.SQLRestriction
-	if id, ok := t.Record["id"]; (!ok || fmt.Sprintf("%v", id) == "0") && !strings.Contains(t.db.SQLRestriction, "id=") { return t.Create() }
 	for key, element := range t.Record {
 		if (strings.Contains(key, "_id") || key == "id") && fmt.Sprintf("%v", element) == "0" { continue }
 		if key == "id" { 
@@ -172,10 +184,14 @@ func (t *TableRowInfo) Delete(restriction... string) ([]map[string]interface{}, 
 	if t.SpecializedService != nil {
 		_, ok, _ := t.SpecializedService.VerifyRowAutomation(t.Record, t.Name)
 		if !ok { return nil, errors.New("verification failed.") }
-		restriction, view, order, limit := t.SpecializedService.ConfigureFilter(t.Table.Name)
-		if restriction != "" { 
-			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + restriction  + ")"
-		    } else { t.db.SQLRestriction = restriction }
+		restr, view, order, limit := t.SpecializedService.ConfigureFilter(t.Table.Name)
+		if restr != "" { t.db.SQLRestriction = restr }
+		if len(restriction) > 0 { 
+			for _, r := range restriction {
+				if r == "" { continue }
+				if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + r + ")"
+				} else { t.db.SQLRestriction = r }
+			}
 		}
 		if view != "" { t.db.SQLView = view }
 		if order != "" { t.db.SQLOrder = order }

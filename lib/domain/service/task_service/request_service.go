@@ -101,7 +101,7 @@ func (s *RequestService) WriteRowAutomation(record map[string]interface{}, table
 		wfs, err := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT)
 		if err != nil || len(wfs) == 0 { 
 			params := utils.Params{ utils.RootTableParam : schserv.DBRequest.Name, utils.RootRowsParam : utils.GetString(record, utils.SpecialIDParam), }
-			s.Domain.SuperCall( params, utils.Record{}, utils.DELETE); return 
+			s.Domain.SuperCall( params, utils.Record{ }, utils.DELETE); return 
 		}
 		sqlFilter := "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser())
 		user, _ := s.Domain.SuperCall( utils.AllParams(schserv.DBUser.Name), utils.Record{}, utils.SELECT, sqlFilter)

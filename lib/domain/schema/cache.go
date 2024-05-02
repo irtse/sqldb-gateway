@@ -47,6 +47,7 @@ type SchemaModel struct { // lightest definition a db table
 	ID 		int64               		 `json:"id"`
 	Name    string              		 `json:"name"`
 	Label   string						 `json:"label"`
+	Category string						 `json:"category"`
 	Fields  []FieldModel 		 		 `json:"fields"`
 }
 func (t SchemaModel) Deserialize(rec utils.Record) SchemaModel { 
@@ -70,6 +71,12 @@ func (t SchemaModel) HasField(name string) bool {
 func (t SchemaModel) GetField(name string) (FieldModel, error) {
 	for _, field := range t.Fields {
 		if field.Name == name { return field, nil }
+	}
+	return FieldModel{}, errors.New("no field corresponding to reference")
+}
+func (t SchemaModel) GetFieldByID(id int64) (FieldModel, error) {
+	for _, field := range t.Fields {
+		if field.ID == id { return field, nil }
 	}
 	return FieldModel{}, errors.New("no field corresponding to reference")
 }

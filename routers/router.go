@@ -28,6 +28,5 @@ func init() {
 		))
 	}
 	ns := beego.NewNamespace("/v1", v1...)
-
 	beego.AddNamespace(ns)
 }

@@ -8,16 +8,19 @@ package schema
 var DBSchema = SchemaModel{
 	Name : RootName("schema"),
 	Label : "template",
+	Category : "template",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Level: LEVELRESPONSIBLE, Index : 0 },
-		FieldModel{ Name: LABELKEY, Type: BIGVARCHAR.String(), Required : false, Default : "general", Readonly : true, Index : 1 },
-		FieldModel{ Name: "fields", Type: "onetomany",  ForeignTable: RootName("schema_column"), Required : false, Index: 2 },
+		FieldModel{ Name: LABELKEY, Type: BIGVARCHAR.String(), Required : true, Readonly : true, Index : 1 },
+		FieldModel{ Name: "category", Type: BIGVARCHAR.String(), Required : false, Default : "general", Readonly : true, Index : 2 },
+		FieldModel{ Name: "fields", Type: "onetomany",  ForeignTable: RootName("schema_column"), Required : false, Index: 3 },
 	},
 }
 
 var DBSchemaField = SchemaModel{
 	Name : RootName("schema_column"),
 	Label : "template field",
+	Category : "template",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(), Required : true, Readonly : true, Index: 0 },
 		FieldModel{ Name: LABELKEY, Type: BIGVARCHAR.String(), Required : true, Index: 1 },
@@ -38,6 +41,7 @@ var DBSchemaField = SchemaModel{
 var DBPermission = SchemaModel{
 	Name : RootName("permission"),
 	Label : "permission",
+	Category : "role & permission",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index: 0 },
 		FieldModel{ Name: CREATEPERMS, Type: BOOLEAN.String(), Required : true, Index: 1  },
@@ -50,6 +54,7 @@ var DBPermission = SchemaModel{
 var DBRole = SchemaModel{
 	Name : RootName("role"),
 	Label : "role",
+	Category : "role & permission",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index: 0 },
 		FieldModel{ Name: "description", Type: TEXT.String(), Required : false, Index: 1 },
@@ -59,6 +64,7 @@ var DBRole = SchemaModel{
 var DBRolePermission = SchemaModel{
 	Name : RootName("role_permission"),
 	Label : "permission role attribution",
+	Category : "role & permission",
 	Fields : []FieldModel{
 		FieldModel{ Name: RootID(DBRole.Name), Type: INTEGER.String(), ForeignTable: DBRole.Name, Required : true, Readonly : true, Index: 0, Label: "role" },
 		FieldModel{ Name: RootID(DBPermission.Name), Type: INTEGER.String(), ForeignTable: DBPermission.Name, Required : true, Readonly : true, Index: 1, Label: "permission" },
@@ -68,6 +74,7 @@ var DBRolePermission = SchemaModel{
 var DBEntity = SchemaModel{
 	Name : RootName("entity"),
 	Label : "entity",
+	Category : "entity",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(), Required : true, Readonly : true, Index: 0 },
 		FieldModel{ Name: "description", Type: TEXT.String(), Required : false, Index: 1 },
@@ -78,6 +85,7 @@ var DBEntity = SchemaModel{
 var DBUser = SchemaModel{
 	Name : RootName("user"),
 	Label : "user",
+	Category : "user",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index: 0  },
 		FieldModel{ Name: "email", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index: 1  },
@@ -90,6 +98,7 @@ var DBUser = SchemaModel{
 var DBHierarchy = SchemaModel{
 	Name : RootName("hierarchy"),
 	Label : "hierarchy",
+	Category : "user",
 	Fields : []FieldModel{
 		FieldModel{ Name: "parent_" + RootID(DBUser.Name), Type: INTEGER.String(), ForeignTable: DBUser.Name, Required : true, Index: 0, Label: "hierarchical user" },
 		FieldModel{ Name: RootID(DBUser.Name), Type: INTEGER.String(), ForeignTable: DBUser.Name, Required : false, Index: 1, Label: "user with hierarchy" },
@@ -102,6 +111,7 @@ var DBHierarchy = SchemaModel{
 var DBEntityUser = SchemaModel{
 	Name : RootName("entity_user"),
 	Label : "entity user attribution",
+	Category : "entity",
 	Fields : []FieldModel{
 		 FieldModel{ Name: RootID(DBUser.Name), Type: INTEGER.String(), ForeignTable: DBUser.Name, Required : true, Readonly : true, Index: 0, Label: "user" },
 		 FieldModel{ Name: RootID(DBEntity.Name), Type: INTEGER.String(), ForeignTable: DBEntity.Name, Required : true, Readonly : true, Index: 1, Label: "entity" },
@@ -112,6 +122,7 @@ var DBEntityUser = SchemaModel{
 var DBRoleAttribution = SchemaModel{
 	Name : RootName("role_attribution"),
 	Label : "role attribution",
+	Category : "role & permission",
 	Fields : []FieldModel{
 		 FieldModel{ Name: RootID(DBUser.Name), Type:INTEGER.String(), ForeignTable: DBUser.Name, Required : false, Readonly : true, Index: 0, Label: "user" },
 		 FieldModel{ Name: RootID(DBEntity.Name), Type: INTEGER.String(), ForeignTable: DBEntity.Name, Required : false, Readonly : true, Index: 1, Label: "entity" },
@@ -124,6 +135,7 @@ var DBRoleAttribution = SchemaModel{
 var DBWorkflow = SchemaModel{
 	Name : RootName("workflow"),
 	Label : "workflow",
+	Category : "workflow",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Constraint : "unique", Type: VARCHAR.String(),  Required : true, Readonly : true, Index: 0 },
 		FieldModel{ Name: "description", Type: BIGVARCHAR.String(), Required : false, Index: 1 },
@@ -136,6 +148,7 @@ var DBWorkflow = SchemaModel{
 var DBWorkflowSchema = SchemaModel{
 	Name : RootName("workflow_schema"),
 	Label : "workflow schema attribution",
+	Category : "workflow",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(), Required : true, Constraint: "unique", Readonly: true, Index: 0 },
 		FieldModel{ Name: "description", Type: TEXT.String(), Required : false, Index: 1 },
@@ -155,6 +168,7 @@ var DBWorkflowSchema = SchemaModel{
 var DBRequest = SchemaModel{
 	Name : RootName("request"),
 	Label : "request",
+	Category : "request",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(), Required : true, Readonly : true, Index: 0 },
 		FieldModel{ Name: "state", Type: ENUMSTATE.String(),  Required : false, Default: STATEPENDING, Level: LEVELRESPONSIBLE, Index: 1 },
@@ -173,6 +187,7 @@ var DBRequest = SchemaModel{
 var DBTask = SchemaModel{
 	Name : RootName("task"),
 	Label : "activity",
+	Category : "request",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(), Required : true, Readonly : true, Index: 0 },
 		FieldModel{ Name: "description", Type: BIGVARCHAR.String(),  Required : false, Index: 1 },
@@ -196,22 +211,25 @@ var DBTask = SchemaModel{
 var DBFilter = SchemaModel{
 	Name : RootName("filter"),
 	Label : "filter",
+	Category : "filter",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(),  Required : true, Constraint: "unique", Index: 0 },
-		FieldModel{ Name: RootID(DBSchema.Name), Type: INTEGER.String(), ForeignTable : DBSchema.Name, Required : false, Index: 1 },
-		FieldModel{ Name: RootID(DBUser.Name), Type: INTEGER.String(), ForeignTable : DBUser.Name, Required : false, Index: 2 },
-		FieldModel{ Name: RootID(DBEntity.Name), Type: INTEGER.String(), ForeignTable : DBEntity.Name, Required : false, Index: 3 },
+		FieldModel{ Name: "is_view", Type: BOOLEAN.String(),  Required : true, Index: 1 },
+		FieldModel{ Name: RootID(DBSchema.Name), Type: INTEGER.String(), ForeignTable : DBSchema.Name, Required : false, Index: 2 },
+		FieldModel{ Name: RootID(DBUser.Name), Type: INTEGER.String(), ForeignTable : DBUser.Name, Required : false, Index: 3 },
+		FieldModel{ Name: RootID(DBEntity.Name), Type: INTEGER.String(), ForeignTable : DBEntity.Name, Required : false, Index: 4 },
 	},
 }
 
 var DBFilterField = SchemaModel{
 	Name : RootName("filter_field"),
 	Label : "filter field",
+	Category : "filter",
 	Fields : []FieldModel{
 		FieldModel{ Name: RootID(DBSchemaField.Name), Type: INTEGER.String(), ForeignTable: DBSchemaField.Name, Required : true, Index: 0 },
 		FieldModel{ Name: "value", Type: BIGVARCHAR.String(), Required : false, Index: 1 },
-		FieldModel{ Name: "operator", Type: ENUMOPERATOR.String(), Required : false, Default: "=", Index: 2 },
-		FieldModel{ Name: "separator", Type: ENUMSEPARATOR.String(), Required : false, Default: "AND", Index: 3 },
+		FieldModel{ Name: "operator", Type: ENUMOPERATOR.String(), Required : false, Index: 2 },
+		FieldModel{ Name: "separator", Type: ENUMSEPARATOR.String(), Required : false, Index: 3 },
 		FieldModel{ Name: "dir", Type: BIGVARCHAR.String(), Required : false, Index: 4 },
 		FieldModel{ Name: "index", Type: INTEGER.String(), Required : false, Default: 1, Index: 5 },
 		FieldModel{ Name: RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable: DBFilter.Name, Required : false, Index: 6 },
@@ -221,23 +239,26 @@ var DBFilterField = SchemaModel{
 var DBView = SchemaModel{
 	Name : RootName("view"),
 	Label : "view",
+	Category : "view",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(),  Required : true, Constraint: "unique", Index: 0 },
 		FieldModel{ Name: "description", Type: BIGVARCHAR.String(),  Required : false, Index: 1 },
-		FieldModel{ Name: "index", Type: INTEGER.String(), Required : false, Default: 1, Index: 2 },
-		FieldModel{ Name: "indexable", Type: BOOLEAN.String(), Required : false, Default: true, Index: 3 },
-		FieldModel{ Name: "is_list", Type: BOOLEAN.String(), Required : false, Default: true, Index: 4 },
-		FieldModel{ Name: "is_empty", Type: BOOLEAN.String(), Required : false, Default: false, Index: 5 },
-		FieldModel{ Name: "readonly", Type: BOOLEAN.String(), Required : true, Index: 6 },
-		FieldModel{ Name: "view_" + RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable : DBFilter.Name, Required : false, Index: 7 },
-		FieldModel{ Name: RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable : DBFilter.Name, Required : false, Index: 8 },
-		FieldModel{ Name: RootID(DBSchema.Name), Type: INTEGER.String(), ForeignTable : DBSchema.Name, Required : true, Index: 9 },
+		FieldModel{ Name: "category", Type: VARCHAR.String(),  Required : false, Index: 2 },
+		FieldModel{ Name: "index", Type: INTEGER.String(), Required : false, Default: 1, Index: 3 },
+		FieldModel{ Name: "indexable", Type: BOOLEAN.String(), Required : false, Default: true, Index: 4 },
+		FieldModel{ Name: "is_list", Type: BOOLEAN.String(), Required : false, Default: true, Index: 5 },
+		FieldModel{ Name: "is_empty", Type: BOOLEAN.String(), Required : false, Default: false, Index: 6 },
+		FieldModel{ Name: "readonly", Type: BOOLEAN.String(), Required : true, Index: 7 },
+		FieldModel{ Name: "view_" + RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable : DBFilter.Name, Required : false, Index: 8 },
+		FieldModel{ Name: RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable : DBFilter.Name, Required : false, Index: 9 },
+		FieldModel{ Name: RootID(DBSchema.Name), Type: INTEGER.String(), ForeignTable : DBSchema.Name, Required : true, Index: 10 },
 	},
 }
 
 var DBViewAttribution = SchemaModel{
 	Name : RootName("view_attribution"),
 	Label : "view attribution",
+	Category : "view",
 	Fields : []FieldModel{
 		FieldModel{ Name: RootID(DBView.Name), Type: INTEGER.String(), ForeignTable : DBView.Name, Required : true, Index: 0 },
 		FieldModel{ Name: RootID(DBUser.Name), Type: INTEGER.String(), ForeignTable : DBUser.Name, Required : false, Index: 1 },
@@ -248,6 +269,7 @@ var DBViewAttribution = SchemaModel{
 var DBNotification = SchemaModel{
 	Name : RootName("notification"),
 	Label : "notification",
+	Category : "notification",
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(),  Required : true, Index: 0 },
 		FieldModel{ Name: "description", Type: BIGVARCHAR.String(),  Required : false, Index: 1 },
@@ -261,6 +283,7 @@ var DBNotification = SchemaModel{
 var DBDataAccess = SchemaModel{
 	Name : RootName("data_access"),
 	Label : "data access",
+	Category : "history",
 	Fields : []FieldModel{
 		FieldModel{ Name: "update", Type: BOOLEAN.String(), Required : false, Default: false, Readonly : true, Label: "updated", Index: 0 },
 		FieldModel{ Name: "write", Type: BOOLEAN.String(), Required : false, Default: false, Readonly : true, Label: "created", Index: 1 },

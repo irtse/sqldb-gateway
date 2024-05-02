@@ -26,27 +26,28 @@ func Load() {
 	roots := schserv.ROOTTABLES
 	roots = append(roots, schserv.DEMOROOTTABLES...)
 	for _, t := range roots {
-			rec := utils.Record{}
-			data, _:= json.Marshal(t)
-			json.Unmarshal(data, &rec) 
-			_, err := schserv.GetSchema(t.Name)
-			if err != nil {
-				p := utils.AllParams(schserv.DBSchema.Name) 
-				p[utils.RootRawView] = "enable"
-				res, err := d.Call(p, rec, utils.CREATE)
-				if err != nil && len(res) == 0 { continue }
-				if t.Name == schserv.DBView.Name || t.Name == schserv.DBWorkflow.Name {
-					addFields(t, d, schserv.SchemaModel{}.Deserialize(res[0]), false)
-				}
-				schserv.LoadCache(t.Name, database)
+		rec := utils.Record{}
+		data, _:= json.Marshal(t)
+		json.Unmarshal(data, &rec) 
+		_, err := schserv.GetSchema(t.Name)
+		if err != nil {
+			p := utils.AllParams(schserv.DBSchema.Name) 
+			p[utils.RootRawView] = "enable"
+			res, err := d.Call(p, rec, utils.CREATE)
+			if err != nil && len(res) == 0 { continue }
+			if t.Name == schserv.DBView.Name || t.Name == schserv.DBWorkflow.Name {
+				addFields(t, d, schserv.SchemaModel{}.Deserialize(res[0]), false)
 			}
+			schserv.LoadCache(t.Name, database)
+		}
 	}
 	for _, t := range roots {
 		schema, err := schserv.GetSchema(t.Name)
 		if err != nil { continue }
 		if t.Name == schserv.DBWorkflow.Name {
 			params := utils.Params{ utils.RootTableParam: schserv.DBView.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
-			newWF := utils.Record{ schserv.NAMEKEY : t.Name, "indexable" : true, "description": "View description for " + t.Name + " datas.", 
+			newWF := utils.Record{ schserv.NAMEKEY : "workflow", 
+				"indexable" : true, "description": "View description for " + t.Name + " datas.", "category" : "workflow", 
 				"is_empty": false, "index": 0, "is_list": true, "readonly": false, schserv.RootID(schserv.DBSchema.Name) : schema.ID }
 			d.Call(params, newWF, utils.CREATE)
 			continue
@@ -98,41 +99,10 @@ func addRootDatas(flattenedSubArray []map[string]interface{}, name string) {
 			delete(root, "link")
 			if filter, ok := root["filter"]; ok {
 				params := utils.Params{ utils.RootTableParam: schserv.DBFilter.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
-				filter.(map[string]interface{})[schserv.RootID(schserv.DBSchema.Name)] = schema.ID
-				f, err := d.Call(params, filter.(map[string]interface{}), utils.CREATE)
-				if len(f) > 0 && err == nil {
-					fields := filter.(map[string]interface{})["fields"]
-					root[schserv.RootID(schserv.DBFilter.Name)] = f[0][utils.SpecialIDParam]
-					for _, field := range fields.([]map[string]interface{}) {
-						params := utils.Params{ utils.RootTableParam: schserv.DBFilterField.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
-						field[schserv.RootID(schserv.DBFilter.Name)] = f[0][utils.SpecialIDParam]
-						cacheField, _ := schema.GetField(fmt.Sprintf("%v", field["name"]))
-						field[schserv.RootID(schserv.DBSchemaField.Name)] = cacheField.ID
-						delete(field, "name")
-						d.Call(params, field, utils.CREATE)
-					}
-				}
-			}
-			if filter, ok := root["viewfilter"]; ok {
-				params := utils.Params{ utils.RootTableParam: schserv.DBFilter.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
-				filter.(map[string]interface{})[schserv.RootID(schserv.DBSchema.Name)] = schema.ID
-				f, err := d.Call(params, filter.(map[string]interface{}), utils.CREATE)
-				if len(f) > 0 && err == nil {
-					fields := filter.(map[string]interface{})["fields"]
-					root["view_" + schserv.RootID(schserv.DBFilter.Name)] = f[0][utils.SpecialIDParam]
-					for _, field := range fields.([]map[string]interface{}) {
-						params := utils.Params{ utils.RootTableParam: schserv.DBFilterField.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
-						field[schserv.RootID(schserv.DBFilter.Name)] = f[0][utils.SpecialIDParam]
-						cacheField, _ := schema.GetField(fmt.Sprintf("%v", field["name"]))
-						field[schserv.RootID(schserv.DBSchemaField.Name)] = cacheField.ID
-						delete(field, "name")
-						res ,err := d.Call(params, field, utils.CREATE)
-						fmt.Println(res, err)
-					}
-				}
+				filter.(map[string]interface{})["link"] = schema.Name
+				d.Call(params, filter.(map[string]interface{}), utils.CREATE)
 			}
 			params := utils.Params{ utils.RootTableParam: name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
-			fmt.Println(root)
 			d.Call(params, root, utils.CREATE)
 		}
 	}
@@ -147,9 +117,10 @@ var DBRootViews = []map[string]interface{}{
 	"index" : 0,
 	"link" : schserv.DBRequest.Name,
 	"is_empty" : true, 
-	"viewfilter" : map[string]interface{}{
+	"category" : "request",
+	"filter" : map[string]interface{}{
 		"name" : "submit form",
-		"fields" : []map[string]interface{}{
+		"view_fields" : []interface{}{
 			map[string]interface{}{ "name" : "dbworkflow_id", "index" : 0 },
 		},
 	},
@@ -160,11 +131,12 @@ var DBRootViews = []map[string]interface{}{
 	"description" : nil,
 	"readonly" : true,
 	"index" : 1,
+	"category" : "request",
 	"link" : schserv.DBRequest.Name,
 	"is_empty" : false,
 	"filter" : map[string]interface{}{
 		"name" : "unvalidated requests",
-		"fields" : []map[string]interface{}{
+		"fields" : []interface{}{
 			map[string]interface{}{ "name" : "state", "value" : "completed", "dir" : "ASC", "index" : 0, "operator" : "!=", "separator" : "and" },
 		},
 	}, },
@@ -178,7 +150,7 @@ var DBRootViews = []map[string]interface{}{
 	"is_empty" : false,
 	"filter" : map[string]interface{}{
 		"name" : "validated requests",
-		"fields" : []map[string]interface{}{
+		"fields" : []interface{}{
 			map[string]interface{}{ "name" : "state", "value" : "completed", "dir" : "ASC", "index" : 0, "operator" : "=", "separator" : "and" },
 		},
 	}, },
@@ -189,10 +161,11 @@ var DBRootViews = []map[string]interface{}{
 	"readonly" : false,
 	"index" : 1,
 	"link" : schserv.DBTask.Name,
+	"category" : "my activity",
 	"is_empty" : false,
 	"filter" : map[string]interface{}{
 		"name" : "unvalidated tasks",
-		"fields" : []map[string]interface{}{
+		"fields" : []interface{}{
 			map[string]interface{}{ "name" : "state", "value" : "completed", "dir" : "ASC", "index" : 0, "operator" : "!=", "separator" : "and" },
 		},
 	}, },
@@ -202,11 +175,12 @@ var DBRootViews = []map[string]interface{}{
 	"description" : nil,
 	"readonly" : true,
 	"index" : 1,
+	"category" : "my activity",
 	"link" : schserv.DBTask.Name,
 	"is_empty" : false,
 	"filter" : map[string]interface{}{
 		"name" : "validated tasks",
-		"fields" : []map[string]interface{}{
+		"fields" : []interface{}{
 			map[string]interface{}{ "name" : "state", "value" : "completed", "dir" : "ASC", "index" : 0, "operator" : "=", "separator" : "and" },
 		},
 	}},

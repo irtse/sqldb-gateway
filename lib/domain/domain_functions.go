@@ -13,7 +13,7 @@ import (
 func (d *MainService) CountNewDataAccess(tableName string, filter string, countParams utils.Params) ([]string, int64) {
 	sqlFilter := "id NOT IN (SELECT " + schserv.RootID("dest_table") + " FROM " + schserv.DBDataAccess.Name + " WHERE "
 	sqlFilter += schserv.RootID(schserv.DBSchema.Name) + " IN (SELECT id FROM " + schserv.DBSchema.Name + " WHERE name = '" + tableName + "') AND " 
-	sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name = '" + d.GetUser() + "' ) AND write=false AND update=false)"
+	sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name = '" + d.GetUser() + "' OR email='" + d.GetUser() + "') AND write=false AND update=false)"
 	if len(filter) > 0 { sqlFilter += " AND " + filter }
 	p := utils.Params{ utils.RootTableParam : tableName, utils.RootRowsParam : utils.ReservedParam, 
 		               utils.RootColumnsParam : utils.SpecialIDParam }
@@ -25,43 +25,31 @@ func (d *MainService) CountNewDataAccess(tableName string, filter string, countP
 			ids = append(ids, rec.GetString(utils.SpecialIDParam)) 
 		}
 	}
-	sqlFilter = "id IN (SELECT " + schserv.RootID("dest_table") + " FROM " + schserv.DBDataAccess.Name + " WHERE "
-	sqlFilter += schserv.RootID(schserv.DBSchema.Name) + " IN (SELECT id FROM " + schserv.DBSchema.Name + " WHERE name = '" + tableName + "') AND " 
-	sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name = '" + d.GetUser() + "' )  AND write=false AND update=false)"
+	sqlFilter = ""
 	if len(filter) > 0 { sqlFilter += " AND " + filter }
-	countParams[utils.RootTableParam] = tableName
-	countParams[utils.RootRowsParam] = utils.ReservedParam
-	res, err = d.PermsSuperCall( countParams, utils.Record{}, utils.COUNT, sqlFilter)
+	res, err = d.SuperCall( utils.AllParams(tableName), utils.Record{}, utils.COUNT, sqlFilter)
 	if len(res) == 0 || err != nil || res[0]["count"] == nil { return ids, 0 }
 	return ids, int64(res[0]["count"].(float64))
 }
 
 func (d *MainService) NewDataAccess(schemaID int64, destIDs []string, meth utils.Method) {
-	users, err := d.SuperCall(utils.AllParams(schserv.DBUser.Name), utils.Record{}, utils.SELECT, "name='"+ d.GetUser() + "'")
+	users, err := d.SuperCall(utils.AllParams(schserv.DBUser.Name), utils.Record{}, utils.SELECT, "name='"+ d.GetUser() + "' OR email='" + d.GetUser() + "'")
 	if err == nil && len(users) > 0 {
 		for _, destID := range destIDs {
 			id := users[0].GetString(utils.SpecialIDParam)
-			sqlFilter := schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schemaID) + " AND " 
-			if strings.Contains(destID, "%") {
-				sqlFilter += schserv.RootID("dest_table") + "::text LIKE '" + strings.Replace(fmt.Sprintf("%v", destID), "%25", "%", -1) + "' AND "
-			} else { sqlFilter += schserv.RootID("dest_table") + "=" + fmt.Sprintf("%v", destID) + " AND " }
-			sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name = '" + d.GetUser() + "' )"
-			access, err := d.SuperCall(utils.AllParams(schserv.DBDataAccess.Name), utils.Record{}, utils.SELECT, sqlFilter)
-			if err != nil || len(access) == 0 {
-				if meth == utils.DELETE {
-					d.SuperCall( utils.Params{ utils.RootTableParam : schserv.DBDataAccess.Name, utils.RootRowsParam : utils.ReservedParam,
+			if meth == utils.DELETE {
+				d.SuperCall( utils.Params{ utils.RootTableParam : schserv.DBDataAccess.Name, utils.RootRowsParam : utils.ReservedParam,
 							schserv.RootID("dest_table") : destID,
 							schserv.RootID(schserv.DBSchema.Name) : fmt.Sprintf("%v", schemaID),
 							schserv.RootID(schserv.DBUser.Name) : id,
-						}, utils.Record{}, utils.DELETE)
-				} else {
-					d.SuperCall(utils.AllParams(schserv.DBDataAccess.Name), utils.Record{
+				}, utils.Record{}, utils.DELETE)
+			} else {
+				d.SuperCall(utils.AllParams(schserv.DBDataAccess.Name), utils.Record{
 						"write" : meth == utils.CREATE,
 						"update" : meth == utils.UPDATE,
 						schserv.RootID("dest_table") : destID,
 						schserv.RootID(schserv.DBSchema.Name) : schemaID,
 						schserv.RootID(schserv.DBUser.Name) : id, }, utils.CREATE)
-				}
 			}
 		}
 	}	
@@ -88,7 +76,7 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 			if !strings.Contains(scheme.Type, "many") { shallowField.LinkPath += "&" + utils.RootShallow + "=enable" }
 		}
 		for _, meth := range []utils.Method{ utils.SELECT, utils.CREATE, utils.UPDATE, utils.DELETE } {
-			if d.PermsCheck(tableName, "", "", meth) { 
+			if d.PermsCheck(tableName, "", "", meth) && (((meth == utils.SELECT || meth == utils.CREATE) && d.Empty) || !d.Empty){ 
 				if !slices.Contains(additionnalAction, meth.Method()) { additionnalAction = append(additionnalAction, meth.Method()) }
 			} 
 			if scheme.Link > 0 && !noRecursive{
