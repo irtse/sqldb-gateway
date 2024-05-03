@@ -21,6 +21,7 @@ WORKDIR /app
 COPY --from=builder /app/conf /app/conf
 COPY --from=builder /app/sqldb-ws /usr/bin/
 COPY --from=builder /app/swagger /app/swagger
+COPY --from=builder /app/web /app/web
 
 EXPOSE 8080
  
