@@ -25,8 +25,8 @@ func main() {
 	beego.SetStaticPath("/", "web")
 	
 	argon := argon2.DefaultConfig()
-	hash, err := argon.HashEncoded([]byte(os.Getenv("SUPERADMIN_PASSWORD")))
-	if err != nil { os.Setenv("SUPERADMIN_PASSWORD", string(hash)) }
+	hash, _ := argon.HashEncoded([]byte(os.Getenv("SUPERADMIN_PASSWORD")))
+	os.Setenv("SUPERADMIN_PASSWORD", string(hash))
 	for key, value := range DEFAULTCONF {
 		if os.Getenv(key) == "" { os.Setenv(key, value) }
 	}

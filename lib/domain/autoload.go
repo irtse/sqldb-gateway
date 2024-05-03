@@ -21,7 +21,7 @@ func Load() {
 			service.NoLog = true
 			service.CreateOrUpdate()
 	}
-	d := Domain(true, "superadmin", false)
+	d := Domain(true, os.Getenv("SUPERADMIN_NAME"), false)
 	d.AutoLoad = true
 	schserv.LoadCache(utils.ReservedParam, database)
 	roots := schserv.ROOTTABLES
@@ -90,7 +90,7 @@ func addFields(t schserv.SchemaModel, d *MainService, schema schserv.SchemaModel
 }
 
 func addRootDatas(flattenedSubArray []map[string]interface{}, name string) {
-	d := Domain(true, "superadmin", false)
+	d := Domain(true, os.Getenv("SUPERADMIN_NAME"), false)
 	for _, root := range flattenedSubArray {
 		if _, ok := root["link"]; ok {
 			schema, err := schserv.GetSchema(fmt.Sprintf("%v", root["link"]))

@@ -32,7 +32,7 @@ services:
     environment:
       SUPERADMIN_NAME: ${SUPERADMIN_NAME:-root}
       SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-morgane.roques@irt-saintexupery.com}
-      SUPERADMIN_PASSWORD: ${POSTGRES_PASSWORD:-2,21Gigowatts}
+      SUPERADMIN_PASSWORD: ${POSTGRES_PASSWORD:-admin}
       AUTH_MODE: ${AUTH_MODE:-token}
       DBDRIVER : ${DBDRIVER:-postgres}
       DBHOST : ${DBHOST:-sqldb-ws-pg}

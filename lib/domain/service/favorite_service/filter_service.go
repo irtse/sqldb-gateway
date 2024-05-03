@@ -1,6 +1,7 @@
 package favorite_service
 import (
 	"fmt"
+	"strings"
 	utils "sqldb-ws/lib/domain/utils"
 	schserv "sqldb-ws/lib/domain/schema"
 )
@@ -58,12 +59,15 @@ func (s *FilterService) PostTreatment(results utils.Results, tableName string, d
 }
 func (s *FilterService) ConfigureFilter(tableName string) (string, string, string, string) { return s.Domain.ViewDefinition(tableName) }
 func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) {
-	if _, ok := record["link"]; !ok { return record, false, false }
-	schema, err := schserv.GetSchema(fmt.Sprintf("%v", record["link"]))
-	delete(record, "link")
-	if err != nil { return record, false, false }
-	record[schserv.RootID(schserv.DBSchema.Name)] = schema.ID
-	name := schema.Name + " "
+	if _, ok := record["link"]; ok { 
+		schema, err := schserv.GetSchema(fmt.Sprintf("%v", record["link"]))
+		delete(record, "link")
+		if err != nil { return record, false, false }
+		record[schserv.RootID(schserv.DBSchema.Name)] = schema.ID
+	}
+	schema, _ := schserv.GetSchemaByID(record[schserv.RootID(schserv.DBSchema.Name)].(int64))
+	name := fmt.Sprintf("%v", record[schserv.NAMEKEY]) + " "
+	if strings.Contains(name, "<nil>") { name = "" }
 	if fields, ok := record["fields"]; ok { 
 		s.Fields = []map[string]interface{}{}
 		for _, field := range fields.([]interface{}) { 
@@ -81,12 +85,15 @@ func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, table
 	}
 	if _, ok := record[schserv.DBEntity.Name]; !ok {
 		users, err := s.Domain.SuperCall(utils.AllParams(schserv.DBUser.Name), utils.Record{}, utils.SELECT, "name='"+ s.Domain.GetUser() + "' OR email='" + s.Domain.GetUser() + "'")
-		if err != nil || len(users) == 0 { return record, false, false }
-		record[schserv.RootID(schserv.DBUser.Name)]=users[0][utils.SpecialIDParam]
-		res, err := s.Domain.SuperCall(utils.AllParams(schserv.DBFilter.Name), utils.Record{}, utils.SELECT, schserv.RootID(schserv.DBUser.Name) + "=" + users[0].GetString(utils.SpecialIDParam) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
-		count := 0
-		if err == nil { count = len(res) }
-		name += "filter n°" + fmt.Sprintf("%v", count + 1)
+		if err == nil && len(users) > 0 { 
+			record[schserv.RootID(schserv.DBUser.Name)]=users[0][utils.SpecialIDParam]
+			record[schserv.RootID(schserv.DBUser.Name)]=users[0][utils.SpecialIDParam]
+			res, err := s.Domain.SuperCall(utils.AllParams(schserv.DBFilter.Name), utils.Record{}, utils.SELECT, schserv.RootID(schserv.DBUser.Name) + "=" + users[0].GetString(utils.SpecialIDParam) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
+			count := 0
+			if err == nil { count = len(res) }
+			name += "filter n°" + fmt.Sprintf("%v", count + 1)
+		}
+		
 	} else {
 		res, err := s.Domain.SuperCall(utils.AllParams(schserv.DBFilter.Name), utils.Record{}, utils.SELECT, schserv.RootID(schserv.DBEntity.Name) + "=" + fmt.Sprintf("%v", record[schserv.RootID(schserv.DBEntity.Name)]) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
 		count := 0
