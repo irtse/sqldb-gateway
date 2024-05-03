@@ -123302,7 +123302,7 @@ return q})
 r($,"bpm","w6",()=>A.l0(null,A.aq("Fs")))
 r($,"bpl","n_",()=>A.l0(null,A.aq("Fh")))
 r($,"bpk","aTZ",()=>A.l0(null,A.aq("F6")))
-s($,"bk6","w1",()=>{var q=A.b6a("http://localhost:8080/v1",A.f(["Content-Type","application/json; charset=UTF-8"],t.N,t.z)),p=A.b11(),o=new A.Tt(A.a([B.Lr],A.aq("y<jl?>")))
+s($,"bk6","w1",()=>{var q=A.b6a("http://capitalisation.irt-aese.local:8080/v1",A.f(["Content-Type","application/json; charset=UTF-8"],t.N,t.z)),p=A.b11(),o=new A.Tt(A.a([B.Lr],A.aq("y<jl?>")))
 p=new A.adY(p,o,A.b11(),new A.aaW(A.bhl()),!1)
 p.E5$=q
 p.a1A$=new A.abi(A.aQ(A.aq("tF")))
