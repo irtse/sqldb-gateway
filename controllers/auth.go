@@ -93,7 +93,6 @@ func (l *AuthController) Refresh() {
 	params := utils.Params{ utils.RootTableParam : schema.DBNotification.Name, 
 						   utils.RootRowsParam : utils.ReservedParam, utils.RootRawView : "enable",}
 	notifs, err := d.PermsSuperCall(params, utils.Record{}, utils.SELECT)
-	resp := utils.Record{}
 	n := utils.Results{}
 	for _, notif := range notifs {
 		sch, err := schema.GetSchemaByID(int64(notif["link_id"].(int64)))
@@ -106,8 +105,10 @@ func (l *AuthController) Refresh() {
 			"data_ref" : "/" + utils.MAIN_PREFIX + "/" + sch.Name + "?" + utils.RootRowsParam + "=" + notif.GetString(schema.RootID("dest_table")),
 		})
 	}
-	if err == nil { resp["notifications"]=n
-	} else { resp["notifications"]=[]interface{}{} }
+	response, err := d.SuperCall(utils.AllParams(schema.DBUser.Name), utils.Record{}, utils.SELECT, "name='" + login + "' OR email='" +login + "'")
+	if len(response) == 0 { l.response(nil, err) }
+	resp := response[0]
+	if err == nil { resp["notifications"]=n } else { resp["notifications"]=[]interface{}{} }
 	resp["token"]=token
 	l.response(utils.Results{resp}, nil)
 }

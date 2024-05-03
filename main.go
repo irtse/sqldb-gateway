@@ -23,12 +23,13 @@ func main() {
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 	}
 	beego.SetStaticPath("/", "web")
-	
-	argon := argon2.DefaultConfig()
-	hash, _ := argon.HashEncoded([]byte(os.Getenv("SUPERADMIN_PASSWORD")))
-	os.Setenv("SUPERADMIN_PASSWORD", string(hash))
 	for key, value := range DEFAULTCONF {
 		if os.Getenv(key) == "" { os.Setenv(key, value) }
+	}
+	if os.Getenv("SUPERADMIN_PASSWORD") != "" {
+		argon := argon2.DefaultConfig()
+		hash, _ := argon.HashEncoded([]byte(os.Getenv("SUPERADMIN_PASSWORD")))
+		os.Setenv("SUPERADMIN_PASSWORD", string(hash))
 	}
 	fmt.Printf("%s\n", "Service in " + os.Getenv("AUTH_MODE") + " mode")
 	fmt.Printf("%s\n", "Checking for root DBBases... Wait for server to launch... (may take a while on first start)")

@@ -115,7 +115,9 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 						if  fieldName != schserv.RootID(schserv.DBWorkflow.Name) && schema.Name == schserv.DBRequest.Name && record["is_empty"].(bool) { continue }
 						if view, ok := params[utils.RootColumnsParam]; !ok || view == "" || strings.Contains(view, fieldName) { 
 							field.(map[string]interface{})["active"] = true
-						} else { field.(map[string]interface{})["active"] = false }
+						} else { 
+							fmt.Printf("field %v is not in view %v\n", fieldName, view)
+							field.(map[string]interface{})["active"] = false }
 						newV[fieldName] = field 
 					}
 					rec[k] = newV
