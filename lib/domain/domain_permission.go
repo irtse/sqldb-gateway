@@ -112,7 +112,6 @@ func (d *MainService) PermsCheck(tableName string, colName string, level string,
 	}
 	if (method == utils.UPDATE && perms.Update) { // should be able to update only if request is made to table and your able to change it
 		if d.Empty { return true }
-		fmt.Printf("THERE ? %v\n", d.Empty)
 		res, err := d.invoke(utils.SELECT.Calling()) // TO TEST STRANGER THING
 		if err == nil && len(res) > 0 {
 			for _, rec := range res {
