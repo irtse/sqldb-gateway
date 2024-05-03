@@ -19,7 +19,7 @@ services:
     image: adminer
     restart: always
     ports:
-      - 8888:8080
+      - 8443:8080
 
   sqldb-ws:
     image: irtse/sqldb-ws:latest
