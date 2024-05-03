@@ -110,25 +110,47 @@ func (d *MainService) PermsCheck(tableName string, colName string, level string,
 		}
 		return isTableNormal || perms.Read == schserv.LEVELNORMAL || perms.Read == schserv.LEVELOWN
 	}
-	/*if (method == utils.UPDATE && perms.Update) { // should be able to update only if request is made to table and your able to change it
+	if (method == utils.UPDATE && perms.Update) { // should be able to update only if request is made to table and your able to change it
 		if d.Empty { return true }
+		fmt.Printf("THERE ? %v\n", d.Empty)
 		res, err := d.invoke(utils.SELECT.Calling()) // TO TEST STRANGER THING
 		if err == nil && len(res) > 0 {
 			for _, rec := range res {
 				schema, _ := schserv.GetSchema(tableName)
-				p := utils.AllParams(schserv.DBRequest.Name)
-				p[utils.RootDestTableIDParam] = rec.GetString(utils.SpecialIDParam)
-				p[schserv.RootID(schserv.DBSchema.Name)] = fmt.Sprintf("%v", schema.ID)
-				req, _ := d.SuperCall(p, utils.Record{}, utils.SELECT)
-				if len(req) == 0 { continue }
-				sqlFilter := "is_close=false AND current_index IN (SELECT wf.index FROM " + schserv.DBWorkflowSchema.Name + " as wf WHERE wf." + schserv.RootID(schserv.DBWorkflow.Name) + " = " + schserv.RootID(schserv.DBWorkflow.Name) + ")"	
+				sqlFilter := "SELECT COUNT(*) FROM " + schserv.DBRequest.Name + " WHERE " + utils.RootDestTableIDParam + "=" + rec.GetString(utils.SpecialIDParam) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID) 
+				count := int64(0)
+				if d.Db.Driver == conn.PostgresDriver { 
+					count, err = d.Db.QueryRow(sqlFilter)
+					if err != nil { continue }
+				}
+				if d.Db.Driver == conn.MySQLDriver {
+					stmt, err := d.Db.Prepare(sqlFilter)
+					if err != nil { continue }
+					res, err := stmt.Exec()
+					if err != nil { continue }
+					count, err = res.LastInsertId()
+					if err != nil { continue }
+				}
+				if count == 0 { continue }
+				sqlFilter += " AND is_close=false AND current_index IN (SELECT wf.index FROM " + schserv.DBWorkflowSchema.Name + " as wf WHERE wf." + schserv.RootID(schserv.DBWorkflow.Name) + " = " + schserv.RootID(schserv.DBWorkflow.Name) + ")"	
 				sqlFilter += "AND (" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")"
 				sqlFilter += " OR " + schserv.RootID(schserv.DBEntity.Name) + " IN (SELECT " + schserv.RootID(schserv.DBEntity.Name) + " FROM " + schserv.DBEntityUser.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")) ) )"
-				req, err := d.SuperCall(p, utils.Record{}, utils.SELECT, sqlFilter)
-				if len(req) == 0 || err != nil { return false }
+				if d.Db.Driver == conn.PostgresDriver { 
+					count, err = d.Db.QueryRow(sqlFilter)
+					if err != nil { continue }
+				}
+				if d.Db.Driver == conn.MySQLDriver {
+					stmt, err := d.Db.Prepare(sqlFilter)
+					if err != nil { continue }
+					res, err := stmt.Exec()
+					if err != nil { continue }
+					count, err = res.LastInsertId()
+					if err != nil { continue }
+				}
+				if count == 0 { return false }
 			}
 		}
 		return true
-	}*/
+	}
 	return method == utils.CREATE && perms.Create || method == utils.DELETE && perms.Delete || method == utils.UPDATE && perms.Update
 }
