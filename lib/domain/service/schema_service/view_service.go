@@ -28,7 +28,11 @@ func (s *ViewService) PostTreatment(results utils.Results, tableName string, des
 	res := utils.Results{}
 	runtime.GOMAXPROCS(5)
 	channel := make(chan utils.Record, len(results))
-	for _, record := range results { go s.PostTreat(record, channel, dest_id...) }
+	for _, record := range results {
+		schema, err := schserv.GetSchemaByID(utils.GetInt(record, schserv.RootID(schserv.DBSchema.Name)))
+		if err != nil || !s.Domain.PermsCheck(schema.Name, "", schserv.LEVELNORMAL, utils.SELECT) { continue }
+		go s.PostTreat(record, channel, dest_id...) 
+	}
 	for range results {
 		rec := <-channel
 		if rec != nil { res = append(res, rec)  }

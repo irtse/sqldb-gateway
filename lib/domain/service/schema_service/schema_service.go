@@ -2,6 +2,7 @@ package schema_service
 
 import (
 	"fmt"
+	"slices"
 	"sqldb-ws/lib/domain/utils"
 	schserv "sqldb-ws/lib/domain/schema"
 )
@@ -50,7 +51,7 @@ func (s *SchemaService) WriteRowAutomation(record map[string]interface{}, tableN
 				"category" : record["category"], "is_empty": false, "index": index, "is_list": true, "readonly": false, schserv.RootID(schserv.DBSchema.Name) : schema.ID }
 			s.Domain.SuperCall(utils.AllParams(schserv.DBView.Name), newView, utils.CREATE)
 		}
-		if schema.Name != schserv.DBTask.Name && schema.Name != schserv.DBRequest.Name {
+		if !slices.Contains([]string{ schserv.DBTask.Name, schserv.DBRequest.Name, schserv.DBFilter.Name, schserv.DBFilterField.Name, schserv.DBViewAttribution.Name, schserv.DBNotification.Name }, schema.Name) {
 			newWF := utils.Record{ schserv.NAMEKEY : "create " + name, "description": "new " + name + " workflow", schserv.RootID(schserv.DBSchema.Name) : schema.ID }
 			s.Domain.SuperCall(utils.AllParams(schserv.DBWorkflow.Name), newWF, utils.CREATE)
 		}
