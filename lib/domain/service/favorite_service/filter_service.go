@@ -100,14 +100,14 @@ func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, table
 				res, err := s.Domain.SuperCall(utils.AllParams(schserv.DBFilter.Name), utils.Record{}, utils.SELECT, schserv.RootID(schserv.DBUser.Name) + "=" + users[0].GetString(utils.SpecialIDParam) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
 				count := 0
 				if err == nil { count = len(res) }
-				name += "filter n°" + fmt.Sprintf("%v", count + 1)
+				if !strings.Contains(name, "filter n°") { name += "filter n°" + fmt.Sprintf("%v", count + 1) }
 			}
 			
 		} else {
 			res, err := s.Domain.SuperCall(utils.AllParams(schserv.DBFilter.Name), utils.Record{}, utils.SELECT, schserv.RootID(schserv.DBEntity.Name) + "=" + fmt.Sprintf("%v", record[schserv.RootID(schserv.DBEntity.Name)]) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
 			count := 0
 			if err == nil { count = len(res) }
-			name += "filter n°" + fmt.Sprintf("%v", count + 1)
+			if !strings.Contains(name, "filter n°") { name += "filter n°" + fmt.Sprintf("%v", count + 1) }
 		}
 		record[schserv.NAMEKEY] = name
 	}
