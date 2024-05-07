@@ -153,8 +153,7 @@ func (d *MainService) invoke(funcName string, args... interface{}) (utils.Result
 		json.Unmarshal(data, &res)
 	}
 	if len(values) > 1 { 
-		if values[1].Interface() == nil { err = nil
-		} else { err = values[1].Interface().(error) } 
+		if values[1].Interface() == nil { err = nil } else { err = values[1].Interface().(error) } 
 	}
 	return res, err
 }

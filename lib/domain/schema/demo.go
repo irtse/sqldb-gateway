@@ -77,7 +77,7 @@ var RestrictionType = SchemaModel{
 	Category : "restriction",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
-		FieldModel{ Name: RootID(FormalizedData.Name), Type: INTEGER.String(), ForeignTable: FormalizedData.Name, Required : true, Index: 1, Label: "related formalized data" },
+		FieldModel{ Name: "formalized_data_id", Type: INTEGER.String(), ForeignTable: "formalized_data", Required : true, Index: 1, Label: "related formalized data" },
 	},
 }
 
@@ -131,7 +131,7 @@ var Valuation = SchemaModel{ // TODO
 	Category : "valuation",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
-		FieldModel{ Name: RootID(FormalizedData.Name), Type: INTEGER.String(), ForeignTable: FormalizedData.Name, Required : true, Index: 1, Label: "related formalized data" },
+		FieldModel{ Name: "formalized_data_id", Type: INTEGER.String(), ForeignTable: "formalized_data", Required : true, Index: 1, Label: "related formalized data" },
 		FieldModel{ Name: RootID(ValuationType.Name), Type: INTEGER.String(), ForeignTable: ValuationType.Name, Required : true, Index: 2, Label: "related valuation type" },
 		FieldModel{ Name: RootID(ValuationFormat.Name), Type: INTEGER.String(), ForeignTable: ValuationFormat.Name, Required : true, Index: 3, Label: "related valuation format" },
 
@@ -167,10 +167,10 @@ var FormalizedData = SchemaModel{
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 		FieldModel{ Name: "ref", Type: VARCHAR.String(), Required : false, Label: "referencing", Readonly : true, Index : 1 },
-		FieldModel{ Name: "first_evaluation", Type: DECIMAL.String(), Required : true, Index: 2 },
-		FieldModel{ Name: "first_evaluation_date", Type: TIMESTAMP.String(), Required : true, Index: 3 },
-		FieldModel{ Name: "actualized_evaluation", Type: DECIMAL.String(), Required : true, Index: 4 },
-		FieldModel{ Name: "capitalization_date", Type: TIMESTAMP.String(), Required : true, Index: 5 },
+		FieldModel{ Name: "first_evaluation", Type: DECIMAL.String(), Required : true, Level: LEVELRESPONSIBLE, Index: 2 },
+		FieldModel{ Name: "first_evaluation_date", Type: TIMESTAMP.String(), Required : true, Level: LEVELRESPONSIBLE, Index: 3 },
+		FieldModel{ Name: "actualized_evaluation", Type: DECIMAL.String(), Required : true, Level: LEVELRESPONSIBLE, Index: 4 },
+		FieldModel{ Name: "capitalization_date", Type: TIMESTAMP.String(), Required : true, Level: LEVELRESPONSIBLE, Index: 5 },
 		FieldModel{ Name: "committee_date", Type: TIMESTAMP.String(), Required : true, Level: LEVELRESPONSIBLE, Index: 6, Label: "committee reunion date" },
 		FieldModel{ Name: "result_type_id", Type: INTEGER.String(), Required : false, ForeignTable: ResultType.Name, Index: 7,  Label: "result type", },
 		FieldModel{ Name: "result_family_id", Type: INTEGER.String(), Required : false, ForeignTable: ResultFamily.Name, Index: 8, Label: "result family", },
@@ -180,9 +180,9 @@ var FormalizedData = SchemaModel{
 		FieldModel{ Name: "storage_area", Type: VARCHAR.String(), Required : false, Readonly : true, Index : 12 },
 		FieldModel{ Name: "storage_types", Type: MANYTOMANY.String(), Required : false, ForeignTable: SupportType.Name, Index: 13 },
 		FieldModel{ Name: "projects", Type: MANYTOMANY.String(), Required : false, ForeignTable: Project.Name, Index: 14 },
-		// FieldModel{ Name: "valuations", Type: ONETOMANY.String(), Required : false, ForeignTable: Valuation.Name, Index: 15 },
-		// FieldModel{ Name: "protections", Type: ONETOMANY.String(), Required : false, ForeignTable: Protection.Name, Index: 16 },
-		// FieldModel{ Name: "restriction_types", Type: ONETOMANY.String(), Required : false, ForeignTable: RestrictionType.Name, Index: 17 },
+		FieldModel{ Name: "valuations", Type: ONETOMANY.String(), Required : false, Level: LEVELRESPONSIBLE, ForeignTable: Valuation.Name, Index: 15 },
+		FieldModel{ Name: "protections", Type: ONETOMANY.String(), Required : false, Level: LEVELRESPONSIBLE, ForeignTable: Protection.Name, Index: 16 },
+		FieldModel{ Name: "restriction_types", Type: ONETOMANY.String(), Required : false, Level: LEVELRESPONSIBLE, ForeignTable: RestrictionType.Name, Index: 17 },
 	},
 }
 var DEMODATASENUM = map[string][]string{
