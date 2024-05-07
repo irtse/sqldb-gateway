@@ -92,7 +92,7 @@ func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, table
 			s.Fields = []map[string]interface{}{}
 			for _, field := range fields.([]interface{}) { s.Fields = append(s.Fields, field.(map[string]interface{})) }
 		}
-		if _, ok := record[schserv.DBEntity.Name]; !ok {
+		if _, ok := record[schserv.DBEntity.Name]; !ok && s.Domain.GetMethod() != utils.UPDATE {
 			users, err := s.Domain.SuperCall(utils.AllParams(schserv.DBUser.Name), utils.Record{}, utils.SELECT, "name='"+ s.Domain.GetUser() + "' OR email='" + s.Domain.GetUser() + "'")
 			if err == nil && len(users) > 0 { 
 				record[schserv.RootID(schserv.DBUser.Name)]=users[0][utils.SpecialIDParam]
@@ -100,14 +100,13 @@ func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, table
 				res, err := s.Domain.SuperCall(utils.AllParams(schserv.DBFilter.Name), utils.Record{}, utils.SELECT, schserv.RootID(schserv.DBUser.Name) + "=" + users[0].GetString(utils.SpecialIDParam) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
 				count := 0
 				if err == nil { count = len(res) }
-				if !strings.Contains(name, "filter n°") { name += "filter n°" + fmt.Sprintf("%v", count + 1) }
+				name += "filter n°" + fmt.Sprintf("%v", count + 1)
 			}
-			
-		} else {
+		} else if s.Domain.GetMethod() != utils.UPDATE {
 			res, err := s.Domain.SuperCall(utils.AllParams(schserv.DBFilter.Name), utils.Record{}, utils.SELECT, schserv.RootID(schserv.DBEntity.Name) + "=" + fmt.Sprintf("%v", record[schserv.RootID(schserv.DBEntity.Name)]) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
 			count := 0
 			if err == nil { count = len(res) }
-			if !strings.Contains(name, "filter n°") { name += "filter n°" + fmt.Sprintf("%v", count + 1) }
+			name += "filter n°" + fmt.Sprintf("%v", count + 1)
 		}
 		record[schserv.NAMEKEY] = name
 	}
