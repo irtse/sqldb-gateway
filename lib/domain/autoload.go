@@ -24,6 +24,8 @@ func Load() {
 	d := Domain(true, os.Getenv("SUPERADMIN_NAME"), false)
 	d.AutoLoad = true
 	schserv.LoadCache(utils.ReservedParam, database)
+	wfNew := false
+	viewNew := false
 	roots := schserv.ROOTTABLES
 	roots = append(roots, schserv.DEMOROOTTABLES...)
 	for _, t := range roots {
@@ -40,12 +42,15 @@ func Load() {
 				addFields(t, d, schserv.SchemaModel{}.Deserialize(res[0]), false)
 			}
 			schserv.LoadCache(t.Name, database)
+			if t.Name == schserv.DBWorkflow.Name { wfNew = true }
+			if t.Name == schserv.DBView.Name { viewNew = true }
 		}
 	}
 	for _, t := range roots {
 		schema, err := schserv.GetSchema(t.Name)
 		if err != nil { continue }
-		if t.Name == schserv.DBWorkflow.Name {
+		if t.Name == schserv.DBWorkflow.Name && wfNew {
+			wfNew = true
 			params := utils.Params{ utils.RootTableParam: schserv.DBView.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
 			newWF := utils.Record{ schserv.NAMEKEY : "workflow", 
 				"indexable" : true, "description": "View description for " + t.Name + " datas.", "category" : "workflow", 
@@ -53,7 +58,8 @@ func Load() {
 			d.Call(params, newWF, utils.CREATE)
 			continue
 		}
-		if t.Name == schserv.DBView.Name {
+		if t.Name == schserv.DBView.Name && viewNew {
+			viewNew = true
 			params := utils.Params{ utils.RootTableParam: schserv.DBWorkflow.Name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
 			newView := utils.Record{ schserv.NAMEKEY : "create " + t.Name, "description": "new " + t.Name + " workflow", schserv.RootID(schserv.DBSchema.Name) : schema.ID }
 			d.Call(params, newView, utils.CREATE)
@@ -64,11 +70,13 @@ func Load() {
 	p := utils.AllParams(schserv.DBUser.Name)
 	p[utils.RootRawView] = "enable"
 	d.Call(p, utils.Record{ "name" : os.Getenv("SUPERADMIN_NAME"), "email" : os.Getenv("SUPERADMIN_EMAIL"), "super_admin" : true, "password" : os.Getenv("SUPERADMIN_PASSWORD") }, utils.CREATE)
-	addRootDatas(DBRootViews, schserv.DBView.Name)
-	for name, datas := range schserv.DEMODATASENUM {
-		for _, data := range datas {
-			params := utils.Params{ utils.RootTableParam: name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
-			d.Call(params, utils.Record{ "name" : data }, utils.CREATE)
+	if viewNew { addRootDatas(DBRootViews, schserv.DBView.Name) }
+	if wfNew {
+		for name, datas := range schserv.DEMODATASENUM {
+			for _, data := range datas {
+				params := utils.Params{ utils.RootTableParam: name, utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable" }
+				d.Call(params, utils.Record{ "name" : data }, utils.CREATE)
+			}
 		}
 	}
 }
@@ -109,8 +117,9 @@ func addRootDatas(flattenedSubArray []map[string]interface{}, name string) {
 }
 
 var DBRootViews = []map[string]interface{}{ 
-	map[string]interface{} { schserv.NAMEKEY : "submit a data",
+	map[string]interface{} { schserv.NAMEKEY : "submit data",
 	"is_list" : false,
+	"is_shortcut": true,
 	"indexable" : true,
 	"description" : "select a form to submit an entry.",
 	"readonly" : false,
@@ -119,9 +128,7 @@ var DBRootViews = []map[string]interface{}{
 	"is_empty" : true, 
 	"filter" : map[string]interface{}{
 		"name" : "submit form",
-		"view_fields" : []interface{}{
-			map[string]interface{}{ "name" : "dbworkflow_id", "index" : 0 },
-		},
+		"view_fields" : []interface{}{ map[string]interface{}{ "name" : "dbworkflow_id", "index" : 0 }, },
 	},
 	},
 	map[string]interface{} { schserv.NAMEKEY : "my unvalidated datas",
@@ -129,7 +136,7 @@ var DBRootViews = []map[string]interface{}{
 	"indexable" : true,
 	"description" : nil,
 	"readonly" : true,
-	"index" : 0,
+	"index" : 1,
 	"link" : schserv.DBRequest.Name,
 	"is_empty" : false,
 	"category" : "my requests",
@@ -144,7 +151,7 @@ var DBRootViews = []map[string]interface{}{
 	"indexable" : true,
 	"description" : nil,
 	"readonly" : true,
-	"index" : 0,
+	"index" : 1,
 	"link" : schserv.DBRequest.Name,
 	"is_empty" : false,
 	"category" : "my requests",
@@ -159,7 +166,7 @@ var DBRootViews = []map[string]interface{}{
 	"indexable" : true,
 	"description" : nil,
 	"readonly" : false,
-	"index" : 0,
+	"index" : 1,
 	"link" : schserv.DBTask.Name,
 	"category" : "my activity",
 	"is_empty" : false,
@@ -174,7 +181,7 @@ var DBRootViews = []map[string]interface{}{
 	"indexable" : true,
 	"description" : nil,
 	"readonly" : true,
-	"index" : 0,
+	"index" : 1,
 	"category" : "my activity",
 	"link" : schserv.DBTask.Name,
 	"is_empty" : false,

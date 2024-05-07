@@ -123,12 +123,12 @@ func (t *TableRowInfo) Create() ([]map[string]interface{}, error) {
 
 func (t *TableRowInfo) Update(restriction... string) ([]map[string]interface{}, error) {
 	t.db.ClearFilter()
-	if id, ok := t.Record["id"]; (!ok || id == "" || fmt.Sprintf("%v", id) == "0") { return t.Create() }
 	if t.SpecializedService != nil {
 		r, ok, forceChange := t.SpecializedService.VerifyRowAutomation(t.Record, t.Name)
 		if !ok { return nil, errors.New("verification failed.") }
 		if forceChange { t.Record = r }
 	}
+	if id, ok := t.Record["id"]; (!ok || id == "" || fmt.Sprintf("%v", id) == "0") { return t.Create() }
 	if t.SpecializedService != nil {
 		restr, view, order, limit := t.SpecializedService.ConfigureFilter(t.Table.Name) 
 		if restr != "" { t.db.SQLRestriction = restr }
@@ -148,7 +148,7 @@ func (t *TableRowInfo) Update(restriction... string) ([]map[string]interface{}, 
 	for key, element := range t.Record {
 		if (strings.Contains(key, "_id") || key == "id") && fmt.Sprintf("%v", element) == "0" { continue }
 		if key == "id" { 
-			if fmt.Sprintf("%v", element) != "0" { restr = "id=" + fmt.Sprintf("%v", element) + " " }
+			if fmt.Sprintf("%v", element) != "0" && fmt.Sprintf("%v", element) != "" { restr = "id=" + fmt.Sprintf("%v", element) + " " }
 			continue 
 		}
 		if t.Verified {
@@ -163,6 +163,7 @@ func (t *TableRowInfo) Update(restriction... string) ([]map[string]interface{}, 
 	}
 	stack = conn.RemoveLastChar(stack)
 	query := ("UPDATE " + t.Table.Name + " SET " + stack) // REMEMBER id is a restriction !
+	if restr == "" && t.db.SQLRestriction == "" { return t.Create() }
 	if restr != "" { query += " WHERE " + restr
 	} else if t.db.SQLRestriction != "" { query += " WHERE " + t.db.SQLRestriction } 
 	if stack != "" {
@@ -202,6 +203,7 @@ func (t *TableRowInfo) Delete(restriction... string) ([]map[string]interface{}, 
 	t.Results = res
 	query := ("DELETE FROM " + t.Table.Name)
 	if t.db.SQLRestriction != "" { query += " WHERE " + t.db.SQLRestriction }
+	fmt.Println(query)
 	err = t.db.Query(query)
 	if err != nil { return t.DBError(nil, err) }
 	if t.SpecializedService != nil { t.SpecializedService.DeleteRowAutomation(t.Results, t.Table.Name) }

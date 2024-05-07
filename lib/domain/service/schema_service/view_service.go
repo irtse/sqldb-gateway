@@ -121,6 +121,13 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 						newV[fieldName] = field 
 					}
 					rec[k] = newV
+				} else if k == "shortcuts" && v != nil { 
+					shorts := map[string]interface{}{}
+					for shortcut, ss := range v.(map[string]interface{}) {
+						if strings.Contains(shortcut, record.GetString(schserv.NAMEKEY)) { continue }
+						shorts[shortcut] = ss
+					}
+					rec[k]=shorts
 				} else if rec[k] == nil || rec[k] == "" { rec[k]=v }
 			} 
 		}	

@@ -213,8 +213,8 @@ var DBFilter = SchemaModel{
 	Label : "filter",
 	Category : "filter",
 	Fields : []FieldModel{
-		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(),  Required : true, Constraint: "unique", Index: 0 },
-		FieldModel{ Name: "is_view", Type: BOOLEAN.String(),  Required : true, Index: 1 },
+		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(),  Required : true, Index: 0 },
+		FieldModel{ Name: "is_view", Type: BOOLEAN.String(),  Required : false, Default: false, Index: 1 },
 		FieldModel{ Name: RootID(DBSchema.Name), Type: INTEGER.String(), ForeignTable : DBSchema.Name, Required : false, Index: 2 },
 		FieldModel{ Name: RootID(DBUser.Name), Type: INTEGER.String(), ForeignTable : DBUser.Name, Required : false, Index: 3 },
 		FieldModel{ Name: RootID(DBEntity.Name), Type: INTEGER.String(), ForeignTable : DBEntity.Name, Required : false, Index: 4 },
@@ -247,11 +247,12 @@ var DBView = SchemaModel{
 		FieldModel{ Name: "index", Type: INTEGER.String(), Required : false, Default: 1, Index: 3 },
 		FieldModel{ Name: "indexable", Type: BOOLEAN.String(), Required : false, Default: true, Index: 4 },
 		FieldModel{ Name: "is_list", Type: BOOLEAN.String(), Required : false, Default: true, Index: 5 },
-		FieldModel{ Name: "is_empty", Type: BOOLEAN.String(), Required : false, Default: false, Index: 6 },
-		FieldModel{ Name: "readonly", Type: BOOLEAN.String(), Required : true, Index: 7 },
-		FieldModel{ Name: "view_" + RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable : DBFilter.Name, Required : false, Index: 8 },
-		FieldModel{ Name: RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable : DBFilter.Name, Required : false, Index: 9 },
-		FieldModel{ Name: RootID(DBSchema.Name), Type: INTEGER.String(), ForeignTable : DBSchema.Name, Required : true, Index: 10 },
+		FieldModel{ Name: "is_shortcut", Type: BOOLEAN.String(), Required : false, Default: false, Index: 6 },
+		FieldModel{ Name: "is_empty", Type: BOOLEAN.String(), Required : false, Default: false, Index: 7 },
+		FieldModel{ Name: "readonly", Type: BOOLEAN.String(), Required : true, Index: 8 },
+		FieldModel{ Name: "view_" + RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable : DBFilter.Name, Required : false, Index: 9 },
+		FieldModel{ Name: RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable : DBFilter.Name, Required : false, Index: 10 },
+		FieldModel{ Name: RootID(DBSchema.Name), Type: INTEGER.String(), ForeignTable : DBSchema.Name, Required : true, Index: 11 },
 	},
 }
 

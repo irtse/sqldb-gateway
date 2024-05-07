@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"sync"
+	"net/url"
 	"strings"
 	"strconv"
 	"database/sql"
@@ -187,10 +188,16 @@ func FormatForSQL(datatype string, value interface{}) string {
 	for _, typ := range SpecialTypes {
 		if strings.Contains(datatype, typ) { 
 			if value == "CURRENT_TIMESTAMP" { return fmt.Sprint(value) 
-			} else { return strings.Replace(Quote(strings.Replace(fmt.Sprint(value), "'", "''", -1)), "%25", "%", -1) }
+			} else { 
+				decodedValue, _ := url.QueryUnescape(fmt.Sprint(value))
+				return Quote(strings.Replace(decodedValue, "'", "''", -1))
+			}
 		}
 	}
-	if strings.Contains(strval, "%") { return strings.Replace(Quote(strings.Replace(fmt.Sprint(value), "'", "''", -1)), "%25", "%", -1) }
+	if strings.Contains(strval, "%") { 
+		decodedValue, _ := url.QueryUnescape(fmt.Sprint(value))
+		return Quote(strings.Replace(decodedValue, "'", "''", -1))
+	}
 	return strval
 }
 

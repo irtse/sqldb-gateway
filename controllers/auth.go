@@ -106,7 +106,7 @@ func (l *AuthController) Refresh() {
 		})
 	}
 	response, err := d.SuperCall(utils.AllParams(schema.DBUser.Name), utils.Record{}, utils.SELECT, "name='" + login + "' OR email='" +login + "'")
-	if len(response) == 0 { l.response(nil, err) }
+	if len(response) == 0 { l.response(nil, err); return }
 	resp := response[0]
 	if err == nil { resp["notifications"]=n } else { resp["notifications"]=[]interface{}{} }
 	resp["token"]=token

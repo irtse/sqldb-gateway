@@ -58,8 +58,8 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 				if len(restr) > 0 {  restr += " AND (" } else { restr += "(" }
 				count := 0
 				for _, or := range ors {
-					sql := conn.FormatForSQL(field.Type, or)
-					sql = strings.ReplaceAll(sql, "%25", "%")
+					sql := strings.ReplaceAll(field.Type, "%25", "%")
+					sql = conn.FormatForSQL(sql, or)
 					if count > 0 { restr +=  " OR " }
 					if field.Link > 0 {
 						foreign, _ := schserv.GetSchemaByID(field.Link)

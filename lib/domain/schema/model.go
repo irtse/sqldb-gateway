@@ -21,6 +21,7 @@ type ViewModel struct { // lightest struct based on SchemaModel dedicate to view
 	ActionPath		string						`json:"action_path"`
 	Readonly		bool						`json:"readonly"`
 	Workflow		*WorkflowModel				`json:"workflow"`
+	Shortcuts		map[string]string			`json:"shortcuts"`
 }
 
 func (v ViewModel) ToRecord() utils.Record { 

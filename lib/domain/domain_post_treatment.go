@@ -22,7 +22,13 @@ func (d *MainService) PostTreat(results utils.Results, tableName string, isWorfl
 		schemes, id, order, cols, addAction, readonly := d.GetViewFields(tableName, false) 
 		view := schserv.ViewModel{ ID: id, Name : schema.Label, Label : schema.Label, Description : tableName + " datas", Schema : schemes,
 			SchemaID: id, SchemaName: tableName, ActionPath : d.BuildPath(tableName, utils.ReservedParam), Readonly : readonly,
-			Order : order, Actions : addAction,  Items : []schserv.ViewItemModel{} }
+			Order : order, Actions : addAction,  Items : []schserv.ViewItemModel{}, Shortcuts: map[string]string{} }
+		shortcuts, err := d.SuperCall( utils.AllParams(schserv.DBView.Name), utils.Record{}, utils.SELECT, "is_shortcut=true")
+		if len(shortcuts) > 0 && err == nil {
+			for _, shortcut := range shortcuts {
+				view.Shortcuts[shortcut.GetString(schserv.NAMEKEY)] = "#" + shortcut.GetString(utils.SpecialIDParam)
+			}
+		}
 		maxConcurrent := 5
 		runtime.GOMAXPROCS(maxConcurrent)
 		channel := make(chan schserv.ViewItemModel, len(results))
