@@ -43,7 +43,7 @@ func (s *SchemaService) WriteRowAutomation(record map[string]interface{}, tableN
 	schema := schserv.SchemaModel{}.Deserialize(record)
 	name := schema.Label
 	if schema.Name != schserv.DBDataAccess.Name {
-		if !slices.Contains([]string{ schserv.DBView.Name, schserv.DBFilter.Name, schserv.DBFilterField.Name, schserv.DBViewAttribution.Name, schserv.DBNotification.Name }, schema.Name) {
+		if !slices.Contains([]string{ schserv.DBView.Name, schserv.DBRequest.Name, schserv.DBTask.Name,  schserv.DBFilter.Name, schserv.DBFilterField.Name, schserv.DBViewAttribution.Name, schserv.DBNotification.Name }, schema.Name) {
 			count, err := s.Domain.SuperCall(utils.AllParams(schserv.DBView.Name), utils.Record{}, utils.COUNT)
 			index := 2
 			if err == nil && len(count) > 0  && (int(count[0]["count"].(float64)) + 1) > 1 { index = int(count[0]["count"].(float64)) + 1 }

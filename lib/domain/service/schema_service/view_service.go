@@ -16,7 +16,10 @@ type ViewService struct {
 }
 
 func (s *ViewService) Entity() utils.SpecializedServiceInfo { return schserv.DBView }
-func (s *ViewService) ConfigureFilter(tableName string) (string, string, string, string) { return s.Domain.ViewDefinition(tableName) }	
+func (s *ViewService) ConfigureFilter(tableName string) (string, string, string, string) { 
+	restr, _, _, _ := s.Domain.ViewDefinition(tableName)
+	return restr, "", "", ""
+}	
 func (s *ViewService) PostTreatment(results utils.Results, tableName string, dest_id... string) utils.Results { 
 	if len(results) == 0 { return results }
 	res := utils.Results{}
