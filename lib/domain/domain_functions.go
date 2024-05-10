@@ -21,9 +21,7 @@ func (d *MainService) CountNewDataAccess(tableName string, filter string, countP
 	ids := []string{}
 	if err != nil { return ids, 0 }
 	for _, rec := range res { 
-		if !slices.Contains(ids, rec.GetString(utils.SpecialIDParam)) { 
-			ids = append(ids, rec.GetString(utils.SpecialIDParam)) 
-		}
+		if !slices.Contains(ids, rec.GetString(utils.SpecialIDParam)) { ids = append(ids, rec.GetString(utils.SpecialIDParam)) }
 	}
 	sqlFilter = ""
 	if len(filter) > 0 { sqlFilter += " AND " + filter }
@@ -41,8 +39,7 @@ func (d *MainService) NewDataAccess(schemaID int64, destIDs []string, meth utils
 				d.SuperCall( utils.Params{ utils.RootTableParam : schserv.DBDataAccess.Name, utils.RootRowsParam : utils.ReservedParam,
 							schserv.RootID("dest_table") : destID,
 							schserv.RootID(schserv.DBSchema.Name) : fmt.Sprintf("%v", schemaID),
-							schserv.RootID(schserv.DBUser.Name) : id,
-				}, utils.Record{}, utils.DELETE)
+							schserv.RootID(schserv.DBUser.Name) : id }, utils.Record{}, utils.DELETE)
 			} else {
 				d.SuperCall(utils.AllParams(schserv.DBDataAccess.Name), utils.Record{
 						"write" : meth == utils.CREATE,

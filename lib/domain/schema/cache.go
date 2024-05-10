@@ -10,7 +10,7 @@ import (
 	conn "sqldb-ws/lib/infrastructure/connector"
 )
 
-var schemaRegistry = map[string]SchemaModel{}
+var SchemaRegistry = map[string]SchemaModel{}
 
 func IsRootDB(name string) bool { 
 	if len(name) > 1 { return strings.Contains(name[:2], "db") 
@@ -24,7 +24,7 @@ func RootName(name string) string { return "db" + name }
 func GetSchemaByFieldID(id int64) (SchemaModel, error) {
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
-	for _, t := range schemaRegistry { 
+	for _, t := range SchemaRegistry { 
 		for _, field := range t.Fields {
 			if field.ID == id { return t, nil }
 		}
@@ -35,7 +35,7 @@ func GetSchemaByFieldID(id int64) (SchemaModel, error) {
 func GetFieldByID(id int64) (FieldModel, error) {
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
-	for _, t := range schemaRegistry { 
+	for _, t := range SchemaRegistry { 
 		for _, field := range t.Fields {
 			if field.ID == id { return field, nil }
 		}
@@ -121,14 +121,14 @@ func LoadCache(name string, db *conn.Db) {
 			}
 		} // anything to do if empty
 		cacheMutex.Lock()
-		schemaRegistry[newSchema.Name] = newSchema // add schema to cache
+		SchemaRegistry[newSchema.Name] = newSchema // add schema to cache
 		cacheMutex.Unlock()
 	}
 }
 
 func HasSchema(tableName string) bool { 
 	cacheMutex.Lock()
-	if _, ok := schemaRegistry[tableName]; !ok {  
+	if _, ok := SchemaRegistry[tableName]; !ok {  
 		cacheMutex.Unlock()
 		return false 
 	} else { 
@@ -138,7 +138,7 @@ func HasSchema(tableName string) bool {
 }
 
 func HasField(tableName string, name string) bool {
-	if schema, ok := schemaRegistry[tableName]; !ok { return false } else { 
+	if schema, ok := SchemaRegistry[tableName]; !ok { return false } else { 
 		return schema.HasField(name) 
 	}
 	return false
@@ -147,7 +147,7 @@ func HasField(tableName string, name string) bool {
 
 func GetSchema(tableName string) (SchemaModel, error) { 
 	cacheMutex.Lock()
-	if schema, ok := schemaRegistry[tableName]; !ok { 
+	if schema, ok := SchemaRegistry[tableName]; !ok { 
 		cacheMutex.Unlock()
 		return SchemaModel{}, errors.New("no schema corresponding to reference name")
 	 } else { 
@@ -158,7 +158,7 @@ func GetSchema(tableName string) (SchemaModel, error) {
 
 func GetSchemaByID(id int64) (SchemaModel, error) {
 	cacheMutex.Lock()
-	for _, schema := range schemaRegistry {
+	for _, schema := range SchemaRegistry {
 		if schema.ID == id { 
 			cacheMutex.Unlock()
 			return schema, nil 

@@ -37,6 +37,14 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 	restr += "active=true"
 	schema, err := schserv.GetSchema(tableName)
 	if err != nil { return restr }
+	if schema.HasField(schserv.RootID(schserv.DBSchema.Name)) { 
+		restr += " AND " + schserv.RootID(schserv.DBSchema.Name) + " IN (" 
+		for _, sch := range schserv.SchemaRegistry {
+			if !d.PermsCheck(sch.Name, "", schserv.LEVELNORMAL, utils.SELECT) { continue }
+			restr += fmt.Sprintf("%v", sch.ID) + ","
+		}
+		restr = conn.RemoveLastChar(restr) + ")"
+	}
 	already := []string{}
     for key, element := range d.Params {
 		field, err := schema.GetField(key)
