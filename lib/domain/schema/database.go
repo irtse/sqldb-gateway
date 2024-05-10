@@ -299,7 +299,7 @@ var OWNPERMISSIONEXCEPTION = []string{ DBFilter.Name, DBFilterField.Name }
 var AllPERMISSIONEXCEPTION = []string{ DBNotification.Name, DBViewAttribution.Name }
 var POSTPERMISSIONEXCEPTION = []string{ DBRequest.Name }
 var PUPERMISSIONEXCEPTION = []string{ DBTask.Name }
-var PERMISSIONEXCEPTION = []string{ DBView.Name, DBTask.Name, DBRequest.Name, DBWorkflow.Name } // override permission checkup
+var PERMISSIONEXCEPTION = []string{ DBView.Name, DBTask.Name, DBRequest.Name, DBWorkflow.Name, DBEntity.Name } // override permission checkup
 
 var ROOTTABLES = []SchemaModel{ DBWorkflow, DBView, DBSchema, DBSchemaField, DBUser, DBPermission, DBEntity, 
 	DBRole, DBDataAccess, DBNotification, DBEntityUser, DBRoleAttribution,
