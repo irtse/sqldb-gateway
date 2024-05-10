@@ -37,7 +37,7 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 	restr += "active=true"
 	schema, err := schserv.GetSchema(tableName)
 	if err != nil { return restr }
-	if schema.HasField(schserv.RootID(schserv.DBSchema.Name)) { 
+	if schema.HasField(schserv.RootID(schserv.DBSchema.Name)) && !d.SuperAdmin { 
 		restr += " AND " + schserv.RootID(schserv.DBSchema.Name) + " IN (" 
 		for _, sch := range schserv.SchemaRegistry {
 			if !d.PermsCheck(sch.Name, "", schserv.LEVELNORMAL, utils.SELECT) { continue }

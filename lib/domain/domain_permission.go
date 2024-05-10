@@ -98,8 +98,7 @@ func (d *MainService) PermsCheck(tableName string, colName string, level string,
 	}
 	mutexPerms.Unlock()
 	if method == utils.SELECT {
-		isTableNormal := perms.Read == "" || perms.Read == "<nil>"
-		if !isTableNormal && slices.Contains(schserv.READLEVELACCESS, level) && level != schserv.LEVELNORMAL {
+		if slices.Contains(schserv.READLEVELACCESS, level) && level != schserv.LEVELNORMAL {
 			levelCount := 0; found := false;
 			compareCount := 0; foundCompare := false
 			for _, l := range schserv.READLEVELACCESS {
@@ -108,7 +107,7 @@ func (d *MainService) PermsCheck(tableName string, colName string, level string,
 			}
 			return compareCount >= levelCount && foundCompare
 		}
-		return isTableNormal || perms.Read == schserv.LEVELNORMAL || perms.Read == schserv.LEVELOWN
+		return perms.Read == schserv.LEVELNORMAL || perms.Read == schserv.LEVELOWN
 	}
 	if (method == utils.UPDATE && perms.Update) { // should be able to update only if request is made to table and your able to change it
 		if d.Empty { return true }

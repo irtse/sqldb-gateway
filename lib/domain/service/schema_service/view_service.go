@@ -16,13 +16,7 @@ type ViewService struct {
 }
 
 func (s *ViewService) Entity() utils.SpecializedServiceInfo { return schserv.DBView }
-func (s *ViewService) ConfigureFilter(tableName string) (string, string, string, string) {
-	if ids, ok := s.Domain.GetParams()[utils.SpecialIDParam]; ok { 
-		if strings.Contains(ids, ",") { return "id IN ( " + ids + " )", "", "", "" }
-		return "id=" + ids, "", "", "" 
-	}
-	return "", "", "", "" 
-}	
+func (s *ViewService) ConfigureFilter(tableName string) (string, string, string, string) { return s.Domain.ViewDefinition(tableName) }	
 func (s *ViewService) PostTreatment(results utils.Results, tableName string, dest_id... string) utils.Results { 
 	if len(results) == 0 { return results }
 	res := utils.Results{}
@@ -83,7 +77,10 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 		params[k]=p 
 	}
 	rec["new"] = []string{}
-	if !s.Domain.GetEmpty() { d, _ = s.Domain.PermsSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter) }
+	if !s.Domain.GetEmpty() {
+		if s.Domain.IsSuperAdmin() { d, _ = s.Domain.PermsSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter)  
+		} else { d, _ = s.Domain.Call( params, utils.Record{}, utils.SELECT, sqlFilter)   }
+	}
 	if  record["is_list"] != nil && record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(schema.Name, sqlFilter, params) }
 	if !s.Domain.GetEmpty() {
 		datas = utils.Results{}
