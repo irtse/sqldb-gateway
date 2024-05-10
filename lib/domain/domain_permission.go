@@ -44,7 +44,7 @@ func (d *MainService) PermsBuilder() {
 		b, _ := json.Marshal(record)
 		json.Unmarshal(b, &perms)
 		n := ""
-		if len(names) > 1 { n = names[1] } else { n = names[0] }		
+		if len(names) > 2 { n = names[1] } else { n = names[0] }		
 		if p, ok := d.Perms[tName]; !ok || p == nil { d.Perms[tName] = map[string]Perms{}; }
 		if _, ok := d.Perms[tName][n]; !ok {  d.Perms[tName][n]=perms }
 		p := d.Perms[tName][n]
