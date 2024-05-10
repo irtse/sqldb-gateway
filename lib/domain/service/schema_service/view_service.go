@@ -72,14 +72,13 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 	if order != "" { params[utils.RootOrderParam] = order }
 	if dir != "" { params[utils.RootDirParam] = dir }
 	for k, p := range s.Domain.GetParams() { 
-		if k == utils.RootRowsParam || k == utils.SpecialIDParam { continue }
+		if k == utils.RootRowsParam || k == utils.SpecialIDParam || k == utils.RootTableParam { continue }
 		if k == utils.SpecialSubIDParam { params[utils.RootRowsParam] = p; continue }
 		params[k]=p 
 	}
 	rec["new"] = []string{}
 	if !s.Domain.GetEmpty() {
-		if s.Domain.IsSuperAdmin() { d, _ = s.Domain.PermsSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter)  
-		} else { d, _ = s.Domain.Call( params, utils.Record{}, utils.SELECT, sqlFilter)   }
+		d, _ = s.Domain.PermsSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter)  
 	}
 	if  record["is_list"] != nil && record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(schema.Name, sqlFilter, params) }
 	if !s.Domain.GetEmpty() {
