@@ -40,20 +40,21 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 	if schema.HasField(schserv.RootID(schserv.DBSchema.Name)) && !d.IsSuperCall() { 
 		restr += " AND " + schserv.RootID(schserv.DBSchema.Name) + " IN (" 
 		for _, sch := range schserv.SchemaRegistry {
-			if !d.PermsCheck(sch.Name, "", schserv.LEVELNORMAL, utils.SELECT) { continue }
+			if sch.Name == schserv.DBWorkflow.Name || !d.PermsCheck(sch.Name, "", schserv.LEVELNORMAL, utils.SELECT) { continue }
 			restr += fmt.Sprintf("%v", sch.ID) + ","
 		}
 		restr = conn.RemoveLastChar(restr) + ")"
+	}
+	if schema.HasField("is_meta") { 
+		if len(restr) > 0 { restr +=  " AND " }
+		restr += "is_meta=false"
 	}
 	already := []string{}
     for key, element := range d.Params {
 		field, err := schema.GetField(key)
 		if (err != nil && key != utils.SpecialIDParam) || slices.Contains(already, key) { continue }
 		already = append(already, key)
-		if key == "is_meta" {
-			if len(restr) > 0 { restr +=  " AND " }
-			restr += "is_meta=false"
-		} else if strings.Contains(element, ",") { 
+		if strings.Contains(element, ",") { 
 			els := ""
 			for _, el := range strings.Split(element, ",") { els += conn.FormatForSQL(field.Type, conn.SQLInjectionProtector(el)) + "," }
 			if len(restr) > 0 { restr +=  " AND (" + key + " IN (" + conn.RemoveLastChar(els) + "))"
