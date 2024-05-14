@@ -31,7 +31,6 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 	}
 	return SQLrestriction, SQLview, SQLOrder, SQLLimit
 }
-
 func (d *MainService) restrictionBySchema(tableName string, restr string) (string) {
 	if len(restr) > 0 { restr +=  " AND " }
 	restr += "active=true"
@@ -45,7 +44,7 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 		}
 		restr = conn.RemoveLastChar(restr) + ")"
 	}
-	if schema.HasField("is_meta") { 
+	if schema.HasField("is_meta") && !d.IsSuperCall() { 
 		if len(restr) > 0 { restr +=  " AND " }
 		restr += "is_meta=false"
 	}
@@ -165,35 +164,35 @@ func (s *MainService) GetFilter(filterID string, viewfilterID string, schemaID s
 		if len(fields) > 0 && err == nil { viewfilterID = s.GetParams()[utils.RootViewFilter] }
 	}
 	utils.ParamsMutex.Unlock()
-	if viewfilterID != "" { 
-		params := utils.AllParams(schserv.DBFilterField.Name)
-		params[schserv.RootID(schserv.DBFilter.Name)] = viewfilterID
-		fields, err := s.PermsSuperCall(params, utils.Record{}, utils.SELECT)
-		if err == nil && len(fields) > 0 {
-			// SORT
-			sort.SliceStable(fields, func(i, j int) bool{ return int64(fields[i]["index"].(float64)) <= int64(fields[j]["index"].(float64)) })
-			for _, field := range fields {
-				f, err := schserv.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
-				if err != nil { continue }
-				viewFilter += f.Name + ","
-				if field["dir"] != nil { dir += strings.ToUpper(field.GetString("dir")) + ","; order += f.Name + ","
-				} else { dir += "ASC,"; order += f.Name + "," }
-			}
-			if len(viewFilter) > 0 { viewFilter = viewFilter[:len(viewFilter)-1] }
-			if len(order) > 0 { order = order[:len(order)-1] }
-			if len(dir) > 0 { dir = dir[:len(dir)-1] }
+	sqlFilter := "SELECT * FROM " + schserv.DBFilterField.Name + " WHERE " // TODO VIEW FILTER FOR MAIN PURPOSE...
+	if schemaID != "" { sqlFilter += schserv.RootID(schserv.DBSchemaField.Name) + " IN (SELECT id FROM " + schserv.DBSchemaField.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + " = " + schemaID + " ) AND " }
+	if viewfilterID == "" { sqlFilter += schserv.RootID(schserv.DBFilter.Name) + " IN (SELECT id FROM " + schserv.DBFilter.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IS NULL AND " + schserv.RootID(schserv.DBEntity.Name) + " IS NULL)" 
+	} else { sqlFilter += schserv.RootID(schserv.DBFilter.Name) + "=" + viewfilterID } 
+	fields, err := s.Db.QueryAssociativeArray(sqlFilter)
+	if err == nil && len(fields) > 0 {
+		sort.SliceStable(fields, func(i, j int) bool{ return fields[i]["index"].(int64) <= fields[j]["index"].(int64) })
+		for _, field := range fields {
+			f, err := schserv.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
+			if err != nil || strings.Contains(viewFilter, f.Name) || !strings.Contains(s.Params[utils.RootColumnsParam], f.Name) { continue }
+			viewFilter += f.Name + ","
+			if field["dir"] != nil { dir += strings.ToUpper(fmt.Sprintf("%v", field["dir"])) + ","; order += f.Name + ","
+			} else { dir += "ASC,"; order += f.Name + "," }
 		}
+		if len(viewFilter) > 0 { viewFilter = viewFilter[:len(viewFilter)-1] }
+		if len(order) > 0 { order = order[:len(order)-1] }
+		if len(dir) > 0 { dir = dir[:len(dir)-1] }
 	}
-	if filterID != "" { 
-		params[schserv.RootID(schserv.DBFilter.Name)] = filterID
-		fields, err := s.PermsSuperCall(params, utils.Record{}, utils.SELECT)
-		if err == nil && len(fields) > 0 {
-			for _, field := range fields {
-				f, err := schserv.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
-				if err != nil || field["operator"] == nil || field["separator"] == nil { continue }
-				if len(filter) > 0 { filter += " " + field.GetString("separator") + " " }
-				filter += f.Name + field.GetString("operator") + conn.FormatForSQL(f.Type, field["value"])
-			}
+	sqlFilter = "SELECT * FROM " + schserv.DBFilterField.Name + " WHERE " // TODO VIEW FILTER FOR MAIN PURPOSE...
+	if schemaID != "" { sqlFilter += schserv.RootID(schserv.DBSchemaField.Name) + " IN  (SELECT id FROM " + schserv.DBSchemaField.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + " = " + schemaID + " ) AND " }
+	if filterID == "" { sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IS NULL AND " + schserv.RootID(schserv.DBEntity.Name) + " IS NULL" 
+	} else { sqlFilter += schserv.RootID(schserv.DBFilter.Name) + "=" + filterID } 
+	fields, err = s.Db.QueryAssociativeArray(sqlFilter)
+	if err == nil && len(fields) > 0 {
+		for _, field := range fields {
+			f, err := schserv.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
+			if err != nil || field["operator"] == nil || field["separator"] == nil { continue }
+			if len(filter) > 0 { filter += " " + fmt.Sprintf("%v", field["separator"]) + " " }
+			filter += f.Name + fmt.Sprintf("%v", field["operator"]) + conn.FormatForSQL(f.Type, field["value"])
 		}
 	}
 	return filter, viewFilter, order, dir

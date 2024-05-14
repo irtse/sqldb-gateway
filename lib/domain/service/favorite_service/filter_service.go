@@ -38,8 +38,7 @@ func (s *FilterService) WriteRowAutomation(record map[string]interface{}, tableN
 		delete(field, "name")
 		field[schserv.RootID(schserv.DBSchemaField.Name)] = f.ID
 		field[schserv.RootID(schserv.DBFilter.Name)]=record[utils.SpecialIDParam]
-		t, err := s.Domain.Call(utils.AllParams(schserv.DBFilterField.Name), field, utils.CREATE)
-		fmt.Println(t, err)
+		s.Domain.Call(utils.AllParams(schserv.DBFilterField.Name), field, utils.CREATE)
 	}
 }
 func (s *FilterService) PostTreatment(results utils.Results, tableName string, dest_id... string) utils.Results { 

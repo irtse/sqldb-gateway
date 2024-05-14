@@ -43,14 +43,22 @@ func (l *AuthController) Login() {
 				n := utils.Results{}
 				for _, notif := range notifs {
 					sch, err := schema.GetSchemaByID(int64(notif["link_id"].(float64)))
-					if err != nil { continue }
-					n = append(n, utils.Record{
+					if sch.Name != schema.DBRequest.Name && sch.Name != schema.DBTask.Name || err != nil  { continue }
+					nn := utils.Record{
 						utils.SpecialIDParam : notif.GetString(utils.SpecialIDParam),
 						schema.NAMEKEY : notif.GetString(schema.NAMEKEY),
 						"description" : notif.GetString("description"),
 						"link_path" : "/" + utils.MAIN_PREFIX + "/" + schema.DBNotification.Name + "?" + utils.RootRowsParam + "=" + notif.GetString("id"),
-						"data_ref" : "/" + utils.MAIN_PREFIX + "/" + sch.Name + "?" + utils.RootRowsParam + "=" + notif.GetString(schema.RootID("dest_table")),
-					})
+					}
+					if sch.Name == schema.DBTask.Name { 
+						r, err := d.SuperCall(utils.AllParams(schema.DBView.Name), utils.Record{}, utils.SELECT, "name='assigned activity'")
+						if err == nil { nn["data_ref"] = "#" + fmt.Sprintf("%v", r[0][utils.SpecialIDParam]) +":" + fmt.Sprintf("%v", notif[utils.RootDestTableIDParam]) }
+					}
+					if sch.Name == schema.DBRequest.Name { 
+						r, err := d.SuperCall(utils.AllParams(schema.DBView.Name), utils.Record{}, utils.SELECT, "name='my unvalidated requests'")
+						if err == nil { nn["data_ref"] = "#" + fmt.Sprintf("%v", r[0][utils.SpecialIDParam]) +":" + fmt.Sprintf("%v", notif[utils.RootDestTableIDParam]) }
+					}
+					n = append(n, nn)
 				}
 				if err == nil { response[0]["notifications"]=n
 				} else { response[0]["notifications"]=[]interface{}{} }
@@ -95,7 +103,7 @@ func (l *AuthController) Refresh() {
 	notifs, err := d.PermsSuperCall(params, utils.Record{}, utils.SELECT)
 	n := utils.Results{}
 	for _, notif := range notifs {
-		sch, err := schema.GetSchemaByID(int64(notif["link_id"].(int64)))
+		sch, err := schema.GetSchemaByID(int64(notif["link_id"].(float64)))
 		if err != nil { continue }
 		n = append(n, utils.Record{
 			utils.SpecialIDParam : notif.GetString(utils.SpecialIDParam),

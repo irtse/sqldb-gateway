@@ -59,6 +59,7 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 	readonly := true
 	schema, err := schserv.GetSchema(tableName)
 	if err != nil { return schemes, -1, keysOrdered, cols, additionnalAction, true }
+	_, view, _, _ := d.GetFilter("", "", fmt.Sprintf("%v", schema.ID))
 	for _, scheme := range schema.Fields {
 		if (!d.SuperAdmin && !d.PermsCheck(tableName, scheme.Name, scheme.Level, utils.SELECT)) { continue }
 		var shallowField schserv.ViewFieldModel
@@ -69,8 +70,16 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 		shallowField.Actions=[]string{}
 		if scheme.Link > 0 && !d.LowerRes {
 			schema, _ := schserv.GetSchemaByID(scheme.Link)
-			shallowField.LinkPath = "/" + utils.MAIN_PREFIX + "/" + schema.Name + "?rows=all"
-			if !strings.Contains(scheme.Type, "many") { shallowField.LinkPath += "&" + utils.RootShallow + "=enable" }
+			shallowField.ActionPath = "/" + utils.MAIN_PREFIX + "/" + schema.Name + "?rows=all"
+			shallowField.LinkPath = shallowField.ActionPath + "&" + utils.RootShallow + "=enable"
+			if strings.Contains(scheme.Type, "many") {
+				for _, field := range schema.Fields {
+					if strings.Contains(field.Name, "_id") && !strings.Contains(field.Name, tableName) && field.Link > 0 {
+						schField, _ := schserv.GetSchemaByID(field.Link)
+						shallowField.LinkPath = "/" + utils.MAIN_PREFIX + "/" + schField.Name + "?rows=all" + "&" + utils.RootShallow + "=enable"
+					}
+				}
+			}
 		}
 		for _, meth := range []utils.Method{ utils.SELECT, utils.CREATE, utils.UPDATE, utils.DELETE } {
 			if d.PermsCheck(tableName, "", "", meth) && (((meth == utils.SELECT || meth == utils.CREATE) && d.Empty) || !d.Empty){ 
@@ -87,12 +96,12 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 					shallowField.Actions=append(shallowField.Actions, meth.Method())
 				} 
 			}
-			if meth == utils.UPDATE && !d.Empty { 
+			if meth == utils.UPDATE && d.Empty { 
 				readonly = false
 				shallowField.Readonly = false 
 			} else if meth == utils.CREATE && d.Empty { shallowField.Readonly = true } 
 		} 
-		keysOrdered = append(keysOrdered, scheme.Name)
+		if !(view != "" && !strings.Contains(view, scheme.Name)) { keysOrdered = append(keysOrdered, scheme.Name) }
 		schemes[scheme.Name]=shallowField
 	}
 	sort.SliceStable(keysOrdered, func(i, j int) bool{

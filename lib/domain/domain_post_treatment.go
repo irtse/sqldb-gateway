@@ -5,7 +5,6 @@ import (
 	"sort"
 	"slices"
 	"strings"
-	"strconv"
 	"runtime"
 	"sqldb-ws/lib/domain/utils"
 	schserv "sqldb-ws/lib/domain/schema"
@@ -22,7 +21,7 @@ func (d *MainService) PostTreat(results utils.Results, tableName string, isWorfl
 		schemes, id, order, cols, addAction, readonly := d.GetViewFields(tableName, false) 
 		view := schserv.ViewModel{ ID: id, Name : schema.Label, Label : schema.Label, Description : tableName + " datas", Schema : schemes,
 			SchemaID: id, SchemaName: tableName, ActionPath : d.BuildPath(tableName, utils.ReservedParam), Readonly : readonly,
-			Order : order, Actions : addAction,  Items : []schserv.ViewItemModel{}, Shortcuts: map[string]string{} }
+			Order : order, Actions : addAction, Items : []schserv.ViewItemModel{}, Shortcuts: map[string]string{} }
 		shortcuts, err := d.SuperCall( utils.AllParams(schserv.DBView.Name), utils.Record{}, utils.SELECT, "is_shortcut=true")
 		if len(shortcuts) > 0 && err == nil {
 			for _, shortcut := range shortcuts {
@@ -47,7 +46,7 @@ func (d *MainService) PostTreat(results utils.Results, tableName string, isWorfl
 			for i, record := range res { go d.PostTreatRecord(i + count, channel, record, tableName, cols, d.Empty, isWorflow) }
 			for range res { 
 				rec := <-channel
-				if !rec.IsEmpty { view.Items = append(view.Items, rec) }			
+				if !rec.IsEmpty { view.Items = append(view.Items, rec) }		
 			}
 			count += len(res)
 		}
@@ -59,7 +58,7 @@ func (d *MainService) PostTreat(results utils.Results, tableName string, isWorfl
 			if record.GetString(schserv.NAMEKEY) == "" { res = append(res, record); continue }
 			label := record.GetString(schserv.NAMEKEY)
 			if record.GetString(schserv.LABELKEY) == "" { label = record.GetString(schserv.LABELKEY) }
-			if record[schserv.RootID(schserv.DBSchema.Name)] != nil { // SCHEMA ? 
+			if record[schserv.RootID(schserv.DBSchema.Name)] != nil {
 				sch, err := schserv.GetSchemaByID(record.GetInt(schserv.RootID(schserv.DBSchema.Name)))
 				if err != nil { continue }
 				schema, id, order,  _, addAction, readonly := d.GetViewFields(sch.Name, false)
@@ -93,52 +92,41 @@ func (d *MainService) PostTreatRecord(index int, channel chan schserv.ViewItemMo
 			if strings.Contains(field.Name, schserv.DBSchema.Name) { 
 				dest, ok := record[schserv.RootID("dest_table")]
 				id, ok2 := record[field.Name]
-				if !ok2 && !ok && dest != nil && id != nil {
-					schema, err := schserv.GetSchemaByID(record.GetInt(field.Name))
-					if dest != nil && err == nil {
+				if ok2 && ok && dest != nil && id != nil {
+					schema, err := schserv.GetSchemaByID(int64(id.(float64)))
+					if err == nil {
 						datapath=d.BuildPath(schema.Name, fmt.Sprintf("%v", dest))
-						params := utils.Params{ utils.RootTableParam : schema.Name, utils.RootRowsParam: fmt.Sprintf("%v", dest), utils.RootShallow : "enable" }
-						if _, ok := d.Params[schserv.RootID("dest_table")]; ok {
-							if _, err := strconv.Atoi(strings.Replace(strings.Replace(fmt.Sprintf("%v", d.Params[schserv.RootID("dest_table")]), "%25", "", -1), "%", "", -1)); err == nil {
-								params[utils.SpecialIDParam] = d.Params[schserv.RootID("dest_table")]
-							} else { params[schserv.NAMEKEY] = d.Params[schserv.RootID("dest_table")] }
-						}
-						r, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
-						if _, ok := d.Params[schserv.RootID("dest_table")]; ok && (err != nil || len(r) == 0) { 
-							channel <- schserv.ViewItemModel{ IsEmpty: true }; return 
-						}
-						if err != nil || len(r) == 0 { continue }
-						ids, _ := strconv.Atoi(fmt.Sprintf("%v",r[0][utils.SpecialIDParam]))
-						shallowVals["db" + utils.RootDestTableIDParam]=utils.Record{ "id": ids, "name" : fmt.Sprintf("%v",r[0][schserv.NAMEKEY]) }
+						if _, ok := record[schserv.RootID("dest_table")]; !ok { channel <- schserv.ViewItemModel{ IsEmpty: true }; return }
+						shallowVals[schserv.RootID(schserv.DBSchema.Name)]=utils.Record{ "id": record[schserv.RootID("dest_table")], "name" : schema.Name, "label" : schema.Label }
 					}
 					continue
 				}
 			}
 			if record.GetString(field.Name) != "" && field.Link > 0 && !shallow { 
 				link := schserv.GetTablename(fmt.Sprintf("%v", field.Link))
-				params := utils.Params{ utils.RootTableParam : link, utils.RootRowsParam: record.GetString(field.Name), utils.RootShallow : "enable" }
-				if strings.Contains(field.Type, "many") {
-					params[utils.RootRowsParam] = utils.ReservedParam
-					params[schserv.RootID(tableName)] = record.GetString(utils.SpecialIDParam)
-				}
-				r, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
-				if err != nil || len(r) == 0 { continue }
-				if !strings.Contains(field.Type, "many")  { shallowVals[field.Name]=r[0]; continue 
-				} else if field.Type == schserv.MANYTOMANY.String() && !d.LowerRes {
-					for _, r2 := range r {
-						for field2, _ := range r2 {
-							if strings.Contains(field2, tableName) || field2 != "id" || !strings.Contains(field2, "_id") { continue }
-							id := strings.Replace(field2, "_id", "", -1)
-							params[utils.RootTableParam] = id
-							sqlFilter := "id IN (SELECT " + id + "_id FROM " + link + " WHERE " + schserv.RootID(tableName) + " = " + record.GetString(utils.SpecialIDParam) + " )"
-							r, err = d.Call( params, utils.Record{}, utils.SELECT, sqlFilter)
-							if err != nil || len(r) == 0 { continue }
-							if _, ok := manyVals[field.Name]; !ok { manyVals[field.Name] = utils.Results{} }
-							manyVals[field.Name]= append(manyVals[field.Name], r...)
-						}
+				if !strings.Contains(field.Type, "many") { 
+					params := utils.Params{ utils.RootTableParam : link, utils.RootRowsParam: record.GetString(field.Name), utils.RootShallow : "enable" }
+					r, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
+					if err != nil || len(r) == 0 { continue }
+					shallowVals[field.Name]=utils.Record{ "id": r[0][utils.SpecialIDParam], "name" : r[0][schserv.NAMEKEY] }
+					if _, ok := r[0]["label"]; ok { shallowVals[field.Name].(utils.Record)["label"]=r[0]["label"] }
+					continue 
+				} else if field.Type == schserv.MANYTOMANY.String() && !d.LowerRes { // TODO DEBUG
+					lsch, _ := schserv.GetSchemaByID(field.Link)
+					for _, f := range lsch.Fields {
+						if strings.Contains(f.Name, tableName) && f.Name == "id" && f.Link <= 0 { continue }
+						lid, _ := schserv.GetSchemaByID(f.Link)
+						sqlFilter := "SELECT id,name"
+						if lid.HasField("label") { sqlFilter += ",label" }
+						sqlFilter += " FROM " + lid.Name + " WHERE id IN (SELECT " + f.Name + " FROM " + link + " WHERE " + schserv.RootID(tableName) + " = " + record.GetString(utils.SpecialIDParam) + " )"
+						rr, err := d.Db.QueryAssociativeArray(sqlFilter)
+						if err != nil || len(rr) == 0 { continue }
+						if _, ok := manyVals[field.Name]; !ok { manyVals[field.Name] = utils.Results{} }
+						for _, r := range rr { manyVals[field.Name] = append(manyVals[field.Name], r) }
 					}
 					continue	
-				} else if field.Type == schserv.ONETOMANY.String() && !d.LowerRes {
+				} 
+				if field.Type == schserv.ONETOMANY.String() && !d.LowerRes {
 					manyPathVals[field.Name] = d.BuildPath(link, utils.ReservedParam, schserv.RootID(tableName) + "=" + record.GetString(utils.SpecialIDParam))
 					continue
 				}
@@ -146,12 +134,13 @@ func (d *MainService) PostTreatRecord(index int, channel chan schserv.ViewItemMo
 			if shallow { vals[field.Name]=nil } else if v, ok:=record[field.Name]; ok { vals[field.Name]=v }
 		}
 		channel <- schserv.ViewItemModel{ Values : vals,  DataPaths :  datapath, ValueShallow : shallowVals, Sort: int64(index),
-			HistoryPath : historyPath, ValueMany: manyVals, ValuePathMany: manyPathVals, Workflow : d.BuildWorkFlow(record, tableName, isWorkflow), }
+			HistoryPath : historyPath, ValueMany: manyVals, ValuePathMany: manyPathVals, 
+			Workflow : d.BuildWorkFlow(record, tableName, isWorkflow), }
 }
 
 func (d *MainService) BuildWorkFlow(record utils.Record, tableName string, isWorflow bool) *schserv.WorkflowModel {
 	var workflow schserv.WorkflowModel
-	if !isWorflow{ return nil  }
+	if !isWorflow { return nil  }
 	id := ""; requestID := ""; nexts := []string{}
 	if tableName == schserv.DBWorkflow.Name { id = record.GetString(utils.SpecialIDParam)
 	} else if tableName == schserv.DBRequest.Name { // TODO AS SPECIALIZED
@@ -160,16 +149,16 @@ func (d *MainService) BuildWorkFlow(record utils.Record, tableName string, isWor
 		workflow = schserv.WorkflowModel{ IsDismiss : record.GetString("state") == "dismiss", Current : record.GetString("current_index"), 
 			IsClose : record.GetString("state") == "completed" || record.GetString("state") == "dismiss" }
 	} else if tableName == schserv.DBTask.Name {
-		params := utils.Params { utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : record.GetString(utils.SpecialIDParam), }
-		t, _ := d.SuperCall( params, utils.Record{}, utils.SELECT)
-		if len(t) > 0 && t[0]["nexts"] != "all" && t[0]["nexts"] != "" && t[0]["nexts"] != nil { nexts = strings.Split(t[0].GetString("nexts"), ",") }
+		t, err := d.Db.QueryAssociativeArray("SELECT * FROM " + schserv.DBTask.Name + " WHERE id = " + record.GetString(utils.SpecialIDParam))
+		if err != nil || len(t) == 0 || t[0][schserv.RootID(schserv.DBWorkflowSchema.Name)] == nil { return nil }
+		if t[0]["nexts"] != "all" && t[0]["nexts"] != "" && t[0]["nexts"] != nil { nexts = strings.Split(fmt.Sprintf("%v", t[0]["nexts"]), ",") }
 		requestID = record.GetString(schserv.RootID(schserv.DBRequest.Name))
 		workflow = schserv.WorkflowModel{ CurrentDismiss : record["state"] == "dismiss", CurrentClose : record["state"] == "completed" || record["state"] == "dismiss" }
-		params = utils.Params { utils.RootTableParam : schserv.DBWorkflowSchema.Name,
-			utils.RootRowsParam : record.GetString(schserv.RootID(schserv.DBWorkflowSchema.Name)), }
+		params := utils.Params { utils.RootTableParam : schserv.DBWorkflowSchema.Name, utils.RootRowsParam : fmt.Sprintf("%v", t[0][schserv.RootID(schserv.DBWorkflowSchema.Name)]), }
 		schemes, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
 		if err != nil || len(schemes) == 0 { return nil }
 		workflow.Current = schemes[0].GetString("index")
+		workflow.CurrentHub=schemes[0]["hub"].(bool)
 		id = fmt.Sprintf("%v", schemes[0][schserv.RootID(schserv.DBWorkflow.Name)])
 	} else { return nil }
 
@@ -179,25 +168,19 @@ func (d *MainService) BuildWorkFlow(record utils.Record, tableName string, isWor
 		utils.RootRowsParam : utils.ReservedParam,
 		schserv.RootID(schserv.DBWorkflow.Name) : id,
 	}
-	steps, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
+	steps, err := d.Db.QueryAssociativeArray("SELECT * FROM " + schserv.DBWorkflowSchema.Name + " WHERE " + schserv.RootID(schserv.DBWorkflow.Name) + " = " + id)
 	if err == nil && len(steps) > 0 {	
 		newSteps := map[string][]schserv.WorkflowStepModel{}
 		for _, step := range steps {
-			index := step.GetString("index")
-			if workflow.Current != "" && workflow.Current == step.GetString("index") && tableName == schserv.DBTask.Name { 
-				params := utils.Params { utils.RootTableParam : schserv.DBWorkflowSchema.Name,
-					utils.RootRowsParam : record.GetString(schserv.RootID(schserv.DBWorkflowSchema.Name)), }
-				ownSteps, err := d.SuperCall( params, utils.Record{}, utils.SELECT)
-				if hub, ok2 := ownSteps[0]["hub"]; ok2 && err == nil && len(ownSteps) > 0 { workflow.CurrentHub=hub.(bool) }
-			}
+			index :=  fmt.Sprintf("%v", step["index"])
 			if _, ok := newSteps[index]; !ok { newSteps[index] = []schserv.WorkflowStepModel{} }
 			newStep := schserv.WorkflowStepModel{ 
-				ID : step.GetInt(utils.SpecialIDParam), Name: step.GetString(schserv.NAMEKEY), Optionnal : step["optionnal"].(bool), 
-				IsSet : !step["optionnal"].(bool) || slices.Contains(nexts, step.GetString("wrapped_" + schserv.RootID(schserv.DBWorkflow.Name))),
+				ID : utils.GetInt(step, utils.SpecialIDParam), Name: fmt.Sprintf("%v", step[schserv.NAMEKEY]), Optionnal : step["optionnal"].(bool), 
+				IsSet : !step["optionnal"].(bool) || slices.Contains(nexts, fmt.Sprintf("%v", step["wrapped_" + schserv.RootID(schserv.DBWorkflow.Name)])),
 			}
 			if workflow.Current != "" {
 				params = utils.Params { utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : utils.ReservedParam,
-					schserv.RootID(schserv.DBWorkflowSchema.Name) : step.GetString(utils.SpecialIDParam),
+					schserv.RootID(schserv.DBWorkflowSchema.Name) : fmt.Sprintf("%v", step[utils.SpecialIDParam]),
 					schserv.RootID(schserv.DBRequest.Name) : requestID,
 				}
 				tasks, err := d.SuperCall( params, utils.Record{}, utils.SELECT)

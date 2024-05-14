@@ -30,6 +30,7 @@ func (s *RequestService) DeleteRowAutomation(results []map[string]interface{}, t
 func (s *RequestService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) { 
 	if s.Domain.GetMethod() == utils.CREATE { 
 		// set up name
+		if _, ok := record[utils.RootDestTableIDParam]; !ok { return record, false, false }
 		sqlFilter := "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser())
 		params := utils.Params{ utils.RootTableParam : schserv.DBUser.Name, utils.RootRowsParam : utils.ReservedParam, }
 		user, err := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT, sqlFilter)
@@ -59,14 +60,8 @@ func (s *RequestService) VerifyRowAutomation(record map[string]interface{}, tabl
 func (s *RequestService) UpdateRowAutomation(results []map[string]interface{}, record map[string]interface{}) {
 	for _, rec := range results {
 		if rec["state"] == "dismiss" { 
-			params := utils.Params{ utils.RootTableParam : schserv.DBTask.Name,
-								   utils.RootRowsParam : utils.ReservedParam,
-								   utils.SpecialIDParam : utils.GetString(rec, utils.SpecialIDParam),
-								   schserv.RootID(schserv.DBRequest.Name) : utils.GetString(rec, utils.SpecialIDParam) }
-			s.Domain.SuperCall( params, utils.Record{ "state" : "dismiss", "is_close" : true, 
-				"closing_date" : time.Now().Format(time.RFC3339),}, utils.UPDATE)
 			schema, err := schserv.GetSchema(schserv.DBRequest.Name)
-			if err == nil { 
+			if err == nil && !rec["is_meta"].(bool) { 
 				s.Domain.SuperCall( utils.AllParams(schserv.DBNotification.Name), utils.Record{ "link_id" : schema.ID,
 					schserv.NAMEKEY : "Rejected " + utils.GetString(rec, schserv.NAMEKEY), 
 					"description" : utils.GetString(rec, schserv.NAMEKEY) + " is rejected and closed.",
@@ -76,40 +71,40 @@ func (s *RequestService) UpdateRowAutomation(results []map[string]interface{}, r
 		}
 		if rec["state"] == "completed" {
 			schema, err := schserv.GetSchema(schserv.DBRequest.Name)
-			if err == nil {
+			if err == nil && !rec["is_meta"].(bool) {
 				s.Domain.SuperCall( utils.AllParams(schserv.DBNotification.Name), utils.Record{ "link_id" : schema.ID,
 					schserv.NAMEKEY : "Validated " + utils.GetString(rec, schserv.NAMEKEY), 
 					"description" : utils.GetString(rec, schserv.NAMEKEY) + " is approved and closed.",
 					schserv.RootID(schserv.DBUser.Name) : rec[schserv.RootID(schserv.DBUser.Name)],
 					schserv.RootID("dest_table") : rec[utils.SpecialIDParam], }, utils.CREATE)
 			}
-			params := utils.Params{ utils.RootTableParam : schserv.DBTask.Name,
-				utils.RootRowsParam : utils.ReservedParam,
-				"meta_" + schserv.RootID(schserv.DBRequest.Name) : utils.GetString(rec, utils.SpecialIDParam), }
-			s.Domain.SuperCall( params, utils.Record{ "state" : rec["state"], "is_close" : true, 
-				"closing_date" : time.Now().Format(time.RFC3339), }, utils.UPDATE)
+		}
+		if rec["is_close"].(bool) {
+			res, err := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBTask.Name + " WHERE meta_" + schserv.RootID(schserv.DBRequest.Name) + "=" + utils.GetString(rec, utils.SpecialIDParam) + " AND is_close=false")
+			if err == nil && len(res) > 0 {
+				for _, task := range res {
+					task["is_close"] = true 
+					task["state"] = rec["state"] 
+					task["closing_date"] = time.Now().Format(time.RFC3339)
+					s.Domain.SuperCall( utils.AllParams(schserv.DBTask.Name), task, utils.UPDATE)
+				}
+			}
 		}
 	}
 }
 
 func (s *RequestService) WriteRowAutomation(record map[string]interface{}, tableName string) {
 	if record["current_index"].(int64) == 1 {
-		params := utils.Params{ utils.RootTableParam : schserv.DBWorkflowSchema.Name,
-		                       utils.RootRowsParam : utils.ReservedParam,
-							   "index": "1", // lauch workflow
-							   schserv.RootID(schserv.DBWorkflow.Name) : fmt.Sprintf("%v", record[schserv.RootID(schserv.DBWorkflow.Name)]) }
-		wfs, err := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT)
+		wfs, err := s.Domain.SuperCall( utils.AllParams(schserv.DBWorkflowSchema.Name), utils.Record{}, 
+			utils.SELECT, "index=1 AND " + schserv.RootID(schserv.DBWorkflow.Name) + "=" + fmt.Sprintf("%v", record[schserv.RootID(schserv.DBWorkflow.Name)]))
 		if err != nil || len(wfs) == 0 { 
 			params := utils.Params{ utils.RootTableParam : schserv.DBRequest.Name, utils.RootRowsParam : utils.GetString(record, utils.SpecialIDParam), }
 			s.Domain.SuperCall( params, utils.Record{ }, utils.DELETE); return 
 		}
-		sqlFilter := "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser())
-		user, _ := s.Domain.SuperCall( utils.AllParams(schserv.DBUser.Name), utils.Record{}, utils.SELECT, sqlFilter)
 		for _, newTask := range wfs {
 			newTask[schserv.RootID(schserv.DBWorkflowSchema.Name)] = newTask[utils.SpecialIDParam]
 			delete(newTask, utils.SpecialIDParam)
 			newTask[schserv.RootID(schserv.DBRequest.Name)] = record[utils.SpecialIDParam]
-			newTask[schserv.RootID(schserv.DBUser.Name)] = user[0][utils.SpecialIDParam]
 			if newTask.GetString(schserv.RootID(schserv.DBSchema.Name)) == utils.GetString(record, schserv.RootID(schserv.DBSchema.Name)) {
 				newTask[schserv.RootID(schserv.DBSchema.Name)] = record[schserv.RootID(schserv.DBSchema.Name)]
 				newTask[schserv.RootID("dest_table")] = record[schserv.RootID("dest_table")]
@@ -168,8 +163,8 @@ func (s *RequestService) WriteRowAutomation(record map[string]interface{}, table
 					schserv.RootID(schserv.DBUser.Name) : user[0][utils.SpecialIDParam],
 					schserv.RootID(schserv.DBUser.Name) : hierarch["parent_" + schserv.RootID(schserv.DBUser.Name)],
 					"description" : "hierarchical verification expected by the system.",
-					"urgency" : "medium",
-					"priority" : "medium",
+					"urgency" : "normal",
+					"priority" : "normal",
 					schserv.NAMEKEY : "hierarchical verification",
 				}
 				res, err := s.Domain.PermsSuperCall( utils.AllParams(schserv.DBTask.Name), newTask, utils.CREATE)

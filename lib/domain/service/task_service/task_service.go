@@ -19,7 +19,10 @@ func (s *TaskService) VerifyRowAutomation(record map[string]interface{}, tablena
 		user, err := s.Domain.SuperCall(utils.AllParams(schserv.DBUser.Name), utils.Record{}, utils.SELECT, sqlFilter)
 		if err != nil || len(user) == 0 { return record, false, false }
 		record[schserv.DBUser.Name]=user[0][utils.SpecialIDParam]  // affected create_by
+		record["created_date"] = time.Now().Format(time.RFC3339)
 	} else if s.Domain.GetMethod() == utils.UPDATE {
+		elder, _ := s.Domain.SuperCall(utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : fmt.Sprintf("%v", record[utils.SpecialIDParam]) }, utils.Record{}, utils.SELECT)
+		if len(elder) > 0 && (elder[0]["state"] == "completed" || elder[0]["state"] == "dismiss") { return record, false, false }
 		if record["state"] == "completed" || record["state"] == "dismiss" { 
 			record["is_close"] = true 
 			record["closing_date"] = time.Now().Format(time.RFC3339)
@@ -44,28 +47,26 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 	for _, res := range results {
 		if res["state"] != "completed" && res["state"] != "dismiss" { continue }
 		paramsReq := utils.Params{ utils.RootTableParam : schserv.DBRequest.Name, 
-								  utils.RootRowsParam : utils.GetString(res, schserv.RootID(schserv.DBRequest.Name)), }
+								   utils.RootRowsParam : utils.GetString(res, schserv.RootID(schserv.DBRequest.Name)), }
 		requests, err := s.Domain.SuperCall( paramsReq, utils.Record{}, utils.SELECT)
 		if err != nil || len(requests) == 0 { continue }
 		if order, ok3 := requests[0]["current_index"]; ok3 {
-			if order.(int64) > 0 {
+			if order.(float64) > 0 {
 				params := utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : utils.ReservedParam, 
 					schserv.RootID(schserv.DBRequest.Name) : fmt.Sprintf("%v", res[schserv.RootID(schserv.DBRequest.Name)]), }
 				otherPendingTasks, _ := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT,
 					"state IN ('pending', 'progressing', 'dismiss') AND (is_close=false)")
 				if len(otherPendingTasks) > 0 { continue }
 			}
-			current_index := order.(int64)
+			current_index := order.(float64)
 			if res["state"] == "completed" { current_index++ }	
 			if res["state"] == "dismiss" {
 				if order.(int64) > 0 { current_index-- } else {  // Dismiss will close requests.
-					s.Domain.Call( paramsReq, utils.Record{ "state" : "dismiss",  "is_close": true, 
-						"closing_date" : time.Now().Format(time.RFC3339) }, utils.UPDATE)
+					s.Domain.Call( paramsReq, utils.Record{ "state" : "dismiss",  "is_close": true, "closing_date" : time.Now().Format(time.RFC3339) }, utils.UPDATE)
 				} // no before task close request and task
 			}
-			params := utils.Params{ utils.RootTableParam : schserv.DBWorkflowSchema.Name, utils.RootRowsParam : utils.ReservedParam, 
-				schserv.RootID(schserv.DBWorkflow.Name) : fmt.Sprintf("%v", requests[0][schserv.RootID(schserv.DBWorkflow.Name)])  }
-			schemes, err := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT, "index=" + fmt.Sprintf("%v", current_index))
+			schemes, err := s.Domain.SuperCall( utils.AllParams(schserv.DBWorkflowSchema.Name), utils.Record{}, 
+				utils.SELECT, "index=" + fmt.Sprintf("%v", current_index) + " AND " + schserv.RootID(schserv.DBWorkflow.Name) + " = " + fmt.Sprintf("%v", requests[0][schserv.RootID(schserv.DBWorkflow.Name)]))
 			newRecRequest := utils.Record{ utils.SpecialIDParam : requests[0][utils.SpecialIDParam]}
 			if err != nil || len(schemes) == 0 { // no new task in workflow
 				newRecRequest["state"] = "completed"
@@ -79,22 +80,18 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 			s.Domain.PermsSuperCall(utils.AllParams(schserv.DBRequest.Name), newRecRequest, utils.UPDATE)
 			if err != nil || len(schemes) == 0 { continue }
 			for _, scheme := range schemes {
-				params = utils.Params{ utils.RootTableParam : schserv.DBTask.Name, 
-									  utils.RootRowsParam: utils.ReservedParam,
-									  schserv.RootID(schserv.DBWorkflowSchema.Name) : scheme.GetString(utils.SpecialIDParam),
-									  schserv.RootID(schserv.DBRequest.Name) : requests[0].GetString(utils.SpecialIDParam), }
+				params := utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam: utils.ReservedParam,
+					schserv.RootID(schserv.DBWorkflowSchema.Name) : scheme.GetString(utils.SpecialIDParam),
+					schserv.RootID(schserv.DBRequest.Name) : requests[0].GetString(utils.SpecialIDParam) }
 				beforeTask, err := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT, "is_close=false")
 				if err == nil && len(beforeTask) > 0 { continue }
 				newTask := utils.Record{
-					schserv.RootID(schserv.DBSchema.Name) : scheme[schserv.RootID(schserv.DBSchema.Name)],
 					schserv.RootID(schserv.DBWorkflowSchema.Name) : scheme[utils.SpecialIDParam],
+					schserv.RootID(schserv.DBSchema.Name) : scheme[schserv.RootID(schserv.DBSchema.Name)],
 					schserv.RootID(schserv.DBRequest.Name) : requests[0][utils.SpecialIDParam],
 					schserv.RootID(schserv.DBUser.Name) : res[schserv.RootID(schserv.DBUser.Name)],
-					"description" : scheme["description"],
-					"urgency" : scheme["urgency"],
-					"priority" : scheme["priority"],
-					schserv.NAMEKEY : scheme[schserv.NAMEKEY],
-				}
+					"description" : scheme["description"], "urgency" : scheme["urgency"], 
+					"priority" : scheme["priority"], schserv.NAMEKEY : scheme[schserv.NAMEKEY] }
 				if fmt.Sprintf("%v", scheme[schserv.RootID(schserv.DBSchema.Name)]) == fmt.Sprintf("%v", res[schserv.RootID(schserv.DBSchema.Name)]) {
 					newTask[schserv.RootID(schserv.DBSchema.Name)] = res[schserv.RootID(schserv.DBSchema.Name)]
 					newTask[schserv.RootID("dest_table")] = res[schserv.RootID("dest_table")]
@@ -112,8 +109,7 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 					newMetaRequest := utils.Record{ 
 						schserv.RootID(schserv.DBWorkflow.Name) : scheme["wrapped_" + schserv.RootID(schserv.DBWorkflow.Name)], 
 						schserv.NAMEKEY : "Meta request for " + newTask.GetString(schserv.NAMEKEY) + " task",
-						"current_index" : 1,
-						"is_meta": true,
+						"current_index" : 1, "is_meta": true,
 						schserv.RootID(schserv.DBSchema.Name) : newTask[schserv.RootID(schserv.DBSchema.Name)],
 						schserv.RootID("dest_table") : newTask[schserv.RootID("dest_table")],
 						schserv.RootID(schserv.DBUser.Name) : newTask[schserv.RootID(schserv.DBUser.Name)],
@@ -143,13 +139,13 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 }
 
 func (s *TaskService) WriteRowAutomation(record map[string]interface{}, tableName string) {
-	// task creation automation.
+	/*// task creation automation.
 	schema, err := schserv.GetSchemaByID(utils.GetInt(record, schserv.RootID(schserv.DBSchema.Name)))
 	if err != nil { return }
 	created, err := s.Domain.SuperCall(utils.AllParams(schema.Name), utils.Record{}, utils.CREATE)
 	if err != nil && len(created) == 0 { return }
 	newRec := utils.Record{ schserv.RootID("dest_table"): created[0][utils.SpecialIDParam] }
-	s.Domain.SuperCall(utils.AllParams(s.Entity().GetName()), newRec, utils.UPDATE)
+	s.Domain.SuperCall(utils.AllParams(s.Entity().GetName()), newRec, utils.UPDATE)*/
 }
 
 func (s *TaskService) ConfigureFilter(tableName string) (string, string, string, string) {
@@ -158,9 +154,8 @@ func (s *TaskService) ConfigureFilter(tableName string) (string, string, string,
 	if (ok && fmt.Sprintf("%v", rows) != utils.ReservedParam) || (ok2 && ids != "") {
 		return s.Domain.ViewDefinition(tableName)
 	}
-	restr := schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ") OR "
-	restr += schserv.RootID(schserv.DBRequest.Name) + " IN (SELECT id FROM " + schserv.DBRequest.Name + " WHERE "
-	restr += schserv.RootID(schserv.DBWorkflowSchema.Name) + " IN (SELECT id FROM " + schserv.DBWorkflowSchema.Name + " WHERE "
+	restr := "(" + schserv.RootID(schserv.DBWorkflowSchema.Name) + " IS NULL AND " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))"
+	restr += " OR (" + schserv.RootID(schserv.DBWorkflowSchema.Name) + " IN (SELECT id FROM " + schserv.DBWorkflowSchema.Name + " WHERE "
 	restr += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
 	restr += " OR " + schserv.RootID(schserv.DBEntity.Name) + " IN ("
 	restr += "SELECT " + schserv.RootID(schserv.DBEntity.Name) + " FROM " + schserv.DBEntityUser.Name + " "

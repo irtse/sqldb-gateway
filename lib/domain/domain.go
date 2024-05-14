@@ -18,7 +18,8 @@ import (
 	It's the specialized part of the API, it concive particular behavior on datas (in our cases, particular Root DB declares in entity)
 	Main Service at a Domain level, it follows the DOMAIN ITF from schserv. 
 	Domain interact at a "Model" level with generic and abstract infra services. 
-	Main service give the main process to interact with Infra. 
+	Mai	"fmt"
+n service give the main process to interact with Infra. 
 */
 var EXCEPTION_FUNC = []string{"Count"}
 type MainService struct {
@@ -94,23 +95,23 @@ func (d *MainService) call(params utils.Params, record utils.Record, method util
 			if !d.isGenericService { specializedService = domain.SpecializedService(tablename) }
 			specializedService.SetDomain(d)
 		}
-		if d.Db == nil || d.Db.Conn == nil { d.Db = conn.Open(); defer d.Db.Close() } // open base		
+		if d.Db != nil { d.Db.Close() } // open base
+		d.Db = conn.Open(); 
+		defer d.Db.Close() 
 		if !d.SuperAdmin && !d.PermsCheck(tablename, "", "", d.Method) && !d.AutoLoad {
 			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + tablename + " datas")
 		}
 		// load the highest entity avaiable Table level.
 		table := infrastructure.Table(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename), record)
+		d.Service=table
 		delete(params, utils.RootTableParam)
 		tablename = strings.ToLower(tablename)
 		if rowName, ok := params[utils.RootRowsParam]; ok { // rows override columns
-			if d.Method == utils.DELETE && !d.SuperAdmin {
-				method = utils.UPDATE
-				record = utils.Record{ "active" : false }
-			}
 			if id, ok := params[utils.SpecialIDParam]; ok { params[utils.SpecialSubIDParam]=id }
 			if strings.ToLower(rowName) != utils.ReservedParam { params[utils.SpecialIDParam]=strings.ToLower(rowName) }
 			delete(params, utils.RootRowsParam)
-			if table.Record != nil { table.Record[utils.SpecialIDParam] = params[utils.SpecialIDParam] }
+			if params[utils.SpecialIDParam] == "" || params[utils.SpecialIDParam] == utils.ReservedParam || params[utils.SpecialIDParam] == "<nil>" { delete(params, utils.SpecialIDParam) 
+			} else if table.Record != nil { table.Record[utils.SpecialIDParam] = params[utils.SpecialIDParam] }
 			d.Service = table.TableRow(specializedService)
 			utils.ParamsMutex.Lock()
 			d.Params = params
@@ -131,14 +132,15 @@ func (d *MainService) call(params utils.Params, record utils.Record, method util
 			if tablename == utils.ReservedParam { return utils.Results{}, errors.New("can't load table as " + utils.ReservedParam) }
 			params[utils.RootColumnsParam]=strings.ToLower(col)
 			d.Service = table.TableColumn(specializedService, params[utils.RootColumnsParam]) 
-		} else { d.Service=table }
+		}
 		return d.invoke(method.Calling(), args...)
 	}
 	return utils.Results{}, errors.New("no service available")
 }
 func (d *MainService) invoke(funcName string, args... interface{}) (utils.Results, error) {
     var err error
-	res := utils.Results{}
+	res := utils.Results{}	
+	if d.Service == nil { return res, errors.New("no service available") }
 	clazz := reflect.ValueOf(d.Service).MethodByName(funcName)
 	if !clazz.IsValid() { return res, errors.New("not implemented <"+ funcName +"> (invalid)") }
 	if clazz.IsZero() { return res, errors.New("not implemented <"+ funcName +"> (zero)") }
@@ -171,7 +173,7 @@ func (d *MainService) ValidateBySchema(data utils.Record, tableName string) (uti
 	}
 	for _, field := range schema.Fields {
 		if field.Required && field.Default == nil {
-			if _, ok := data[field.Name]; ok || field.Name == utils.SpecialIDParam { continue }
+			if _, ok := data[field.Name]; ok || field.Name == utils.SpecialIDParam || !d.PermsCheck(tableName, field.Name, field.Level, utils.SELECT) { continue }
 			if field.Label != "" { return data, errors.New("Missing a required field " + field.Label + " (can't see it ? you probably missing permissions)")
 			} else { return data, errors.New("Missing a required field " + field.Name + " (can't see it ? you probably missing permissions)") }
 		}

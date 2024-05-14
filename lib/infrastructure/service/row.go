@@ -10,7 +10,6 @@ import (
 type TableRowInfo struct {
 	Table				*TableInfo
 	EmptyCol            *TableColumnInfo
-	Verified  	        bool
 	InfraService
 }
 
@@ -22,21 +21,9 @@ func (t *TableRowInfo) Verify(name string) (string, bool) {
 }
 
 func (t *TableRowInfo) Count(restriction... string) ([]map[string]interface{}, error) {
-	t.db.ClearFilter()
-	if t.SpecializedService != nil {
-		restr, _, order, limit := t.SpecializedService.ConfigureFilter(t.Table.Name)
-		if restr != "" { t.db.SQLRestriction = restr }
-		if len(restriction) > 0 { 
-			for _, r := range restriction {
-				if r == "" { continue }
-				if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + r + ")"
-				} else { t.db.SQLRestriction = r }
-			}
-		}
-		if order != "" { t.db.SQLOrder = order }
-		if limit != "" { t.db.SQLLimit = limit }
-	}
-	var err error; var count int64
+	err := t.setupFilter(false, false, restriction...)
+	if err != nil { return nil, err }
+	var count int64
 	if t.db.Driver == conn.PostgresDriver { 
 		count, err = t.db.QueryRow(t.db.BuildCount(t.Table.Name))
 		if err != nil { return nil, err }
@@ -55,28 +42,14 @@ func (t *TableRowInfo) Count(restriction... string) ([]map[string]interface{}, e
 }
 
 func (t *TableRowInfo) Get(restriction... string) ([]map[string]interface{}, error) {
-	t.db.ClearFilter()
-	if t.SpecializedService != nil {
-		restr, view, order, limit:= t.SpecializedService.ConfigureFilter(t.Table.Name)
-		if restr != "" { t.db.SQLRestriction = restr }
-		if view != "" { t.db.SQLView = view }
-		if len(restriction) > 0 { 
-			for _, r := range restriction {
-				if r == "" { continue }
-				if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + r + ")"
-				} else { t.db.SQLRestriction = r }
-			}
-		}
-		if order != "" { t.db.SQLOrder = order }
-		if limit != "" { t.db.SQLLimit = limit }
-	}
-	d, err := t.db.SelectResults(t.Table.Name)
-	if err != nil { return t.DBError(nil, err) }
-	t.Results = d
+	var err error
+	if err = t.setupFilter(false, false, restriction...); err != nil { return nil, err }
+	if t.Results, err = t.db.SelectResults(t.Table.Name); err != nil { return t.DBError(nil, err) }
 	return t.Results, nil
 }
 
 func (t *TableRowInfo) Create() ([]map[string]interface{}, error) {
+	if len(t.Record) == 0 { return nil, errors.New("no data to insert") }
 	t.db.ClearFilter()
 	var id int64; var err error
 	result := []map[string]interface{}{}
@@ -122,90 +95,78 @@ func (t *TableRowInfo) Create() ([]map[string]interface{}, error) {
 }
 
 func (t *TableRowInfo) Update(restriction... string) ([]map[string]interface{}, error) {
-	t.db.ClearFilter()
-	if t.SpecializedService != nil {
-		r, ok, forceChange := t.SpecializedService.VerifyRowAutomation(t.Record, t.Name)
-		if !ok { return nil, errors.New("verification failed.") }
-		if forceChange { t.Record = r }
-	}
-	if id, ok := t.Record["id"]; (!ok || id == "" || fmt.Sprintf("%v", id) == "0") { return t.Create() }
-	if t.SpecializedService != nil {
-		restr, view, order, limit := t.SpecializedService.ConfigureFilter(t.Table.Name) 
-		if restr != "" { t.db.SQLRestriction = restr }
-		if len(restriction) > 0 { 
-			for _, r := range restriction {
-				if r == "" { continue }
-				if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + r + ")"
-				} else { t.db.SQLRestriction = r }
-			}
-		}
-		if view != "" { t.db.SQLView = view } 
-		if order != "" { t.db.SQLOrder = order }
-		if limit != "" { t.db.SQLLimit = limit }
-	}
+	var err error
+	if id, ok := t.Record["id"]; (!ok || id == "" || fmt.Sprintf("%v", id) == "0") { return nil, errors.New("verification failed on id.") }
+	if err = t.setupFilter(false, true, restriction...); err != nil { return nil, err }
 	stack := ""
 	restr := t.db.SQLRestriction
 	for key, element := range t.Record {
 		if (strings.Contains(key, "_id") || key == "id") && fmt.Sprintf("%v", element) == "0" { continue }
-		if key == "id" { 
-			if fmt.Sprintf("%v", element) != "0" && fmt.Sprintf("%v", element) != "" { restr = "id=" + fmt.Sprintf("%v", element) + " " }
-			continue 
+		if key == "id" && fmt.Sprintf("%v", element) != "0" && fmt.Sprintf("%v", element) != "" { restr = "id=" + fmt.Sprintf("%v", element) + " "; continue } 
+		t.EmptyCol.Name = t.Name
+		typ, ok := t.EmptyCol.Verify(key)
+		realType := strings.Split(typ, ":")[0]
+		isNull := len(strings.Split(typ, ":")) > 1 && strings.Split(typ, ":")[1] == "nullable"
+		if ok && !(!isNull && conn.FormatForSQL(realType, element) == "NULL") { 
+			stack += key + "=" + conn.FormatForSQL(realType, element) + "," 
 		}
-		if t.Verified {
-			typ, ok := t.EmptyCol.Verify(key)
-			realType := strings.Split(typ, ":")[0]
-			isNull := len(strings.Split(typ, ":")) > 1 && strings.Split(typ, ":")[1] == "nullable"
-			if ok { 
-				if (!isNull && conn.FormatForSQL(realType, element) == "NULL") { continue }
-				stack += key + "=" + conn.FormatForSQL(realType, element) + "," 
-			}
-		} else { stack += " " + key + "=" + fmt.Sprintf("%v", element) + "," }
 	}
 	stack = conn.RemoveLastChar(stack)
 	query := ("UPDATE " + t.Table.Name + " SET " + stack) // REMEMBER id is a restriction !
-	if restr == "" && t.db.SQLRestriction == "" { return t.Create() }
 	if restr != "" { query += " WHERE " + restr
 	} else if t.db.SQLRestriction != "" { query += " WHERE " + t.db.SQLRestriction } 
-	if stack != "" {
-		if t.db.Query(query) != nil { return t.DBError(nil, errors.New("nothing to update")) }
+	if stack != "" { 
+		if err := t.db.Query(query); err != nil { return t.DBError(nil, err) }
 	}
 	t.db.ClearFilter()
 	if restr != "" { t.db.SQLRestriction = restr }
-	result, err := t.db.SelectResults(t.Table.Name)
-	if err != nil { return t.DBError(nil, err) }
-	t.Results = result
+	if t.Results, err = t.db.SelectResults(t.Table.Name); err != nil { return t.DBError(nil, err) }
 	if t.SpecializedService != nil { t.SpecializedService.UpdateRowAutomation(t.Results, t.Record) }
 	return t.Results, nil
 }
-
-func (t *TableRowInfo) CreateOrUpdate(restriction... string) ([]map[string]interface{}, error) { return t.Update(restriction...) }
-
 func (t *TableRowInfo) Delete(restriction... string) ([]map[string]interface{}, error) {
+	var err error
+	if err = t.setupFilter(true, true, restriction...); err != nil { return t.DBError(nil, err) }
+	t.Results, err = t.db.SelectResults(t.Table.Name)
+	if t.db.SQLRestriction == "" { return t.DBError(nil, errors.New("no restriction can't delete all")) }
+	if err = t.db.Query("DELETE FROM " + t.Table.Name + " WHERE " + t.db.SQLRestriction); err != nil { return t.DBError(nil, err) }
+	if t.SpecializedService != nil { t.SpecializedService.DeleteRowAutomation(t.Results, t.Table.Name) }
+	return t.Results, nil
+}
+
+func (t *TableRowInfo) setupFilter(reverse bool, verify bool, restriction... string) error {
+	if t.SpecializedService != nil && verify {
+		r, ok, forceChange := t.SpecializedService.VerifyRowAutomation(t.Record, t.Name)
+		if !ok { return errors.New("verification failed.") }
+		if forceChange { t.Record = r }
+	}
 	t.db.ClearFilter()
+	if len(restriction) > 0 && reverse { 
+		for _, r := range restriction { 
+			if strings.TrimSpace(r) == "" { continue }
+			if len(r) > 5 && r[:5] == " AND " { r = r[5:] }
+			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + r
+			} else { t.db.SQLRestriction = r }
+		}
+	}
 	if t.SpecializedService != nil {
-		_, ok, _ := t.SpecializedService.VerifyRowAutomation(t.Record, t.Name)
-		if !ok { return nil, errors.New("verification failed.") }
 		restr, view, order, limit := t.SpecializedService.ConfigureFilter(t.Table.Name)
-		if restr != "" { t.db.SQLRestriction = restr }
-		if len(restriction) > 0 { 
-			for _, r := range restriction {
-				if r == "" { continue }
-				if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction = t.db.SQLRestriction + " AND (" + r + ")"
-				} else { t.db.SQLRestriction = r }
-			}
+		if restr != "" { 
+			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + restr
+			} else { t.db.SQLRestriction = restr }
 		}
 		if view != "" { t.db.SQLView = view }
 		if order != "" { t.db.SQLOrder = order }
 		if limit != "" { t.db.SQLLimit = limit }
 	}
-	res, err := t.db.SelectResults(t.Table.Name)
-	if err != nil { return t.DBError(nil, err) }
-	t.Results = res
-	query := ("DELETE FROM " + t.Table.Name)
-	if t.db.SQLRestriction != "" { query += " WHERE " + t.db.SQLRestriction }
-	fmt.Println(query)
-	err = t.db.Query(query)
-	if err != nil { return t.DBError(nil, err) }
-	if t.SpecializedService != nil { t.SpecializedService.DeleteRowAutomation(t.Results, t.Table.Name) }
-	return t.Results, nil
+	if len(restriction) > 0 && !reverse { 
+		for _, r := range restriction { 
+			if strings.TrimSpace(r) == "" { continue }
+			if len(r) > 5 && r[:5] == " AND " { r = r[5:] }
+			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + r 
+			} else { t.db.SQLRestriction = r }
+		}
+	}
+	if len(t.db.SQLRestriction) > 5 && t.db.SQLRestriction[:5] == " AND " { t.db.SQLRestriction = t.db.SQLRestriction[5:] }
+	return nil
 }

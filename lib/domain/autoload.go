@@ -19,7 +19,7 @@ func Load() {
 			json.Unmarshal(data, &rec)
 			service := infrastructure.Table(database, true, "", table.Name, rec)
 			service.NoLog = true
-			service.CreateOrUpdate()
+			service.Update()
 	}
 	d := Domain(true, os.Getenv("SUPERADMIN_NAME"), false)
 	d.AutoLoad = true

@@ -31,7 +31,6 @@ func (t *TableInfo) TableRow(specializedService InfraSpecializedServiceItf) *Tab
 	row.Name = t.Name
 	row.SpecializedService = specializedService
 	row.EmptyCol.db = t.db
-    row.Verified = true
     return row
 }
 
@@ -114,8 +113,7 @@ func RetrieveTable(name string, driver string, db *conn.Db) (map[string]TableCol
 	columns := []string{}
 	mapped := map[string]TableColumnEntity{}
 	cols, err := db.QueryAssociativeArray(querySchemaCmd(driver, name))
-	if err != nil { 
-		return mapped, columns, err }
+	if err != nil { return mapped, columns, err }
 	for _, row := range cols {
 		var tableCol TableColumnEntity
 		b, _ := json.Marshal(row)
@@ -167,17 +165,12 @@ func (t *TableInfo) Update() ([]map[string]interface{}, error) {
 			col, err := json.Marshal(rowtype)
 			if err != nil { continue }
 			json.Unmarshal(col, &tc.Record)
-			tc.CreateOrUpdate()
+			tc.Update()
 		}
 	}
 	t.Name=name
 	_, err := t.Get()
 	return t.Results, err
-}
-
-func (t *TableInfo) CreateOrUpdate(restriction... string) ([]map[string]interface{}, error) { 
-	if _, ok := t.Verify(t.Name); !ok { return t.Create() }
-	return t.Update()
 }
 
 func (t *TableInfo) Delete(restriction... string) ([]map[string]interface{}, error) {

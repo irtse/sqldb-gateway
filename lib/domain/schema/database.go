@@ -173,7 +173,7 @@ var DBRequest = SchemaModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(), Required : true, Readonly : true, Index: 0 },
 		FieldModel{ Name: "state", Type: ENUMSTATE.String(),  Required : false, Default: STATEPENDING, Level: LEVELRESPONSIBLE, Index: 1 },
 		FieldModel{ Name: "is_close", Type: BOOLEAN.String(),  Required : false, Default: false, Level: LEVELRESPONSIBLE, Index: 2 },
-		FieldModel{ Name: "current_index", Type: INTEGER.String(),  Required : false, Default: 0, Level: LEVELRESPONSIBLE, Index: 3 },
+		FieldModel{ Name: "current_index", Type: INTEGER.String(),  Required : false, Default: 0, Index: 3 },
 		FieldModel{ Name: "created_date", Type: TIMESTAMP.String(),  Required : false, Default : "CURRENT_TIMESTAMP", Readonly : true, Level: LEVELRESPONSIBLE, Index: 4 },
 		FieldModel{ Name: "closing_date", Type: TIMESTAMP.String(),  Required : false, Readonly : true, Level: LEVELRESPONSIBLE, Index: 5 },
 		FieldModel{ Name: RootID("dest_table"), Type: INTEGER.String(), Required : false, Readonly : true, Level: LEVELRESPONSIBLE, Label: "reference", Index: 6 },
@@ -196,15 +196,16 @@ var DBTask = SchemaModel{
 		FieldModel{ Name: "urgency", Type: ENUMURGENCY.String(), Required : false, Default: LEVELNORMAL, Readonly : true, Index: 4 },
 		FieldModel{ Name: "priority", Type: ENUMURGENCY.String(), Required : false, Default: LEVELNORMAL, Readonly : true, Index: 5 },
 		FieldModel{ Name: "comment", Type: TEXT.String(), Required : false, Index: 6 },
+		FieldModel{ Name: RootID(DBEntity.Name), Type: INTEGER.String(), ForeignTable: DBEntity.Name, Required : false, Readonly : true, Label: "created by", Level: LEVELRESPONSIBLE, Index: 8 },
 		FieldModel{ Name: RootID(DBUser.Name), Type: INTEGER.String(), ForeignTable: DBUser.Name, Required : false, Readonly : true, Label: "created by", Level: LEVELRESPONSIBLE, Index: 8 },
 		FieldModel{ Name: "created_date", Type: TIMESTAMP.String(),  Required : false, Default : "CURRENT_TIMESTAMP", Readonly : true, Index: 9 },
 		FieldModel{ Name: "closing_date", Type: TIMESTAMP.String(),  Required : false, Readonly : true, Index: 10 },
 		FieldModel{ Name: RootID("dest_table"), Type: INTEGER.String(), Required : false, Readonly : true, Label: "reference", Index: 11 },
 		FieldModel{ Name: RootID(DBSchema.Name), Type: INTEGER.String(), ForeignTable: DBSchema.Name, Required : true, Readonly : true, Label: "template attached", Index: 12 },
 		FieldModel{ Name: RootID(DBRequest.Name), Type: INTEGER.String(), ForeignTable: DBRequest.Name, Required : true, Readonly : true, Label: "request attached", Index: 13 },
-		FieldModel{ Name: RootID(DBWorkflowSchema.Name), Type: INTEGER.String(),  ForeignTable: DBWorkflowSchema.Name, Required : false, Readonly : true, Level: LEVELRESPONSIBLE, Label: "workflow attached", Index: 14 },
+		FieldModel{ Name: RootID(DBWorkflowSchema.Name), Type: INTEGER.String(),  ForeignTable: DBWorkflowSchema.Name, Required : false, Readonly : true, Label: "workflow attached", Index: 14 },
 		FieldModel{ Name: "nexts", Type: BIGVARCHAR.String(),  Required : false, Default : "all", Level: LEVELRESPONSIBLE , Index: 15 },
-		FieldModel{ Name: "meta_" + RootID(DBRequest.Name), Type: INTEGER.String(), ForeignTable: DBRequest.Name, Required : true, Readonly : true, Label: "meta request attached", Index: 16 },
+		FieldModel{ Name: "meta_" + RootID(DBRequest.Name), Type: INTEGER.String(), ForeignTable: DBRequest.Name, Required : false, Readonly : true, Label: "meta request attached", Index: 16 },
 	},
 }
 
@@ -295,11 +296,11 @@ var DBDataAccess = SchemaModel{
 	},
 }
 
-var OWNPERMISSIONEXCEPTION = []string{ DBFilter.Name, DBFilterField.Name }
+var OWNPERMISSIONEXCEPTION = []string{ DBFilter.Name, DBFilterField.Name, DBNotification.Name }
 var AllPERMISSIONEXCEPTION = []string{ DBNotification.Name, DBViewAttribution.Name }
 var POSTPERMISSIONEXCEPTION = []string{ DBRequest.Name }
 var PUPERMISSIONEXCEPTION = []string{ DBTask.Name }
-var PERMISSIONEXCEPTION = []string{ DBView.Name, DBTask.Name, DBRequest.Name, DBWorkflow.Name, DBEntity.Name } // override permission checkup
+var PERMISSIONEXCEPTION = []string{ DBView.Name, DBTask.Name, DBRequest.Name, DBWorkflow.Name, DBEntity.Name, DBSchema.Name, DBSchemaField.Name } // override permission checkup
 
 var ROOTTABLES = []SchemaModel{ DBWorkflow, DBView, DBSchema, DBSchemaField, DBUser, DBPermission, DBEntity, 
 	DBRole, DBDataAccess, DBNotification, DBEntityUser, DBRoleAttribution,

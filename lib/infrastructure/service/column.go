@@ -180,15 +180,9 @@ func (t *TableColumnInfo) update(record map[string]interface{}) (error) {
 		query := "ALTER TABLE " + t.Name + " ALTER " + name  + " SET DEFAULT " + conn.FormatForSQL(typ, def) + ";"
         err := t.db.Query(query)
 		if err != nil { return err } // then iterate on field to update value if null
-		// TODO UPDATE
-		/*record := tool.Record{ tcce.Name : tcce.Default }
-		t.Row.SpecializedFill(record, tool.UPDATE)
-		t.Row.CreateOrUpdate(tcce.Name + " IS NULL")*/
 	}
 	return nil
 }
-
-func (t *TableColumnInfo) CreateOrUpdate(restriction... string) ([]map[string]interface{}, error) { return t.Create() }
 
 func (t *TableColumnInfo) Delete(restriction... string) ([]map[string]interface{}, error) {
 	t.db.ClearFilter()

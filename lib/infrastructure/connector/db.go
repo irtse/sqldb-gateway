@@ -60,7 +60,7 @@ func Open() *Db {
 }
 
 func (db *Db) Close() {
-	db.Conn.Close()
+	if db.Conn != nil { db.Conn.Close() }
 	db.Conn = nil
 }
 
@@ -76,27 +76,24 @@ func (db *Db) Prepare(query string) (*sql.Stmt, error) {
 }
 
 func (db *Db) QueryRow(query string) (int64, error) {
+	if db == nil || db.Conn == nil { return -1, fmt.Errorf("No connection to database") }
     id := 0
-	if db.LogQueries { log.Info().Msg(query) }
-	mutex.Lock()
 	err := db.Conn.QueryRow(query).Scan(&id)
-	mutex.Unlock()
 	if err != nil { return int64(id), err }
 	return int64(id), err
 }
 
 func (db *Db) Query(query string) (error) {
-	mutex.Lock()
+	if db == nil || db.Conn == nil { return fmt.Errorf("No connection to database") }
 	rows, err := db.Conn.Query(query)
-	mutex.Unlock()
 	if err != nil { return err }
 	err = rows.Close()
 	return err
 }
 
 func (db *Db) QueryAssociativeArray(query string) ([]map[string]interface{}, error) {
-	if db.Conn == nil || strings.Contains(query, "<nil>") { return []map[string]interface{}{}, nil }
-	rows, err := db.Conn.Query(query)
+	if db == nil || db.Conn == nil { return nil, fmt.Errorf("No connection to database") }
+	rows, err := db.Conn.Query(query)	
 	if err != nil { return nil, err }
 	defer rows.Close()
 	// get rows
@@ -130,10 +127,10 @@ func (db *Db) QueryAssociativeArray(query string) ([]map[string]interface{}, err
 			if (*val) == nil { m[colName] = nil; continue }
 			switch columnType[colName] {
 				case "MONEY": m[colName], _ = strconv.ParseFloat(string(m[colName].([]uint8))[1:], 64); break
-				case "DOUBLE", "FLOAT", "NUMERIC", "DECIMAL": m[colName], _ = strconv.ParseFloat(string(m[colName].([]uint8)), 64); break
+				case "DOUBLE", "FLOAT", "NUMERIC", "DECIMAL": m[colName], _ = strconv.ParseFloat(fmt.Sprintf("%", *val), 64); break
 				case "TIMESTAMP", "DATE": 
-					if len(fmt.Sprintf("%v", m[colName])) > 10 { m[colName] = fmt.Sprintf("%v", m[colName])[:10]
-					} else { m[colName] = fmt.Sprintf("%v", m[colName]) }
+					if len(fmt.Sprintf("%v", *val)) > 10 { m[colName] = fmt.Sprintf("%v", *val)[:10]
+					} else { m[colName] = fmt.Sprintf("%v", *val) }
 					
 					break
 				default: m[colName] = *val; break
@@ -144,7 +141,7 @@ func (db *Db) QueryAssociativeArray(query string) ([]map[string]interface{}, err
 	return results, nil
 }
 
-func (db *Db) SelectResults(name string) ([]map[string]interface{}, error) { return db.QueryAssociativeArray(db.BuildSelect(name)) }
+func (db *Db) SelectResults(name string) ([]map[string]interface{}, error) {  return db.QueryAssociativeArray(db.BuildSelect(name)) }
 
 func (db *Db) BuildCount(name string) string {
 	query := "SELECT COUNT(*) FROM " + name
@@ -190,6 +187,9 @@ func FormatForSQL(datatype string, value interface{}) string {
 			if value == "CURRENT_TIMESTAMP" { return fmt.Sprint(value) 
 			} else { 
 				decodedValue, _ := url.QueryUnescape(fmt.Sprint(value))
+				if strings.Contains(strings.ToUpper(datatype), "DATE") || strings.Contains(strings.ToUpper(datatype), "TIME") {
+					if len(decodedValue) > 10 { decodedValue = decodedValue[:10] }
+				}
 				return Quote(strings.Replace(decodedValue, "'", "''", -1))
 			}
 		}

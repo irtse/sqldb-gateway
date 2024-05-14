@@ -74,8 +74,8 @@ func (s Method) Method() string {
 func (s Method) Calling() string {
 	switch s {
 		case SELECT: return "Get"
-		case CREATE: return "CreateOrUpdate"
-		case UPDATE: return "CreateOrUpdate"
+		case CREATE: return "Create"
+		case UPDATE: return "Update"
 		case DELETE: return "Delete"
 		case COUNT: return "Count"
 	}
