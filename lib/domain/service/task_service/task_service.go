@@ -21,8 +21,8 @@ func (s *TaskService) VerifyRowAutomation(record map[string]interface{}, tablena
 		record[schserv.DBUser.Name]=user[0][utils.SpecialIDParam]  // affected create_by
 		record["created_date"] = time.Now().Format(time.RFC3339)
 	} else if s.Domain.GetMethod() == utils.UPDATE {
-		elder, _ := s.Domain.SuperCall(utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : fmt.Sprintf("%v", record[utils.SpecialIDParam]) }, utils.Record{}, utils.SELECT)
-		if len(elder) > 0 && (elder[0]["state"] == "completed" || elder[0]["state"] == "dismiss") { return record, false, false }
+		// elder, _ := s.Domain.SuperCall(utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : fmt.Sprintf("%v", record[utils.SpecialIDParam]) }, utils.Record{}, utils.SELECT)
+		// if len(elder) > 0 && (elder[0]["state"] == "completed" || elder[0]["state"] == "dismiss") { return record, false, false }
 		if record["state"] == "completed" || record["state"] == "dismiss" { 
 			record["is_close"] = true 
 			record["closing_date"] = time.Now().Format(time.RFC3339)
@@ -49,6 +49,7 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 		paramsReq := utils.Params{ utils.RootTableParam : schserv.DBRequest.Name, 
 								   utils.RootRowsParam : utils.GetString(res, schserv.RootID(schserv.DBRequest.Name)), }
 		requests, err := s.Domain.SuperCall( paramsReq, utils.Record{}, utils.SELECT)
+		fmt.Printf("requests : %v %v %v\n", paramsReq, requests, err)
 		if err != nil || len(requests) == 0 { continue }
 		if order, ok3 := requests[0]["current_index"]; ok3 {
 			if order.(float64) > 0 {
@@ -123,7 +124,7 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 					tasks, err := s.Domain.SuperCall(utils.AllParams(schserv.DBTask.Name), newTask, utils.CREATE)
 					if err != nil || len(tasks) == 0 { continue }
 					schema, err := schserv.GetSchema(schserv.DBTask.Name)
-					if err == nil {
+					if err == nil && tasks[0]["meta_" + schserv.RootID(schserv.DBRequest.Name)] == nil {
 						s.Domain.SuperCall( utils.AllParams(schserv.DBNotification.Name), utils.Record{ "link_id" : schema.ID,
 							schserv.NAMEKEY : "Task affected : " + tasks[0].GetString(schserv.NAMEKEY), 
 							"description" : "Task is affected : " + tasks[0].GetString(schserv.NAMEKEY),

@@ -9,7 +9,18 @@ import (
 )
 
 type RequestService struct { 
-	utils.SpecializedService
+	utils.AbstractSpecializedService
+}
+
+func (s *RequestService) PostTreatment(results utils.Results, tableName string, dest_id... string) utils.Results { 
+	return s.Domain.PostTreat(results, tableName, true) 
+}
+func (s *RequestService) ConfigureFilter(tableName string) (string, string, string, string) { 
+	restr := ""
+	if s.Domain.IsSuperAdmin() { return s.Domain.ViewDefinition(tableName, restr) }
+	restr += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")"
+	restr += " OR " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT " + schserv.RootID(schserv.DBUser.Name) + " FROM " + schserv.DBHierarchy.Name + " WHERE parent_" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))"
+	return s.Domain.ViewDefinition(tableName, restr) 
 }
 
 func (s *RequestService) GetHierarchical() (utils.Results, error) {
