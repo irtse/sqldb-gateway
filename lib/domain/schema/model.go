@@ -42,6 +42,7 @@ type ViewItemModel struct {
 	ValueMany      map[string]utils.Results		`json:"values_many"`
 	HistoryPath	   string						`json:"history_path"`
 	Workflow  	   *WorkflowModel				`json:"workflow"`
+	Readonly	   bool							`json:"readonly"`
 }
 
 type ViewFieldModel struct { // lightest struct based on FieldModel dedicate to view
@@ -71,6 +72,7 @@ type WorkflowModel struct { // lightest struct based on SchemaModel dedicate to 
 	ID 					string               			`json:"id"`
 	IsDismiss 			bool               				`json:"is_dismiss"`
 	Current  			string 							`json:"current"`
+	Position  			string 							`json:"position"`
 	IsClose  			bool 							`json:"is_close"`
 	CurrentHub  		bool 							`json:"current_hub"`
 	CurrentDismiss  	bool 							`json:"current_dismiss"`
@@ -87,4 +89,13 @@ type WorkflowStepModel struct { // lightest struct based on SchemaModel dedicate
 	IsCurrent 			bool               			`json:"is_current"`
 	IsClose  			bool 						`json:"is_close"`
 	Workflow  			*WorkflowModel 				`json:"workflow"`
+}
+
+type FilterModel struct { 
+	ID 					int64               		`json:"id"`
+	Name  				string 						`json:"name"`
+	Value 				interface{} 				`json:"value"`
+	Operator 			string 						`json:"operator"`
+	Separator 			string 						`json:"separator"`
+	Dir 				string 						`json:"dir"`
 }

@@ -84,11 +84,19 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 		for _, meth := range []utils.Method{ utils.SELECT, utils.CREATE, utils.UPDATE, utils.DELETE } {
 			if d.PermsCheck(tableName, "", "", meth) && (((meth == utils.SELECT || meth == utils.CREATE) && d.Empty) || !d.Empty){ 
 				if !slices.Contains(additionnalAction, meth.Method()) { additionnalAction = append(additionnalAction, meth.Method()) }
+				if meth == utils.CREATE && !slices.Contains(additionnalAction, "import") {
+					res, err := d.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBWorkflow.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
+					if err == nil && len(res) > 0 {
+						ids := ""
+						for _, rec := range res { ids += fmt.Sprintf("%v", rec[utils.SpecialIDParam]) + "," }
+						res, err = d.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBWorkflowSchema.Name + " WHERE " + schserv.RootID(schserv.DBWorkflow.Name) + " IN (" + ids[:len(ids) - 1] + ")")
+						if len(res) == 0 { additionnalAction = append(additionnalAction, "import") }
+					}
+				}
 			} 
 			if scheme.Link > 0 && !noRecursive{
 				schema, _ := schserv.GetSchemaByID(scheme.Link)
 				if d.PermsCheck(schema.Name, "", "", meth) { 
-					if !slices.Contains(additionnalAction, meth.Method()) { additionnalAction = append(additionnalAction, meth.Method()) }
 					sch, _, _, _, _, _ := d.GetViewFields(schema.Name, true)
 					shallowField.DataSchema = sch
 					// shallowField.DataSchemaOrder = ordered

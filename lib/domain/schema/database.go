@@ -216,9 +216,10 @@ var DBFilter = SchemaModel{
 	Fields : []FieldModel{
 		FieldModel{ Name: NAMEKEY, Type: VARCHAR.String(),  Required : true, Index: 0 },
 		FieldModel{ Name: "is_view", Type: BOOLEAN.String(),  Required : false, Default: false, Index: 1 },
-		FieldModel{ Name: RootID(DBSchema.Name), Type: INTEGER.String(), ForeignTable : DBSchema.Name, Required : false, Index: 2 },
-		FieldModel{ Name: RootID(DBUser.Name), Type: INTEGER.String(), ForeignTable : DBUser.Name, Required : false, Index: 3 },
-		FieldModel{ Name: RootID(DBEntity.Name), Type: INTEGER.String(), ForeignTable : DBEntity.Name, Required : false, Index: 4 },
+		FieldModel{ Name: "is_selected", Type: BOOLEAN.String(),  Required : false, Default: false, Index: 2 },
+		FieldModel{ Name: RootID(DBSchema.Name), Type: INTEGER.String(), ForeignTable : DBSchema.Name, Required : false, Index: 3 },
+		FieldModel{ Name: RootID(DBUser.Name), Type: INTEGER.String(), ForeignTable : DBUser.Name, Required : false, Index: 4 },
+		FieldModel{ Name: RootID(DBEntity.Name), Type: INTEGER.String(), ForeignTable : DBEntity.Name, Required : false, Index: 5 },
 	},
 }
 

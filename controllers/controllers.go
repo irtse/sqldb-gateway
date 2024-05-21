@@ -205,8 +205,7 @@ func (t *AbstractController) response(resp utils.Results, err error) {
 			t.Data[JSON]=map[string]interface{}{ DATA : utils.Results{}, ERROR : err.Error() }
 		}
 	} else { // if success precise an error if no datas is founded
-		if len(resp) == 0 { t.Data[JSON] = map[string]interface{}{ DATA : resp, ERROR : "datas not found" } 			
-		} else { t.Data[JSON] = map[string]interface{}{ DATA : resp, ERROR : nil } }
+		t.Data[JSON] = map[string]interface{}{ DATA : resp, ERROR : nil }
 		for _, json := range t.Data[JSON].(map[string]interface{})[DATA].(utils.Results) {
 			if _, ok := json["password"]; ok { delete(json, "password") } // never send back a password in any manner
 		}

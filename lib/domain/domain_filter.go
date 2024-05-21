@@ -13,7 +13,6 @@ import (
 // define filter whatever what happen on sql...
 func (d *MainService) ViewDefinition(tableName string, innerRestriction... string) (string, string, string, string) {
 	SQLview := ""; SQLrestriction := ""; SQLOrder := ""; SQLLimit := ""
-	if !d.IsSuperCall() { SQLrestriction = d.restrictionByEntityUser(tableName, SQLrestriction) } // admin can see all on admin view
 	schema, err := schserv.GetSchema(tableName)
 	if err != nil { return SQLrestriction, SQLview, SQLOrder, SQLLimit }
 	restr, view, order, dir := d.GetFilter("", "", fmt.Sprintf("%v", schema.ID))
@@ -29,6 +28,7 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 		if len(strings.TrimSpace(restr)) == 0 { continue }
 		if len(SQLrestriction) > 0 { SQLrestriction += " AND (" + restr + ")" } else { SQLrestriction = restr  }
 	}
+	if !d.IsSuperCall() { SQLrestriction = d.restrictionByEntityUser(tableName, SQLrestriction) } // admin can see all on admin view
 	return SQLrestriction, SQLview, SQLOrder, SQLLimit
 }
 func (d *MainService) restrictionBySchema(tableName string, restr string) (string) {
@@ -36,52 +36,65 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 	restr += "active=true"
 	schema, err := schserv.GetSchema(tableName)
 	if err != nil { return restr }
-	if schema.HasField(schserv.RootID(schserv.DBSchema.Name)) && !d.IsSuperCall() { 
+	if schema.HasField("is_meta") && !d.IsSuperCall() { 
+		if len(restr) > 0 { restr +=  " AND " }
+		restr += "is_meta=false"
+	}
+	already := []string{}
+	isSchema := false
+	isOr := false
+	alterRestr := ""
+    for key, element := range d.Params {
+		field, err := schema.GetField(key)
+		if (err != nil && key != utils.SpecialIDParam) || slices.Contains(already, key) || key != utils.SpecialIDParam && tableName == schserv.DBView.Name { 
+			continue 
+		}
+		if strings.Contains(key, schserv.RootID(schserv.DBSchema.Name)) { isSchema = true }
+		already = append(already, key)
+		if strings.Contains(element, ",") { 
+			els := ""
+			for _, el := range strings.Split(element, ",") { els += conn.FormatForSQL(field.Type, conn.SQLInjectionProtector(el)) + "," }
+			if len(alterRestr) > 0 { 
+				if isOr { alterRestr +=  " OR " } else { alterRestr +=  " AND " }
+			}
+			alterRestr += key + " IN (" + conn.RemoveLastChar(els) + ")"
+		} else { 
+			if len(element) > 2 &&  element[len(element) - 3:] == "%7C"{ isOr = true } else { isOr = false }
+			ands := strings.Split(element, "+")
+			for _, and := range ands {
+				ors := strings.Split(and, "%7C")
+				if len(ors) == 0 { continue }
+				if len(alterRestr) > 0 { 
+					if isOr { alterRestr +=  " OR " } else { alterRestr +=  " AND " }
+				}
+				alterRestr += "("
+				count := 0
+				for _, or := range ors {
+					sql := strings.ReplaceAll(field.Type, "%25", "%")
+					sql = conn.FormatForSQL(sql, or)
+					if count > 0 { alterRestr +=  " OR " }
+					if field.Link > 0 {
+						foreign, _ := schserv.GetSchemaByID(field.Link)
+						if strings.Contains(sql, "%") { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name::text LIKE " + sql + " OR id::text LIKE " + sql + ")"
+						} else { 
+							if strings.Contains(sql, "'") { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name = " + sql + ")" 
+							} else { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE id = " + sql + ")" }
+						}
+					} else if strings.Contains(sql, "%") { alterRestr += key + "::text LIKE " + sql } else { alterRestr += key + "=" + sql }
+					count++
+				}
+				alterRestr += ")"
+			}
+		}
+	}
+	if len(alterRestr) > 0 { if len(restr) > 0 { restr +=  " AND (" + alterRestr + ")"  } else { restr = alterRestr } }
+	if schema.HasField(schserv.RootID(schserv.DBSchema.Name)) && !d.IsSuperCall() && !isSchema { 
 		restr += " AND " + schserv.RootID(schserv.DBSchema.Name) + " IN (" 
 		for _, sch := range schserv.SchemaRegistry {
 			if sch.Name == schserv.DBWorkflow.Name || !d.PermsCheck(sch.Name, "", schserv.LEVELNORMAL, utils.SELECT) { continue }
 			restr += fmt.Sprintf("%v", sch.ID) + ","
 		}
 		restr = conn.RemoveLastChar(restr) + ")"
-	}
-	if schema.HasField("is_meta") && !d.IsSuperCall() { 
-		if len(restr) > 0 { restr +=  " AND " }
-		restr += "is_meta=false"
-	}
-	already := []string{}
-    for key, element := range d.Params {
-		field, err := schema.GetField(key)
-		if (err != nil && key != utils.SpecialIDParam) || slices.Contains(already, key) { continue }
-		already = append(already, key)
-		if strings.Contains(element, ",") { 
-			els := ""
-			for _, el := range strings.Split(element, ",") { els += conn.FormatForSQL(field.Type, conn.SQLInjectionProtector(el)) + "," }
-			if len(restr) > 0 { restr +=  " AND (" + key + " IN (" + conn.RemoveLastChar(els) + "))"
-			} else { restr += key + " IN (" + conn.RemoveLastChar(els) + ")" }
-		} else { 
-			ands := strings.Split(element, "+")
-			for _, and := range ands {
-				ors := strings.Split(and, "%7C")
-				if len(ors) == 0 { continue }
-				if len(restr) > 0 {  restr += " AND (" } else { restr += "(" }
-				count := 0
-				for _, or := range ors {
-					sql := strings.ReplaceAll(field.Type, "%25", "%")
-					sql = conn.FormatForSQL(sql, or)
-					if count > 0 { restr +=  " OR " }
-					if field.Link > 0 {
-						foreign, _ := schserv.GetSchemaByID(field.Link)
-						if strings.Contains(sql, "%") { restr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name::text LIKE " + sql + " OR id::text LIKE " + sql + ")"
-						} else { 
-							if strings.Contains(sql, "'") { restr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name = " + sql + ")" 
-							} else { restr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE id = " + sql + ")" }
-						}
-					} else if strings.Contains(sql, "%") { restr += key + "::text LIKE " + sql } else { restr += key + "=" + sql }
-					count++
-				}
-				restr += ")"
-			}
-		}
 	}
 	return restr
 }
@@ -121,14 +134,17 @@ func (s *MainService) restrictionByEntityUser(tableName string, restr string) st
 	schema, err := schserv.GetSchema(tableName)
 	if !s.IsOwnPermission(tableName, false, s.Method) || err != nil { return restr }
 	userID := schserv.RootID(schserv.DBUser.Name); entityID := schserv.RootID(schserv.DBEntity.Name)
+	isUser := false
 	if schema.HasField(userID) || tableName == schserv.DBUser.Name {
+		if len(restr) > 0 { restr +=  " AND " }
+		isUser = true
 		if tableName == schserv.DBUser.Name  { userID = utils.SpecialIDParam }
 		restr += userID + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" 
 		restr += conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")" 
 	}
 	if schema.HasField(entityID) || tableName == schserv.DBEntity.Name  {
 		if tableName == schserv.DBEntity.Name  { entityID = utils.SpecialIDParam }
-		if len(restr) > 0 { restr +=  " OR " }
+		if isUser { restr +=  " OR " } else if len(restr) > 0 { restr +=  " AND " }
 		restr += entityID + " IN (SELECT " + entityID + " FROM " + schserv.DBEntityUser.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN (" 
 		restr += "SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + "))"
 		// TODO GET FROM PARENT ID MISSING + OWN
@@ -192,7 +208,10 @@ func (s *MainService) GetFilter(filterID string, viewfilterID string, schemaID s
 			f, err := schserv.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
 			if err != nil || field["operator"] == nil || field["separator"] == nil { continue }
 			if len(filter) > 0 { filter += " " + fmt.Sprintf("%v", field["separator"]) + " " }
-			filter += f.Name + fmt.Sprintf("%v", field["operator"]) + conn.FormatForSQL(f.Type, field["value"])
+			if fmt.Sprintf("%v", field["operator"]) == "LIKE" {
+				filter += f.Name + "::text " + fmt.Sprintf("%v", field["operator"]) + " '%" + fmt.Sprintf("%v", field["value"]) + "%'"
+			}
+			filter += f.Name + " " + fmt.Sprintf("%v", field["operator"]) + " " + conn.FormatForSQL(f.Type, field["value"])
 		}
 	}
 	return filter, viewFilter, order, dir

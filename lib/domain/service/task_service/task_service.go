@@ -21,8 +21,8 @@ func (s *TaskService) VerifyRowAutomation(record map[string]interface{}, tablena
 		record[schserv.DBUser.Name]=user[0][utils.SpecialIDParam]  // affected create_by
 		record["created_date"] = time.Now().Format(time.RFC3339)
 	} else if s.Domain.GetMethod() == utils.UPDATE {
-		// elder, _ := s.Domain.SuperCall(utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : fmt.Sprintf("%v", record[utils.SpecialIDParam]) }, utils.Record{}, utils.SELECT)
-		// if len(elder) > 0 && (elder[0]["state"] == "completed" || elder[0]["state"] == "dismiss") { return record, false, false }
+		elder, _ := s.Domain.SuperCall(utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : fmt.Sprintf("%v", record[utils.SpecialIDParam]) }, utils.Record{}, utils.SELECT)
+		if len(elder) > 0 && (elder[0]["state"] == "completed" || elder[0]["state"] == "dismiss") { return record, false, false }
 		if record["state"] == "completed" || record["state"] == "dismiss" { 
 			record["is_close"] = true 
 			record["closing_date"] = time.Now().Format(time.RFC3339)

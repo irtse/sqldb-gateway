@@ -86,7 +86,9 @@ func (db *Db) QueryRow(query string) (int64, error) {
 func (db *Db) Query(query string) (error) {
 	if db == nil || db.Conn == nil { return fmt.Errorf("No connection to database") }
 	rows, err := db.Conn.Query(query)
-	if err != nil { return err }
+	if err != nil { 
+		fmt.Printf("Error querying row: %s\n", query)
+		return err }
 	err = rows.Close()
 	return err
 }
@@ -126,8 +128,10 @@ func (db *Db) QueryAssociativeArray(query string) ([]map[string]interface{}, err
 			}
 			if (*val) == nil { m[colName] = nil; continue }
 			switch columnType[colName] {
-				case "MONEY": m[colName], _ = strconv.ParseFloat(string(m[colName].([]uint8))[1:], 64); break
-				case "DOUBLE", "FLOAT", "NUMERIC", "DECIMAL": m[colName], _ = strconv.ParseFloat(fmt.Sprintf("%", *val), 64); break
+				case "MONEY", "NUMERIC", "DECIMAL", "DOUBLE", "FLOAT": 
+				v := *val
+				m[colName], _ = strconv.ParseFloat(string(v.([]uint8)), 64); 
+				break
 				case "TIMESTAMP", "DATE": 
 					if len(fmt.Sprintf("%v", *val)) > 10 { m[colName] = fmt.Sprintf("%v", *val)[:10]
 					} else { m[colName] = fmt.Sprintf("%v", *val) }

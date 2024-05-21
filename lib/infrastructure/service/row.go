@@ -106,8 +106,8 @@ func (t *TableRowInfo) Update(restriction... string) ([]map[string]interface{}, 
 		t.EmptyCol.Name = t.Name
 		typ, ok := t.EmptyCol.Verify(key)
 		realType := strings.Split(typ, ":")[0]
-		isNull := len(strings.Split(typ, ":")) > 1 && strings.Split(typ, ":")[1] == "nullable"
-		if ok && !(!isNull && conn.FormatForSQL(realType, element) == "NULL") { 
+		//isNull := len(strings.Split(typ, ":")) > 1 && strings.Split(typ, ":")[1] == "nullable"
+		if ok && conn.FormatForSQL(realType, element) != "NULL" { 
 			stack += key + "=" + conn.FormatForSQL(realType, element) + "," 
 		}
 	}
