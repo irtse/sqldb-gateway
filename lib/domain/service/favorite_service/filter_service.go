@@ -31,6 +31,7 @@ func (s *FilterService) WriteRowAutomation(record map[string]interface{}, tableN
 func (s *FilterService) PostTreatment(results utils.Results, tableName string, dest_id... string) utils.Results {
 	selected := map[string]bool{}
 	for _, rec := range results { 
+		if b, ok := rec["is_selected"]; !ok || b == nil { rec["is_selected"] = false }
 		selected[rec.GetString(utils.SpecialIDParam)] = rec["is_selected"].(bool) 
 	} 
 	res := s.Domain.PostTreat(results, tableName, true) 
