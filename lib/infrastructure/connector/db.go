@@ -79,7 +79,8 @@ func (db *Db) QueryRow(query string) (int64, error) {
 	if db == nil || db.Conn == nil { return -1, fmt.Errorf("No connection to database") }
     id := 0
 	err := db.Conn.QueryRow(query).Scan(&id)
-	if err != nil { return int64(id), err }
+	if err != nil { 
+		return int64(id), err }
 	return int64(id), err
 }
 
@@ -87,7 +88,6 @@ func (db *Db) Query(query string) (error) {
 	if db == nil || db.Conn == nil { return fmt.Errorf("No connection to database") }
 	rows, err := db.Conn.Query(query)
 	if err != nil { 
-		fmt.Printf("Error querying row: %s\n", query)
 		return err }
 	err = rows.Close()
 	return err
@@ -183,9 +183,10 @@ func RemoveLastChar(s string) string {
 }
 // transition for mysql types
 func FormatForSQL(datatype string, value interface{}) string {
-	if value == nil { return "NULL" }
+	if value == nil { return "" }
 	strval := fmt.Sprintf("%v", value)
-	if len(strval) == 0 { return "NULL" }
+	if len(strval) == 0 { return "" }
+	if strval == "NULL" || strval == "NOT NULL" { return strval }
 	for _, typ := range SpecialTypes {
 		if strings.Contains(datatype, typ) { 
 			if value == "CURRENT_TIMESTAMP" { return fmt.Sprint(value) 
@@ -194,15 +195,15 @@ func FormatForSQL(datatype string, value interface{}) string {
 				if strings.Contains(strings.ToUpper(datatype), "DATE") || strings.Contains(strings.ToUpper(datatype), "TIME") {
 					if len(decodedValue) > 10 { decodedValue = decodedValue[:10] }
 				}
-				return Quote(strings.Replace(decodedValue, "'", "''", -1))
+				return Quote(strings.Replace(SQLInjectionProtector(decodedValue), "'", "''", -1))
 			}
 		}
 	}
 	if strings.Contains(strval, "%") { 
 		decodedValue, _ := url.QueryUnescape(fmt.Sprint(value))
-		return Quote(strings.Replace(decodedValue, "'", "''", -1))
+		return Quote(strings.Replace(SQLInjectionProtector(decodedValue), "'", "''", -1))
 	}
-	return strval
+	return SQLInjectionProtector(strval)
 }
 
 func SQLInjectionProtector(injection string) (string) {

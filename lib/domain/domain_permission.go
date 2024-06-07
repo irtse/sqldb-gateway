@@ -20,6 +20,7 @@ type Perms struct {
 var mutexPerms  = sync.RWMutex{}
 func (d *MainService) PermsBuilder() {
 	d.Perms = map[string]map[string]Perms{}
+	if d.Db == nil { return }
 	d.Db.SQLRestriction = "id IN (SELECT " + schserv.DBPermission.Name + "_id FROM " 
 	d.Db.SQLRestriction += schserv.DBRolePermission.Name + " WHERE " + schserv.DBRole.Name + "_id IN ("
 	d.Db.SQLRestriction += "SELECT " + schserv.DBRole.Name + "_id FROM " 

@@ -15,6 +15,7 @@ func (s *WorkflowService) PostTreatment(results utils.Results, tableName string,
 	res := utils.Results{}	
 	for _, rec := range results { // filter by allowed schemas
 		schema, err := schserv.GetSchemaByID(int64(rec[schserv.RootID(schserv.DBSchema.Name)].(float64)))
+		if !schema.HasField("name") && !s.Domain.IsSuperAdmin() { continue }
 		if err == nil && s.Domain.PermsCheck(schema.Name, "", "", utils.CREATE) { res = append(res, rec) }
 	}
 	return s.Domain.PostTreat(res, tableName, true) 

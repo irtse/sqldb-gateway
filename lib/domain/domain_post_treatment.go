@@ -97,8 +97,13 @@ func (d *MainService) PostTreatRecord(index int, channel chan schserv.ViewItemMo
 					schema, err := schserv.GetSchemaByID(int64(id.(float64)))
 					if err == nil {
 						datapath=d.BuildPath(schema.Name, fmt.Sprintf("%v", dest))
-						if _, ok := record[schserv.RootID("dest_table")]; !ok { channel <- schserv.ViewItemModel{ IsEmpty: true }; return }
-						shallowVals[schserv.RootID(schserv.DBSchema.Name)]=utils.Record{ "id": record[schserv.RootID("dest_table")], "name" : schema.Name, "label" : schema.Label }
+						shallowVals[schserv.RootID(schserv.DBSchema.Name)]=utils.Record{ "id": schema.ID, "name" : schema.Name, "label" : schema.Label }
+						p := utils.AllParams(schema.Name)
+						p[utils.RootRowsParam] = fmt.Sprintf("%v", dest)
+						t, err := d.SuperCall(p, utils.Record{}, utils.SELECT)
+						if err == nil && len(t) > 0 { 
+							shallowVals[schserv.RootID("dest_table")]=utils.Record{ "id":t[0][utils.SpecialIDParam], "name" : t[0][schserv.NAMEKEY], "label" : t[0][schserv.NAMEKEY] }
+						}
 					}
 					continue
 				}
@@ -145,11 +150,13 @@ func (d *MainService) BuildWorkFlow(record utils.Record, tableName string, isWor
 	id := ""; requestID := ""; nexts := []string{}
 	if tableName == schserv.DBWorkflow.Name { id = record.GetString(utils.SpecialIDParam)
 	} else if tableName == schserv.DBRequest.Name {
-		id = record.GetString(schserv.RootID(schserv.DBWorkflow.Name))
-		requestID = record.GetString(utils.SpecialIDParam)
-		workflow = schserv.WorkflowModel{ IsDismiss : record.GetString("state") == "dismiss", 
-			Current : record.GetString("current_index"), Position : record.GetString("current_index"),
-			IsClose : record.GetString("state") == "completed" || record.GetString("state") == "dismiss" }
+		t, err := d.Db.QueryAssociativeArray("SELECT * FROM " + schserv.DBRequest.Name + " WHERE id = " + record.GetString(utils.SpecialIDParam))
+		if err != nil || len(t) == 0 { return nil }
+		id = fmt.Sprintf("%v", t[0][schserv.RootID(schserv.DBWorkflow.Name)])
+		requestID = fmt.Sprintf("%v", t[0][utils.SpecialIDParam])
+		workflow = schserv.WorkflowModel{ IsDismiss : fmt.Sprintf("%v", t[0]["state"]) == "dismiss", 
+			Current : fmt.Sprintf("%v", t[0]["current_index"]), Position : fmt.Sprintf("%v", t[0]["current_index"]),
+			IsClose :fmt.Sprintf("%v", t[0]["state"]) == "completed" || fmt.Sprintf("%v", t[0]["state"]) == "dismiss" }
 	} else if tableName == schserv.DBTask.Name {
 		id = "0"
 		t, err := d.Db.QueryAssociativeArray("SELECT * FROM " + schserv.DBTask.Name + " WHERE id = " + record.GetString(utils.SpecialIDParam))

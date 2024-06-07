@@ -49,7 +49,6 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 		paramsReq := utils.Params{ utils.RootTableParam : schserv.DBRequest.Name, 
 								   utils.RootRowsParam : utils.GetString(res, schserv.RootID(schserv.DBRequest.Name)), }
 		requests, err := s.Domain.SuperCall( paramsReq, utils.Record{}, utils.SELECT)
-		fmt.Printf("requests : %v %v %v\n", paramsReq, requests, err)
 		if err != nil || len(requests) == 0 { continue }
 		if order, ok3 := requests[0]["current_index"]; ok3 {
 			if order.(float64) > 0 {
@@ -150,11 +149,6 @@ func (s *TaskService) WriteRowAutomation(record map[string]interface{}, tableNam
 }
 
 func (s *TaskService) ConfigureFilter(tableName string) (string, string, string, string) {
-	rows, ok := s.Domain.GetParams()[utils.RootRowsParam]
-	ids, ok2 := s.Domain.GetParams()[utils.SpecialIDParam]
-	if (ok && fmt.Sprintf("%v", rows) != utils.ReservedParam) || (ok2 && ids != "") {
-		return s.Domain.ViewDefinition(tableName)
-	}
 	restr := "(" + schserv.RootID(schserv.DBWorkflowSchema.Name) + " IS NULL AND " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))"
 	restr += " OR (" + schserv.RootID(schserv.DBWorkflowSchema.Name) + " IN (SELECT id FROM " + schserv.DBWorkflowSchema.Name + " WHERE "
 	restr += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 

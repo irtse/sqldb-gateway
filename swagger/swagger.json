@@ -177,13 +177,19 @@
       "type": "string"
      },
      {
-      "description": "set filter identifier to activate a specific restrictive filter",
+      "description": "set a filter command line compose as (key~value(+|))",
+      "in": "query",
+      "name": "filter_line",
+      "type": "string"
+     },
+     {
+      "description": "set filter identifier to activate a specific restrictive filter in db",
       "in": "query",
       "name": "filter",
       "type": "string"
      },
      {
-      "description": "set view filter identifier to activate a specific view filter",
+      "description": "set view filter identifier to activate a specific view filter in db",
       "in": "query",
       "name": "view_filter",
       "type": "string"
@@ -291,13 +297,19 @@
       "type": "string"
      },
      {
-      "description": "set filter identifier to activate a specific restrictive filter",
+      "description": "set a filter command line compose as (key~value(+|))",
+      "in": "query",
+      "name": "filter_line",
+      "type": "string"
+     },
+     {
+      "description": "set filter identifier to activate a specific restrictive filter in db",
       "in": "query",
       "name": "filter",
       "type": "string"
      },
      {
-      "description": "set view filter identifier to activate a specific view filter",
+      "description": "set view filter identifier to activate a specific view filter in db",
       "in": "query",
       "name": "view_filter",
       "type": "string"
@@ -405,13 +417,19 @@
       "type": "string"
      },
      {
-      "description": "set filter identifier to activate a specific restrictive filter",
+      "description": "set a filter command line compose as (key~value(+|))",
+      "in": "query",
+      "name": "filter_line",
+      "type": "string"
+     },
+     {
+      "description": "set filter identifier to activate a specific restrictive filter in db",
       "in": "query",
       "name": "filter",
       "type": "string"
      },
      {
-      "description": "set view filter identifier to activate a specific view filter",
+      "description": "set view filter identifier to activate a specific view filter in db",
       "in": "query",
       "name": "view_filter",
       "type": "string"
@@ -528,13 +546,19 @@
       "type": "string"
      },
      {
-      "description": "set filter identifier to activate a specific restrictive filter",
+      "description": "set a filter command line compose as (key~value(+|))",
+      "in": "query",
+      "name": "filter_line",
+      "type": "string"
+     },
+     {
+      "description": "set filter identifier to activate a specific restrictive filter in db",
       "in": "query",
       "name": "filter",
       "type": "string"
      },
      {
-      "description": "set view filter identifier to activate a specific view filter",
+      "description": "set view filter identifier to activate a specific view filter in db",
       "in": "query",
       "name": "view_filter",
       "type": "string"
@@ -653,13 +677,19 @@
       "type": "string"
      },
      {
-      "description": "set filter identifier to activate a specific restrictive filter",
+      "description": "set a filter command line compose as (key~value(+|))",
+      "in": "query",
+      "name": "filter_line",
+      "type": "string"
+     },
+     {
+      "description": "set filter identifier to activate a specific restrictive filter in db",
       "in": "query",
       "name": "filter",
       "type": "string"
      },
      {
-      "description": "set view filter identifier to activate a specific view filter",
+      "description": "set view filter identifier to activate a specific view filter in db",
       "in": "query",
       "name": "view_filter",
       "type": "string"

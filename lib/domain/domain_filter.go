@@ -42,52 +42,47 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 	}
 	already := []string{}
 	isSchema := false
-	isOr := false
 	alterRestr := ""
-    for key, element := range d.Params {
-		field, err := schema.GetField(key)
-		if (err != nil && key != utils.SpecialIDParam) || slices.Contains(already, key) || key != utils.SpecialIDParam && tableName == schserv.DBView.Name { 
-			continue 
-		}
-		if strings.Contains(key, schserv.RootID(schserv.DBSchema.Name)) { isSchema = true }
-		already = append(already, key)
-		if strings.Contains(element, ",") { 
-			els := ""
-			for _, el := range strings.Split(element, ",") { els += conn.FormatForSQL(field.Type, conn.SQLInjectionProtector(el)) + "," }
-			if len(alterRestr) > 0 { 
-				if isOr { alterRestr +=  " OR " } else { alterRestr +=  " AND " }
+	if line, ok := d.Params[utils.RootFilterLine]; ok && tableName != schserv.DBView.Name {
+		ands := strings.Split(line, "+")
+		// todo order depending on the field index
+		for _, and := range ands {
+			if len(strings.Trim(alterRestr, " ")) > 0 { alterRestr +=  " AND " }
+			and = strings.ReplaceAll(and, "%7C", "%7c")
+			ors := strings.Split(and, "%7c")
+			if len(ors) == 0 { continue }
+			orRestr := ""
+			for _, or := range ors {
+				operator := "~"
+				or = strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(or, "%3A", "%3a"), "%3E", "%3e"), "%3C", "%3c")
+				keyVal := []string{} 
+				if strings.Contains(or, "~") { keyVal = strings.Split(or, "~"); operator = " LIKE " 
+				} else if strings.Contains(or, "%3a") { keyVal = strings.Split(or, "%3a"); operator = "=" 
+				} else if strings.Contains(or, "%3c") { keyVal = strings.Split(or, "%3c"); operator = "<"  
+				} else if strings.Contains(or, "%3e") { keyVal = strings.Split(or, "%3e"); operator = ">"  }
+				if len(keyVal) != 2 { continue }
+				field, err := schema.GetField(keyVal[0])
+				if (err != nil && keyVal[0] != utils.SpecialIDParam) { continue  }
+				if len(strings.Trim(orRestr, " ")) > 0 { orRestr +=  " OR " }
+				orRestr = d.sqlItem(orRestr, field, keyVal[0], keyVal[1], operator)
 			}
-			alterRestr += key + " IN (" + conn.RemoveLastChar(els) + ")"
-		} else { 
-			if len(element) > 2 &&  element[len(element) - 3:] == "%7C"{ isOr = true } else { isOr = false }
-			ands := strings.Split(element, "+")
-			for _, and := range ands {
-				ors := strings.Split(and, "%7C")
-				if len(ors) == 0 { continue }
-				if len(alterRestr) > 0 { 
-					if isOr { alterRestr +=  " OR " } else { alterRestr +=  " AND " }
-				}
-				alterRestr += "("
-				count := 0
-				for _, or := range ors {
-					sql := strings.ReplaceAll(field.Type, "%25", "%")
-					sql = conn.FormatForSQL(sql, or)
-					if count > 0 { alterRestr +=  " OR " }
-					if field.Link > 0 {
-						foreign, _ := schserv.GetSchemaByID(field.Link)
-						if strings.Contains(sql, "%") { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name::text LIKE " + sql + " OR id::text LIKE " + sql + ")"
-						} else { 
-							if strings.Contains(sql, "'") { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name = " + sql + ")" 
-							} else { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE id = " + sql + ")" }
-						}
-					} else if strings.Contains(sql, "%") { alterRestr += key + "::text LIKE " + sql } else { alterRestr += key + "=" + sql }
-					count++
-				}
-				alterRestr += ")"
-			}
+			if len(orRestr) > 0 { alterRestr += "( " + orRestr + " )" }
 		}
 	}
-	if len(alterRestr) > 0 { if len(restr) > 0 { restr +=  " AND (" + alterRestr + ")"  } else { restr = alterRestr } }
+	alterRestr = strings.ReplaceAll(strings.ReplaceAll(alterRestr, " OR ()", ""), " AND ()", "")
+	alterRestr = strings.ReplaceAll(alterRestr, "()", "")
+	for key, val := range d.Params {
+		field, err := schema.GetField(key)
+		if (err != nil && key != utils.SpecialIDParam) || slices.Contains(already, key) || key != utils.SpecialIDParam && tableName == schserv.DBView.Name { continue  }
+		ands := strings.Split(fmt.Sprintf("%v", val), ",")
+		for _, and := range ands {
+			if len(strings.Trim(alterRestr, " ")) > 0 { alterRestr +=  " AND " }
+			alterRestr = d.sqlItem(alterRestr, field, key, and, "=")
+		}
+	}
+	if len(alterRestr) > 0 { 
+		if len(restr) > 0 { restr +=  " AND " + alterRestr } else { restr = alterRestr } 
+	}
 	if schema.HasField(schserv.RootID(schserv.DBSchema.Name)) && !d.IsSuperCall() && !isSchema { 
 		restr += " AND " + schserv.RootID(schserv.DBSchema.Name) + " IN (" 
 		for _, sch := range schserv.SchemaRegistry {
@@ -97,6 +92,25 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 		restr = conn.RemoveLastChar(restr) + ")"
 	}
 	return restr
+}
+
+func (d *MainService) sqlItem(alterRestr string, field schserv.FieldModel, key string, or string, operator string) (string) {
+	sql := or
+	sql = conn.FormatForSQL(field.Type, sql)
+	if sql == "" { return alterRestr }
+	if strings.Contains(sql, "NULL") { operator = "IS " }
+	if field.Link > 0 {
+		foreign, _ := schserv.GetSchemaByID(field.Link)
+		if strings.Contains(sql, "%") { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name::text LIKE " + sql + " OR id::text LIKE " + sql + ")"
+		} else { 			
+			if strings.Contains(sql, "'") {  
+				if strings.Contains(sql, "NULL") { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name IS " + sql + ")"  
+				} else { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name = " + sql + ")" }
+				
+			} else { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE id " + operator + " " + sql + ")" }
+		}
+	} else if strings.Contains(sql, "%") { alterRestr += key + "::text LIKE " + sql } else { alterRestr += key + " " + operator + " " + sql }
+	return alterRestr
 }
 
 func (d *MainService) limitFromParams(limited string) (string) {

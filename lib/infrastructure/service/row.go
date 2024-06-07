@@ -65,6 +65,7 @@ func (t *TableRowInfo) Create() ([]map[string]interface{}, error) {
 		typ, _ := t.EmptyCol.Verify(key) 
 		realType := strings.Split(typ, ":")[0]
 		if realType != "" { 
+			if conn.FormatForSQL(realType, element) == "" { continue }
 			columns += key + ","
 			values += conn.FormatForSQL(realType, element) + "," 
 		}
@@ -107,7 +108,7 @@ func (t *TableRowInfo) Update(restriction... string) ([]map[string]interface{}, 
 		typ, ok := t.EmptyCol.Verify(key)
 		realType := strings.Split(typ, ":")[0]
 		//isNull := len(strings.Split(typ, ":")) > 1 && strings.Split(typ, ":")[1] == "nullable"
-		if ok && conn.FormatForSQL(realType, element) != "NULL" { 
+		if ok && conn.FormatForSQL(realType, element) != "NULL" && conn.FormatForSQL(realType, element) != "" { 
 			stack += key + "=" + conn.FormatForSQL(realType, element) + "," 
 		}
 	}

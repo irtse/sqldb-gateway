@@ -10,6 +10,7 @@ const RootRowsParam = "rows"
 const RootColumnsParam = "columns" 
 const RootOrderParam = "orderby" 
 const RootDirParam = "dir"
+const RootFilterLine = "filter_line"
 const RootFilter = "filter"
 const RootViewFilter = "view_filter"
 const RootRawView = "rawview"
@@ -29,11 +30,12 @@ var RootParamsDesc = map[string]string{
 	RootOrderParam : "sets up a sql order in query (don't even try to inject you little joker)",
 	RootDirParam : "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
 	RootRawView : "set 'enable' to activate a response without the main response format",
-	RootFilter : "set filter identifier to activate a specific restrictive filter",
-	RootViewFilter : "set view filter identifier to activate a specific view filter",
+	RootFilterLine : "set a filter command line compose as (key~value(+|))",
+	RootFilter : "set filter identifier to activate a specific restrictive filter in db",
+	RootViewFilter : "set view filter identifier to activate a specific view filter in db",
 }
 var HiddenParams = []string{RootDestTableIDParam}
-var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset, RootShallow, RootRawView, RootExport, RootFilename, RootFilter, RootViewFilter, RootSuperCall, SpecialIDParam}
+var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset, RootShallow, RootRawView, RootExport, RootFilename, RootFilterLine, RootFilter, RootViewFilter, RootSuperCall, SpecialIDParam}
 
 const SpecialIDParam = "id" 
 const SpecialSubIDParam = "subid" 

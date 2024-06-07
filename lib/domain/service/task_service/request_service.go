@@ -73,6 +73,12 @@ func (s *RequestService) UpdateRowAutomation(results []map[string]interface{}, r
 		if rec["state"] == "dismiss" { 
 			schema, err := schserv.GetSchema(schserv.DBRequest.Name)
 			if err == nil && !rec["is_meta"].(bool) { 
+				p := utils.AllParams(schserv.DBNotification.Name)
+				p[schserv.NAMEKEY] = "Rejected " + utils.GetString(rec, schserv.NAMEKEY)
+				p[schserv.RootID(schserv.DBUser.Name)] = fmt.Sprintf("%v", rec[schserv.RootID(schserv.DBUser.Name)])
+				p[schserv.RootID("dest_table")] = fmt.Sprintf("%v", rec[utils.SpecialIDParam])
+				t, _ := s.Domain.SuperCall( p, utils.Record{}, utils.SELECT)
+				if len(t) > 0 { return }
 				s.Domain.SuperCall( utils.AllParams(schserv.DBNotification.Name), utils.Record{ "link_id" : schema.ID,
 					schserv.NAMEKEY : "Rejected " + utils.GetString(rec, schserv.NAMEKEY), 
 					"description" : utils.GetString(rec, schserv.NAMEKEY) + " is rejected and closed.",
@@ -83,6 +89,12 @@ func (s *RequestService) UpdateRowAutomation(results []map[string]interface{}, r
 		if rec["state"] == "completed" {
 			schema, err := schserv.GetSchema(schserv.DBRequest.Name)
 			if err == nil && !rec["is_meta"].(bool) {
+				p := utils.AllParams(schserv.DBNotification.Name)
+				p[schserv.NAMEKEY] = "Validated " + utils.GetString(rec, schserv.NAMEKEY)
+				p[schserv.RootID(schserv.DBUser.Name)] = fmt.Sprintf("%v", rec[schserv.RootID(schserv.DBUser.Name)])
+				p[schserv.RootID("dest_table")] = fmt.Sprintf("%v", rec[utils.SpecialIDParam])
+				t, _ := s.Domain.SuperCall( p, utils.Record{}, utils.SELECT)
+				if len(t) > 0 { return }
 				s.Domain.SuperCall( utils.AllParams(schserv.DBNotification.Name), utils.Record{ "link_id" : schema.ID,
 					schserv.NAMEKEY : "Validated " + utils.GetString(rec, schserv.NAMEKEY), 
 					"description" : utils.GetString(rec, schserv.NAMEKEY) + " is approved and closed.",

@@ -9,6 +9,7 @@ import (
 type FilterService struct { 
 	utils.AbstractSpecializedService 
 	Fields []map[string]interface{}
+	UpdateFields bool
 }
 
 func (s *FilterService) Entity() utils.SpecializedServiceInfo { return schserv.DBFilter }
@@ -18,10 +19,17 @@ func (s *FilterService) UpdateRowAutomation(results []map[string]interface{}, re
 }
 func (s *FilterService) WriteRowAutomation(record map[string]interface{}, tableName string) {
 	for _, field := range s.Fields {
+		if _, ok := record[schserv.RootID(schserv.DBSchema.Name)]; !ok { continue }
 		schema, err := schserv.GetSchemaByID(record[schserv.RootID(schserv.DBSchema.Name)].(int64))
 		if _, ok := field["name"]; !ok || err != nil { continue }
 		f, err := schema.GetField(fmt.Sprintf("%v", field["name"]))
-		if err != nil { continue }
+		if err != nil { 
+			delete(field, "name")
+			field[schserv.RootID(schserv.DBFilter.Name)]=record[utils.SpecialIDParam]
+			_, err = s.Domain.Call(utils.AllParams(schserv.DBFilterField.Name), field, utils.CREATE)
+			fmt.Printf("error: %v\n", err)
+			continue 
+		}
 		delete(field, "name")
 		field[schserv.RootID(schserv.DBSchemaField.Name)] = f.ID
 		field[schserv.RootID(schserv.DBFilter.Name)]=record[utils.SpecialIDParam]
@@ -47,10 +55,18 @@ func (s *FilterService) PostTreatment(results utils.Results, tableName string, d
 		fieldsID := []schserv.FilterModel{}
 		sort.SliceStable(fields, func(i, j int) bool{ return fields[i]["index"].(float64) <= fields[j]["index"].(float64) })
 		for _, field := range fields { 
+			separator := ""
+			if sep, ok := field["separator"]; ok && sep != nil { separator = fmt.Sprintf("%v", sep) }
 			ff, err := schema.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
-			if err != nil { rr = append(rr, rec); continue }
-			model := schserv.FilterModel{ ID: utils.GetInt(res[0], utils.SpecialIDParam),  Name: ff.Name,
-				Value: fmt.Sprintf("%v", field["value"]), Separator: fmt.Sprintf("%v", field["separator"]),  Operator: fmt.Sprintf("%v", field["operator"]), Dir: fmt.Sprintf("%v", field["dir"])}
+			if err != nil { 
+				model := schserv.FilterModel{ ID: utils.GetInt(res[0], utils.SpecialIDParam),  Name: "id",
+					Index: field["index"].(float64), Label: "id", Type: "integer",
+					Value: fmt.Sprintf("%v", field["value"]), Separator: separator,  Operator: fmt.Sprintf("%v", field["operator"]), Dir: fmt.Sprintf("%v", field["dir"])}
+				fieldsID = append(fieldsID, model) 
+				continue
+			}
+			model := schserv.FilterModel{ ID: utils.GetInt(res[0], utils.SpecialIDParam),  Name: ff.Name, Label: ff.Label, Index: field["index"].(float64),
+				Type: ff.Type, Value: fmt.Sprintf("%v", field["value"]), Separator: fmt.Sprintf("%v", field["separator"]),  Operator: fmt.Sprintf("%v", field["operator"]), Dir: fmt.Sprintf("%v", field["dir"])}
 			fieldsID = append(fieldsID, model) 
 		}
 		rec["filter_fields"] = fieldsID
@@ -60,6 +76,7 @@ func (s *FilterService) PostTreatment(results utils.Results, tableName string, d
 }
 func (s *FilterService) ConfigureFilter(tableName string) (string, string, string, string) { return s.Domain.ViewDefinition(tableName) }
 func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) {
+	s.UpdateFields = false
 	if s.Domain.GetMethod() != utils.DELETE {
 		if _, ok := record["link"]; ok { 
 			schema, err := schserv.GetSchema(fmt.Sprintf("%v", record["link"]))
@@ -74,15 +91,18 @@ func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, table
 			t, err := s.Domain.SuperCall(p, utils.Record{}, utils.SELECT)
 			if err == nil && len(t) > 0 { record[utils.SpecialIDParam] = t[0][utils.SpecialIDParam] }
 		} 
-		if fields, ok := record["view_fields"]; ok { 
+		if fields, ok := record["view_fields"]; ok {
+			s.UpdateFields = true 
 			s.Fields = []map[string]interface{}{}
 			for _, field := range fields.([]interface{}) { s.Fields = append(s.Fields, field.(map[string]interface{})) }
 		}
 		if fields, ok := record["filter_fields"]; ok {
+			s.UpdateFields = true
 			s.Fields = []map[string]interface{}{}
 			for _, field := range fields.([]interface{}) { s.Fields = append(s.Fields, field.(map[string]interface{})) }
 		}
-		if s.Domain.GetMethod() == utils.UPDATE {
+		fmt.Printf("fields: %v %v\n", s.Fields, s.UpdateFields)
+		if s.Domain.GetMethod() == utils.UPDATE && s.UpdateFields {
 			p := utils.AllParams(schserv.DBFilterField.Name)
 			p[schserv.RootID(schserv.DBFilter.Name)] = fmt.Sprintf("%v", record[utils.SpecialIDParam])
 			s.Domain.SuperCall(p, utils.Record{}, utils.DELETE)
@@ -114,9 +134,7 @@ func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, table
 			}
 			record[schserv.NAMEKEY] = name
 		}
-		fmt.Printf("Record: %v\n", record)
 	} else {
-		fmt.Printf("Record: %v\n", record)
 		p := utils.AllParams(schserv.DBFilterField.Name)
 		p[schserv.RootID(schserv.DBFilter.Name)] = fmt.Sprintf("%v", record[utils.SpecialIDParam])
 		s.Domain.SuperCall(p, utils.Record{}, utils.DELETE)

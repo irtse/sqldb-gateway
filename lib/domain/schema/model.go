@@ -94,6 +94,9 @@ type WorkflowStepModel struct { // lightest struct based on SchemaModel dedicate
 type FilterModel struct { 
 	ID 					int64               		`json:"id"`
 	Name  				string 						`json:"name"`
+	Label				string						`json:"label"`
+	Type				string						`json:"type"`
+	Index				float64						`json:"index"`
 	Value 				interface{} 				`json:"value"`
 	Operator 			string 						`json:"operator"`
 	Separator 			string 						`json:"separator"`

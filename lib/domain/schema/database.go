@@ -228,7 +228,7 @@ var DBFilterField = SchemaModel{
 	Label : "filter field",
 	Category : "filter",
 	Fields : []FieldModel{
-		FieldModel{ Name: RootID(DBSchemaField.Name), Type: INTEGER.String(), ForeignTable: DBSchemaField.Name, Required : true, Index: 0 },
+		FieldModel{ Name: RootID(DBSchemaField.Name), Type: INTEGER.String(), ForeignTable: DBSchemaField.Name, Required : false, Index: 0 },
 		FieldModel{ Name: "value", Type: BIGVARCHAR.String(), Required : false, Index: 1 },
 		FieldModel{ Name: "operator", Type: ENUMOPERATOR.String(), Required : false, Index: 2 },
 		FieldModel{ Name: "separator", Type: ENUMSEPARATOR.String(), Required : false, Index: 3 },
