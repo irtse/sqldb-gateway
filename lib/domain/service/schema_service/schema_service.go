@@ -47,8 +47,10 @@ func (s *SchemaService) WriteRowAutomation(record map[string]interface{}, tableN
 			count, err := s.Domain.SuperCall(utils.AllParams(schserv.DBView.Name), utils.Record{}, utils.COUNT)
 			index := 2
 			if err == nil && len(count) > 0  && (int(count[0]["count"].(float64)) + 1) > 1 { index = int(count[0]["count"].(float64)) + 1 }
+			cat := "datas"
+			if fmt.Sprintf("%v",record["name"])[:2] == "db" { cat = "technical datas" }
 			newView := utils.Record{ schserv.NAMEKEY : name, "indexable" : true, "description": "View description for " + name + " datas.", 
-				"category" : record["category"], "is_empty": false, "index": index, "is_list": true, "readonly": false, schserv.RootID(schserv.DBSchema.Name) : schema.ID }
+				"category" : cat, "is_empty": false, "index": index, "is_list": true, "readonly": false, schserv.RootID(schserv.DBSchema.Name) : schema.ID }
 			s.Domain.SuperCall(utils.AllParams(schserv.DBView.Name), newView, utils.CREATE)
 		}
 		if !slices.Contains([]string{ schserv.DBTask.Name, schserv.DBRequest.Name, schserv.DBFilter.Name, schserv.DBFilterField.Name, schserv.DBViewAttribution.Name, schserv.DBNotification.Name }, schema.Name) {

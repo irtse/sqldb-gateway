@@ -168,7 +168,7 @@ var DBRootViews = []map[string]interface{}{
 	"readonly" : false,
 	"index" : 1,
 	"link" : schserv.DBTask.Name,
-	"category" : "my activity",
+	"category" : "my activities",
 	"is_empty" : false,
 	"filter" : map[string]interface{}{
 		"name" : "unvalidated tasks",
@@ -182,7 +182,7 @@ var DBRootViews = []map[string]interface{}{
 	"description" : nil,
 	"readonly" : true,
 	"index" : 1,
-	"category" : "my activity",
+	"category" : "my activities",
 	"link" : schserv.DBTask.Name,
 	"is_empty" : false,
 	"filter" : map[string]interface{}{

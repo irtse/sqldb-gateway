@@ -80,9 +80,7 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 		params[k]=p
 	}
 	rec["new"] = []string{}
-	if !s.Domain.GetEmpty() {
-		d, _ = s.Domain.PermsSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter)  
-	}
+	if !s.Domain.GetEmpty() { d, _ = s.Domain.PermsSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter) }
 	if  record["is_list"] != nil && record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(schema.Name, sqlFilter, params) }
 	if !s.Domain.GetEmpty() {
 		datas = utils.Results{}
