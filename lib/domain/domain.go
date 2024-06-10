@@ -99,7 +99,7 @@ func (d *MainService) call(params utils.Params, record utils.Record, method util
 		d.Db = conn.Open(); 
 		defer d.Db.Close() 
 		if !d.SuperAdmin && !d.PermsCheck(tablename, "", "", d.Method) && !d.AutoLoad {
-			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + tablename + " datas")
+			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + tablename + " data")
 		}
 		// load the highest entity avaiable Table level.
 		table := infrastructure.Table(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename), record)
@@ -126,7 +126,7 @@ func (d *MainService) call(params utils.Params, record utils.Record, method util
 			return res, err
 		}
 		if !d.SuperAdmin || method == utils.DELETE { 
-			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + table.Name + " datas") 
+			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + table.Name + " data") 
 		}
 		if col, ok := params[utils.RootColumnsParam]; ok { 
 			if tablename == utils.ReservedParam { return utils.Results{}, errors.New("can't load table as " + utils.ReservedParam) }

@@ -131,7 +131,7 @@ var DBRootViews = []map[string]interface{}{
 		"view_fields" : []interface{}{ map[string]interface{}{ "name" : "dbworkflow_id", "index" : 0 }, },
 	},
 	},
-	map[string]interface{} { schserv.NAMEKEY : "my unvalidated datas",
+	map[string]interface{} { schserv.NAMEKEY : "my unvalidated requests",
 	"is_list" : true,
 	"indexable" : true,
 	"description" : nil,

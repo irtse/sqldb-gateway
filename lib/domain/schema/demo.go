@@ -8,7 +8,7 @@ var ConfidentialityLevel = SchemaModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 	},
 }
-var confDatas = []string{"public", "confidential project", "IRT confidential", "restricted diffusion", "special restricted diffusion", "classified datas", "authorized profile"}
+var confDatas = []string{"public", "confidential project", "IRT confidential", "restricted diffusion", "special restricted diffusion", "classified data", "authorized profile"}
 
 var FormalizedDataProject = SchemaModel{
 	Name : "formalized_data_project",
