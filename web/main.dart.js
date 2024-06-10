@@ -33408,16 +33408,14 @@ s=1
 break
 case 1:return A.I(q,r)}})
 return A.J($async$aaB,r)},
-ni(a,b){var s=0,r=A.K(t.z),q,p
+ni(a,b){var s=0,r=A.K(t.z),q
 var $async$ni=A.L(function(c,d){if(c===1)return A.H(d,r)
 while(true)switch(s){case 0:s=2
 return A.Q(A.qS(),$async$ni)
-case 2:p=d
+case 2:q=d
 A.hN("Setting route cookie "+a)
-p.Cj("String","url",a)
-q=A.an(a,"#","/")
-q=A.an(q,":","/")
-A.Tt(b).v9(0,q,null)
+q.Cj("String","url",a)
+A.Tt(b).v9(0,"/",null)
 return A.I(null,r)}})
 return A.J($async$ni,r)},
 aSb(a){var s,r=A.an(a,"#","/"),q=A.an(r,":","/").split("/")
