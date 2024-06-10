@@ -87,7 +87,7 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 		except := []string{schserv.DBRequest.Name, schserv.DBTask.Name}
 		restr += " AND " + schserv.RootID(schserv.DBSchema.Name) + " IN (" 
 		for _, sch := range schserv.SchemaRegistry {
-			if (!d.IsSuperAdmin() &&  sch.Name[:2] == "db" && !slices.Contains(except, sch.Name)) || !d.PermsCheck(sch.Name, "", schserv.LEVELNORMAL, utils.SELECT) { continue }
+			if (!d.IsSuperAdmin() &&  sch.Name[:2] == "db" && !slices.Contains(except, sch.Name)) || !sch.HasField("name") || !d.PermsCheck(sch.Name, "", schserv.LEVELNORMAL, utils.SELECT) { continue }
 			restr += fmt.Sprintf("%v", sch.ID) + ","
 		}
 		restr = conn.RemoveLastChar(restr) + ")"

@@ -3,7 +3,7 @@ package schema
 var ConfidentialityLevel = SchemaModel{
 	Name : "confidentiality_level",
 	Label : "confidentiality level",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 	},
@@ -13,7 +13,7 @@ var confDatas = []string{"public", "confidential project", "IRT confidential", "
 var FormalizedDataProject = SchemaModel{
 	Name : "formalized_data_project",
 	Label : "formalized data project",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: RootID(FormalizedData.Name), Type: INTEGER.String(), ForeignTable: FormalizedData.Name, Required : true, Index: 0, Label: "binded formalized data" },
 		FieldModel{ Name: RootID(Project.Name), Type: INTEGER.String(), ForeignTable: Project.Name, Required : true, Index: 1, Label: "binded project" },
@@ -23,7 +23,7 @@ var FormalizedDataProject = SchemaModel{
 var FormalizedDataStorageType = SchemaModel{ 
 	Name : "formalized_data_storage_type",
 	Label : "formalized data storage type",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: RootID(FormalizedData.Name), Type: INTEGER.String(), ForeignTable: FormalizedData.Name, Required : true, Index: 0, Label: "binded formalized data" },
 		FieldModel{ Name: RootID(SupportType.Name), Type: INTEGER.String(), ForeignTable: SupportType.Name, Required : true, Index: 1, Label: "binded storage type" },
@@ -33,7 +33,7 @@ var FormalizedDataStorageType = SchemaModel{
 var Project = SchemaModel{ // todo
 	Name : "project",
 	Label : "project",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 		FieldModel{ Name: "code", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 1 },
@@ -44,7 +44,7 @@ var Project = SchemaModel{ // todo
 var Protection = SchemaModel{ // TODO
 	Name : "protection",
 	Label : "protection",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 	},
@@ -55,7 +55,7 @@ var protArDatas = []string{"france", "UE", "out of the UE"}
 var ProtectionArea = SchemaModel{ 
 	Name : "protection_area",
 	Label : "protection area",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 	},
@@ -65,7 +65,7 @@ var protTypDatas = []string{"SOLEAU envelope", "timestamp", "patent application 
 var ProtectionType = SchemaModel{ 
 	Name : "protection_type",
 	Label : "protection type",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 	},
@@ -74,7 +74,7 @@ var ProtectionType = SchemaModel{
 var RestrictionType = SchemaModel{
 	Name : "restriction_type",
 	Label : "restriction type",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 		FieldModel{ Name: "formalized_data_id", Type: INTEGER.String(), ForeignTable: "formalized_data", Required : true, Index: 1, Label: "related formalized data" },
@@ -86,7 +86,7 @@ var resFamDatas = []string{"report", "internal technical note", "laboratory work
 var ResultFamily = SchemaModel{ 
 	Name : "result_family",
 	Label : "result family",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 	},
@@ -97,7 +97,7 @@ var resTypDatas = []string{"process", "method", "algorithm", "software", "specif
 var ResultType = SchemaModel{ 
 	Name : "result_type",
 	Label : "result type",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 	},
@@ -108,7 +108,7 @@ var supTypDatas = []string{"IRT server", "external data center", "hard disk", "U
 var SupportType = SchemaModel{ 
 	Name : "support_type",
 	Label : "support type",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 	},
@@ -119,7 +119,7 @@ var supDatas = []string{"paper", "digital"}
 var Support = SchemaModel{ 
 	Name : "support",
 	Label : "support",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 	},
@@ -128,7 +128,7 @@ var Support = SchemaModel{
 var Valuation = SchemaModel{ // TODO
 	Name : "valuation",
 	Label : "valuation",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 		FieldModel{ Name: "formalized_data_id", Type: INTEGER.String(), ForeignTable: "formalized_data", Required : true, Index: 1, Label: "related formalized data" },
@@ -143,7 +143,7 @@ var valFormDatas = []string{"scientific journal article", "conference presentati
 var ValuationFormat = SchemaModel{
 	Name : "valuation_format",
 	Label : "valuation format",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 	},
@@ -154,7 +154,7 @@ var valTyp = []string{"scientific", "economic"}
 var ValuationType = SchemaModel{
 	Name : "valuation_type",
 	Label : "valuation type",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 	},
@@ -163,7 +163,7 @@ var ValuationType = SchemaModel{
 var FormalizedData = SchemaModel{
 	Name : "formalized_data",
 	Label : "formalized data",
-	Category : "datas",
+	Category : "data",
 	Fields : []FieldModel{
 		FieldModel{ Name: "name", Type: VARCHAR.String(), Constraint: "unique", Required : true, Readonly : true, Index : 0 },
 		FieldModel{ Name: "ref", Type: VARCHAR.String(), Required : false, Label: "referencing", Readonly : true, Index : 1 },

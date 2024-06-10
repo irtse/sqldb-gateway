@@ -54,6 +54,7 @@ func (s *RequestService) VerifyRowAutomation(record map[string]interface{}, tabl
 		wf, err := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT)
 		if err != nil || len(wf) == 0 { return record, false, false }
 		record["name"]=wf[0][schserv.NAMEKEY]
+		record["created_date"] = time.Now().Format(time.RFC3339)
 		record[schserv.RootID(schserv.DBSchema.Name)]=wf[0][schserv.RootID(schserv.DBSchema.Name)]
 	} else if s.Domain.GetMethod() == utils.UPDATE {
 		if record["state"] == "completed" || record["state"] == "dismiss" { 
