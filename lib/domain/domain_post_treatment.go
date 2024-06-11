@@ -71,7 +71,6 @@ func (d *MainService) PostTreat(results utils.Results, tableName string, isWorfl
 														  Workflow : d.BuildWorkFlow(record, tableName, isWorflow),  }.ToRecord()) }
 			
 		}
-		
 		return res
 	} 
 	return results
@@ -93,6 +92,7 @@ func (d *MainService) PostTreatRecord(index int, channel chan schserv.ViewItemMo
 			if strings.Contains(field.Name, schserv.DBSchema.Name) { 
 				dest, ok := record[schserv.RootID("dest_table")]
 				id, ok2 := record[field.Name]
+				fmt.Printf("dest %v, id %v\n", dest, id)
 				if ok2 && ok && dest != nil && id != nil {
 					schema, err := schserv.GetSchemaByID(int64(id.(float64)))
 					if err == nil {

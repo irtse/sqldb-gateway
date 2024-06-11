@@ -15,17 +15,14 @@ func (d *MainService) CountNewDataAccess(tableName string, filter string, countP
 	sqlFilter += schserv.RootID(schserv.DBSchema.Name) + " IN (SELECT id FROM " + schserv.DBSchema.Name + " WHERE name = '" + tableName + "') AND " 
 	sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name = '" + d.GetUser() + "' OR email='" + d.GetUser() + "') AND write=false AND update=false)"
 	if len(filter) > 0 { sqlFilter += " AND " + filter }
-	p := utils.Params{ utils.RootTableParam : tableName, utils.RootRowsParam : utils.ReservedParam, 
-		               utils.RootColumnsParam : utils.SpecialIDParam }
-	res, err := d.PermsSuperCall( p, utils.Record{}, utils.SELECT, sqlFilter)
+	p := utils.Params{ utils.RootTableParam : tableName, utils.RootRowsParam : utils.ReservedParam, utils.RootColumnsParam : utils.SpecialIDParam }
+	res, err := d.SpecialSuperCall( p, utils.Record{}, utils.SELECT, sqlFilter)
 	ids := []string{}
 	if err != nil { return ids, 0 }
 	for _, rec := range res { 
 		if !slices.Contains(ids, rec.GetString(utils.SpecialIDParam)) { ids = append(ids, rec.GetString(utils.SpecialIDParam)) }
 	}
-	sqlFilter = ""
-	if len(filter) > 0 { sqlFilter += " AND " + filter }
-	res, err = d.SuperCall( utils.AllParams(tableName), utils.Record{}, utils.COUNT, sqlFilter)
+	res, err = d.SpecialSuperCall( utils.AllParams(tableName), utils.Record{}, utils.COUNT)
 	if len(res) == 0 || err != nil || res[0]["count"] == nil { return ids, 0 }
 	return ids, int64(res[0]["count"].(float64))
 }
