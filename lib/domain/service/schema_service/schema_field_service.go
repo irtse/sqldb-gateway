@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"strconv"
+	"math/rand"
 	"sqldb-ws/lib/domain/utils"
 	schserv "sqldb-ws/lib/domain/schema"
 )
@@ -53,6 +54,14 @@ func (s *SchemaFields) WriteRowAutomation(record map[string]interface{}, tableNa
 	s.Domain.SuperCall(utils.Params{ utils.RootTableParam : schema.Name, 
 		utils.RootColumnsParam : fmt.Sprintf("%v", record[schserv.NAMEKEY])}, record, utils.CREATE)
 	schserv.LoadCache(schema.Name, s.Domain.GetDb())
+	if record[schserv.NAMEKEY] == schserv.RootID(schserv.DBUser.Name) || record[schserv.NAMEKEY] == schserv.RootID(schserv.DBEntity.Name)  {
+		r := rand.New(rand.NewSource(9999999999))
+		newView := utils.Record{ schserv.NAMEKEY : "my " + schema.Name, "indexable" : true, 
+				"description": "View description for my " + schema.Name + " datas.", 
+				"category" : "my data", "is_empty": false, "index": r.Int(), "is_list": true, "readonly": false, 
+				"own_view" : true, schserv.RootID(schserv.DBSchema.Name) : schema.ID }
+		s.Domain.SuperCall(utils.AllParams(schserv.DBView.Name), newView, utils.CREATE)
+	}
 }
 func (s *SchemaFields) UpdateRowAutomation(results []map[string]interface{}, record map[string]interface{}) {
 	for _, r := range results {
@@ -91,5 +100,11 @@ func (s *SchemaFields) DeleteRowAutomation(results []map[string]interface{}, tab
 		s.Domain.SuperCall(utils.Params{ utils.RootTableParam : schserv.DBPermission.Name, 
 			utils.RootRowsParam : utils.ReservedParam, schserv.NAMEKEY : "%" + tableName + ":" + fmt.Sprintf("%v", record[schserv.NAMEKEY]) + "%" }, 
 			utils.Record{ },  utils.DELETE)
+		if schema.HasField(schserv.RootID(schserv.DBUser.Name)) || schema.HasField(schserv.RootID(schserv.DBEntity.Name)) {
+			p := utils.AllParams(schserv.DBView.Name)
+			p[schserv.NAMEKEY] = "my " + schema.Name
+			s.Domain.SuperCall(p, utils.Record{}, utils.DELETE)
+		}
+		schserv.LoadCache(schema.Name, s.Domain.GetDb())
 	}
 }	

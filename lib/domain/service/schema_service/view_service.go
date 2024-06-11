@@ -52,7 +52,7 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 		rec["is_favorize"] = len(u) > 0
 	}
 	if record["is_list"] != nil { s.Domain.SetLowerRes(record["is_list"].(bool)) } else { s.Domain.SetLowerRes(false) }
-	
+	if record["own_view"] != nil && record["own_view"].(bool) { s.Domain.SetOwn(true) }
 	for _, dest := range dest_id {
 		if id == "" { id = dest } else { id = "," + dest  }
 	}
@@ -70,9 +70,8 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 	d := utils.Results{}
 	filter := record.GetString(schserv.RootID(schserv.DBFilter.Name))
 	viewFilter := record.GetString("view_" + schserv.RootID(schserv.DBFilter.Name))
-	sqlFilter, view, order, dir := s.Domain.GetFilter(filter, viewFilter, utils.GetString(record, schserv.RootID(schserv.DBSchema.Name)))
+	sqlFilter, view, _, dir := s.Domain.GetFilter(filter, viewFilter, utils.GetString(record, schserv.RootID(schserv.DBSchema.Name)))
 	if view != "" { params[utils.RootColumnsParam] = view }
-	if order != "" { params[utils.RootOrderParam] = order }
 	if dir != "" { params[utils.RootDirParam] = dir }
 	for k, p := range s.Domain.GetParams() { 
 		if k == utils.RootRowsParam || k == utils.SpecialIDParam || k == utils.RootTableParam { continue }
@@ -80,7 +79,7 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 		params[k]=p
 	}
 	rec["new"] = []string{}
-	if !s.Domain.GetEmpty() { d, _ = s.Domain.PermsSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter) }
+	if !s.Domain.GetEmpty() { d, _ = s.Domain.SpecialSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter) }
 	if  record["is_list"] != nil && record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(schema.Name, sqlFilter, params) }
 	if !s.Domain.GetEmpty() {
 		datas = utils.Results{}
@@ -127,6 +126,7 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 			} 
 		}	
 	}
+	if view != "" { rec["order"] = strings.Split(view, ",") }
 	rec["link_path"]=s.Domain.BuildPath(fmt.Sprintf(schserv.DBView.Name), fmt.Sprintf("%v", record[utils.SpecialIDParam]))
 	channel <- rec
 }

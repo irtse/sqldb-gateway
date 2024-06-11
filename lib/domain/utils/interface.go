@@ -23,8 +23,10 @@ func (s *SpecializedService) ConfigureFilter(tableName string) (string, string, 
 type SpecializedServiceInfo interface { GetName() string }
 type DomainITF interface {
 	GetMethod() Method
+	SetOwn(own bool)
 	SetExternalSuperAdmin(external bool)
 	CountNewDataAccess(tableName string, filter string, countParams Params) ([]string, int64)
+	SpecialSuperCall(params Params, record Record, method Method, args... interface{}) (Results, error)
 	PermsSuperCall(params Params, record Record, method Method, args... interface{}) (Results, error)
 	SuperCall(params Params, rec Record, m Method, args... interface{}) (Results, error)
 	Call(params Params, rec Record, m Method, args... interface{}) (Results, error)

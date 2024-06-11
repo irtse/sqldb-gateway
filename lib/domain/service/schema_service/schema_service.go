@@ -47,7 +47,7 @@ func (s *SchemaService) WriteRowAutomation(record map[string]interface{}, tableN
 			count, err := s.Domain.SuperCall(utils.AllParams(schserv.DBView.Name), utils.Record{}, utils.COUNT)
 			index := 2
 			if err == nil && len(count) > 0  && (int(count[0]["count"].(float64)) + 1) > 1 { index = int(count[0]["count"].(float64)) + 1 }
-			cat := "data"
+			cat := "global data"
 			if fmt.Sprintf("%v",record["name"])[:2] == "db" { cat = "technical data" }
 			newView := utils.Record{ schserv.NAMEKEY : name, "indexable" : true, "description": "View description for " + name + " datas.", 
 				"category" : cat, "is_empty": false, "index": index, "is_list": true, "readonly": false, schserv.RootID(schserv.DBSchema.Name) : schema.ID }

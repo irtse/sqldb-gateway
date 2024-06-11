@@ -28,7 +28,7 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 		if len(strings.TrimSpace(restr)) == 0 { continue }
 		if len(SQLrestriction) > 0 { SQLrestriction += " AND (" + restr + ")" } else { SQLrestriction = restr  }
 	}
-	if !d.IsSuperCall() { SQLrestriction = d.restrictionByEntityUser(tableName, SQLrestriction) } // admin can see all on admin view
+	SQLrestriction = d.restrictionByEntityUser(tableName, SQLrestriction) // admin can see all on admin view
 	return SQLrestriction, SQLview, SQLOrder, SQLLimit
 }
 func (d *MainService) restrictionBySchema(tableName string, restr string) (string) {
@@ -147,8 +147,33 @@ func (d *MainService) orderFromParams(tableName string, order string) (string) {
 
 func (s *MainService) restrictionByEntityUser(tableName string, restr string) string {
 	schema, err := schserv.GetSchema(tableName)
-	if !s.IsOwnPermission(tableName, false, s.Method) || err != nil { return restr }
+	if err != nil { return restr }
 	userID := schserv.RootID(schserv.DBUser.Name); entityID := schserv.RootID(schserv.DBEntity.Name)
+	if (schema.HasField(userID) || schema.HasField(entityID)) {
+		if (s.IsSuperCall() || !s.IsOwnPermission(tableName, false, s.Method)) { return restr }
+	} else if s.IsOwn() {
+		quer := "SELECT * FROM " + schserv.DBRequest.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID) + " AND " 
+		quer += userID + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")" 
+		requests, err := s.Db.QueryAssociativeArray(quer)
+		ids := ""
+		if err == nil && len(requests) > 0 {
+			for _, request := range requests { 
+				if !strings.Contains(ids, fmt.Sprintf("%v", request[utils.RootDestTableIDParam])) {
+					ids += fmt.Sprintf("%v", request[utils.RootDestTableIDParam]) + "," 
+				}	
+			}
+			if len(ids) > 0 { 
+				ids = conn.RemoveLastChar(ids) 
+				if len(restr) > 0 { restr +=  " AND " }
+				restr += "id IN (" + ids + ")"
+			}
+		} 
+		if tableName[:2] != "db" && len(ids) == 0 { 
+			if len(restr) > 0 { restr +=  " AND " }
+			restr += "id IS NULL"
+			return restr 
+		}
+	}
 	isUser := false
 	if schema.HasField(userID) || tableName == schserv.DBUser.Name {
 		if len(restr) > 0 { restr +=  " AND " }
@@ -191,6 +216,7 @@ func (s *MainService) GetFilter(filterID string, viewfilterID string, schemaID s
 	}
 	if s.GetParams()[utils.RootViewFilter] != "" { 
 		params[schserv.RootID(schserv.DBFilter.Name)] = s.GetParams()[utils.RootViewFilter]
+		params["is_view"] = "true"
 		fields, err := s.PermsSuperCall(params, utils.Record{}, utils.SELECT)
 		if len(fields) > 0 && err == nil { viewfilterID = s.GetParams()[utils.RootViewFilter] }
 	}
@@ -204,7 +230,7 @@ func (s *MainService) GetFilter(filterID string, viewfilterID string, schemaID s
 		sort.SliceStable(fields, func(i, j int) bool{ return fields[i]["index"].(int64) <= fields[j]["index"].(int64) })
 		for _, field := range fields {
 			f, err := schserv.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
-			if err != nil || strings.Contains(viewFilter, f.Name) || !strings.Contains(s.Params[utils.RootColumnsParam], f.Name) { continue }
+			if err != nil || strings.Contains(viewFilter, f.Name) || (len(s.Params[utils.RootColumnsParam]) > 0 && !strings.Contains(s.Params[utils.RootColumnsParam], f.Name)) { continue }
 			viewFilter += f.Name + ","
 			if field["dir"] != nil { dir += strings.ToUpper(fmt.Sprintf("%v", field["dir"])) + ","; order += f.Name + ","
 			} else { dir += "ASC,"; order += f.Name + "," }

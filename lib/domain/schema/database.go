@@ -255,6 +255,7 @@ var DBView = SchemaModel{
 		FieldModel{ Name: "view_" + RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable : DBFilter.Name, Required : false, Index: 9 },
 		FieldModel{ Name: RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable : DBFilter.Name, Required : false, Index: 10 },
 		FieldModel{ Name: RootID(DBSchema.Name), Type: INTEGER.String(), ForeignTable : DBSchema.Name, Required : true, Index: 11 },
+		FieldModel{ Name: "own_view", Type: BOOLEAN.String(), Required : false, Index: 12 },
 	},
 }
 

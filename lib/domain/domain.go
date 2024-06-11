@@ -34,6 +34,7 @@ type MainService struct {
 	Specialization		bool
 	Empty               bool
 	LowerRes            bool
+	Own 				bool
 	Method				utils.Method
 	Params 				utils.Params
 	Perms				map[string]map[string]Perms
@@ -62,6 +63,8 @@ func (d *MainService) GetUser() string { return d.User }
 func (d *MainService) IsSuperAdmin() bool { return d.SuperAdmin }
 func (d *MainService) IsSuperCall() bool { return d.Super && d.SuperAdmin || d.ExternalSuperAdmin }
 func (d *MainService) IsShallowed() bool { return d.Shallowed }
+func (d *MainService) IsOwn() bool { return d.Own }
+func (d *MainService) SetOwn(b bool) { d.Own = b }
 func (d *MainService) GetParams() utils.Params { return d.Params }
 func (d *MainService) GetDb() *conn.Db { return d.Db }
 // Infra func caller with admin view && superadmin right (not a structured view made around data for view reason)
@@ -74,6 +77,14 @@ func (d *MainService) SuperCall(params utils.Params, record utils.Record, method
 func (d *MainService) PermsSuperCall(params utils.Params, record utils.Record, method utils.Method, args... interface{}) (utils.Results, error) {
 	params[utils.RootRawView]="enable"
 	d2 := Domain(true, d.User, d.isGenericService)
+	d2.ExternalSuperAdmin = d.ExternalSuperAdmin
+	return d2.call(params, record, method, args...)
+}
+
+func (d *MainService) SpecialSuperCall(params utils.Params, record utils.Record, method utils.Method, args... interface{}) (utils.Results, error) {
+	params[utils.RootRawView]="enable"
+	d2 := Domain(true, d.User, d.isGenericService)
+	d2.Own = d.IsOwn()
 	d2.ExternalSuperAdmin = d.ExternalSuperAdmin
 	return d2.call(params, record, method, args...)
 }
