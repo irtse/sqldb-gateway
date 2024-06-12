@@ -50,14 +50,12 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 								   utils.RootRowsParam : utils.GetString(res, schserv.RootID(schserv.DBRequest.Name)), }
 		requests, err := s.Domain.SuperCall( paramsReq, utils.Record{}, utils.SELECT)
 		if err != nil || len(requests) == 0 { continue }
+		fmt.Println(requests[0]["current_index"])
 		if order, ok3 := requests[0]["current_index"]; ok3 {
-			if order.(float64) > 0 {
-				params := utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : utils.ReservedParam, 
+			params := utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : utils.ReservedParam, 
 					schserv.RootID(schserv.DBRequest.Name) : fmt.Sprintf("%v", res[schserv.RootID(schserv.DBRequest.Name)]), }
-				otherPendingTasks, _ := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT,
-					"state IN ('pending', 'progressing', 'dismiss') AND (is_close=false)")
-				if len(otherPendingTasks) > 0 { continue }
-			}
+			otherPendingTasks, _ := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT, "state IN ('pending', 'progressing')")
+			if len(otherPendingTasks) > 0 { continue }
 			current_index := order.(float64)
 			if res["state"] == "completed" { current_index++ }	
 			if res["state"] == "dismiss" {
@@ -67,7 +65,7 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 			}
 			schemes, err := s.Domain.SuperCall( utils.AllParams(schserv.DBWorkflowSchema.Name), utils.Record{}, 
 				utils.SELECT, "index=" + fmt.Sprintf("%v", current_index) + " AND " + schserv.RootID(schserv.DBWorkflow.Name) + " = " + fmt.Sprintf("%v", requests[0][schserv.RootID(schserv.DBWorkflow.Name)]))
-			newRecRequest := utils.Record{ utils.SpecialIDParam : requests[0][utils.SpecialIDParam]}
+				newRecRequest := utils.Record{ utils.SpecialIDParam : requests[0][utils.SpecialIDParam]}
 			if err != nil || len(schemes) == 0 { // no new task in workflow
 				newRecRequest["state"] = "completed"
 				newRecRequest["is_close"] = true

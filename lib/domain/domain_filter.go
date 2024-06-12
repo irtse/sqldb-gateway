@@ -17,7 +17,7 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 	if err != nil { return SQLrestriction, SQLview, SQLOrder, SQLLimit }
 	restr, view, order, dir := d.GetFilter("", "", fmt.Sprintf("%v", schema.ID))
 	if restr != "" { innerRestriction = append(innerRestriction, restr) }
-	if view != "" { d.Params[utils.RootColumnsParam] = view }
+	if view != "" && !d.IsSuperCall() { d.Params[utils.RootColumnsParam] = view }
 	if order != "" { d.Params[utils.RootOrderParam] = order }
 	if dir != "" { d.Params[utils.RootDirParam] = dir }
 	SQLrestriction = d.restrictionBySchema(tableName, SQLrestriction)
@@ -28,6 +28,7 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 		if len(strings.TrimSpace(restr)) == 0 { continue }
 		if len(SQLrestriction) > 0 { SQLrestriction += " AND (" + restr + ")" } else { SQLrestriction = restr  }
 	}
+	if d.IsSuperCall() { return SQLrestriction, SQLview, SQLOrder, SQLLimit }
 	SQLrestriction = d.restrictionByEntityUser(tableName, SQLrestriction) // admin can see all on admin view
 	return SQLrestriction, SQLview, SQLOrder, SQLLimit
 }
@@ -150,7 +151,8 @@ func (s *MainService) restrictionByEntityUser(tableName string, restr string) st
 	if err != nil { return restr }
 	userID := schserv.RootID(schserv.DBUser.Name); entityID := schserv.RootID(schserv.DBEntity.Name)
 	if (schema.HasField(userID) || schema.HasField(entityID)) {
-		if (s.IsSuperCall() || !s.IsOwnPermission(tableName, false, s.Method)) { return restr }
+		fmt.Println(tableName, s.IsOwnPermission(tableName, false, s.Method))
+		if !s.IsOwnPermission(tableName, false, s.Method) && !s.IsOwn() { return restr }
 	} else if s.IsOwn() {
 		quer := "SELECT * FROM " + schserv.DBRequest.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID) + " AND " 
 		quer += userID + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")" 
