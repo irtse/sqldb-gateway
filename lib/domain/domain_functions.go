@@ -22,7 +22,7 @@ func (d *MainService) CountNewDataAccess(tableName string, filter string, countP
 		if k == utils.RootRowsParam || k == utils.RootRowsParam || k == utils.RootColumnsParam { continue }
 		p[k] = v 
 	}
-	res, err := d.Db.QueryAssociativeArray("SELECT * FROM " + tableName + " WHERE " + sqlFilter)
+	res, err := d.Db.QueryAssociativeArray("SELECT id FROM " + tableName + " WHERE " + sqlFilter)
 	ids := []string{}
 	if err != nil { return ids, 0 }
 	for _, rec := range res { 

@@ -80,7 +80,10 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 	if s.Domain.GetParams()[utils.RootFilterNewState] != "" { params[utils.RootFilterNewState] = s.Domain.GetParams()[utils.RootFilterNewState] }
 	rec["new"] = []string{}
 	if !s.Domain.GetEmpty() { d, _ = s.Domain.SpecialSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter) }
-	if  record["is_list"] != nil && record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(schema.Name, sqlFilter, params) }
+	if  record["is_list"] != nil && record["is_list"].(bool) { 
+		SQLrestriction, _, _, _ := s.Domain.ViewDefinition(schema.Name, sqlFilter)
+		rec["new"], rec["max"] = s.Domain.CountNewDataAccess(schema.Name, SQLrestriction, params)
+	}
 	if !s.Domain.GetEmpty() {
 		datas = utils.Results{}
 		if new, ok := s.Domain.GetParams()["new"]; ok && new == "enable" {

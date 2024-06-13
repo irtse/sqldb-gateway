@@ -18,11 +18,12 @@ func (s *RequestService) PostTreatment(results utils.Results, tableName string, 
 }
 func (s *RequestService) ConfigureFilter(tableName string, innerestr... string) (string, string, string, string) { 
 	restr := ""
-	if s.Domain.IsSuperAdmin() { return s.Domain.ViewDefinition(tableName, restr) }
+	if s.Domain.IsSuperCall() { return s.Domain.ViewDefinition(tableName, restr) }
 	restr += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")"
 	restr += " OR " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT " + schserv.RootID(schserv.DBUser.Name) + " FROM " + schserv.DBHierarchy.Name + " WHERE parent_" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))"
-	innerestr = append(innerestr, restr)
-	return s.Domain.ViewDefinition(tableName, innerestr...) 
+	n := []string{ restr }
+	for _, inner := range innerestr { n = append(n, inner) }
+	return s.Domain.ViewDefinition(tableName, n... )
 }
 
 func (s *RequestService) GetHierarchical() (utils.Results, error) {
@@ -59,7 +60,7 @@ func (s *RequestService) VerifyRowAutomation(record map[string]interface{}, tabl
 		if record["state"] == "completed" || record["state"] == "dismiss" { 
 			record["is_close"] = true 
 			record["closing_date"] = time.Now().Format(time.RFC3339)
-		} else if !s.Domain.IsSuperCall() { return record, errors.New("Can't set any state lower"), false }
+		}
 	}
 	if s.Domain.GetMethod() != utils.DELETE {
 		rec, err := s.Domain.ValidateBySchema(record, tablename)
@@ -103,7 +104,10 @@ func (s *RequestService) UpdateRowAutomation(results []map[string]interface{}, r
 			}
 		}
 		if rec["is_close"].(bool) {
-			res, err := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBTask.Name + " WHERE meta_" + schserv.RootID(schserv.DBRequest.Name) + "=" + utils.GetString(rec, utils.SpecialIDParam) + " AND is_close=false")
+			p := utils.AllParams(schserv.DBTask.Name)
+			p["meta_" + schserv.RootID(schserv.DBRequest.Name)]= fmt.Sprintf("%v",rec[utils.SpecialIDParam])
+			res, err := s.Domain.SuperCall( p, utils.Record{}, utils.SELECT)
+			fmt.Println("res : \n", res, p)
 			if err == nil && len(res) > 0 {
 				for _, task := range res {
 					task["is_close"] = true 

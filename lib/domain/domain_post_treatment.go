@@ -50,9 +50,6 @@ func (d *MainService) PostTreat(results utils.Results, tableName string, isWorfl
 			}
 			count += len(res)
 		}
-		if tableName == "valuation" {
-			fmt.Println(len(view.Items), view.Readonly, view.Items, view.Actions )
-		}
 		if len(view.Items) == 1 { view.Readonly = view.Items[0].Readonly }
 		if view.Readonly { view.Actions = []string{"get"} }
 		sort.SliceStable(view.Items, func(i, j int) bool { return view.Items[i].Sort < view.Items[j].Sort })
@@ -82,7 +79,8 @@ func (d *MainService) PostTreat(results utils.Results, tableName string, isWorfl
 }
 
 func (d *MainService) PostTreatRecord(index int, channel chan schserv.ViewItemModel, record utils.Record, tableName string, cols map[string]schserv.FieldModel, shallow bool, isWorkflow bool) {
-		vals := map[string]interface{}{}; shallowVals := map[string]interface{}{}; manyPathVals := map[string]string{}; manyVals := map[string]utils.Results{}
+		vals := map[string]interface{}{}; shallowVals := map[string]interface{}{}; manyPathVals := map[string]string{}; 
+		manyVals := map[string]utils.Results{}
 		datapath := ""; historyPath := ""
 		if !shallow { 
 			schema, err := schserv.GetSchema(tableName)
@@ -123,7 +121,7 @@ func (d *MainService) PostTreatRecord(index int, channel chan schserv.ViewItemMo
 				} else if field.Type == schserv.MANYTOMANY.String() && !d.LowerRes { // TODO DEBUG
 					lsch, _ := schserv.GetSchemaByID(field.Link)
 					for _, f := range lsch.Fields {
-						if strings.Contains(f.Name, tableName) && f.Name == "id" && f.Link <= 0 { continue }
+						if strings.Contains(f.Name, tableName) || f.Name == "id" || f.Link <= 0 { continue }
 						lid, _ := schserv.GetSchemaByID(f.Link)
 						sqlFilter := "SELECT id,name"
 						if lid.HasField("label") { sqlFilter += ",label" }

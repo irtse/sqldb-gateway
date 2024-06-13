@@ -35,6 +35,9 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 	SQLview := ""; SQLrestriction := ""; SQLOrder := ""; SQLLimit := ""
 	schema, err := schserv.GetSchema(tableName)
 	if err != nil { return SQLrestriction, SQLview, SQLOrder, SQLLimit }
+	for _, restr := range innerRestriction {
+		if len(SQLrestriction) > 0  && len(restr) > 0 { SQLrestriction = restr + " AND " + SQLrestriction } else { SQLrestriction = restr  }
+	}
 	restr, view, order, dir, state := d.GetFilter("", "", fmt.Sprintf("%v", schema.ID))
 	if restr != "" && !d.IsSuperCall() { innerRestriction = append(innerRestriction, restr) }
 	if view != "" && !d.IsSuperCall() { d.Params[utils.RootColumnsParam] = view }
@@ -44,9 +47,7 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 	SQLOrder = d.orderFromParams(tableName, SQLOrder)
 	SQLLimit = d.limitFromParams(SQLLimit)
 	SQLview = d.viewbyFields(tableName)
-	for _, restr := range innerRestriction {
-		if len(SQLrestriction) > 0  && len(restr) > 0 { SQLrestriction = restr + " AND " + SQLrestriction } else { SQLrestriction = restr  }
-	}
+	
 	if d.IsSuperCall() { return SQLrestriction, SQLview, SQLOrder, SQLLimit }
 	SQLrestriction = d.restrictionByEntityUser(tableName, SQLrestriction) // admin can see all on admin view
 	if s, ok := d.Params[utils.RootFilterNewState]; ok && s != "" { state = s }
