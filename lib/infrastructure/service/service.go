@@ -11,11 +11,11 @@ import (
 	Main Procedure of services at Infrastructure level.
 */
 type InfraSpecializedServiceItf interface {
-	ConfigureFilter(tableName string) (string, string, string, string)
+	ConfigureFilter(tableName string, innerestr... string) (string, string, string, string)
 	WriteRowAutomation(record map[string]interface{}, tableName string)
 	UpdateRowAutomation(results []map[string]interface{}, record map[string]interface{}) 
 	DeleteRowAutomation(results []map[string]interface{}, tableName string)
-	VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool)
+	VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool)
 }
 
 type InfraSpecializedService struct { }

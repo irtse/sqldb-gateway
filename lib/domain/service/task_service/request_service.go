@@ -3,6 +3,7 @@ package task_service
 import (
 	"fmt"
 	"time"
+	"errors"
 	utils "sqldb-ws/lib/domain/utils"
 	schserv "sqldb-ws/lib/domain/schema"
 	conn "sqldb-ws/lib/infrastructure/connector"
@@ -15,12 +16,13 @@ type RequestService struct {
 func (s *RequestService) PostTreatment(results utils.Results, tableName string, dest_id... string) utils.Results { 
 	return s.Domain.PostTreat(results, tableName, true) 
 }
-func (s *RequestService) ConfigureFilter(tableName string) (string, string, string, string) { 
+func (s *RequestService) ConfigureFilter(tableName string, innerestr... string) (string, string, string, string) { 
 	restr := ""
 	if s.Domain.IsSuperAdmin() { return s.Domain.ViewDefinition(tableName, restr) }
 	restr += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")"
 	restr += " OR " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT " + schserv.RootID(schserv.DBUser.Name) + " FROM " + schserv.DBHierarchy.Name + " WHERE parent_" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))"
-	return s.Domain.ViewDefinition(tableName, restr) 
+	innerestr = append(innerestr, restr)
+	return s.Domain.ViewDefinition(tableName, innerestr...) 
 }
 
 func (s *RequestService) GetHierarchical() (utils.Results, error) {
@@ -38,21 +40,18 @@ func (s *RequestService) GetHierarchical() (utils.Results, error) {
 
 func (s *RequestService) Entity() utils.SpecializedServiceInfo { return schserv.DBRequest }
 func (s *RequestService) DeleteRowAutomation(results []map[string]interface{}, tableName string) { }
-func (s *RequestService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) { 
+func (s *RequestService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) { 
 	if s.Domain.GetMethod() == utils.CREATE { 
 		// set up name
-		if _, ok := record[utils.RootDestTableIDParam]; !ok { return record, false, false }
+		if _, ok := record[utils.RootDestTableIDParam]; !ok { return record, errors.New("Missing related data"), false }
 		sqlFilter := "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser())
-		params := utils.Params{ utils.RootTableParam : schserv.DBUser.Name, utils.RootRowsParam : utils.ReservedParam, }
-		user, err := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT, sqlFilter)
-		if err != nil || len(user) == 0 { return record, false, true }
+		user, err := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBUser.Name + " WHERE " + sqlFilter)
+		if err != nil || len(user) == 0 { return record, errors.New("User not found"), true }
 		record[schserv.RootID(schserv.DBUser.Name)]=user[0][utils.SpecialIDParam] 
 		hierarchy, err := s.GetHierarchical()
 		if err != nil || len(hierarchy) > 0 { record["current_index"]=0 } else { record["current_index"]=1 }
-		params = utils.Params{ utils.RootTableParam : schserv.DBWorkflow.Name, 
-			utils.RootRowsParam : utils.GetString(record, schserv.RootID(schserv.DBWorkflow.Name)) }
-		wf, err := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT)
-		if err != nil || len(wf) == 0 { return record, false, false }
+		wf, err := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBWorkflow.Name + " WHERE id=" + fmt.Sprintf("%v", record[schserv.RootID(schserv.DBWorkflow.Name)]))
+		if err != nil || len(wf) == 0 { return record, errors.New("Workflow not found"), false }
 		record["name"]=wf[0][schserv.NAMEKEY]
 		record["created_date"] = time.Now().Format(time.RFC3339)
 		record[schserv.RootID(schserv.DBSchema.Name)]=wf[0][schserv.RootID(schserv.DBSchema.Name)]
@@ -60,14 +59,14 @@ func (s *RequestService) VerifyRowAutomation(record map[string]interface{}, tabl
 		if record["state"] == "completed" || record["state"] == "dismiss" { 
 			record["is_close"] = true 
 			record["closing_date"] = time.Now().Format(time.RFC3339)
-		}
+		} else if !s.Domain.IsSuperCall() { return record, errors.New("Can't set any state lower"), false }
 	}
 	if s.Domain.GetMethod() != utils.DELETE {
 		rec, err := s.Domain.ValidateBySchema(record, tablename)
-		if err != nil && !s.Domain.GetAutoload() { return rec, false, false } else { rec = record }
-		return rec, true, true
+		if err != nil && !s.Domain.GetAutoload() { return rec, err, false } else { rec = record }
+		return rec, nil, true
 	}
-	return record, true, true
+	return record, nil, true
 }
 func (s *RequestService) UpdateRowAutomation(results []map[string]interface{}, record map[string]interface{}) {
 	for _, rec := range results {

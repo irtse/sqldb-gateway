@@ -2,6 +2,7 @@ package schema_service
 
 import (
 	"fmt"
+	"errors"
 	"strings"
 	"strconv"
 	"math/rand"
@@ -11,13 +12,15 @@ import (
 
 type SchemaFields struct { utils.SpecializedService }
 func (s *SchemaFields) Entity() utils.SpecializedServiceInfo {return schserv.DBSchemaField }
-func (s *SchemaFields) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) {
+func (s *SchemaFields) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
 	if s.Domain.GetMethod() == utils.DELETE { 
 		i, err := strconv.Atoi(s.Domain.GetParams()[utils.RootRowsParam])
-		if err != nil { return record, false, false }
+		if err != nil { return record, err, false }
 		schema, err := schserv.GetSchemaByFieldID(int64(i))
-		if err != nil { return record, false, false }
-		return record, !schserv.IsRootDB(schema.Name), false 
+		if err != nil { return record, err, false }
+		err = nil
+		if !schserv.IsRootDB(schema.Name) { err = errors.New("Cannot delete root schema field") }
+		return record, err, false 
 	}
 	if typ, ok := record[schserv.TYPEKEY]; ok && strings.Contains(fmt.Sprintf("%v", typ), "enum") {
 		typ2 := strings.Replace(fmt.Sprintf("%v", typ), " ", "", -1)
@@ -31,8 +34,8 @@ func (s *SchemaFields) VerifyRowAutomation(record map[string]interface{}, tablen
 		record[schserv.LABELKEY] = strings.Replace(fmt.Sprintf("%v", record[schserv.NAMEKEY]), "_", " ", -1)
 	}
 	rec, err := s.Domain.ValidateBySchema(record, tablename)
-	if err != nil && !s.Domain.GetAutoload() { return rec, false, false } else { rec = record } 
-	return rec, true, true
+	if err != nil && !s.Domain.GetAutoload() { return rec, err, false } else { rec = record } 
+	return rec, nil, true
 }
 func (s *SchemaFields) WriteRowAutomation(record map[string]interface{}, tableName string) { 
 	schema, err := schserv.GetSchemaByID(record[schserv.RootID(schserv.DBSchema.Name)].(int64))

@@ -30,11 +30,11 @@ type CustomService struct {
 	infrastructure.InfraSpecializedService
 }
 func (s *CustomService) Entity() utils.SpecializedServiceInfo { return nil }
-func (s *CustomService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) { 
+func (s *CustomService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) { 
 	if s.Domain.GetMethod() != utils.DELETE {
 		rec, err := s.Domain.ValidateBySchema(record, tablename)
-		if err != nil && !s.Domain.GetAutoload() { return rec, false, false } else { rec = record }
-		return rec, true, false 
+		if err != nil && !s.Domain.GetAutoload() { return rec, err, false } else { rec = record }
+		return rec, nil, false 
 	}
-	return record, true, true
+	return record, nil, true
 }

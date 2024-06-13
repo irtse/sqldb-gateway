@@ -3,6 +3,7 @@ package schema_service
 import (
 	"fmt"
 	"slices"
+	"errors"
 	"sqldb-ws/lib/domain/utils"
 	schserv "sqldb-ws/lib/domain/schema"
 )
@@ -10,16 +11,17 @@ import (
 type SchemaService struct { utils.SpecializedService }
 // ADD IN THE FUTURE IN CACHE
 func (s *SchemaService) Entity() utils.SpecializedServiceInfo { return schserv.DBSchema }
-func (s *SchemaService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) { 
+func (s *SchemaService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) { 
 	if s.Domain.GetMethod() == utils.DELETE { 
 		tableName := schserv.GetTablename(s.Domain.GetParams()[utils.RootRowsParam])
-		if tableName == "" { return record, false, false }
+		if tableName == "" { return record, errors.New("no data name given..."), false }
 		schema, err := schserv.GetSchema(tableName)
-		return record, err == nil && !schserv.IsRootDB(schema.Name), false 
+		if !schserv.IsRootDB(schema.Name) { err = errors.New("Cannot delete root schema field") }
+		return record, err, false 
 	}
 	rec, err := s.Domain.ValidateBySchema(record, tablename)
-	if err != nil && !s.Domain.GetAutoload() { return rec, false, false } else { rec = record }
-	return rec, true, false 
+	if err != nil && !s.Domain.GetAutoload() { return rec, err, false } else { rec = record }
+	return rec, nil, false 
 }
 func (s *SchemaService) DeleteRowAutomation(results []map[string]interface{}, tableName string) { 
 	s.Domain.SetIsCustom(true)
@@ -44,7 +46,7 @@ func (s *SchemaService) WriteRowAutomation(record map[string]interface{}, tableN
 	name := schema.Label
 	if schema.Name != schserv.DBDataAccess.Name {
 		if !slices.Contains([]string{ schserv.DBView.Name, schserv.DBRequest.Name, schserv.DBTask.Name,  schserv.DBFilter.Name, schserv.DBFilterField.Name, schserv.DBViewAttribution.Name, schserv.DBNotification.Name }, schema.Name) {
-			count, err := s.Domain.SuperCall(utils.AllParams(schserv.DBView.Name), utils.Record{}, utils.COUNT)
+			count, err := s.Domain.GetDb().QueryAssociativeArray("SELECT COUNT(*) as count FROM " + schserv.DBView.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
 			index := 2
 			if err == nil && len(count) > 0  && (int(count[0]["count"].(float64)) + 1) > 1 { index = int(count[0]["count"].(float64)) + 1 }
 			cat := "global data"

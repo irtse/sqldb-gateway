@@ -10,7 +10,8 @@ const RootRowsParam = "rows"
 const RootColumnsParam = "columns" 
 const RootOrderParam = "orderby" 
 const RootDirParam = "dir"
-const RootFilterLine = "filter_line"
+const RootFilterNewState = "filter_new" // all - new - old	
+const RootFilterLine = "filter_line" // + == "and" | == "or" ~ == "like" : == "=" > == ">" < == "<"
 const RootFilter = "filter"
 const RootViewFilter = "view_filter"
 const RootRawView = "rawview"
@@ -35,7 +36,7 @@ var RootParamsDesc = map[string]string{
 	RootViewFilter : "set view filter identifier to activate a specific view filter in db",
 }
 var HiddenParams = []string{RootDestTableIDParam}
-var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset, RootShallow, RootRawView, RootExport, RootFilename, RootFilterLine, RootFilter, RootViewFilter, RootSuperCall, SpecialIDParam}
+var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset, RootShallow, RootRawView, RootExport, RootFilename, RootFilterNewState, RootFilterLine, RootFilter, RootViewFilter, RootSuperCall, SpecialIDParam}
 
 const SpecialIDParam = "id" 
 const SpecialSubIDParam = "subid" 

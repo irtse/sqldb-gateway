@@ -48,9 +48,7 @@ func (s *FilterService) PostTreatment(results utils.Results, tableName string, d
 		rec["is_selected"] = selected[rec.GetString(utils.SpecialIDParam)]
 		schema, err := schserv.GetSchemaByID(rec.GetInt("schema_id"))
 		if err != nil { rr = append(rr, rec) }
-		p := utils.AllParams(schserv.DBFilterField.Name)
-		p[schserv.RootID(schserv.DBFilter.Name)] = fmt.Sprintf("%v", rec[utils.SpecialIDParam])
-		fields, err := s.Domain.SuperCall(p, utils.Record{}, utils.SELECT)
+		fields, err := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBFilterField.Name + " WHERE " + schserv.RootID(schserv.DBFilter.Name) + "=" + fmt.Sprintf("%v", rec[utils.SpecialIDParam]))
 		if err != nil || len(fields) == 0 { rr = append(rr, rec); continue }
 		fieldsID := []schserv.FilterModel{}
 		sort.SliceStable(fields, func(i, j int) bool{ return fields[i]["index"].(float64) <= fields[j]["index"].(float64) })
@@ -69,26 +67,29 @@ func (s *FilterService) PostTreatment(results utils.Results, tableName string, d
 				Type: ff.Type, Value: fmt.Sprintf("%v", field["value"]), Separator: fmt.Sprintf("%v", field["separator"]),  Operator: fmt.Sprintf("%v", field["operator"]), Dir: fmt.Sprintf("%v", field["dir"])}
 			fieldsID = append(fieldsID, model) 
 		}
+		if rec["elder"] == nil { 
+			fils, err := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBFilter.Name + " WHERE id=" + fmt.Sprintf("%v", rec[utils.SpecialIDParam]))
+			if err == nil && len(fils) > 0 { rec["elder"] = fils[0]["elder"] } else { rec["elder"] = "all" }
+		}
 		rec["filter_fields"] = fieldsID
 		rr = append(rr, rec)
 	}
 	return rr
 }
-func (s *FilterService) ConfigureFilter(tableName string) (string, string, string, string) { return s.Domain.ViewDefinition(tableName) }
-func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) {
+func (s *FilterService) ConfigureFilter(tableName string, innerestr... string) (string, string, string, string) { 
+	return s.Domain.ViewDefinition(tableName, innerestr...) 
+}
+func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
 	s.UpdateFields = false
 	if s.Domain.GetMethod() != utils.DELETE {
 		if _, ok := record["link"]; ok { 
 			schema, err := schserv.GetSchema(fmt.Sprintf("%v", record["link"]))
 			delete(record, "link")
-			if err != nil { return record, false, false }
+			if err != nil { return record, err, false }
 			record[schserv.RootID(schserv.DBSchema.Name)] = schema.ID
 		}
 		if n, ok := record["name"]; ok { 
-			p := utils.AllParams(schserv.DBFilter.Name)
-			p[schserv.RootID(schserv.DBSchema.Name)] = fmt.Sprintf("%v", record[schserv.RootID(schserv.DBSchema.Name)])
-			p["name"] = fmt.Sprintf("%v", n)
-			t, err := s.Domain.SuperCall(p, utils.Record{}, utils.SELECT)
+			t, err := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBFilter.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", record[schserv.RootID(schserv.DBSchema.Name)]) + " AND name='" + fmt.Sprintf("%v", n) + "'")
 			if err == nil && len(t) > 0 { record[utils.SpecialIDParam] = t[0][utils.SpecialIDParam] }
 		} 
 		if fields, ok := record["view_fields"]; ok {
@@ -101,7 +102,6 @@ func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, table
 			s.Fields = []map[string]interface{}{}
 			for _, field := range fields.([]interface{}) { s.Fields = append(s.Fields, field.(map[string]interface{})) }
 		}
-		fmt.Printf("fields: %v %v\n", s.Fields, s.UpdateFields)
 		if s.Domain.GetMethod() == utils.UPDATE && s.UpdateFields {
 			p := utils.AllParams(schserv.DBFilterField.Name)
 			p[schserv.RootID(schserv.DBFilter.Name)] = fmt.Sprintf("%v", record[utils.SpecialIDParam])
@@ -116,18 +116,18 @@ func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, table
 			}
 			if _, ok := record[schserv.DBEntity.Name]; !ok && record[schserv.RootID(schserv.DBSchema.Name)] != nil {
 				schema, _ := schserv.GetSchemaByID(record[schserv.RootID(schserv.DBSchema.Name)].(int64))
-				users, err := s.Domain.SuperCall(utils.AllParams(schserv.DBUser.Name), utils.Record{}, utils.SELECT, "name='"+ s.Domain.GetUser() + "' OR email='" + s.Domain.GetUser() + "'")
+				users, err := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBUser.Name + " WHERE name='" + s.Domain.GetUser() + "' OR email='" + s.Domain.GetUser() + "'")
 				if err == nil && len(users) > 0 { 
 					record[schserv.RootID(schserv.DBUser.Name)]=users[0][utils.SpecialIDParam]
 					record[schserv.RootID(schserv.DBUser.Name)]=users[0][utils.SpecialIDParam]
-					res, err := s.Domain.SuperCall(utils.AllParams(schserv.DBFilter.Name), utils.Record{}, utils.SELECT, schserv.RootID(schserv.DBUser.Name) + "=" + users[0].GetString(utils.SpecialIDParam) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
+					res, err := s.Domain.SuperCall(utils.AllParams(schserv.DBFilter.Name), utils.Record{}, utils.SELECT, schserv.RootID(schserv.DBUser.Name) + "=" + utils.GetString(users[0], utils.SpecialIDParam) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
 					count := 0
 					if err == nil { count = len(res) }
 					if !strings.Contains(name, "filter n°") { name += "filter n°" + fmt.Sprintf("%v", count + 1) }
 				}
 			} else if record[schserv.RootID(schserv.DBSchema.Name)] != nil {
 				schema, _ := schserv.GetSchemaByID(record[schserv.RootID(schserv.DBSchema.Name)].(int64))
-				res, err := s.Domain.SuperCall(utils.AllParams(schserv.DBFilter.Name), utils.Record{}, utils.SELECT, schserv.RootID(schserv.DBEntity.Name) + "=" + fmt.Sprintf("%v", record[schserv.RootID(schserv.DBEntity.Name)]) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
+				res, err := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBFilter.Name + " WHERE " + schserv.RootID(schserv.DBEntity.Name) + "=" + fmt.Sprintf("%v", record[schserv.RootID(schserv.DBEntity.Name)]) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
 				count := 0
 				if err == nil { count = len(res) }
 				if !strings.Contains(name, "filter n°") { name += "filter n°" + fmt.Sprintf("%v", count + 1) }
@@ -143,5 +143,5 @@ func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, table
 		s.Domain.GetDb().QueryAssociativeArray("UPDATE " + schserv.DBFilter.Name + " SET is_selected=false WHERE " + schserv.RootID(schserv.DBFilter.Name) + "=" + fmt.Sprintf("%v", record[schserv.RootID(schserv.DBFilter.Name)]))
 	}
 	delete(record, "filter_fields")
-	return record, true, true
+	return record, nil, true
 }

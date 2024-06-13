@@ -72,7 +72,7 @@ func (d *MainService) SuperCall(params utils.Params, record utils.Record, method
 	params[utils.RootRawView]="enable"; params[utils.RootSuperCall]="enable"
 	d2 := Domain(true, d.User, d.isGenericService)
 	d2.ExternalSuperAdmin = d.ExternalSuperAdmin
-	return d2.call(params, record, method, args...)
+	return d2.call(params, record, method, args...) // how to...
 }
 func (d *MainService) PermsSuperCall(params utils.Params, record utils.Record, method utils.Method, args... interface{}) (utils.Results, error) {
 	params[utils.RootRawView]="enable"
@@ -128,7 +128,7 @@ func (d *MainService) call(params utils.Params, record utils.Record, method util
 			d.Params = params
 			utils.ParamsMutex.Unlock()
 			res, err := d.invoke(method.Calling(), args...)
-			if err == nil && specializedService != nil && params[utils.RootRawView] != "enable" && !d.Super && !slices.Contains(EXCEPTION_FUNC, method.Calling()) {
+			if err == nil && specializedService != nil && params[utils.RootRawView] != "enable" && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, method.Calling()) {
 				if dest_id, ok := params[utils.RootDestTableIDParam]; ok {
 					return specializedService.PostTreatment(res, tablename, dest_id), nil
 				}

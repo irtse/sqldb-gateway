@@ -20,12 +20,14 @@ func (s *WorkflowService) PostTreatment(results utils.Results, tableName string,
 	}
 	return s.Domain.PostTreat(res, tableName, true) 
 }
-func (s *WorkflowService) ConfigureFilter(tableName string) (string, string, string, string) { return s.Domain.ViewDefinition(tableName) }
-func (s *WorkflowService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) { 
+func (s *WorkflowService) ConfigureFilter(tableName string, innerestr... string) (string, string, string, string) { 
+	return s.Domain.ViewDefinition(tableName, innerestr...) 
+}
+func (s *WorkflowService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) { 
 	if s.Domain.GetMethod() != utils.DELETE {
 		rec, err := s.Domain.ValidateBySchema(record, tablename)
-		if err != nil && !s.Domain.GetAutoload() { return rec, false, false } else { rec = record }
-		return rec, true, false 
+		if err != nil && !s.Domain.GetAutoload() { return rec, err, false } else { rec = record }
+		return rec, nil, false 
 	}
-	return record, true, true
+	return record, nil, true
 }

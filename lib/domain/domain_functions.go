@@ -9,29 +9,40 @@ import (
 	"sqldb-ws/lib/domain/utils"
 	schserv "sqldb-ws/lib/domain/schema"
 )
+
+
 // DONT FORGET DATA ACCESS
 func (d *MainService) CountNewDataAccess(tableName string, filter string, countParams utils.Params) ([]string, int64) {
 	sqlFilter := "id NOT IN (SELECT " + schserv.RootID("dest_table") + " FROM " + schserv.DBDataAccess.Name + " WHERE "
 	sqlFilter += schserv.RootID(schserv.DBSchema.Name) + " IN (SELECT id FROM " + schserv.DBSchema.Name + " WHERE name = '" + tableName + "') AND " 
 	sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name = '" + d.GetUser() + "' OR email='" + d.GetUser() + "') AND write=false AND update=false)"
-	if len(filter) > 0 { sqlFilter += " AND " + filter }
+	if len(filter) > 0 { sqlFilter = filter + " AND " + sqlFilter }
 	p := utils.Params{ utils.RootTableParam : tableName, utils.RootRowsParam : utils.ReservedParam, utils.RootColumnsParam : utils.SpecialIDParam }
-	res, err := d.SpecialSuperCall( p, utils.Record{}, utils.SELECT, sqlFilter)
+	for k, v := range countParams { 
+		if k == utils.RootRowsParam || k == utils.RootRowsParam || k == utils.RootColumnsParam { continue }
+		p[k] = v 
+	}
+	res, err := d.Db.QueryAssociativeArray("SELECT * FROM " + tableName + " WHERE " + sqlFilter)
 	ids := []string{}
 	if err != nil { return ids, 0 }
 	for _, rec := range res { 
-		if !slices.Contains(ids, rec.GetString(utils.SpecialIDParam)) { ids = append(ids, rec.GetString(utils.SpecialIDParam)) }
+		if !slices.Contains(ids, utils.GetString(rec, utils.SpecialIDParam)) { ids = append(ids, utils.GetString(rec, utils.SpecialIDParam)) }
 	}
-	res, err = d.SpecialSuperCall( utils.AllParams(tableName), utils.Record{}, utils.COUNT)
+	p = utils.AllParams(tableName)
+	for k, v := range countParams { 
+		if k == utils.RootRowsParam || k == utils.RootRowsParam { continue }
+		p[k] = v 
+	}
+	res, err = d.Db.QueryAssociativeArray("SELECT COUNT(*) as count FROM " + tableName + " WHERE " + sqlFilter)
 	if len(res) == 0 || err != nil || res[0]["count"] == nil { return ids, 0 }
-	return ids, int64(res[0]["count"].(float64))
+	return ids, int64(res[0]["count"].(int64))
 }
 
 func (d *MainService) NewDataAccess(schemaID int64, destIDs []string, meth utils.Method) {
-	users, err := d.SuperCall(utils.AllParams(schserv.DBUser.Name), utils.Record{}, utils.SELECT, "name='"+ d.GetUser() + "' OR email='" + d.GetUser() + "'")
+	users, err := d.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBUser.Name + " WHERE name='" + d.GetUser() + "' OR email='" + d.GetUser() + "'")
 	if err == nil && len(users) > 0 {
 		for _, destID := range destIDs {
-			id := users[0].GetString(utils.SpecialIDParam)
+			id := utils.GetString(users[0], utils.SpecialIDParam)
 			if meth == utils.DELETE {
 				d.SuperCall( utils.Params{ utils.RootTableParam : schserv.DBDataAccess.Name, utils.RootRowsParam : utils.ReservedParam,
 							schserv.RootID("dest_table") : destID,
@@ -53,10 +64,9 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 	tableName = schserv.GetTablename(tableName)
 	cols := map[string]schserv.FieldModel{}; schemes := map[string]interface{}{}
 	keysOrdered := []string{}; additionnalAction := []string{}
-	readonly := true
 	schema, err := schserv.GetSchema(tableName)
 	if err != nil { return schemes, -1, keysOrdered, cols, additionnalAction, true }
-	_, view, _, _ := d.GetFilter("", "", fmt.Sprintf("%v", schema.ID))
+	_, view, _, _, _ := d.GetFilter("", "", fmt.Sprintf("%v", schema.ID))
 	for _, scheme := range schema.Fields {
 		if (!d.SuperAdmin && !d.PermsCheck(tableName, scheme.Name, scheme.Level, utils.SELECT)) { continue }
 		var shallowField schserv.ViewFieldModel
@@ -79,7 +89,7 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 			}
 		}
 		for _, meth := range []utils.Method{ utils.SELECT, utils.CREATE, utils.UPDATE, utils.DELETE } {
-			if d.PermsCheck(tableName, "", "", meth) && (((meth == utils.SELECT || meth == utils.CREATE) && d.Empty) || !d.Empty){ 
+			if d.PermsCheck(tableName, "", "", meth) && (((meth == utils.SELECT || meth == utils.CREATE) && d.Empty) || !d.Empty) { 
 				if !slices.Contains(additionnalAction, meth.Method()) { additionnalAction = append(additionnalAction, meth.Method()) }
 				if meth == utils.CREATE && !slices.Contains(additionnalAction, "import") {
 					res, err := d.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBWorkflow.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
@@ -101,9 +111,7 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 					shallowField.Actions=append(shallowField.Actions, meth.Method())
 				} 
 			}
-			if meth == utils.UPDATE && d.Empty { 
-				readonly = false
-				shallowField.Readonly = false 
+			if meth == utils.UPDATE && d.Empty { shallowField.Readonly = false 
 			} else if meth == utils.CREATE && d.Empty { shallowField.Readonly = true } 
 		} 
 		if !(view != "" && !strings.Contains(view, scheme.Name)) { keysOrdered = append(keysOrdered, scheme.Name) }
@@ -112,7 +120,7 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 	sort.SliceStable(keysOrdered, func(i, j int) bool{
         return schemes[keysOrdered[i]].(schserv.ViewFieldModel).Index <= schemes[keysOrdered[j]].(schserv.ViewFieldModel).Index
     })
-	return schemes, schema.ID, keysOrdered, cols, additionnalAction, readonly
+	return schemes, schema.ID, keysOrdered, cols, additionnalAction, !slices.Contains(additionnalAction, "post") && !slices.Contains(additionnalAction, "put")
 }
 
 func (d *MainService) BuildPath(tableName string, rows string, extra... string) string {

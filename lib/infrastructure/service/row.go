@@ -55,8 +55,8 @@ func (t *TableRowInfo) Create() ([]map[string]interface{}, error) {
 	result := []map[string]interface{}{}
 	columns := ""; values := ""
 	if t.SpecializedService != nil {
-		r, ok, forceChange := t.SpecializedService.VerifyRowAutomation(t.Record, t.Name)
-		if !ok { return nil, errors.New("verification failed.") }
+		r, err, forceChange := t.SpecializedService.VerifyRowAutomation(t.Record, t.Name)
+		if err != nil { return nil, err }
 		if forceChange { t.Record = r }
 	}
 	for key, element := range t.Record {
@@ -137,21 +137,13 @@ func (t *TableRowInfo) Delete(restriction... string) ([]map[string]interface{}, 
 
 func (t *TableRowInfo) setupFilter(reverse bool, verify bool, restriction... string) error {
 	if t.SpecializedService != nil && verify {
-		r, ok, forceChange := t.SpecializedService.VerifyRowAutomation(t.Record, t.Name)
-		if !ok { return errors.New("verification failed.") }
+		r, err, forceChange := t.SpecializedService.VerifyRowAutomation(t.Record, t.Name)
+		if err != nil { return err }
 		if forceChange { t.Record = r }
 	}
 	t.db.ClearFilter()
-	if len(restriction) > 0 && reverse { 
-		for _, r := range restriction { 
-			if strings.TrimSpace(r) == "" { continue }
-			if len(r) > 5 && r[:5] == " AND " { r = r[5:] }
-			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + r
-			} else { t.db.SQLRestriction = r }
-		}
-	}
 	if t.SpecializedService != nil {
-		restr, view, order, limit := t.SpecializedService.ConfigureFilter(t.Table.Name)
+		restr, view, order, limit := t.SpecializedService.ConfigureFilter(t.Table.Name, restriction...)
 		if restr != "" { 
 			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + restr
 			} else { t.db.SQLRestriction = restr }
@@ -160,14 +152,8 @@ func (t *TableRowInfo) setupFilter(reverse bool, verify bool, restriction... str
 		if order != "" { t.db.SQLOrder = order }
 		if limit != "" { t.db.SQLLimit = limit }
 	}
-	if len(restriction) > 0 && !reverse { 
-		for _, r := range restriction { 
-			if strings.TrimSpace(r) == "" { continue }
-			if len(r) > 5 && r[:5] == " AND " { r = r[5:] }
-			if len(t.db.SQLRestriction) > 0 { t.db.SQLRestriction += " AND " + r 
-			} else { t.db.SQLRestriction = r }
-		}
+	if len(t.db.SQLRestriction) > 5 && t.db.SQLRestriction[len(t.db.SQLRestriction)-5:] == " AND " { 
+		t.db.SQLRestriction = t.db.SQLRestriction[:len(t.db.SQLRestriction)-5] 
 	}
-	if len(t.db.SQLRestriction) > 5 && t.db.SQLRestriction[:5] == " AND " { t.db.SQLRestriction = t.db.SQLRestriction[5:] }
 	return nil
 }

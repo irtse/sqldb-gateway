@@ -6,17 +6,37 @@ import (
 	"slices"
 	"strings"
 	"strconv"
+	"net/url"
 	"sqldb-ws/lib/domain/utils"
 	schserv "sqldb-ws/lib/domain/schema"
 	conn "sqldb-ws/lib/infrastructure/connector"
 )
+func (d *MainService) LifeCycleRestriction(tableName string, restr string, state string) string {
+	if state == "all" || tableName == schserv.DBView.Name { return restr }
+	operator := ""
+	news, _ := d.CountNewDataAccess(tableName, restr, utils.Params{})
+	if state == "new" { 
+		operator = "IN" 
+		if len(news) == 0 { news = append(news, "NULL")}
+	}
+	if state == "old" { 
+		if len(news) == 0 { return restr }
+		operator = "NOT IN" 
+	}
+	if operator != "" { 
+		t := "id " + operator + " (" + strings.Join(news, ",") + ")" 
+		if len(restr) > 0 { t += " AND " }
+		restr = t + restr
+	}
+	return restr
+}
 // define filter whatever what happen on sql...
 func (d *MainService) ViewDefinition(tableName string, innerRestriction... string) (string, string, string, string) {
 	SQLview := ""; SQLrestriction := ""; SQLOrder := ""; SQLLimit := ""
 	schema, err := schserv.GetSchema(tableName)
 	if err != nil { return SQLrestriction, SQLview, SQLOrder, SQLLimit }
-	restr, view, order, dir := d.GetFilter("", "", fmt.Sprintf("%v", schema.ID))
-	if restr != "" { innerRestriction = append(innerRestriction, restr) }
+	restr, view, order, dir, state := d.GetFilter("", "", fmt.Sprintf("%v", schema.ID))
+	if restr != "" && !d.IsSuperCall() { innerRestriction = append(innerRestriction, restr) }
 	if view != "" && !d.IsSuperCall() { d.Params[utils.RootColumnsParam] = view }
 	if order != "" { d.Params[utils.RootOrderParam] = order }
 	if dir != "" { d.Params[utils.RootDirParam] = dir }
@@ -25,11 +45,12 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 	SQLLimit = d.limitFromParams(SQLLimit)
 	SQLview = d.viewbyFields(tableName)
 	for _, restr := range innerRestriction {
-		if len(strings.TrimSpace(restr)) == 0 { continue }
-		if len(SQLrestriction) > 0 { SQLrestriction += " AND (" + restr + ")" } else { SQLrestriction = restr  }
+		if len(SQLrestriction) > 0  && len(restr) > 0 { SQLrestriction = restr + " AND " + SQLrestriction } else { SQLrestriction = restr  }
 	}
 	if d.IsSuperCall() { return SQLrestriction, SQLview, SQLOrder, SQLLimit }
 	SQLrestriction = d.restrictionByEntityUser(tableName, SQLrestriction) // admin can see all on admin view
+	if s, ok := d.Params[utils.RootFilterNewState]; ok && s != "" { state = s }
+	if state != "" { SQLrestriction = d.LifeCycleRestriction(tableName, SQLrestriction, state) }
 	return SQLrestriction, SQLview, SQLOrder, SQLLimit
 }
 func (d *MainService) restrictionBySchema(tableName string, restr string) (string) {
@@ -45,29 +66,30 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 	isSchema := false
 	alterRestr := ""
 	if line, ok := d.Params[utils.RootFilterLine]; ok && tableName != schserv.DBView.Name {
-		ands := strings.Split(line, "+")
-		// todo order depending on the field index
-		for _, and := range ands {
-			if len(strings.Trim(alterRestr, " ")) > 0 { alterRestr +=  " AND " }
-			and = strings.ReplaceAll(and, "%7C", "%7c")
-			ors := strings.Split(and, "%7c")
-			if len(ors) == 0 { continue }
-			orRestr := ""
-			for _, or := range ors {
-				operator := "~"
-				or = strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(or, "%3A", "%3a"), "%3E", "%3e"), "%3C", "%3c")
-				keyVal := []string{} 
-				if strings.Contains(or, "~") { keyVal = strings.Split(or, "~"); operator = " LIKE " 
-				} else if strings.Contains(or, "%3a") { keyVal = strings.Split(or, "%3a"); operator = "=" 
-				} else if strings.Contains(or, "%3c") { keyVal = strings.Split(or, "%3c"); operator = "<"  
-				} else if strings.Contains(or, "%3e") { keyVal = strings.Split(or, "%3e"); operator = ">"  }
-				if len(keyVal) != 2 { continue }
-				field, err := schema.GetField(keyVal[0])
-				if (err != nil && keyVal[0] != utils.SpecialIDParam) { continue  }
-				if len(strings.Trim(orRestr, " ")) > 0 { orRestr +=  " OR " }
-				orRestr = d.sqlItem(orRestr, field, keyVal[0], keyVal[1], operator)
+		decodedLine, err := url.QueryUnescape(fmt.Sprint(line))
+		if err == nil {
+			ands := strings.Split(decodedLine, "+")
+			// todo order depending on the field index
+			for _, and := range ands {
+				if len(strings.Trim(alterRestr, " ")) > 0 { alterRestr +=  " AND " }
+				ors := strings.Split(and, "|")
+				if len(ors) == 0 { continue }
+				orRestr := ""
+				for _, or := range ors {
+					operator := "~"
+					keyVal := []string{} 
+					if strings.Contains(or, "~") { keyVal = strings.Split(or, "~"); operator = " LIKE " 
+					} else if strings.Contains(or, ":") { keyVal = strings.Split(or, ":"); operator = "=" 
+					} else if strings.Contains(or, "<") { keyVal = strings.Split(or, "<"); operator = "<"  
+					} else if strings.Contains(or, ">") { keyVal = strings.Split(or, ">"); operator = ">"  }
+					if len(keyVal) != 2 { continue }
+					field, err := schema.GetField(keyVal[0])
+					if (err != nil && keyVal[0] != utils.SpecialIDParam) { continue  }
+					if len(strings.Trim(orRestr, " ")) > 0 { orRestr +=  " OR " }
+					orRestr = d.sqlItem(orRestr, field, keyVal[0], keyVal[1], operator)
+				}
+				if len(orRestr) > 0 { alterRestr += "( " + orRestr + " )" }
 			}
-			if len(orRestr) > 0 { alterRestr += "( " + orRestr + " )" }
 		}
 	}
 	alterRestr = strings.ReplaceAll(strings.ReplaceAll(alterRestr, " OR ()", ""), " AND ()", "")
@@ -151,7 +173,6 @@ func (s *MainService) restrictionByEntityUser(tableName string, restr string) st
 	if err != nil { return restr }
 	userID := schserv.RootID(schserv.DBUser.Name); entityID := schserv.RootID(schserv.DBEntity.Name)
 	if (schema.HasField(userID) || schema.HasField(entityID)) {
-		fmt.Println(tableName, s.IsOwnPermission(tableName, false, s.Method))
 		if !s.IsOwnPermission(tableName, false, s.Method) && !s.IsOwn() { return restr }
 	} else if s.IsOwn() {
 		quer := "SELECT * FROM " + schserv.DBRequest.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID) + " AND " 
@@ -206,56 +227,67 @@ func (d *MainService) viewbyFields(tableName string) (string) {
 	if len(SQLview) > 0 { SQLview = SQLview[:len(SQLview) - 1] }
 	return SQLview
 }
-func (s *MainService) GetFilter(filterID string, viewfilterID string, schemaID string) (string, string, string, string) {
+func (s *MainService) GetFilter(filterID string, viewfilterID string, schemaID string) (string, string, string, string, string) {
 	viewFilter := ""; filter := ""; order := ""; dir := ""
 	params := utils.AllParams(schserv.DBFilter.Name)
 	params[schserv.RootID(schserv.DBSchema.Name)] = schemaID
 	utils.ParamsMutex.Lock()
 	if s.GetParams()[utils.RootFilter] != "" { 
 		params[schserv.RootID(schserv.DBFilter.Name)] = s.GetParams()[utils.RootFilter]
-		fields, err := s.PermsSuperCall(params, utils.Record{}, utils.SELECT)
+		fields, err := s.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBFilterField.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + schemaID + " AND " + schserv.RootID(schserv.DBFilter.Name) + "=" + s.GetParams()[utils.RootFilter])
 		if len(fields) > 0 && err == nil { filterID = s.GetParams()[utils.RootFilter] }
 	}
 	if s.GetParams()[utils.RootViewFilter] != "" { 
 		params[schserv.RootID(schserv.DBFilter.Name)] = s.GetParams()[utils.RootViewFilter]
 		params["is_view"] = "true"
-		fields, err := s.PermsSuperCall(params, utils.Record{}, utils.SELECT)
+		fields, err := s.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBFilterField.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + schemaID + " AND " + schserv.RootID(schserv.DBFilter.Name) + "=" + s.GetParams()[utils.RootViewFilter] + " AND is_view=true")
 		if len(fields) > 0 && err == nil { viewfilterID = s.GetParams()[utils.RootViewFilter] }
 	}
 	utils.ParamsMutex.Unlock()
 	sqlFilter := "SELECT * FROM " + schserv.DBFilterField.Name + " WHERE " // TODO VIEW FILTER FOR MAIN PURPOSE...
 	if schemaID != "" { sqlFilter += schserv.RootID(schserv.DBSchemaField.Name) + " IN (SELECT id FROM " + schserv.DBSchemaField.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + " = " + schemaID + " ) AND " }
-	if viewfilterID == "" { sqlFilter += schserv.RootID(schserv.DBFilter.Name) + " IN (SELECT id FROM " + schserv.DBFilter.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IS NULL AND " + schserv.RootID(schserv.DBEntity.Name) + " IS NULL)" 
-	} else { sqlFilter += schserv.RootID(schserv.DBFilter.Name) + "=" + viewfilterID } 
-	fields, err := s.Db.QueryAssociativeArray(sqlFilter)
-	if err == nil && len(fields) > 0 {
-		sort.SliceStable(fields, func(i, j int) bool{ return fields[i]["index"].(int64) <= fields[j]["index"].(int64) })
-		for _, field := range fields {
-			f, err := schserv.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
-			if err != nil || strings.Contains(viewFilter, f.Name) || (len(s.Params[utils.RootColumnsParam]) > 0 && !strings.Contains(s.Params[utils.RootColumnsParam], f.Name)) { continue }
-			viewFilter += f.Name + ","
-			if field["dir"] != nil { dir += strings.ToUpper(fmt.Sprintf("%v", field["dir"])) + ","; order += f.Name + ","
-			} else { dir += "ASC,"; order += f.Name + "," }
+	if viewfilterID != "" { 
+		sqlFilter += schserv.RootID(schserv.DBFilter.Name) + "=" + viewfilterID 
+		fields, err := s.Db.QueryAssociativeArray(sqlFilter)
+		if err == nil && len(fields) > 0 {
+			sort.SliceStable(fields, func(i, j int) bool{ return fields[i]["index"].(int64) <= fields[j]["index"].(int64) })
+			for _, field := range fields {
+				f, err := schserv.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
+				if err != nil || strings.Contains(viewFilter, f.Name) || (len(s.Params[utils.RootColumnsParam]) > 0 && !strings.Contains(s.Params[utils.RootColumnsParam], f.Name)) { continue }
+				viewFilter += f.Name + ","
+				if field["dir"] != nil { dir += strings.ToUpper(fmt.Sprintf("%v", field["dir"])) + ","; order += f.Name + ","
+				} else { dir += "ASC,"; order += f.Name + "," }
+			}
+			if len(viewFilter) > 0 { viewFilter = viewFilter[:len(viewFilter)-1] }
+			if len(order) > 0 { order = order[:len(order)-1] }
+			if len(dir) > 0 { dir = dir[:len(dir)-1] }
 		}
-		if len(viewFilter) > 0 { viewFilter = viewFilter[:len(viewFilter)-1] }
-		if len(order) > 0 { order = order[:len(order)-1] }
-		if len(dir) > 0 { dir = dir[:len(dir)-1] }
 	}
 	sqlFilter = "SELECT * FROM " + schserv.DBFilterField.Name + " WHERE " // TODO VIEW FILTER FOR MAIN PURPOSE...
-	if schemaID != "" { sqlFilter += schserv.RootID(schserv.DBSchemaField.Name) + " IN  (SELECT id FROM " + schserv.DBSchemaField.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + " = " + schemaID + " ) AND " }
-	if filterID == "" { sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IS NULL AND " + schserv.RootID(schserv.DBEntity.Name) + " IS NULL" 
-	} else { sqlFilter += schserv.RootID(schserv.DBFilter.Name) + "=" + filterID } 
-	fields, err = s.Db.QueryAssociativeArray(sqlFilter)
-	if err == nil && len(fields) > 0 {
-		for _, field := range fields {
-			f, err := schserv.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
-			if err != nil || field["operator"] == nil || field["separator"] == nil { continue }
-			if len(filter) > 0 { filter += " " + fmt.Sprintf("%v", field["separator"]) + " " }
-			if fmt.Sprintf("%v", field["operator"]) == "LIKE" {
-				filter += f.Name + "::text " + fmt.Sprintf("%v", field["operator"]) + " '%" + fmt.Sprintf("%v", field["value"]) + "%'"
+	state := ""
+	if schemaID != "" { 
+		sqlFilter += schserv.RootID(schserv.DBSchemaField.Name) + " IN  (SELECT id FROM " + schserv.DBSchemaField.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + " = " + schemaID + " ) AND " 
+		if filterID != "" { 
+			sqlFilter += schserv.RootID(schserv.DBFilter.Name) + "=" + filterID 
+			fields, err := s.Db.QueryAssociativeArray(sqlFilter)
+			if err == nil && len(fields) > 0 {
+				for _, field := range fields {
+					f, err := schserv.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
+					if err != nil || field["operator"] == nil || field["separator"] == nil { continue }
+					if len(filter) > 0 { 
+						filter += " " + fmt.Sprintf("%v", field["separator"]) + " " 
+					}
+					if fmt.Sprintf("%v", field["operator"]) == "LIKE" {
+						filter += f.Name + "::text " + fmt.Sprintf("%v", field["operator"]) + " '%" + fmt.Sprintf("%v", field["value"]) + "%'"
+					} else { 
+						filter += f.Name + " " + fmt.Sprintf("%v", field["operator"]) + " " + conn.FormatForSQL(f.Type, field["value"]) 
+					}
+				}
 			}
-			filter += f.Name + " " + fmt.Sprintf("%v", field["operator"]) + " " + conn.FormatForSQL(f.Type, field["value"])
+			/*sqlFilter = "SELECT elder FROM " + schserv.DBFilter.Name + " WHERE id=" + filterID 
+			fils, err := s.Db.QueryAssociativeArray(sqlFilter)
+			if err == nil && len(fils) > 0 { state = fmt.Sprintf("%v", fils[0]["elder"]) }*/
 		}
 	}
-	return filter, viewFilter, order, dir
+	return filter, viewFilter, order, dir, state
 }

@@ -80,6 +80,7 @@ func (db *Db) QueryRow(query string) (int64, error) {
     id := 0
 	err := db.Conn.QueryRow(query).Scan(&id)
 	if err != nil { 
+		fmt.Printf("err row: %v\n", query)
 		return int64(id), err }
 	return int64(id), err
 }
@@ -88,12 +89,14 @@ func (db *Db) Query(query string) (error) {
 	if db == nil || db.Conn == nil { return fmt.Errorf("No connection to database") }
 	rows, err := db.Conn.Query(query)
 	if err != nil { 
+		fmt.Printf("err q: %v\n", query)
 		return err }
 	err = rows.Close()
 	return err
 }
 
 func (db *Db) QueryAssociativeArray(query string) ([]map[string]interface{}, error) {
+	if strings.Contains(query, "<nil>") { return []map[string]interface{}{}, nil }
 	if db == nil || db.Conn == nil { return nil, fmt.Errorf("No connection to database") }
 	rows, err := db.Conn.Query(query)	
 	if err != nil { return nil, err }

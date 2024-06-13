@@ -17,8 +17,9 @@ func (s *AbstractSpecializedService) SetDomain(d DomainITF) {  s.Domain = d  }
 type SpecializedService struct { AbstractSpecializedService }
 func (s *SpecializedService) PostTreatment(results Results, tableName string, dest_id... string) Results { 
 	return s.Domain.PostTreat(results, tableName, true) }
-func (s *SpecializedService) ConfigureFilter(tableName string) (string, string, string, string) { 
-	return s.Domain.ViewDefinition(tableName) }
+func (s *SpecializedService) ConfigureFilter(tableName string, innerestr... string) (string, string, string, string) { 
+	return s.Domain.ViewDefinition(tableName, innerestr...) 
+}
 
 type SpecializedServiceInfo interface { GetName() string }
 type DomainITF interface {
@@ -39,7 +40,7 @@ type DomainITF interface {
 	SetEmpty(empty bool)
 	SetLowerRes(empty bool)
 	BuildPath(tableName string, rows string, extra... string) string
-	GetFilter(filterID string, viewfilterID string, schemaID string) (string, string, string, string)
+	GetFilter(filterID string, viewfilterID string, schemaID string) (string, string, string, string, string)
 	IsSuperAdmin() bool
 	GetAutoload() bool
 	ValidateBySchema(data Record, tableName string) (Record, error)

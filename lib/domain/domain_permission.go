@@ -79,7 +79,7 @@ func (d *MainService) IsOwnPermission(tableName string, force bool, method utils
 }
 // can redact a view based on perms. 
 func (d *MainService) PermsCheck(tableName string, colName string, level string, method utils.Method) bool {
-	if d.SuperAdmin && method != utils.SELECT || method == utils.SELECT && d.IsSuperCall() { return true }
+	if d.IsSuperCall() && method != utils.SELECT || method == utils.SELECT && d.IsSuperCall() { return true }
 	if d.exception(tableName, level == "" || fmt.Sprintf("%v", level) == "<nil>" || level == schserv.LEVELNORMAL, method) { return true }
 	if len(d.Perms) == 0 { d.PermsBuilder() }
 	var perms Perms
@@ -131,9 +131,10 @@ func (d *MainService) PermsCheck(tableName string, colName string, level string,
 					if err != nil { continue }
 				}
 				if count == 0 { continue }
-				sqlFilter += " AND is_close=false AND current_index IN (SELECT wf.index FROM " + schserv.DBWorkflowSchema.Name + " as wf WHERE wf." + schserv.RootID(schserv.DBWorkflow.Name) + " = " + schserv.RootID(schserv.DBWorkflow.Name) + ")"	
-				sqlFilter += "AND (" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")"
-				sqlFilter += " OR " + schserv.RootID(schserv.DBEntity.Name) + " IN (SELECT " + schserv.RootID(schserv.DBEntity.Name) + " FROM " + schserv.DBEntityUser.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")) ) )"
+				sqlFilter += " AND current_index IN (SELECT wf.index FROM " + schserv.DBWorkflowSchema.Name + " as wf WHERE wf." + schserv.RootID(schserv.DBWorkflow.Name) + " = " + schserv.RootID(schserv.DBWorkflow.Name) + " "	
+				sqlFilter += " AND id IN (SELECT dbworkflow_schema_id FROM dbtask WHERE is_close=false)"
+				sqlFilter += " AND (" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")"
+				sqlFilter += " OR " + schserv.RootID(schserv.DBEntity.Name) + " IN (SELECT " + schserv.RootID(schserv.DBEntity.Name) + " FROM " + schserv.DBEntityUser.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + "))))"
 				if d.Db.Driver == conn.PostgresDriver { 
 					count, err = d.Db.QueryRow(sqlFilter)
 					if err != nil { continue }

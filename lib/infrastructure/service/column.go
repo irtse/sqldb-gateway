@@ -34,7 +34,7 @@ func (t *TableColumnInfo) Template(restriction... string) (interface{}, error) {
 func (t *TableColumnInfo) Count(restriction... string) ([]map[string]interface{}, error) {
 	t.db.SQLView = t.Views
 	if t.SpecializedService != nil {
-		restr, _, order, limit := t.SpecializedService.ConfigureFilter(t.Name)
+		restr, _, order, limit := t.SpecializedService.ConfigureFilter(t.Name, strings.Join(restriction, " AND "))
 		if restr != "" { t.db.SQLRestriction = restr }
 		if len(restriction) > 0 { 
 			for _, r := range restriction {
@@ -67,7 +67,7 @@ func (t *TableColumnInfo) Count(restriction... string) ([]map[string]interface{}
 func (t *TableColumnInfo) Get(restriction... string) ([]map[string]interface{}, error) {
 	t.db.SQLView = t.Views
 	if t.SpecializedService != nil {
-		restr, _, order, limit := t.SpecializedService.ConfigureFilter(t.Name)
+		restr, _, order, limit := t.SpecializedService.ConfigureFilter(t.Name, restriction...)
 		if restr != "" { t.db.SQLRestriction = restr }
 		if len(restriction) > 0 { 
 			for _, r := range restriction {

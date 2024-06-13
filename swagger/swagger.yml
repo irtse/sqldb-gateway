@@ -132,6 +132,10 @@ paths:
         in: query
         name: filename
         type: string
+      - description: (Optionnal) Value of filter_new
+        in: query
+        name: filter_new
+        type: string
       - description: set a filter command line compose as (key~value(+|))
         in: query
         name: filter_line
@@ -221,6 +225,10 @@ paths:
         in: query
         name: filename
         type: string
+      - description: (Optionnal) Value of filter_new
+        in: query
+        name: filter_new
+        type: string
       - description: set a filter command line compose as (key~value(+|))
         in: query
         name: filter_line
@@ -309,6 +317,10 @@ paths:
       - description: (Optionnal) Value of filename
         in: query
         name: filename
+        type: string
+      - description: (Optionnal) Value of filter_new
+        in: query
+        name: filter_new
         type: string
       - description: set a filter command line compose as (key~value(+|))
         in: query
@@ -405,6 +417,10 @@ paths:
         in: query
         name: filename
         type: string
+      - description: (Optionnal) Value of filter_new
+        in: query
+        name: filter_new
+        type: string
       - description: set a filter command line compose as (key~value(+|))
         in: query
         name: filter_line
@@ -500,6 +516,10 @@ paths:
       - description: (Optionnal) Value of filename
         in: query
         name: filename
+        type: string
+      - description: (Optionnal) Value of filter_new
+        in: query
+        name: filter_new
         type: string
       - description: set a filter command line compose as (key~value(+|))
         in: query

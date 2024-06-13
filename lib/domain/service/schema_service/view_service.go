@@ -16,8 +16,8 @@ type ViewService struct {
 }
 
 func (s *ViewService) Entity() utils.SpecializedServiceInfo { return schserv.DBView }
-func (s *ViewService) ConfigureFilter(tableName string) (string, string, string, string) { 
-	restr, _, _, _ := s.Domain.ViewDefinition(tableName)
+func (s *ViewService) ConfigureFilter(tableName string, innerestr... string) (string, string, string, string) { 
+	restr, _, _, _ := s.Domain.ViewDefinition(tableName, innerestr...)
 	return restr, "", "", ""
 }	
 func (s *ViewService) PostTreatment(results utils.Results, tableName string, dest_id... string) utils.Results { 
@@ -42,13 +42,11 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 	rec := utils.Record{ "id": record["id"], "name" : record["name"], "label" : record["name"], "description" : record["description"], "is_empty" : record["is_empty"],
 						"index" : record["index"], "is_list" : record["is_list"], "readonly" : record["readonly"], "category" : record["category"],
 						"filter_path" : "/" + utils.MAIN_PREFIX + "/" + schserv.DBFilter.Name + "?" + utils.RootRowsParam + "=" + utils.ReservedParam + "&" + utils.RootShallow + "=enable&" + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID), }	
-	u, _ := s.Domain.PermsSuperCall( utils.Params{ utils.RootTableParam: schserv.DBUser.Name, utils.RootRowsParam : utils.ReservedParam,
-												  utils.RootRawView: "enable", schserv.NAMEKEY : s.Domain.GetUser() }, utils.Record{}, utils.SELECT)
+	u, _ := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBUser.Name + " WHERE name='" + s.Domain.GetUser() +"' OR email='" + s.Domain.GetUser()  + "'")
 	if len(u) > 0 { 
 		rec["favorize_body"] = utils.Record{ schserv.RootID(schserv.DBUser.Name) : u[0][utils.SpecialIDParam], schserv.RootID(schserv.DBView.Name) : record[utils.SpecialIDParam] }
 		rec["favorize_path"] = "/" + utils.MAIN_PREFIX + "/" + schserv.DBViewAttribution.Name + "?" + utils.RootRowsParam + "=" + utils.ReservedParam
-		u, _ = s.Domain.PermsSuperCall( utils.Params{ utils.RootTableParam: schserv.DBViewAttribution.Name, utils.RootRowsParam : utils.ReservedParam,
-			schserv.RootID(schserv.DBUser.Name) : fmt.Sprintf("%v", u[0][utils.SpecialIDParam]), schserv.RootID(schserv.DBView.Name) : record.GetString(utils.SpecialIDParam) }, utils.Record{}, utils.SELECT)
+		u, _ = s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBViewAttribution.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + "=" + fmt.Sprintf("%v", u[0][utils.SpecialIDParam]) + " AND " + schserv.RootID(schserv.DBView.Name) + "=" + fmt.Sprintf("%v", record[utils.SpecialIDParam]))
 		rec["is_favorize"] = len(u) > 0
 	}
 	if record["is_list"] != nil { s.Domain.SetLowerRes(record["is_list"].(bool)) } else { s.Domain.SetLowerRes(false) }
@@ -68,9 +66,10 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 	}
 	datas := utils.Results{utils.Record{}}
 	d := utils.Results{}
-	filter := record.GetString(schserv.RootID(schserv.DBFilter.Name))
-	viewFilter := record.GetString("view_" + schserv.RootID(schserv.DBFilter.Name))
-	sqlFilter, view, _, dir := s.Domain.GetFilter(filter, viewFilter, utils.GetString(record, schserv.RootID(schserv.DBSchema.Name)))
+	filter := ""; viewFilter := ""
+	if record[schserv.RootID(schserv.DBFilter.Name)] != nil { filter = fmt.Sprintf("%v", record[schserv.RootID(schserv.DBFilter.Name)])}
+	if record["view_" + schserv.RootID(schserv.DBFilter.Name)] != nil { viewFilter = fmt.Sprintf("%v", record["view_" +schserv.RootID(schserv.DBFilter.Name)])}
+	sqlFilter, view, _, dir, _ := s.Domain.GetFilter(filter, viewFilter, utils.GetString(record, schserv.RootID(schserv.DBSchema.Name)))
 	if view != "" { params[utils.RootColumnsParam] = view }
 	if dir != "" { params[utils.RootDirParam] = dir }
 	for k, p := range s.Domain.GetParams() { 
@@ -78,6 +77,7 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 		if k == utils.SpecialSubIDParam { params[utils.RootRowsParam] = p; continue }
 		params[k]=p
 	}
+	if s.Domain.GetParams()[utils.RootFilterNewState] != "" { params[utils.RootFilterNewState] = s.Domain.GetParams()[utils.RootFilterNewState] }
 	rec["new"] = []string{}
 	if !s.Domain.GetEmpty() { d, _ = s.Domain.SpecialSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter) }
 	if  record["is_list"] != nil && record["is_list"].(bool) { rec["new"], rec["max"] = s.Domain.CountNewDataAccess(schema.Name, sqlFilter, params) }
@@ -130,12 +130,12 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 	rec["link_path"]=s.Domain.BuildPath(fmt.Sprintf(schserv.DBView.Name), fmt.Sprintf("%v", record[utils.SpecialIDParam]))
 	channel <- rec
 }
-func (s *ViewService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, bool, bool) { 
+func (s *ViewService) VerifyRowAutomation(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) { 
 	if s.Domain.GetMethod() != utils.DELETE {
 		rec, err := s.Domain.ValidateBySchema(record, tablename)
-		if err != nil && !s.Domain.GetAutoload() { return rec, false, false } else { rec = record }
-		return rec, true, false 
+		if err != nil && !s.Domain.GetAutoload() { return rec, err, false } else { rec = record }
+		return rec, nil, false 
 	}
-	return record, true, true
+	return record, nil, true
 }
 // TODO : filter service ? (not in the same service) on own

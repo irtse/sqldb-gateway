@@ -46,6 +46,7 @@ const (
 	ENUMLEVELCOMPLETE
 	ENUMSTATE
 	ENUMURGENCY
+	ENUMLIFESTATE
 	ONETOMANY
 	MANYTOMANY
 )
@@ -71,7 +72,9 @@ func DataTypeList() []string {
 	"ENUM('"+ LEVELADMIN + "', '"+ LEVELMODERATOR + "', '"+ LEVELRESPONSIBLE + "', '"+ LEVELNORMAL + "')",
 	"ENUM('"+ LEVELADMIN + "', '"+ LEVELMODERATOR + "', '"+ LEVELRESPONSIBLE + "', '"+ LEVELNORMAL + "', '"+ LEVELOWN + "')",
 	"ENUM('" + STATEPENDING + "', '" + STATEPROGRESSING + "', '" + STATEDISMISS + "', '" + STATECOMPLETED + "')",
-	"ENUM('low', 'normal', 'high')", "ONETOMANY", "MANYTOMANY"}
+	"ENUM('low', 'normal', 'high')", 
+	"ENUM('all', 'new', 'old')",
+	"ONETOMANY", "MANYTOMANY"}
 }
 
 func (s DataType) String() string {  return strings.ToLower(DataTypeList()[s-1]) }

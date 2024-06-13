@@ -220,6 +220,7 @@ var DBFilter = SchemaModel{
 		FieldModel{ Name: RootID(DBSchema.Name), Type: INTEGER.String(), ForeignTable : DBSchema.Name, Required : false, Index: 3 },
 		FieldModel{ Name: RootID(DBUser.Name), Type: INTEGER.String(), ForeignTable : DBUser.Name, Required : false, Index: 4 },
 		FieldModel{ Name: RootID(DBEntity.Name), Type: INTEGER.String(), ForeignTable : DBEntity.Name, Required : false, Index: 5 },
+		FieldModel{ Name: "elder", Type: ENUMLIFESTATE.String(),  Required : false, Default: "all", Index: 6 },
 	},
 }
 
