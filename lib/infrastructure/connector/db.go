@@ -4,7 +4,6 @@ import (
 	"os"
 	"fmt"
 	"sync"
-	"net/url"
 	"strings"
 	"strconv"
 	"database/sql"
@@ -203,7 +202,7 @@ func FormatForSQL(datatype string, value interface{}) string {
 		}
 	}
 	if strings.Contains(strval, "%") { 
-		decodedValue, _ := url.QueryUnescape(fmt.Sprint(value))
+		decodedValue := fmt.Sprint(value)
 		return Quote(strings.Replace(SQLInjectionProtector(decodedValue), "'", "''", -1))
 	}
 	return SQLInjectionProtector(strval)
