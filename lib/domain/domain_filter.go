@@ -90,10 +90,13 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 				for _, or := range ors {
 					operator := "~"
 					keyVal := []string{} 
-					
-					if strings.Contains(or, "~") { keyVal = strings.Split(or, "~"); operator = " LIKE " 
+					fmt.Println("OR:", or)
+					if strings.Contains(or, "<>~") { keyVal = strings.Split(or, "<>~"); operator = " NOT LIKE "
+					} else if strings.Contains(or, "~") { keyVal = strings.Split(or, "~"); operator = " LIKE " 
 					} else if strings.Contains(or, ":") { keyVal = strings.Split(or, ":"); operator = "=" 
 					} else if strings.Contains(or, "<>") { keyVal = strings.Split(or, "<>"); operator = "<>"
+					} else if strings.Contains(or, "<:") { keyVal = strings.Split(or, "<:"); operator = "<=" 
+					} else if strings.Contains(or, ">:") { keyVal = strings.Split(or, ">:"); operator = ">=" 
 					} else if strings.Contains(or, "<") { keyVal = strings.Split(or, "<"); operator = "<"  
 					} else if strings.Contains(or, ">") { keyVal = strings.Split(or, ">"); operator = ">"  }
 					if len(keyVal) != 2 { continue }
@@ -118,7 +121,7 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 		}
 	}
 	if len(alterRestr) > 0 { 
-		if len(restr) > 0 { restr +=  " AND " + alterRestr } else { restr = alterRestr } 
+		if len(restr) > 0 { restr = alterRestr + " AND " + restr } else { restr = alterRestr } 
 	}
 	if schema.HasField(schserv.RootID(schserv.DBSchema.Name)) && !d.IsSuperCall() && !isSchema { 
 		except := []string{schserv.DBRequest.Name, schserv.DBTask.Name}
@@ -134,14 +137,14 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 
 func (d *MainService) sqlItem(alterRestr string, field schserv.FieldModel, key string, or string, operator string) (string) {
 	sql := or
-	fmt.Println("SQL:", key, or)
+	fmt.Println("SQL:", key, or, operator)
 
 	sql = conn.FormatForSQL(field.Type, sql)
 	if sql == "" { return alterRestr }
 	if strings.Contains(sql, "NULL") { operator = "IS " }
 	if field.Link > 0 {
 		foreign, _ := schserv.GetSchemaByID(field.Link)
-		if strings.Contains(sql, "%") { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name::text LIKE " + sql + " OR id::text LIKE " + sql + ")"
+		if strings.Contains(sql, "%") { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name::text LIKE " + sql + " OR id::text " + operator + sql + ")"
 		} else { 			
 			if strings.Contains(sql, "'") {  
 				if strings.Contains(sql, "NULL") { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name IS " + sql + ")"  
@@ -149,7 +152,7 @@ func (d *MainService) sqlItem(alterRestr string, field schserv.FieldModel, key s
 				
 			} else { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE id " + operator + " " + sql + ")" }
 		}
-	} else if strings.Contains(sql, "%") { alterRestr += key + "::text LIKE " + sql } else { alterRestr += key + " " + operator + " " + sql }
+	} else if strings.Contains(sql, "%") { alterRestr += key + "::text " + operator + sql } else { alterRestr += key + " " + operator + " " + sql }
 	return alterRestr
 }
 
