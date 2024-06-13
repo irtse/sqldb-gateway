@@ -194,7 +194,7 @@ func FormatForSQL(datatype string, value interface{}) string {
 		if strings.Contains(datatype, typ) { 
 			if value == "CURRENT_TIMESTAMP" { return fmt.Sprint(value) 
 			} else { 
-				decodedValue, _ := url.QueryUnescape(fmt.Sprint(value))
+				decodedValue := fmt.Sprint(value)
 				if strings.Contains(strings.ToUpper(datatype), "DATE") || strings.Contains(strings.ToUpper(datatype), "TIME") {
 					if len(decodedValue) > 10 { decodedValue = decodedValue[:10] }
 				}

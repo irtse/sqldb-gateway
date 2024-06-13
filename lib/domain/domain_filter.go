@@ -26,7 +26,7 @@ func (d *MainService) LifeCycleRestriction(tableName string, restr string, state
 	if operator != "" { 
 		t := "id " + operator + " (" + strings.Join(news, ",") + ")" 
 		if len(restr) > 0 { t += " AND " }
-		restr = t + restr
+		restr = restr + t
 	}
 	return restr
 }
@@ -35,14 +35,15 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 	SQLview := ""; SQLrestriction := ""; SQLOrder := ""; SQLLimit := ""
 	schema, err := schserv.GetSchema(tableName)
 	if err != nil { return SQLrestriction, SQLview, SQLOrder, SQLLimit }
-	for _, restr := range innerRestriction {
-		if len(SQLrestriction) > 0  && len(restr) > 0 { SQLrestriction = restr + " AND " + SQLrestriction } else { SQLrestriction = restr  }
-	}
+	
 	restr, view, order, dir, state := d.GetFilter("", "", fmt.Sprintf("%v", schema.ID))
 	if restr != "" && !d.IsSuperCall() { innerRestriction = append(innerRestriction, restr) }
 	if view != "" && !d.IsSuperCall() { d.Params[utils.RootColumnsParam] = view }
 	if order != "" { d.Params[utils.RootOrderParam] = order }
 	if dir != "" { d.Params[utils.RootDirParam] = dir }
+	for _, restr := range innerRestriction {
+		if len(SQLrestriction) > 0  && len(restr) > 0 { SQLrestriction = restr + " AND " + SQLrestriction } else { SQLrestriction = restr  }
+	}
 	SQLrestriction = d.restrictionBySchema(tableName, SQLrestriction)
 	SQLOrder = d.orderFromParams(tableName, SQLOrder)
 	SQLLimit = d.limitFromParams(SQLLimit)
@@ -79,8 +80,10 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 				for _, or := range ors {
 					operator := "~"
 					keyVal := []string{} 
+					fmt.Println("OR:", or)
 					if strings.Contains(or, "~") { keyVal = strings.Split(or, "~"); operator = " LIKE " 
 					} else if strings.Contains(or, ":") { keyVal = strings.Split(or, ":"); operator = "=" 
+					} else if strings.Contains(or, "<>") { keyVal = strings.Split(or, "<>"); operator = "<>"
 					} else if strings.Contains(or, "<") { keyVal = strings.Split(or, "<"); operator = "<"  
 					} else if strings.Contains(or, ">") { keyVal = strings.Split(or, ">"); operator = ">"  }
 					if len(keyVal) != 2 { continue }
@@ -88,6 +91,8 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 					if (err != nil && keyVal[0] != utils.SpecialIDParam) { continue  }
 					if len(strings.Trim(orRestr, " ")) > 0 { orRestr +=  " OR " }
 					orRestr = d.sqlItem(orRestr, field, keyVal[0], keyVal[1], operator)
+					fmt.Println("OR:", orRestr, keyVal)
+
 				}
 				if len(orRestr) > 0 { alterRestr += "( " + orRestr + " )" }
 			}
@@ -122,6 +127,7 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 func (d *MainService) sqlItem(alterRestr string, field schserv.FieldModel, key string, or string, operator string) (string) {
 	sql := or
 	sql = conn.FormatForSQL(field.Type, sql)
+	fmt.Println("SQL:", sql)
 	if sql == "" { return alterRestr }
 	if strings.Contains(sql, "NULL") { operator = "IS " }
 	if field.Link > 0 {

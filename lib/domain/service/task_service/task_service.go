@@ -48,18 +48,12 @@ func (s *TaskService) DeleteRowAutomation(results []map[string]interface{}, tabl
 func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, record map[string]interface{}) {
 	for _, res := range results {
 		if res["state"] != "completed" && res["state"] != "dismiss" { continue }
+		/* kill dependent notif */
 		paramsReq := utils.Params{ utils.RootTableParam : schserv.DBRequest.Name, 
 								   utils.RootRowsParam : utils.GetString(res, schserv.RootID(schserv.DBRequest.Name)), }
 		requests, err := s.Domain.SuperCall( paramsReq, utils.Record{}, utils.SELECT)
-		fmt.Println("1", requests, err)
 		if err != nil || len(requests) == 0 { continue }
 		req := requests[0] 
-		for _, re := range requests {
-			if  utils.GetString(re, "id") == utils.GetString(res, schserv.RootID(schserv.DBRequest.Name)) {
-				req = re
-				break
-			}
-		}
 		if order, ok3 := req["current_index"]; ok3 {
 			params := utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : utils.ReservedParam, 
 					schserv.RootID(schserv.DBRequest.Name) : fmt.Sprintf("%v", res[schserv.RootID(schserv.DBRequest.Name)]), }
@@ -86,10 +80,16 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 				newRecRequest["state"] = "progressing"
 				newRecRequest["is_close"] = false
 			} 
-			rr, err := s.Domain.PermsSuperCall(utils.AllParams(schserv.DBRequest.Name), newRecRequest, utils.UPDATE)
-			fmt.Println("THERE4", rr, err)
+			s.Domain.PermsSuperCall(utils.AllParams(schserv.DBRequest.Name), newRecRequest, utils.UPDATE)
 			if err != nil || len(schemes) == 0 { continue }
+			
 			for _, scheme := range schemes {
+				paramsNot := utils.Params{ utils.RootTableParam : schserv.DBNotification.Name, 
+					utils.RootRowsParam : utils.ReservedParam, 
+					schserv.RootID(schserv.DBEntity.Name) : utils.GetString(scheme, schserv.RootID(schserv.DBEntity.Name)),
+					schserv.RootID(schserv.DBUser.Name) : utils.GetString(scheme, schserv.RootID(schserv.DBUser.Name)),
+					utils.RootDestTableIDParam : fmt.Sprintf("%v", res[utils.SpecialIDParam]), }
+				s.Domain.SuperCall( paramsNot, utils.Record{}, utils.DELETE) 
 				params := utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam: utils.ReservedParam,
 					schserv.RootID(schserv.DBWorkflowSchema.Name) : scheme.GetString(utils.SpecialIDParam),
 					schserv.RootID(schserv.DBRequest.Name) : req.GetString(utils.SpecialIDParam) }
