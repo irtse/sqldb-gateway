@@ -150,14 +150,14 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 
 func (s *TaskService) ConfigureFilter(tableName string, innerestr... string) (string, string, string, string) {
 	if !s.Domain.IsSuperCall() {
-		restr := "(" + schserv.RootID(schserv.DBWorkflowSchema.Name) + " IS NULL AND " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))"
+		restr := "((" + schserv.RootID(schserv.DBWorkflowSchema.Name) + " IS NULL AND " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))"
 		restr += " OR (" + schserv.RootID(schserv.DBWorkflowSchema.Name) + " IN (SELECT id FROM " + schserv.DBWorkflowSchema.Name + " WHERE "
 		restr += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
 		restr += " OR " + schserv.RootID(schserv.DBEntity.Name) + " IN ("
 		restr += "SELECT " + schserv.RootID(schserv.DBEntity.Name) + " FROM " + schserv.DBEntityUser.Name + " "
 		restr += " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN ("
 		restr += "SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))))"
-		restr += " AND meta_" + schserv.RootID(schserv.DBRequest.Name) + " IS NULL"
+		restr += " AND meta_" + schserv.RootID(schserv.DBRequest.Name) + " IS NULL)"
 		innerestr = append(innerestr, restr)
 		return s.Domain.ViewDefinition(tableName, innerestr... )
 	}

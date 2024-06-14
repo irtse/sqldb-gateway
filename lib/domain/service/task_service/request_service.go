@@ -19,24 +19,22 @@ func (s *RequestService) PostTreatment(results utils.Results, tableName string, 
 func (s *RequestService) ConfigureFilter(tableName string, innerestr... string) (string, string, string, string) { 
 	restr := ""
 	if s.Domain.IsSuperCall() { return s.Domain.ViewDefinition(tableName, restr) }
-	restr += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")"
-	restr += " OR " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT " + schserv.RootID(schserv.DBUser.Name) + " FROM " + schserv.DBHierarchy.Name + " WHERE parent_" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))"
+	restr += "(" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")"
+	restr += " OR " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT " + schserv.RootID(schserv.DBUser.Name) + " FROM " + schserv.DBHierarchy.Name + " WHERE parent_" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")))"
 	n := []string{ restr }
 	for _, inner := range innerestr { n = append(n, inner) }
 	return s.Domain.ViewDefinition(tableName, n... )
 }
 
-func (s *RequestService) GetHierarchical() (utils.Results, error) {
-	paramsNew := utils.Params{ utils.RootTableParam : schserv.DBHierarchy.Name, utils.RootRowsParam: utils.ReservedParam }
-	sqlFilter := "id IN (SELECT id FROM " + schserv.DBHierarchy.Name + " WHERE "
-	sqlFilter += schserv.RootID(schserv.DBUser.Name) + " IN ("
+func (s *RequestService) GetHierarchical() ([]map[string]interface{}, error) {
+	sqlFilter := schserv.RootID(schserv.DBUser.Name) + " IN ("
 	sqlFilter += "SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")"
 	sqlFilter += " OR " + schserv.DBEntity.Name + "_id IN ("
 	sqlFilter += "SELECT " + schserv.DBEntity.Name + "_id FROM "
 	sqlFilter += schserv.DBEntityUser.Name + " WHERE " + schserv.DBUser.Name +"_id IN ("
 	sqlFilter += "SELECT id FROM " + schserv.DBUser.Name + " WHERE "
-	sqlFilter += "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")))"
-	return s.Domain.SuperCall( paramsNew, utils.Record{}, utils.SELECT, sqlFilter )
+	sqlFilter += "name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))"
+	return s.Domain.GetDb().QueryAssociativeArray( "SELECT * FROM " + schserv.DBHierarchy.Name + " WHERE " + sqlFilter)
 }
 
 func (s *RequestService) Entity() utils.SpecializedServiceInfo { return schserv.DBRequest }
@@ -107,7 +105,6 @@ func (s *RequestService) UpdateRowAutomation(results []map[string]interface{}, r
 			p := utils.AllParams(schserv.DBTask.Name)
 			p["meta_" + schserv.RootID(schserv.DBRequest.Name)]= fmt.Sprintf("%v",rec[utils.SpecialIDParam])
 			res, err := s.Domain.SuperCall( p, utils.Record{}, utils.SELECT)
-			fmt.Println("res : \n", res, p)
 			if err == nil && len(res) > 0 {
 				for _, task := range res {
 					task["is_close"] = true 

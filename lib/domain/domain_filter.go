@@ -61,8 +61,6 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 		if len(SQLrestriction) > 0  && len(restr) > 0 { SQLrestriction = SQLrestriction + " AND " + restr } else { SQLrestriction = restr  }
 	}
 	if state != "" { SQLrestriction = d.LifeCycleRestriction(tableName, SQLrestriction, state) }
-	fmt.Println("OR:", SQLrestriction)
-
 	return SQLrestriction, SQLview, SQLOrder, SQLLimit
 }
 func (d *MainService) restrictionBySchema(tableName string, restr string) (string) {
@@ -149,7 +147,6 @@ func (d *MainService) sqlItem(alterRestr string, field schserv.FieldModel, key s
 			if strings.Contains(sql, "'") {  
 				if strings.Contains(sql, "NULL") { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name IS " + sql + ")"  
 				} else { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE name = " + sql + ")" }
-				
 			} else { alterRestr += key + " IN (SELECT id FROM " + foreign.Name + " WHERE id " + operator + " " + sql + ")" }
 		}
 	} else if strings.Contains(sql, "%") { alterRestr += key + "::text " + operator + sql } else { alterRestr += key + " " + operator + " " + sql }
@@ -190,6 +187,7 @@ func (d *MainService) orderFromParams(tableName string, order string) (string) {
 func (s *MainService) restrictionByEntityUser(tableName string, restr string) string {
 	schema, err := schserv.GetSchema(tableName)
 	if err != nil { return restr }
+	newRestr := ""
 	userID := schserv.RootID(schserv.DBUser.Name); entityID := schserv.RootID(schserv.DBEntity.Name)
 	if (schema.HasField(userID) || schema.HasField(entityID)) {
 		if !s.IsOwnPermission(tableName, false, s.Method) && !s.IsOwn() { return restr }
@@ -197,7 +195,7 @@ func (s *MainService) restrictionByEntityUser(tableName string, restr string) st
 		quer := "SELECT * FROM " + schserv.DBRequest.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID) + " AND " 
 		quer += userID + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")" 
 		requests, err := s.Db.QueryAssociativeArray(quer)
-		ids := ""
+		ids := ""; 
 		if err == nil && len(requests) > 0 {
 			for _, request := range requests { 
 				if !strings.Contains(ids, fmt.Sprintf("%v", request[utils.RootDestTableIDParam])) {
@@ -206,30 +204,38 @@ func (s *MainService) restrictionByEntityUser(tableName string, restr string) st
 			}
 			if len(ids) > 0 { 
 				ids = conn.RemoveLastChar(ids) 
-				if len(restr) > 0 { restr +=  " AND " }
-				restr += "id IN (" + ids + ")"
+				if len(newRestr) > 0 { newRestr +=  " AND " }
+				newRestr += "id IN (" + ids + ")"
 			}
 		} 
 		if tableName[:2] != "db" && len(ids) == 0 { 
+			if len(newRestr) > 0 { newRestr +=  " AND " }
+			newRestr += "id IS NULL"
 			if len(restr) > 0 { restr +=  " AND " }
-			restr += "id IS NULL"
+			if len(newRestr) > 0 {
+				restr += "(" + newRestr + ")"
+			}
 			return restr 
 		}
 	}
 	isUser := false
 	if schema.HasField(userID) || tableName == schserv.DBUser.Name {
-		if len(restr) > 0 { restr +=  " AND " }
+		if len(newRestr) > 0 { newRestr +=  " AND " }
 		isUser = true
 		if tableName == schserv.DBUser.Name  { userID = utils.SpecialIDParam }
-		restr += userID + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" 
-		restr += conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")" 
+		newRestr += userID + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" 
+		newRestr += conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")" 
 	}
 	if schema.HasField(entityID) || tableName == schserv.DBEntity.Name  {
 		if tableName == schserv.DBEntity.Name  { entityID = utils.SpecialIDParam }
-		if isUser { restr +=  " OR " } else if len(restr) > 0 { restr +=  " AND " }
-		restr += entityID + " IN (SELECT " + entityID + " FROM " + schserv.DBEntityUser.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN (" 
-		restr += "SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + "))"
+		if isUser { newRestr +=  " OR " } else if len(newRestr) > 0 { newRestr +=  " AND " }
+		newRestr += entityID + " IN (SELECT " + entityID + " FROM " + schserv.DBEntityUser.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN (" 
+		newRestr += "SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + "))"
 		// TODO GET FROM PARENT ID MISSING + OWN
+	}
+	if len(restr) > 0 { restr +=  " AND " }
+	if len(newRestr) > 0 {
+		restr += "(" + newRestr + ")"
 	}
 	return restr
 }
