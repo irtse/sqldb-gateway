@@ -88,7 +88,6 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 				for _, or := range ors {
 					operator := "~"
 					keyVal := []string{} 
-					fmt.Println("OR:", or)
 					if strings.Contains(or, "<>~") { keyVal = strings.Split(or, "<>~"); operator = " NOT LIKE "
 					} else if strings.Contains(or, "~") { keyVal = strings.Split(or, "~"); operator = " LIKE " 
 					} else if strings.Contains(or, ":") { keyVal = strings.Split(or, ":"); operator = "=" 
@@ -237,6 +236,7 @@ func (s *MainService) restrictionByEntityUser(tableName string, restr string) st
 	if len(newRestr) > 0 {
 		restr += "(" + newRestr + ")"
 	}
+	fmt.Println("NEW RESTRICTION:", restr)
 	return restr
 }
 

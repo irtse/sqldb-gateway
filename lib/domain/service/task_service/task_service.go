@@ -55,10 +55,7 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 		if err != nil || len(requests) == 0 { continue }
 		req := requests[0] 
 		if order, ok3 := req["current_index"]; ok3 {
-			params := utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam : utils.ReservedParam, 
-					schserv.RootID(schserv.DBRequest.Name) : fmt.Sprintf("%v", res[schserv.RootID(schserv.DBRequest.Name)]), }
-			otherPendingTasks, _ := s.Domain.SuperCall( params, utils.Record{}, utils.SELECT, "state IN ('pending', 'progressing')")
-			fmt.Println("2", otherPendingTasks)
+			otherPendingTasks, _ := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBTask.Name + " WHERE " + schserv.RootID(schserv.DBRequest.Name) + "=" + fmt.Sprintf("%v", res[schserv.RootID(schserv.DBRequest.Name)]) + " AND state IN ('pending', 'progressing')")
 			if len(otherPendingTasks) > 0 { continue }
 			current_index := order.(float64)
 			if res["state"] == "completed" { current_index++ }	
