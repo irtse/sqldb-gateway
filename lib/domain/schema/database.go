@@ -235,7 +235,8 @@ var DBFilterField = SchemaModel{
 		FieldModel{ Name: "separator", Type: ENUMSEPARATOR.String(), Required : false, Index: 3 },
 		FieldModel{ Name: "dir", Type: BIGVARCHAR.String(), Required : false, Index: 4 },
 		FieldModel{ Name: "index", Type: INTEGER.String(), Required : false, Default: 1, Index: 5 },
-		FieldModel{ Name: RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable: DBFilter.Name, Required : false, Index: 6 },
+		FieldModel{ Name: "width", Type: DECIMAL.String(), Required : false, Index: 6 },
+		FieldModel{ Name: RootID(DBFilter.Name), Type: INTEGER.String(), ForeignTable: DBFilter.Name, Required : false, Index: 7 },
 	},
 }
 

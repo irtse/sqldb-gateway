@@ -1,5 +1,5 @@
 package utils
-import ( "fmt"; "strconv"; "sync" )
+import ( "fmt"; "strconv"; "sync"; "strings" )
 // API COMMON query params !
 var ParamsMutex = &sync.Mutex{}
 
@@ -20,7 +20,8 @@ const RootFilename = "filename"
 const RootShallow = "shallow"
 const RootSuperCall = "super"
 const RootDestTableIDParam = "dbdest_table_id" 
-
+const RootCommandRow = "command_row"
+const RootCommandCols = "command_columns"
 const RootLimit= "limit"
 const RootOffset= "offset"
 
@@ -36,7 +37,7 @@ var RootParamsDesc = map[string]string{
 	RootViewFilter : "set view filter identifier to activate a specific view filter in db",
 }
 var HiddenParams = []string{RootDestTableIDParam}
-var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset, RootShallow, RootRawView, RootExport, RootFilename, RootFilterNewState, RootFilterLine, RootFilter, RootViewFilter, RootSuperCall, SpecialIDParam}
+var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset, RootShallow, RootRawView, RootExport, RootFilename, RootFilterNewState, RootFilterLine, RootFilter, RootViewFilter, RootSuperCall, RootCommandRow, SpecialIDParam}
 
 const SpecialIDParam = "id" 
 const SpecialSubIDParam = "subid" 
@@ -51,7 +52,25 @@ const(
 	UPDATE Method = 3
 	DELETE Method = 4
 	COUNT Method = 5
+	AVG Method = 6
+	MIN Method = 7
+	MAX Method = 8
+	SUM Method = 9
 )
+func Found(name string) Method {
+	switch strings.ToLower(name) {
+		case "read": return SELECT
+		case "write": return CREATE
+		case "update": return UPDATE
+		case "delete": return DELETE
+		case "count": return COUNT
+		case "avg": return AVG
+		case "min": return MIN
+		case "max": return MAX
+		case "sum": return SUM
+	}
+	return SELECT
+}
 func (s Method) String() string {
 	switch s {
 		case SELECT: return "read"
@@ -59,8 +78,19 @@ func (s Method) String() string {
 		case UPDATE: return "update"
 		case DELETE: return "delete"
 		case COUNT: return "count"
+		case AVG: return "avg"
+		case MIN: return "min"
+		case MAX: return "max"
+		case SUM: return "sum"
 	}
 	return "unknown"
+}
+
+func (s Method) IsMath() bool {
+	switch s {
+		case COUNT, AVG, MIN, MAX, SUM: return true
+	}
+	return false
 }
 
 func (s Method) Method() string {
@@ -70,6 +100,10 @@ func (s Method) Method() string {
 		case UPDATE: return "put"
 		case DELETE: return "delete"
 		case COUNT: return "count"
+		case AVG: return "avg"
+		case MIN: return "min"
+		case MAX: return "max"
+		case SUM: return "sum"
 	}
 	return "unknown"
 }
@@ -80,7 +114,11 @@ func (s Method) Calling() string {
 		case CREATE: return "Create"
 		case UPDATE: return "Update"
 		case DELETE: return "Delete"
-		case COUNT: return "Count"
+		case COUNT: return "Math"
+		case AVG: return "Math"
+		case MIN: return "Math"
+		case MAX: return "Math"
+		case SUM: return "Math"
 	}
 	return "unknown"
 }

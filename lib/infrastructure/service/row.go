@@ -20,24 +20,12 @@ func (t *TableRowInfo) Verify(name string) (string, bool) {
 	return name, err == nil && len(res) > 0
 }
 
-func (t *TableRowInfo) Count(restriction... string) ([]map[string]interface{}, error) {
+func (t *TableRowInfo) Math(algo string, restriction... string) ([]map[string]interface{}, error) {
 	err := t.setupFilter(false, false, restriction...)
 	if err != nil { return nil, err }
-	var count int64
-	if t.db.Driver == conn.PostgresDriver { 
-		count, err = t.db.QueryRow(t.db.BuildCount(t.Table.Name))
-		if err != nil { return nil, err }
-	}
-	if t.db.Driver == conn.MySQLDriver {
-		stmt, err := t.db.Prepare(t.db.BuildCount(t.Table.Name))
-		if err != nil { return t.DBError(nil, err) }
-		res, err := stmt.Exec()
-		if err != nil { return nil, err }
-		count, err = res.LastInsertId()
-		if err != nil { return t.DBError(nil, err) }
-	}
-	if err != nil { return t.DBError(nil, err) }
-	t.Results = append(t.Results, map[string]interface{}{ "count" : count, })
+	res, err := t.db.QueryAssociativeArray(t.db.BuildMath(algo, t.Table.Name))
+	if err != nil || len(res) == 0 { return nil, err }	
+	t.Results = append(t.Results, map[string]interface{}{ "result" : res[0]["result"], })
 	return t.Results, nil
 }
 

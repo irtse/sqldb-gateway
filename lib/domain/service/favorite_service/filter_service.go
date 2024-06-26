@@ -2,6 +2,7 @@ package favorite_service
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	utils "sqldb-ws/lib/domain/utils"
 	schserv "sqldb-ws/lib/domain/schema"
@@ -27,7 +28,6 @@ func (s *FilterService) WriteRowAutomation(record map[string]interface{}, tableN
 			delete(field, "name")
 			field[schserv.RootID(schserv.DBFilter.Name)]=record[utils.SpecialIDParam]
 			_, err = s.Domain.Call(utils.AllParams(schserv.DBFilterField.Name), field, utils.CREATE)
-			fmt.Printf("error: %v\n", err)
 			continue 
 		}
 		delete(field, "name")
@@ -51,20 +51,20 @@ func (s *FilterService) PostTreatment(results utils.Results, tableName string, d
 		fields, err := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBFilterField.Name + " WHERE " + schserv.RootID(schserv.DBFilter.Name) + "=" + fmt.Sprintf("%v", rec[utils.SpecialIDParam]))
 		if err != nil || len(fields) == 0 { rr = append(rr, rec); continue }
 		fieldsID := []schserv.FilterModel{}
-		sort.SliceStable(fields, func(i, j int) bool{ return fields[i]["index"].(float64) <= fields[j]["index"].(float64) })
+		sort.SliceStable(fields, func(i, j int) bool{ return fields[i]["index"].(int64) <= fields[j]["index"].(int64) })
 		for _, field := range fields { 
-			separator := ""
-			if sep, ok := field["separator"]; ok && sep != nil { separator = fmt.Sprintf("%v", sep) }
 			ff, err := schema.GetFieldByID(utils.GetInt(field, schserv.RootID(schserv.DBSchemaField.Name)))
-			if err != nil { 
-				model := schserv.FilterModel{ ID: utils.GetInt(res[0], utils.SpecialIDParam),  Name: "id",
-					Index: field["index"].(float64), Label: "id", Type: "integer",
-					Value: fmt.Sprintf("%v", field["value"]), Separator: separator,  Operator: fmt.Sprintf("%v", field["operator"]), Dir: fmt.Sprintf("%v", field["dir"])}
-				fieldsID = append(fieldsID, model) 
-				continue
-			}
-			model := schserv.FilterModel{ ID: utils.GetInt(res[0], utils.SpecialIDParam),  Name: ff.Name, Label: ff.Label, Index: field["index"].(float64),
-				Type: ff.Type, Value: fmt.Sprintf("%v", field["value"]), Separator: fmt.Sprintf("%v", field["separator"]),  Operator: fmt.Sprintf("%v", field["operator"]), Dir: fmt.Sprintf("%v", field["dir"])}
+			if err != nil { continue }
+			model := schserv.FilterModel{ ID: utils.GetInt(res[0], utils.SpecialIDParam),  
+				Name: ff.Name, 
+				Label: ff.Label, 
+				Index: float64(field["index"].(int64)),
+				Type: ff.Type, Value: fmt.Sprintf("%v", field["value"]), 
+				Separator: fmt.Sprintf("%v", field["separator"]),  
+				Operator: fmt.Sprintf("%v", field["operator"]),
+				Dir: fmt.Sprintf("%v", field["dir"])}
+			floa, err := strconv.ParseFloat(fmt.Sprintf("%v", field["width"]), 64)
+			if err == nil { model.Width = float64(floa) }
 			fieldsID = append(fieldsID, model) 
 		}
 		if rec["elder"] == nil { 
@@ -143,5 +143,6 @@ func (s *FilterService) VerifyRowAutomation(record map[string]interface{}, table
 		s.Domain.GetDb().QueryAssociativeArray("UPDATE " + schserv.DBFilter.Name + " SET is_selected=false WHERE " + schserv.RootID(schserv.DBFilter.Name) + "=" + fmt.Sprintf("%v", record[schserv.RootID(schserv.DBFilter.Name)]))
 	}
 	delete(record, "filter_fields")
+	delete(record, "view_fields")
 	return record, nil, true
 }

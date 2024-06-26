@@ -6,6 +6,7 @@ import (
 	"time"
 	"errors"
 	"strings"
+	"net/url"
 	"net/http"
 	"encoding/csv"
 	"encoding/json"
@@ -61,8 +62,16 @@ func (t *AbstractController) Call(auth bool, method utils.Method, args... interf
 		}
 		t.response(resp, error) // send back response
 	} else {
+		if _, ok := p[utils.RootExport]; ok { p[utils.RootRawView] = "disable" }
 		response, err := d.Call(p, t.body(true), method, args...)
-		if format, ok := p[utils.RootExport]; ok { t.download(format, p[utils.RootFilename], asLabel, response, err); return }
+		if format, ok := p[utils.RootExport]; ok { 
+			cols := ""; cmd := ""; cmdCols := ""
+			if pp, ok := p[utils.RootColumnsParam]; ok { cols = pp }
+			if pp, ok := p[utils.RootCommandRow]; ok { cmd = pp }
+			if pp, ok := p[utils.RootCommandCols]; ok { cmdCols = pp }
+			t.download(d, cols, cmdCols, cmd, format, p[utils.RootFilename], asLabel, response, err)
+			return 
+		}
 		t.response(response, err) // send back response
 	}	
 }
@@ -213,27 +222,51 @@ func (t *AbstractController) response(resp utils.Results, err error) {
 	t.ServeJSON() // then serve response by beego
 }
 
-func (t *AbstractController) download(format string, name string, mapping map[string]string, resp utils.Results, error error) {
-	cols, results := t.mapping(mapping, resp) // mapping
+func (t *AbstractController) download(d utils.DomainITF, col string, colsCmd string, cmd string, format string, name string, mapping map[string]string, resp utils.Results, error error) {
+	cols, lastLineMap, results := t.mapping(col, colsCmd, cmd, mapping, resp) // mapping
 	t.Ctx.ResponseWriter.Header().Set("Content-Type", "text/" + format)
 	t.Ctx.ResponseWriter.Header().Set("Content-Disposition", "attachment; filename=" + name + "_" + strings.Replace(time.Now().Format(time.RFC3339), " ", "_", -1) + "." + format)
-	data := t.csv(cols, results) // rationalize to CSV
+	data := t.csv(d, lastLineMap, cols, results) // rationalize to CSV
 	if format == "csv" { 
 		csv.NewWriter(t.Ctx.ResponseWriter).WriteAll(data) 
 	} else { 
 		t.response(results, error)
 	}
 }
-func (t *AbstractController) mapping(mapping map[string]string, resp utils.Results) ([]string, utils.Results) {
-	cols := []string{}; results := utils.Results{}
-	if len(resp) == 0 { return cols, results }
+func (t *AbstractController) mapping(col string, colsCmd string, cmd string, mapping map[string]string, resp utils.Results) ([]string, map[string]string, utils.Results) {
+	cols := []string{}; results := utils.Results{}; colsFunc := map[string]string{}
+	if len(resp) == 0 { return cols, colsFunc, results }
 	r := resp[0]
-	order := r["order"].([]interface{})
+	additionnalCol := ""
+	order := []interface{}{"id"}
+	order = append(order, r["order"].([]interface{})...)
+	if cmd != "" {
+		decodedLine, _ := url.QueryUnescape(cmd)
+		re := strings.Split(decodedLine, " as ")
+	 	if len(re) > 1 { 
+			additionnalCol = re[len(re) - 1]
+			order = append(order, additionnalCol) 
+			colsFunc[additionnalCol] = re[0]
+		}
+	}
+
+	for _, c := range strings.Split(colsCmd, ",") {
+		re := strings.Split(c, ":")
+		if len(re) > 1 { 
+			if v, ok := colsFunc[re[0]]; ok && v != ""{
+				colsFunc[re[0]] = strings.ToUpper(re[1]) + "((" + v + "))"
+			} else { colsFunc[re[0]] = re[1] }
+		 }
+	}
 	schema := r["schema"].(map[string]interface{})
 	for _, o := range order {
 		key := o.(string)
-		if scheme, ok := schema[o.(string)]; !ok && strings.Contains(scheme.(map[string]interface{})["type"].(string), "many") { continue }
-		label := strings.Replace(schema[key].(map[string]interface{})["label"].(string), "_", " ", -1)
+		if col != "" && !strings.Contains(col, key) && !( additionnalCol == "" || strings.Contains(additionnalCol, key)) { continue }
+		if scheme, ok := schema[o.(string)]; ok && strings.Contains(scheme.(map[string]interface{})["type"].(string), "many") { continue }
+		label := key
+		if scheme, ok := schema[key]; ok {
+			label = strings.Replace(scheme.(map[string]interface{})["label"].(string), "_", " ", -1)
+		}
 		if mapKey, ok := mapping[key]; ok && mapKey != "" { label = mapKey }	
 		cols = append(cols, label)
 	}
@@ -242,29 +275,48 @@ func (t *AbstractController) mapping(mapping map[string]string, resp utils.Resul
 		for _, o := range order {
 			key := o.(string)
 			it := item.(map[string]interface{})
-			if scheme, ok := schema[key]; !ok && strings.Contains(scheme.(map[string]interface{})["type"].(string), "many") { continue }
-			label := strings.Replace(schema[key].(map[string]interface{})["label"].(string), "_", " ", -1)
+			if scheme, ok := schema[key]; ok && key != "id" && strings.Contains(scheme.(map[string]interface{})["type"].(string), "many") { continue }
+			label := key
+			if scheme, ok := schema[key]; ok {
+				label = strings.Replace(scheme.(map[string]interface{})["label"].(string), "_", " ", -1)
+			}
 			if mapKey, ok := mapping[key]; ok && mapKey != "" { label = mapKey }	
 			label = label
 			if v, ok := it["values_shallow"].(map[string]interface{})[key]; ok { record[label] = v.(map[string]interface{})["name"].(string)
 			} else if v, ok := it["values"].(map[string]interface{})[key]; ok && v != nil { record[label] = fmt.Sprintf("%v", v) 
 			} else { record[label] = "" }
+			colsFunc[label] = colsFunc[key]
 		}
 		results = append(results, record)
 	}
-	return cols, results
+	return cols, colsFunc, results
 }
-func (t *AbstractController) csv(cols []string, results utils.Results) [][]string {
+func (t *AbstractController) csv(d utils.DomainITF, colsFunc map[string]string, cols []string, results utils.Results) [][]string {
 	var data [][]string
 	data = append(data, cols)
+	lastLine := []string{}
+	for _, c := range cols {
+		if v, ok := colsFunc[c]; ok && v != "" { 
+			r, err := d.GetDb().QueryAssociativeArray("SELECT " + v + " as result FROM " + d.GetTable() + " WHERE " + d.GetDb().SQLRestriction)
+			fmt.Println(r, err)
+			if err == nil && len(r) > 0 { 
+				splitted := strings.Split(v, "(")
+				lastLine = append(lastLine, splitted[0] + ": " + utils.GetString(r[0], "result")) 
+			}
+		} else { lastLine = append(lastLine, "") }
+	}
 	for _, r := range results {
 		var row []string
 		for _, c := range cols { 
-			if v, ok := r[c]; !ok || v == nil  { row = append(row, ""); continue }
+			if v, ok := r[c]; !ok || v == nil  { 
+				row = append(row, "")
+				continue 
+			}
 			row = append(row, fmt.Sprintf("%v", r[c])) 
 		}
 		data = append(data, row)
 	}
+	data = append(data, lastLine)
 	return data
 }
 // session is the main manager from Handler

@@ -57,10 +57,14 @@ func (t *GenericController) Delete() { t.SafeCall(utils.DELETE) }
 // @Failure 403 no table
 // @router /:table [get]
 func (t *GenericController) Get() { t.SafeCall(utils.SELECT) }
-// @Title Count
-// @Description count Datas
+
+// @Title Math
+// @Description math on Datas
 // @Param	table			path 	string	true		"Name of the table"
 // @Success 200 {string} success !
 // @Failure 403 no table
-// @router /:table [get]
-func (t *GenericController) Count() { t.SafeCall(utils.COUNT) }
+// @router /:table/:function [get]
+func (t *GenericController) Math() { 
+	function := t.Ctx.Input.Params()[":function"]
+	t.SafeCall(utils.Found(function)) 
+}

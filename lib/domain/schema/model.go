@@ -57,6 +57,7 @@ type ViewFieldModel struct { // lightest struct based on FieldModel dedicate to 
 	LinkPath 				string 		 			 	 `json:"values_path"`
 	ActionPath		 		string 		 		 	 	 `json:"action_path"`
 	Actions		 			[]string 		 		 	 `json:"actions"`
+	DataSchemaID 			int64 		 			 	 `json:"data_schema_id"`
 	DataSchema 				map[string]interface{} 		 `json:"data_schema"`
 }
 
@@ -101,4 +102,5 @@ type FilterModel struct {
 	Operator 			string 						`json:"operator"`
 	Separator 			string 						`json:"separator"`
 	Dir 				string 						`json:"dir"`
+	Width 				float64						`json:"width"`
 }

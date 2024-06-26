@@ -207,6 +207,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of command_row",
+      "in": "query",
+      "name": "command_row",
+      "type": "string"
+     },
+     {
       "description": "(Optionnal) Value of id",
       "in": "query",
       "name": "id",
@@ -333,6 +339,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of command_row",
+      "in": "query",
+      "name": "command_row",
+      "type": "string"
+     },
+     {
       "description": "(Optionnal) Value of id",
       "in": "query",
       "name": "id",
@@ -456,6 +468,12 @@
       "description": "(Optionnal) Value of super",
       "in": "query",
       "name": "super",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of command_row",
+      "in": "query",
+      "name": "command_row",
       "type": "string"
      },
      {
@@ -594,6 +612,12 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of command_row",
+      "in": "query",
+      "name": "command_row",
+      "type": "string"
+     },
+     {
       "description": "(Optionnal) Value of id",
       "in": "query",
       "name": "id",
@@ -628,15 +652,22 @@
     ]
    }
   },
-  "/generic/{table}/count": {
+  "/generic/{table}/{function}": {
    "get": {
-    "description": "Count Datas\n\u003cbr\u003e",
-    "operationId": "GenericController.Count",
+    "description": "Math Datas\n\u003cbr\u003e",
+    "operationId": "GenericController.Math",
     "parameters": [
      {
       "description": "Value of the table",
       "in": "path",
       "name": "table",
+      "required": true,
+      "type": "string"
+     },
+     {
+      "description": "Value of the function",
+      "in": "path",
+      "name": "function",
       "required": true,
       "type": "string"
      },
@@ -728,6 +759,12 @@
       "description": "(Optionnal) Value of super",
       "in": "query",
       "name": "super",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of command_row",
+      "in": "query",
+      "name": "command_row",
       "type": "string"
      },
      {

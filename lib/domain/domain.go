@@ -23,6 +23,7 @@ n service give the main process to interact with Infra.
 */
 var EXCEPTION_FUNC = []string{"Count"}
 type MainService struct {
+	TableName			string
 	AutoLoad			bool
 	User				string
 	Shallowed			bool
@@ -67,6 +68,7 @@ func (d *MainService) IsOwn() bool { return d.Own }
 func (d *MainService) SetOwn(b bool) { d.Own = b }
 func (d *MainService) GetParams() utils.Params { return d.Params }
 func (d *MainService) GetDb() *conn.Db { return d.Db }
+func (d *MainService) GetTable() string { return d.TableName }
 // Infra func caller with admin view && superadmin right (not a structured view made around data for view reason)
 func (d *MainService) SuperCall(params utils.Params, record utils.Record, method utils.Method, args... interface{}) (utils.Results, error) {
 	params[utils.RootRawView]="enable"; params[utils.RootSuperCall]="enable"
@@ -99,6 +101,7 @@ func (d *MainService) call(params utils.Params, record utils.Record, method util
 	if shallow, ok := params[utils.RootShallow]; (ok && shallow == "enable") { d.Shallowed = true }  // set up shallow option (lighter version of results)
 	if tablename, ok := params[utils.RootTableParam]; ok { // retrieve tableName in query (not optionnal)
 		tablename := schserv.GetTablename(tablename)
+		d.TableName = tablename
 		if raw, ok := params[utils.RootRawView]; (!ok || raw != "enable") { d.ClearDeprecatedDatas(tablename) }
 		var specializedService utils.SpecializedServiceITF
 		if d.Specialization {
@@ -109,7 +112,9 @@ func (d *MainService) call(params utils.Params, record utils.Record, method util
 		if d.Db != nil { d.Db.Close() } // open base
 		d.Db = conn.Open(); 
 		defer d.Db.Close() 
-		if !d.SuperAdmin && !d.PermsCheck(tablename, "", "", d.Method) && !d.AutoLoad {
+		meth := d.Method 
+		if meth.IsMath() { meth = utils.SELECT }
+		if !d.SuperAdmin && !d.PermsCheck(tablename, "", "", meth) && !d.AutoLoad {
 			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + tablename + " data")
 		}
 		// load the highest entity avaiable Table level.
@@ -127,7 +132,7 @@ func (d *MainService) call(params utils.Params, record utils.Record, method util
 			utils.ParamsMutex.Lock()
 			d.Params = params
 			utils.ParamsMutex.Unlock()
-			res, err := d.invoke(method.Calling(), args...)
+			res, err := d.invoke(method, args...)
 			if err == nil && specializedService != nil && params[utils.RootRawView] != "enable" && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, method.Calling()) {
 				if dest_id, ok := params[utils.RootDestTableIDParam]; ok {
 					return specializedService.PostTreatment(res, tablename, dest_id), nil
@@ -144,23 +149,24 @@ func (d *MainService) call(params utils.Params, record utils.Record, method util
 			params[utils.RootColumnsParam]=strings.ToLower(col)
 			d.Service = table.TableColumn(specializedService, params[utils.RootColumnsParam]) 
 		}
-		return d.invoke(method.Calling(), args...)
+		return d.invoke(method, args...)
 	}
 	return utils.Results{}, errors.New("no service available")
 }
-func (d *MainService) invoke(funcName string, args... interface{}) (utils.Results, error) {
+func (d *MainService) invoke(method utils.Method, args... interface{}) (utils.Results, error) {
     var err error
 	res := utils.Results{}	
 	if d.Service == nil { return res, errors.New("no service available") }
-	clazz := reflect.ValueOf(d.Service).MethodByName(funcName)
-	if !clazz.IsValid() { return res, errors.New("not implemented <"+ funcName +"> (invalid)") }
-	if clazz.IsZero() { return res, errors.New("not implemented <"+ funcName +"> (zero)") }
+	clazz := reflect.ValueOf(d.Service).MethodByName(method.Calling())
+	if !clazz.IsValid() { return res, errors.New("not implemented <"+ method.Calling() +"> (invalid)") }
+	if clazz.IsZero() { return res, errors.New("not implemented <"+ method.Calling() +"> (zero)") }
 	var values []reflect.Value
+	vals := []reflect.Value {}
+	if method.IsMath() { vals = append(vals, reflect.ValueOf(method.String())) }
 	if len(args) > 0 {
-		vals := []reflect.Value {}
 		for _, arg := range args { vals = append(vals, reflect.ValueOf(arg)) }
 		values = clazz.Call(vals)
-	} else { values = clazz.Call(nil) }
+	} else { values = clazz.Call(vals) }
 	if len(values) > 0 { 
 		data, _:= json.Marshal(values[0].Interface())
 		json.Unmarshal(data, &res)

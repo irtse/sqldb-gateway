@@ -3,9 +3,11 @@ package domain
 import (
 	"fmt"
 	"sort"
+	"net/url"
 	"slices"
 	"strings"
 	"runtime"
+	"runtime/debug"
 	"sqldb-ws/lib/domain/utils"
 	schserv "sqldb-ws/lib/domain/schema"
 )
@@ -33,7 +35,7 @@ func (d *MainService) PostTreat(results utils.Results, tableName string, isWorfl
 		channel := make(chan schserv.ViewItemModel, len(results))
 		defer close(channel)
 		defer func() {
-			if err := recover(); err != nil { fmt.Printf("panic occurred: %v\n", err) }
+			if err := recover(); err != nil { fmt.Printf("panic occurred: %v\n%v\n", err, string(debug.Stack())) }
 		}()
 		resResults := []utils.Results{} 
 		index := 0
@@ -67,7 +69,8 @@ func (d *MainService) PostTreat(results utils.Results, tableName string, isWorfl
 				res = append(res, schserv.ViewModel{ ID: record.GetInt(utils.SpecialIDParam), 
 					Name : record.GetString(schserv.NAMEKEY), Label : label, Description : tableName + " shallowed data",  
 					Path: d.BuildPath(sch.Name, utils.ReservedParam), Schema : schema, SchemaID: id, 
-					SchemaName: tableName, Actions : addAction, ActionPath : d.BuildPath(sch.Name, utils.ReservedParam), Readonly : readonly,
+					SchemaName: tableName, Actions : addAction, ActionPath : d.BuildPath(sch.Name, utils.ReservedParam), 
+					Readonly : readonly,
 					Order : order, Workflow: d.BuildWorkFlow(record, tableName, isWorflow) }.ToRecord())
 			} else { res = append(res, schserv.ViewModel{ ID: record.GetInt(utils.SpecialIDParam), Name : record.GetString(schserv.NAMEKEY), Label : label, 
 														  Workflow : d.BuildWorkFlow(record, tableName, isWorflow),  }.ToRecord()) }
@@ -104,7 +107,9 @@ func (d *MainService) PostTreatRecord(index int, channel chan schserv.ViewItemMo
 						p[utils.RootRowsParam] = fmt.Sprintf("%v", dest)
 						t, err := d.Db.QueryAssociativeArray("SELECT * FROM " + schema.Name + " WHERE id=" + fmt.Sprintf("%v", dest))
 						if err == nil && len(t) > 0 { 
-							shallowVals[schserv.RootID("dest_table")]=utils.Record{ "id":t[0][utils.SpecialIDParam], "name" : t[0][schserv.NAMEKEY], "label" : t[0][schserv.NAMEKEY] }
+							shallowVals[schserv.RootID("dest_table")]=utils.Record{ 
+								"id":t[0][utils.SpecialIDParam], "name" : t[0][schserv.NAMEKEY], "label" : t[0][schserv.NAMEKEY], 
+								"data_ref" : "@" + fmt.Sprintf("%v", schema.ID) + ":" + fmt.Sprintf("%v", t[0][utils.SpecialIDParam]) }
 						}
 					}
 					continue
@@ -115,7 +120,10 @@ func (d *MainService) PostTreatRecord(index int, channel chan schserv.ViewItemMo
 				if !strings.Contains(field.Type, "many") { 
 					r, err := d.Db.QueryAssociativeArray("SELECT * FROM " + link + " WHERE id=" + record.GetString(field.Name))
 					if err != nil || len(r) == 0 { continue }
-					shallowVals[field.Name]=utils.Record{ "id": r[0][utils.SpecialIDParam], "name" : r[0][schserv.NAMEKEY] }
+					if d.PermsCheck(link, "", "", utils.SELECT) {
+						shallowVals[field.Name]=utils.Record{ "id": r[0][utils.SpecialIDParam], "name" : r[0][schserv.NAMEKEY],
+							"data_ref" : "@" + fmt.Sprintf("%v", field.Link) + ":" + fmt.Sprintf("%v", r[0][utils.SpecialIDParam]), }
+					} else { shallowVals[field.Name]=utils.Record{ "id": r[0][utils.SpecialIDParam], "name" : r[0][schserv.NAMEKEY], } }
 					if _, ok := r[0]["label"]; ok { shallowVals[field.Name].(utils.Record)["label"]=r[0]["label"] }
 					continue 
 				} else if field.Type == schserv.MANYTOMANY.String() && !d.LowerRes { // TODO DEBUG
@@ -146,8 +154,14 @@ func (d *MainService) PostTreatRecord(index int, channel chan schserv.ViewItemMo
 			}
 			if shallow { vals[field.Name]=nil } else if v, ok:=record[field.Name]; ok { vals[field.Name]=v }
 		}
+		if cmd, ok := d.Params[utils.RootCommandRow]; ok { 
+			decodedLine, _ := url.QueryUnescape(cmd)
+			matches := strings.Split(decodedLine, " as ")
+			if len(matches) > 1 { vals[matches[len(matches) - 1]]=record[matches[len(matches) - 1]] }
+		}
 		channel <- schserv.ViewItemModel{ Values : vals,  DataPaths :  datapath, ValueShallow : shallowVals, Sort: int64(index),
-			HistoryPath : historyPath, ValueMany: manyVals, ValuePathMany: manyPathVals, Readonly : d.IsReadonly(tableName, record),
+			HistoryPath : historyPath, ValueMany: manyVals, ValuePathMany: manyPathVals, 
+			Readonly : d.IsReadonly(tableName, record),
 			Workflow : d.BuildWorkFlow(record, tableName, isWorkflow), }
 }
 
@@ -218,5 +232,12 @@ func (d *MainService) BuildWorkFlow(record utils.Record, tableName string, isWor
 }
 
 func (d *MainService) IsReadonly(tableName string, record utils.Record) bool {
-	return record["state"] == "completed" || record["state"] == "dismiss"
+	readonly := true
+	for _, meth := range []utils.Method{ utils.CREATE, utils.UPDATE } {
+		if d.LocalPermsCheck(tableName, "", "", meth, record.GetString(utils.SpecialIDParam)) {
+			if meth == utils.CREATE && d.Empty { readonly = false; break;
+			} else if meth == utils.UPDATE { readonly = false; break; }
+		}
+	}
+	return readonly || record["state"] == "completed" || record["state"] == "dismiss"
 }

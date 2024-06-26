@@ -73,8 +73,15 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 	if view != "" { params[utils.RootColumnsParam] = view }
 	if dir != "" { params[utils.RootDirParam] = dir }
 	for k, p := range s.Domain.GetParams() { 
-		if k == utils.RootRowsParam || k == utils.SpecialIDParam || k == utils.RootTableParam { continue }
-		if k == utils.SpecialSubIDParam { params[utils.RootRowsParam] = p; continue }
+		if k == utils.RootRowsParam || k == utils.SpecialIDParam || k == utils.RootTableParam { 
+			delete(s.Domain.GetParams(), k)
+			continue 
+		}
+		if k == utils.SpecialSubIDParam { 
+			params[utils.RootRowsParam] = p;
+			delete(s.Domain.GetParams(), k)
+			continue
+		}
 		params[k]=p
 	}
 	if s.Domain.GetParams()[utils.RootFilterNewState] != "" { params[utils.RootFilterNewState] = s.Domain.GetParams()[utils.RootFilterNewState] }

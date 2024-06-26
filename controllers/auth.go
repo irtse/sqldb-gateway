@@ -49,20 +49,7 @@ func (l *AuthController) Login() {
 						schema.NAMEKEY : notif.GetString(schema.NAMEKEY),
 						"description" : notif.GetString("description"),
 						"link_path" : "/" + utils.MAIN_PREFIX + "/" + schema.DBNotification.Name + "?" + utils.RootRowsParam + "=" + notif.GetString("id"),
-					}
-					if sch.Name == schema.DBTask.Name { 
-						r, err := d.SuperCall(utils.AllParams(schema.DBView.Name), utils.Record{}, utils.SELECT, "name='assigned activity'")
-						if err == nil { 
-							nn["data_ref"] = "#" + fmt.Sprintf("%v", r[0][utils.SpecialIDParam]) +":" + fmt.Sprintf("%v", notif[utils.RootDestTableIDParam]) 
-							nn["data_path"] = "/" + utils.MAIN_PREFIX + "/" + schema.DBTask.Name + "?" + utils.RootRowsParam + "=" + notif.GetString(schema.RootID("dest_table"))
-						}
-					}
-					if sch.Name == schema.DBRequest.Name { 
-						r, err := d.SuperCall(utils.AllParams(schema.DBView.Name), utils.Record{}, utils.SELECT, "name='my unvalidated requests'")
-						if err == nil { 
-							nn["data_ref"] = "#" + fmt.Sprintf("%v", r[0][utils.SpecialIDParam]) +":" + fmt.Sprintf("%v", notif[utils.RootDestTableIDParam]) 
-							nn["data_path"] = "/" + utils.MAIN_PREFIX + "/" + schema.DBRequest.Name + "?" + utils.RootRowsParam + "=" + fmt.Sprintf("%v", notif[utils.RootDestTableIDParam]) 
-						}
+						"data_ref" : "@" + fmt.Sprintf("%v", sch.ID) +":" + fmt.Sprintf("%v", notif[utils.RootDestTableIDParam]),
 					}
 					n = append(n, nn)
 				}
@@ -116,21 +103,7 @@ func (l *AuthController) Refresh() {
 			schema.NAMEKEY : notif.GetString(schema.NAMEKEY),
 			"description" : notif.GetString("description"),
 			"link_path" : "/" + utils.MAIN_PREFIX + "/" + schema.DBNotification.Name + "?" + utils.RootRowsParam + "=" + notif.GetString("id"),
-		}
-		
-		if sch.Name == schema.DBTask.Name { 
-			r, err := d.SuperCall(utils.AllParams(schema.DBView.Name), utils.Record{}, utils.SELECT, "name='assigned activity'")
-			if err == nil { 
-				nn["data_ref"] = "#" + fmt.Sprintf("%v", r[0][utils.SpecialIDParam]) +":" + fmt.Sprintf("%v", notif[utils.RootDestTableIDParam]) 
-				nn["data_path"] = "/" + utils.MAIN_PREFIX + "/" + schema.DBTask.Name + "?" + utils.RootRowsParam + "=" + notif.GetString(schema.RootID("dest_table"))
-			}
-		}
-		if sch.Name == schema.DBRequest.Name { 
-			r, err := d.SuperCall(utils.AllParams(schema.DBView.Name), utils.Record{}, utils.SELECT, "name='my unvalidated requests'")
-			if err == nil { 
-				nn["data_ref"] = "#" + fmt.Sprintf("%v", r[0][utils.SpecialIDParam]) +":" + fmt.Sprintf("%v", notif[utils.RootDestTableIDParam]) 
-				nn["data_path"] = "/" + utils.MAIN_PREFIX + "/" + schema.DBRequest.Name + "?" + utils.RootRowsParam + "=" + fmt.Sprintf("%v", notif[utils.RootDestTableIDParam]) 
-			}
+			"data_ref" : "@" + fmt.Sprintf("%v", sch.ID) + ":" + fmt.Sprintf("%v", notif[utils.RootDestTableIDParam]),
 		}
 		n = append(n, nn)
 	}

@@ -68,6 +68,12 @@ func (db *Db) GetSQLOrder() string { return db.SQLOrder }
 func (db *Db) GetSQLView() string { return db.SQLView }
 
 func (db *Db) Prepare(query string) (*sql.Stmt, error) {
+	if db == nil || db.Conn == nil { 
+		var err error
+		db.Conn, err = sql.Open(db.Driver, db.Url)
+		if err != nil { return nil, fmt.Errorf("No connection to database") }
+		defer db.Close()
+	}
 	if db.LogQueries { log.Info().Msg(query) }
 	stmt, err := db.Conn.Prepare(query)
 	if err != nil { return nil, err }
@@ -75,20 +81,28 @@ func (db *Db) Prepare(query string) (*sql.Stmt, error) {
 }
 
 func (db *Db) QueryRow(query string) (int64, error) {
-	if db == nil || db.Conn == nil { return -1, fmt.Errorf("No connection to database") }
-    id := 0
+	id := 0
+	if db == nil || db.Conn == nil { 
+		var err error
+		db.Conn, err = sql.Open(db.Driver, db.Url)
+		if err != nil { return int64(id), fmt.Errorf("No connection to database") }
+		defer db.Close()
+	}
 	err := db.Conn.QueryRow(query).Scan(&id)
-	if err != nil { 
-		fmt.Printf("err row: %v\n", query)
-		return int64(id), err }
+	if err != nil { return int64(id), err }
 	return int64(id), err
 }
 
 func (db *Db) Query(query string) (error) {
-	if db == nil || db.Conn == nil { return fmt.Errorf("No connection to database") }
+	if db == nil || db.Conn == nil { 
+		var err error
+		db.Conn, err = sql.Open(db.Driver, db.Url)
+		if err != nil { return fmt.Errorf("No connection to database") }
+		defer db.Close()
+	}
 	rows, err := db.Conn.Query(query)
 	if err != nil { 
-		fmt.Printf("err q: %v\n", query)
+		// fmt.Printf("err q: %v\n", query)
 		return err }
 	err = rows.Close()
 	return err
@@ -96,7 +110,13 @@ func (db *Db) Query(query string) (error) {
 
 func (db *Db) QueryAssociativeArray(query string) ([]map[string]interface{}, error) {
 	if strings.Contains(query, "<nil>") { return []map[string]interface{}{}, nil }
-	if db == nil || db.Conn == nil { return nil, fmt.Errorf("No connection to database") }
+	if db == nil || db.Conn == nil { 
+		var err error
+		db.Conn, err = sql.Open(db.Driver, db.Url)
+		if err != nil { return nil, fmt.Errorf("No connection to database") }
+		defer db.Close()
+	}
+	// fmt.Println("query: ", query)
 	rows, err := db.Conn.Query(query)	
 	if err != nil { return nil, err }
 	defer rows.Close()
@@ -135,9 +155,7 @@ func (db *Db) QueryAssociativeArray(query string) ([]map[string]interface{}, err
 				m[colName], _ = strconv.ParseFloat(string(v.([]uint8)), 64); 
 				break
 				case "TIMESTAMP", "DATE": 
-					if len(fmt.Sprintf("%v", *val)) > 10 { m[colName] = fmt.Sprintf("%v", *val)[:10]
-					} else { m[colName] = fmt.Sprintf("%v", *val) }
-					
+					if len(fmt.Sprintf("%v", *val)) > 10 { m[colName] = fmt.Sprintf("%v", *val)[:10] } else { m[colName] = fmt.Sprintf("%v", *val) }
 					break
 				default: m[colName] = *val; break
 			}
@@ -149,8 +167,18 @@ func (db *Db) QueryAssociativeArray(query string) ([]map[string]interface{}, err
 
 func (db *Db) SelectResults(name string) ([]map[string]interface{}, error) {  return db.QueryAssociativeArray(db.BuildSelect(name)) }
 
-func (db *Db) BuildCount(name string) string {
-	query := "SELECT COUNT(*) FROM " + name
+func (db *Db) BuildMath(algo string, name string) string {
+	col := "*"
+	cols := strings.Split(db.SQLView, ",")
+	if len(cols) > 0 { 
+		for _, c := range cols {
+			if c != "id" { 
+				if strings.Contains(strings.ToLower(c), " as ") { col = "(" + strings.Split(strings.ToLower(c), " as ")[0] + ")" } else { col = c }
+				break; 
+			} 
+		}
+	}
+	query := "SELECT " + strings.ToUpper(algo) + "(" + col + ") as result FROM " + name
 	if db.SQLRestriction != "" { query += " WHERE " + db.SQLRestriction }
 	return query
 }

@@ -53,9 +53,10 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 								   utils.RootRowsParam : utils.GetString(res, schserv.RootID(schserv.DBRequest.Name)), }
 		requests, err := s.Domain.SuperCall( paramsReq, utils.Record{}, utils.SELECT)
 		if err != nil || len(requests) == 0 { continue }
+		err = s.Domain.GetDb().Query("DELETE FROM " + schserv.DBNotification.Name + " WHERE " + utils.RootDestTableIDParam + "=" + fmt.Sprintf("%v", res[utils.SpecialIDParam]) + " AND " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ");")
 		req := requests[0] 
 		if order, ok3 := req["current_index"]; ok3 {
-			otherPendingTasks, _ := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBTask.Name + " WHERE " + schserv.RootID(schserv.DBRequest.Name) + "=" + fmt.Sprintf("%v", res[schserv.RootID(schserv.DBRequest.Name)]) + " AND state IN ('pending', 'progressing')")
+			otherPendingTasks, err := s.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBTask.Name + " WHERE " + schserv.RootID(schserv.DBRequest.Name) + "=" + fmt.Sprintf("%v", res[schserv.RootID(schserv.DBRequest.Name)]) + " AND state IN ('pending', 'progressing')")
 			if len(otherPendingTasks) > 0 { continue }
 			current_index := order.(float64)
 			if res["state"] == "completed" { current_index++ }	
@@ -79,14 +80,7 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 			} 
 			s.Domain.PermsSuperCall(utils.AllParams(schserv.DBRequest.Name), newRecRequest, utils.UPDATE)
 			if err != nil || len(schemes) == 0 { continue }
-			
-			for _, scheme := range schemes {
-				paramsNot := utils.Params{ utils.RootTableParam : schserv.DBNotification.Name, 
-					utils.RootRowsParam : utils.ReservedParam, 
-					schserv.RootID(schserv.DBEntity.Name) : utils.GetString(scheme, schserv.RootID(schserv.DBEntity.Name)),
-					schserv.RootID(schserv.DBUser.Name) : utils.GetString(scheme, schserv.RootID(schserv.DBUser.Name)),
-					utils.RootDestTableIDParam : fmt.Sprintf("%v", res[utils.SpecialIDParam]), }
-				s.Domain.SuperCall( paramsNot, utils.Record{}, utils.DELETE) 
+			for _, scheme := range schemes { 
 				params := utils.Params{ utils.RootTableParam : schserv.DBTask.Name, utils.RootRowsParam: utils.ReservedParam,
 					schserv.RootID(schserv.DBWorkflowSchema.Name) : scheme.GetString(utils.SpecialIDParam),
 					schserv.RootID(schserv.DBRequest.Name) : req.GetString(utils.SpecialIDParam) }
@@ -147,14 +141,12 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 
 func (s *TaskService) ConfigureFilter(tableName string, innerestr... string) (string, string, string, string) {
 	if !s.Domain.IsSuperCall() {
-		restr := "((" + schserv.RootID(schserv.DBWorkflowSchema.Name) + " IS NULL AND " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))"
-		restr += " OR (" + schserv.RootID(schserv.DBWorkflowSchema.Name) + " IN (SELECT id FROM " + schserv.DBWorkflowSchema.Name + " WHERE "
-		restr += schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")" 
-		restr += " OR " + schserv.RootID(schserv.DBEntity.Name) + " IN ("
+		restr := schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")"
+		restr += " OR (" + schserv.RootID(schserv.DBEntity.Name) + " IN ("
 		restr += "SELECT " + schserv.RootID(schserv.DBEntity.Name) + " FROM " + schserv.DBEntityUser.Name + " "
 		restr += " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN ("
-		restr += "SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + "))))"
-		restr += " AND meta_" + schserv.RootID(schserv.DBRequest.Name) + " IS NULL)"
+		restr += "SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.Domain.GetUser()) + " OR email=" + conn.Quote(s.Domain.GetUser()) + ")))"
+		restr += " AND meta_" + schserv.RootID(schserv.DBRequest.Name) + " IS NULL"
 		innerestr = append(innerestr, restr)
 		return s.Domain.ViewDefinition(tableName, innerestr... )
 	}

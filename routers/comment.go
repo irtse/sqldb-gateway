@@ -66,8 +66,8 @@ func init() {
             Params: nil})
     beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"],
         beego.ControllerComments{
-            Method: "Count",
-            Router: `/:table/count`,
+            Method: "Math",
+            Router: `/:table/:function`,
             AllowHTTPMethods: []string{"get"},
             MethodParams: param.Make(),
             Filters: nil,

@@ -71,11 +71,8 @@ func (t *TableInfo) EmptyRecord() (map[string]interface{}, error) {
 	return record, nil
 }
 
-func (t *TableInfo) Count(restriction... string) ([]map[string]interface{}, error) {
-	res, err := t.Get()
-	if err != nil { return nil, err }
-	t.Results = []map[string]interface{}{ map[string]interface{}{ "count" : len(res) }, }
-	return t.Results, nil
+func (t *TableInfo) Math(algo string, restriction... string) ([]map[string]interface{}, error) {
+	return nil, errors.New("not implemented...")
 }
 
 func (t *TableInfo) Get(restriction... string) ([]map[string]interface{}, error) {

@@ -24,6 +24,7 @@ func (s *SpecializedService) ConfigureFilter(tableName string, innerestr... stri
 type SpecializedServiceInfo interface { GetName() string }
 type DomainITF interface {
 	GetMethod() Method
+	GetTable() string
 	SetOwn(own bool)
 	SetExternalSuperAdmin(external bool)
 	CountNewDataAccess(tableName string, filter string, countParams Params) ([]string, int64)

@@ -79,6 +79,9 @@ func (d *MainService) IsOwnPermission(tableName string, force bool, method utils
 }
 // can redact a view based on perms. 
 func (d *MainService) PermsCheck(tableName string, colName string, level string, method utils.Method) bool {
+	return d.LocalPermsCheck(tableName, colName, level, method, "")
+}
+func (d *MainService) LocalPermsCheck(tableName string, colName string, level string, method utils.Method, destID string) bool {
 	if d.IsSuperCall() && method != utils.SELECT || method == utils.SELECT && d.IsSuperCall() { return true }
 	if d.exception(tableName, level == "" || fmt.Sprintf("%v", level) == "<nil>" || level == schserv.LEVELNORMAL, method) { return true }
 	if len(d.Perms) == 0 { d.PermsBuilder() }
@@ -110,47 +113,57 @@ func (d *MainService) PermsCheck(tableName string, colName string, level string,
 		}
 		return perms.Read == schserv.LEVELNORMAL || perms.Read == schserv.LEVELOWN
 	}
-	if (method == utils.UPDATE && perms.Update) { // should be able to update only if request is made to table and your able to change it
+	if (method == utils.UPDATE && perms.Update) || (method == utils.CREATE && perms.Create) { // should be able to update only if request is made to table and your able to change it
 		if d.Empty { return true }
-		res, err := d.invoke(utils.SELECT.Calling()) // TO TEST STRANGER THING
-		if err == nil && len(res) > 0 {
-			for _, rec := range res {
-				schema, _ := schserv.GetSchema(tableName)
-				sqlFilter := "SELECT COUNT(*) FROM " + schserv.DBRequest.Name + " WHERE " + utils.RootDestTableIDParam + "=" + rec.GetString(utils.SpecialIDParam) + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID) 
-				count := int64(0)
-				if d.Db.Driver == conn.PostgresDriver { 
-					count, err = d.Db.QueryRow(sqlFilter)
-					if err != nil { continue }
-				}
-				if d.Db.Driver == conn.MySQLDriver {
-					stmt, err := d.Db.Prepare(sqlFilter)
-					if err != nil { continue }
-					res, err := stmt.Exec()
-					if err != nil { continue }
-					count, err = res.LastInsertId()
-					if err != nil { continue }
-				}
-				if count == 0 { continue }
-				sqlFilter += " AND current_index IN (SELECT wf.index FROM " + schserv.DBWorkflowSchema.Name + " as wf WHERE wf." + schserv.RootID(schserv.DBWorkflow.Name) + " = " + schserv.RootID(schserv.DBWorkflow.Name) + " "	
-				sqlFilter += " AND id IN (SELECT dbworkflow_schema_id FROM dbtask WHERE is_close=false)"
-				sqlFilter += " AND (" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")"
-				sqlFilter += " OR " + schserv.RootID(schserv.DBEntity.Name) + " IN (SELECT " + schserv.RootID(schserv.DBEntity.Name) + " FROM " + schserv.DBEntityUser.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + "))))"
-				if d.Db.Driver == conn.PostgresDriver { 
-					count, err = d.Db.QueryRow(sqlFilter)
-					if err != nil { continue }
-				}
-				if d.Db.Driver == conn.MySQLDriver {
-					stmt, err := d.Db.Prepare(sqlFilter)
-					if err != nil { continue }
-					res, err := stmt.Exec()
-					if err != nil { continue }
-					count, err = res.LastInsertId()
-					if err != nil { continue }
-				}
-				if count == 0 { return false }
+		if destID != "" {
+			schema, _ := schserv.GetSchema(tableName)
+			sqlFilter := "SELECT COUNT(*) FROM " + schserv.DBRequest.Name + " WHERE " 
+			sqlFilter += utils.RootDestTableIDParam + "=" + destID + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID ) 
+			count := int64(0); var err error
+			if d.Db.Driver == conn.PostgresDriver { 
+				count, err = d.Db.QueryRow(sqlFilter)
+				if err != nil { return false }
 			}
+			if d.Db.Driver == conn.MySQLDriver {
+				stmt, err := d.Db.Prepare(sqlFilter)
+				if err != nil { return false }
+				res, err := stmt.Exec()
+				if err != nil { return false }
+				count, err = res.LastInsertId()
+				if err != nil { return false }
+			}
+			if count == 0 { return false }
+			sqlFilter += " AND current_index IN (SELECT wf.index FROM " + schserv.DBWorkflowSchema.Name + " as wf WHERE wf." + schserv.RootID(schserv.DBWorkflow.Name) + " = " + schserv.RootID(schserv.DBWorkflow.Name) + " "	
+			sqlFilter += " AND id IN (SELECT dbworkflow_schema_id FROM dbtask WHERE is_close=false)"
+			sqlFilter += " AND (" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")"
+			sqlFilter += " OR " + schserv.RootID(schserv.DBEntity.Name) + " IN (SELECT " + schserv.RootID(schserv.DBEntity.Name) + " FROM " + schserv.DBEntityUser.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + "))))"
+			if d.Db.Driver == conn.PostgresDriver { 
+				count, err = d.Db.QueryRow(sqlFilter)
+
+				if err != nil { return false }
+			}
+			if d.Db.Driver == conn.MySQLDriver {
+				stmt, err := d.Db.Prepare(sqlFilter)
+				if err != nil { return false }
+				res, err := stmt.Exec()
+				if err != nil { return false }
+				count, err = res.LastInsertId()
+				if err != nil { return false }
+			}
+				
+			if count == 0 { return false 
+			} else { 
+				sqlFilter = "SELECT COUNT(*) as result FROM " + schserv.DBTask.Name + " WHERE " + utils.RootDestTableIDParam + "=" + destID
+				sqlFilter += " AND (" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")"
+				sqlFilter += " OR " + schserv.RootID(schserv.DBEntity.Name) + " IN (SELECT " + schserv.RootID(schserv.DBEntity.Name) + " FROM " + schserv.DBEntityUser.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")))"
+				res, err := d.Db.QueryAssociativeArray(sqlFilter)
+				if err != nil || len(res) == 0  { return false }
+				if res[0]["result"] == nil || fmt.Sprintf("%v", res[0]["result"]) == "0" { return false }
+			}
+		} else {
+			return (method == utils.UPDATE && perms.Update) || (method == utils.CREATE && perms.Create)
 		}
 		return true
 	}
-	return method == utils.CREATE && perms.Create || method == utils.DELETE && perms.Delete || method == utils.UPDATE && perms.Update
+	return method == utils.DELETE && perms.Delete
 }

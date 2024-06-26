@@ -48,7 +48,7 @@ func (s *SchemaService) WriteRowAutomation(record map[string]interface{}, tableN
 		if !slices.Contains([]string{ schserv.DBView.Name, schserv.DBRequest.Name, schserv.DBTask.Name,  schserv.DBFilter.Name, schserv.DBFilterField.Name, schserv.DBViewAttribution.Name, schserv.DBNotification.Name }, schema.Name) {
 			count, err := s.Domain.GetDb().QueryAssociativeArray("SELECT COUNT(*) as count FROM " + schserv.DBView.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
 			index := 2
-			if err == nil && len(count) > 0  && (int(count[0]["count"].(float64)) + 1) > 1 { index = int(count[0]["count"].(float64)) + 1 }
+			if err == nil && len(count) > 0  && (int(count[0]["result"].(float64)) + 1) > 1 { index = int(count[0]["result"].(float64)) + 1 }
 			cat := "global data"
 			if fmt.Sprintf("%v",record["name"])[:2] == "db" { cat = "technical data" }
 			newView := utils.Record{ schserv.NAMEKEY : name, "indexable" : true, "description": "View description for " + name + " datas.", 

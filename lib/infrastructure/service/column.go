@@ -31,7 +31,7 @@ type TableColumnInfo struct {
 
 func (t *TableColumnInfo) Template(restriction... string) (interface{}, error) { return t.Get(restriction...) }
 
-func (t *TableColumnInfo) Count(restriction... string) ([]map[string]interface{}, error) {
+func (t *TableColumnInfo) Math(algo string, restriction... string) ([]map[string]interface{}, error) {
 	t.db.SQLView = t.Views
 	if t.SpecializedService != nil {
 		restr, _, order, limit := t.SpecializedService.ConfigureFilter(t.Name, strings.Join(restriction, " AND "))
@@ -46,21 +46,9 @@ func (t *TableColumnInfo) Count(restriction... string) ([]map[string]interface{}
 		if order != "" { t.db.SQLOrder = order }
 		if limit != "" { t.db.SQLLimit = limit }
 	}
-	var err error; var count int64
-	if t.db.Driver == conn.PostgresDriver { 
-		count, err = t.db.QueryRow(t.db.BuildCount(t.Name))
-		if err != nil { return nil, err }
-	}
-	if t.db.Driver == conn.MySQLDriver {
-		stmt, err := t.db.Prepare(t.db.BuildCount(t.Name))
-		if err != nil { return t.DBError(nil, err) }
-		res, err := stmt.Exec()
-		if err != nil { return nil, err }
-		count, err = res.LastInsertId()
-		if err != nil { return t.DBError(nil, err) }
-	}
-	if err != nil { return t.DBError(nil, err) }
-	t.Results = append(t.Results, map[string]interface{}{ "count" : count, })
+	res, err := t.db.QueryAssociativeArray(t.db.BuildMath(algo, t.Name))
+	if err != nil || len(res) == 0 { return nil, err }
+	t.Results = append(t.Results, map[string]interface{}{ "result" : res[0]["result"], })
 	return t.Results, nil
 }
 

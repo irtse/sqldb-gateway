@@ -154,6 +154,10 @@ paths:
         in: query
         name: super
         type: string
+      - description: (Optionnal) Value of command_row
+        in: query
+        name: command_row
+        type: string
       - description: (Optionnal) Value of id
         in: query
         name: id
@@ -247,6 +251,10 @@ paths:
         in: query
         name: super
         type: string
+      - description: (Optionnal) Value of command_row
+        in: query
+        name: command_row
+        type: string
       - description: (Optionnal) Value of id
         in: query
         name: id
@@ -339,6 +347,10 @@ paths:
       - description: (Optionnal) Value of super
         in: query
         name: super
+        type: string
+      - description: (Optionnal) Value of command_row
+        in: query
+        name: command_row
         type: string
       - description: (Optionnal) Value of id
         in: query
@@ -439,6 +451,10 @@ paths:
         in: query
         name: super
         type: string
+      - description: (Optionnal) Value of command_row
+        in: query
+        name: command_row
+        type: string
       - description: (Optionnal) Value of id
         in: query
         name: id
@@ -460,16 +476,21 @@ paths:
           description: no table
       tags:
       - generic
-  /generic/{table}/count:
+  /generic/{table}/{function}:
     get:
       description: |-
-        Count Datas
+        Math Datas
         <br>
-      operationId: GenericController.Count
+      operationId: GenericController.Math
       parameters:
       - description: Value of the table
         in: path
         name: table
+        required: true
+        type: string
+      - description: Value of the function
+        in: path
+        name: function
         required: true
         type: string
       - description: needed on a rows level request (value=all for post/put method
@@ -538,6 +559,10 @@ paths:
       - description: (Optionnal) Value of super
         in: query
         name: super
+        type: string
+      - description: (Optionnal) Value of command_row
+        in: query
+        name: command_row
         type: string
       - description: (Optionnal) Value of id
         in: query

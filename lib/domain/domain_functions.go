@@ -34,8 +34,8 @@ func (d *MainService) CountNewDataAccess(tableName string, filter string, countP
 		p[k] = v 
 	}
 	res, err = d.Db.QueryAssociativeArray("SELECT COUNT(*) as count FROM " + tableName + " WHERE " + sqlFilter)
-	if len(res) == 0 || err != nil || res[0]["count"] == nil { return ids, 0 }
-	return ids, int64(res[0]["count"].(int64))
+	if len(res) == 0 || err != nil || res[0]["result"] == nil { return ids, 0 }
+	return ids, int64(res[0]["result"].(int64))
 }
 
 func (d *MainService) NewDataAccess(schemaID int64, destIDs []string, meth utils.Method) {
@@ -75,8 +75,10 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 		json.Unmarshal(b, &shallowField)
 		shallowField.ActionPath = ""
 		shallowField.Actions=[]string{}
+		if scheme.Name == utils.RootDestTableIDParam { shallowField.Type = "link" }
 		if scheme.Link > 0 && !d.LowerRes {
 			schema, _ := schserv.GetSchemaByID(scheme.Link)
+			if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") { shallowField.Type = "link" }
 			shallowField.ActionPath = "/" + utils.MAIN_PREFIX + "/" + schema.Name + "?rows=all"
 			shallowField.LinkPath = shallowField.ActionPath + "&" + utils.RootShallow + "=enable"
 			if strings.Contains(scheme.Type, "many") {
@@ -89,7 +91,8 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 			}
 		}
 		for _, meth := range []utils.Method{ utils.SELECT, utils.CREATE, utils.UPDATE, utils.DELETE } {
-			if d.PermsCheck(tableName, "", "", meth) && (((meth == utils.SELECT || meth == utils.CREATE) && d.Empty) || !d.Empty) { 
+			if d.PermsCheck(tableName, "", "", meth) && (((meth == utils.SELECT || meth == utils.CREATE) && d.Empty) || !d.Empty) {
+ 
 				if !slices.Contains(additionnalAction, meth.Method()) { additionnalAction = append(additionnalAction, meth.Method()) }
 				if meth == utils.CREATE && !slices.Contains(additionnalAction, "import") {
 					res, err := d.GetDb().QueryAssociativeArray("SELECT * FROM " + schserv.DBWorkflow.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID))
@@ -106,7 +109,7 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 				if d.PermsCheck(schema.Name, "", "", meth) { 
 					sch, _, _, _, _, _ := d.GetViewFields(schema.Name, true)
 					shallowField.DataSchema = sch
-					// shallowField.DataSchemaOrder = ordered
+					if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") { shallowField.Type = "link" }
 					shallowField.ActionPath = "/" + utils.MAIN_PREFIX + "/" + schema.Name + "?rows=" + utils.ReservedParam
 					shallowField.Actions=append(shallowField.Actions, meth.Method())
 				} 
@@ -120,7 +123,7 @@ func (d *MainService) GetViewFields(tableName string, noRecursive bool) (map[str
 	sort.SliceStable(keysOrdered, func(i, j int) bool{
         return schemes[keysOrdered[i]].(schserv.ViewFieldModel).Index <= schemes[keysOrdered[j]].(schserv.ViewFieldModel).Index
     })
-	return schemes, schema.ID, keysOrdered, cols, additionnalAction, !slices.Contains(additionnalAction, "post") && !slices.Contains(additionnalAction, "put")
+	return schemes, schema.ID, keysOrdered, cols, additionnalAction, !(slices.Contains(additionnalAction, "post") && d.Empty) && !slices.Contains(additionnalAction, "put")
 }
 
 func (d *MainService) BuildPath(tableName string, rows string, extra... string) string {

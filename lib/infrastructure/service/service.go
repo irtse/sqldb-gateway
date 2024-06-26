@@ -25,7 +25,7 @@ func (s *InfraSpecializedService) WriteRowAutomation(record map[string]interface
 
 type InfraServiceItf interface {
 	Verify(string)              					(string, bool)
-	Count(restriction... string)  					([]map[string]interface{}, error)
+	Math(algo string, restriction... string)  					([]map[string]interface{}, error)
 	Get(restriction... string)  					([]map[string]interface{}, error)
 	CreateOrUpdate(restriction... string)        	([]map[string]interface{}, error)
 	Delete(restriction... string)                	([]map[string]interface{}, error)

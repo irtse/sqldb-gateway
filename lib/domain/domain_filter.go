@@ -25,7 +25,7 @@ func (d *MainService) LifeCycleRestriction(tableName string, restr string, state
 	}
 	if operator != "" { 
 		t := "id " + operator + " (" + strings.Join(news, ",") + ")" 
-		if len(restr) > 0 { t += " AND " }
+		if len(restr) > 0 { restr += " AND " }
 		restr = restr + t
 	}
 	return restr
@@ -90,10 +90,10 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 					keyVal := []string{} 
 					if strings.Contains(or, "<>~") { keyVal = strings.Split(or, "<>~"); operator = " NOT LIKE "
 					} else if strings.Contains(or, "~") { keyVal = strings.Split(or, "~"); operator = " LIKE " 
-					} else if strings.Contains(or, ":") { keyVal = strings.Split(or, ":"); operator = "=" 
 					} else if strings.Contains(or, "<>") { keyVal = strings.Split(or, "<>"); operator = "<>"
 					} else if strings.Contains(or, "<:") { keyVal = strings.Split(or, "<:"); operator = "<=" 
 					} else if strings.Contains(or, ">:") { keyVal = strings.Split(or, ">:"); operator = ">=" 
+					} else if strings.Contains(or, ":") { keyVal = strings.Split(or, ":"); operator = "="
 					} else if strings.Contains(or, "<") { keyVal = strings.Split(or, "<"); operator = "<"  
 					} else if strings.Contains(or, ">") { keyVal = strings.Split(or, ">"); operator = ">"  }
 					if len(keyVal) != 2 { continue }
@@ -134,8 +134,6 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 
 func (d *MainService) sqlItem(alterRestr string, field schserv.FieldModel, key string, or string, operator string) (string) {
 	sql := or
-	fmt.Println("SQL:", key, or, operator)
-
 	sql = conn.FormatForSQL(field.Type, sql)
 	if sql == "" { return alterRestr }
 	if strings.Contains(sql, "NULL") { operator = "IS " }
@@ -210,8 +208,8 @@ func (s *MainService) restrictionByEntityUser(tableName string, restr string) st
 		if tableName[:2] != "db" && len(ids) == 0 { 
 			if len(newRestr) > 0 { newRestr +=  " AND " }
 			newRestr += "id IS NULL"
-			if len(restr) > 0 { restr +=  " AND " }
 			if len(newRestr) > 0 {
+				if len(restr) > 0 { restr +=  " AND " }
 				restr += "(" + newRestr + ")"
 			}
 			return restr 
@@ -232,11 +230,10 @@ func (s *MainService) restrictionByEntityUser(tableName string, restr string) st
 		newRestr += "SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + "))"
 		// TODO GET FROM PARENT ID MISSING + OWN
 	}
-	if len(restr) > 0 { restr +=  " AND " }
 	if len(newRestr) > 0 {
+		if len(restr) > 0 { restr +=  " AND " }
 		restr += "(" + newRestr + ")"
 	}
-	fmt.Println("NEW RESTRICTION:", restr)
 	return restr
 }
 
@@ -250,6 +247,10 @@ func (d *MainService) viewbyFields(tableName string) (string) {
 		if d.PermsCheck(tableName, field.Name, field.Level, utils.SELECT) { SQLview += field.Name + "," }
 	}
 	if len(SQLview) > 0 { SQLview = SQLview[:len(SQLview) - 1] }
+	if d.Params[utils.RootCommandRow] != "" { 
+		decodedLine, err := url.QueryUnescape(fmt.Sprint(d.Params[utils.RootCommandRow]))
+		if err == nil { SQLview += "," + decodedLine }
+	}
 	return SQLview
 }
 func (s *MainService) GetFilter(filterID string, viewfilterID string, schemaID string) (string, string, string, string, string) {
