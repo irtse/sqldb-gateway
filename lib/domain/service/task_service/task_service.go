@@ -90,7 +90,8 @@ func (s *TaskService) UpdateRowAutomation(results []map[string]interface{}, reco
 					schserv.RootID(schserv.DBWorkflowSchema.Name) : scheme[utils.SpecialIDParam],
 					schserv.RootID(schserv.DBSchema.Name) : scheme[schserv.RootID(schserv.DBSchema.Name)],
 					schserv.RootID(schserv.DBRequest.Name) : req[utils.SpecialIDParam],
-					schserv.RootID(schserv.DBUser.Name) : res[schserv.RootID(schserv.DBUser.Name)],
+					schserv.RootID(schserv.DBUser.Name) : scheme[schserv.RootID(schserv.DBUser.Name)],
+					schserv.RootID(schserv.DBEntity.Name) : scheme[schserv.RootID(schserv.DBEntity.Name)],
 					"description" : scheme["description"], "urgency" : scheme["urgency"], 
 					"priority" : scheme["priority"], schserv.NAMEKEY : scheme[schserv.NAMEKEY] }
 				if fmt.Sprintf("%v", scheme[schserv.RootID(schserv.DBSchema.Name)]) == fmt.Sprintf("%v", res[schserv.RootID(schserv.DBSchema.Name)]) {

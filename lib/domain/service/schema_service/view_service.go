@@ -58,10 +58,9 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 	params := utils.AllParams(schema.Name)
 	if id != "" { params[utils.RootRowsParam] = id }
 	for k, v := range s.Domain.GetParams() {
-		if _, ok := params[k]; !ok { 
-			if k != "new" && !strings.Contains(k,"dest_table") && k != "id" {
-				if k == utils.SpecialSubIDParam { params[utils.SpecialIDParam] = v } else if _, ok := params[k]; !ok { params[k] = v }
-			}
+		if _, ok := params[k]; !ok && k != "new" && !strings.Contains(k,"dest_table") && k != "id" { 
+			if k == utils.SpecialSubIDParam { params[utils.SpecialIDParam] = v 
+			} else if _, ok := params[k]; !ok { params[k] = v }
 		}
 	}
 	datas := utils.Results{utils.Record{}}
@@ -84,9 +83,13 @@ func (s *ViewService) PostTreat(record utils.Record, channel chan utils.Record, 
 		}
 		params[k]=p
 	}
-	if s.Domain.GetParams()[utils.RootFilterNewState] != "" { params[utils.RootFilterNewState] = s.Domain.GetParams()[utils.RootFilterNewState] }
+	if s.Domain.GetParams()[utils.RootFilterNewState] != "" { 
+		params[utils.RootFilterNewState] = s.Domain.GetParams()[utils.RootFilterNewState] 
+	}
 	rec["new"] = []string{}
-	if !s.Domain.GetEmpty() { d, _ = s.Domain.SpecialSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter) }
+	if !s.Domain.GetEmpty() { 
+		d, _ = s.Domain.SpecialSuperCall( params, utils.Record{}, utils.SELECT, sqlFilter) 
+	}
 	if  record["is_list"] != nil && record["is_list"].(bool) { 
 		SQLrestriction, _, _, _ := s.Domain.ViewDefinition(schema.Name, sqlFilter)
 		rec["new"], rec["max"] = s.Domain.CountNewDataAccess(schema.Name, SQLrestriction, params)

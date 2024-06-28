@@ -118,7 +118,8 @@ func (d *MainService) LocalPermsCheck(tableName string, colName string, level st
 		if destID != "" {
 			schema, _ := schserv.GetSchema(tableName)
 			sqlFilter := "SELECT COUNT(*) FROM " + schserv.DBRequest.Name + " WHERE " 
-			sqlFilter += utils.RootDestTableIDParam + "=" + destID + " AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID ) 
+			sqlFilter += utils.RootDestTableIDParam + "=" + destID + " AND " 
+			sqlFilter += schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID ) 
 			count := int64(0); var err error
 			if d.Db.Driver == conn.PostgresDriver { 
 				count, err = d.Db.QueryRow(sqlFilter)
@@ -132,37 +133,16 @@ func (d *MainService) LocalPermsCheck(tableName string, colName string, level st
 				count, err = res.LastInsertId()
 				if err != nil { return false }
 			}
-			if count == 0 { return false }
-			sqlFilter += " AND current_index IN (SELECT wf.index FROM " + schserv.DBWorkflowSchema.Name + " as wf WHERE wf." + schserv.RootID(schserv.DBWorkflow.Name) + " = " + schserv.RootID(schserv.DBWorkflow.Name) + " "	
-			sqlFilter += " AND id IN (SELECT dbworkflow_schema_id FROM dbtask WHERE is_close=false)"
+			if count == 0 { return false } 
+			sqlFilter = "SELECT COUNT(*) as result FROM " + schserv.DBTask.Name
+			sqlFilter += " WHERE " + utils.RootDestTableIDParam + "=" + destID
 			sqlFilter += " AND (" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")"
-			sqlFilter += " OR " + schserv.RootID(schserv.DBEntity.Name) + " IN (SELECT " + schserv.RootID(schserv.DBEntity.Name) + " FROM " + schserv.DBEntityUser.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + "))))"
-			if d.Db.Driver == conn.PostgresDriver { 
-				count, err = d.Db.QueryRow(sqlFilter)
-
-				if err != nil { return false }
-			}
-			if d.Db.Driver == conn.MySQLDriver {
-				stmt, err := d.Db.Prepare(sqlFilter)
-				if err != nil { return false }
-				res, err := stmt.Exec()
-				if err != nil { return false }
-				count, err = res.LastInsertId()
-				if err != nil { return false }
-			}
-				
-			if count == 0 { return false 
-			} else { 
-				sqlFilter = "SELECT COUNT(*) as result FROM " + schserv.DBTask.Name + " WHERE " + utils.RootDestTableIDParam + "=" + destID
-				sqlFilter += " AND (" + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")"
-				sqlFilter += " OR " + schserv.RootID(schserv.DBEntity.Name) + " IN (SELECT " + schserv.RootID(schserv.DBEntity.Name) + " FROM " + schserv.DBEntityUser.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")))"
-				res, err := d.Db.QueryAssociativeArray(sqlFilter)
-				if err != nil || len(res) == 0  { return false }
-				if res[0]["result"] == nil || fmt.Sprintf("%v", res[0]["result"]) == "0" { return false }
-			}
-		} else {
-			return (method == utils.UPDATE && perms.Update) || (method == utils.CREATE && perms.Create)
-		}
+			sqlFilter += " OR " + schserv.RootID(schserv.DBEntity.Name) + " IN (SELECT " + schserv.RootID(schserv.DBEntity.Name) 
+			sqlFilter += " FROM " + schserv.DBEntityUser.Name + " WHERE " + schserv.RootID(schserv.DBUser.Name) + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(d.GetUser()) + " OR email=" + conn.Quote(d.GetUser()) + ")))"
+			res, err := d.Db.QueryAssociativeArray(sqlFilter)
+			if err != nil || len(res) == 0  { return false }
+			if res[0]["result"] == nil || fmt.Sprintf("%v", res[0]["result"]) == "0" { return false }
+		} else { return (method == utils.UPDATE && perms.Update) || (method == utils.CREATE && perms.Create) }
 		return true
 	}
 	return method == utils.DELETE && perms.Delete

@@ -21,6 +21,7 @@ type ViewModel struct { // lightest struct based on SchemaModel dedicate to view
 	ActionPath		string						`json:"action_path"`
 	Readonly		bool						`json:"readonly"`
 	Workflow		*WorkflowModel				`json:"workflow"`
+	IsWrapper		bool						`json:"is_wrapper"`
 	Shortcuts		map[string]string			`json:"shortcuts"`
 }
 

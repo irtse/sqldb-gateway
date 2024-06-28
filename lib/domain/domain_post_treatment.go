@@ -19,11 +19,22 @@ func (d *MainService) PostTreat(results utils.Results, tableName string, isWorfl
 	if ids, ok := d.Params[utils.SpecialIDParam]; (ok || d.Method != utils.SELECT) { 
 		d.NewDataAccess(schema.ID, strings.Split(ids, ","), d.Method) 
 	}
+
 	if !d.IsShallowed() {
 		schemes, id, order, cols, addAction, readonly := d.GetViewFields(tableName, false) 
-		view := schserv.ViewModel{ ID: id, Name : schema.Label, Label : schema.Label, Description : tableName + " data", Schema : schemes,
-			SchemaID: id, SchemaName: tableName, ActionPath : d.BuildPath(tableName, utils.ReservedParam), Readonly : readonly,
-			Order : order, Actions : addAction, Items : []schserv.ViewItemModel{}, Shortcuts: map[string]string{} }
+		view := schserv.ViewModel{ ID: id, Name : schema.Label, 
+			Label : schema.Label, 
+			Description : tableName + " data", 
+			Schema : schemes,
+			IsWrapper: tableName == schserv.DBTask.Name || tableName == schserv.DBRequest.Name,
+			SchemaID: id, 
+			SchemaName: tableName, 
+			ActionPath : d.BuildPath(tableName, utils.ReservedParam), 
+			Readonly : readonly,
+			Order : order, 
+			Actions : addAction, 
+			Items : []schserv.ViewItemModel{}, 
+			Shortcuts: map[string]string{} }
 		shortcuts, err := d.Db.QueryAssociativeArray("SELECT * FROM " + schserv.DBView.Name + " WHERE is_shortcut = true")
 		if len(shortcuts) > 0 && err == nil {
 			for _, shortcut := range shortcuts {
@@ -67,11 +78,19 @@ func (d *MainService) PostTreat(results utils.Results, tableName string, isWorfl
 				if err != nil { continue }
 				schema, id, order,  _, addAction, readonly := d.GetViewFields(sch.Name, false)
 				res = append(res, schserv.ViewModel{ ID: record.GetInt(utils.SpecialIDParam), 
-					Name : record.GetString(schserv.NAMEKEY), Label : label, Description : tableName + " shallowed data",  
-					Path: d.BuildPath(sch.Name, utils.ReservedParam), Schema : schema, SchemaID: id, 
-					SchemaName: tableName, Actions : addAction, ActionPath : d.BuildPath(sch.Name, utils.ReservedParam), 
+					Name : record.GetString(schserv.NAMEKEY), 
+					Label : label, 
+					Description : tableName + " shallowed data",  
+					IsWrapper: tableName == schserv.DBTask.Name || tableName == schserv.DBRequest.Name,
+					Path: d.BuildPath(sch.Name, utils.ReservedParam), 
+					Schema : schema, 
+					SchemaID: id, 
+					SchemaName: tableName, 
+					Actions : addAction, 
+					ActionPath : d.BuildPath(sch.Name, utils.ReservedParam), 
 					Readonly : readonly,
-					Order : order, Workflow: d.BuildWorkFlow(record, tableName, isWorflow) }.ToRecord())
+					Order : order, 
+					Workflow: d.BuildWorkFlow(record, tableName, isWorflow) }.ToRecord())
 			} else { res = append(res, schserv.ViewModel{ ID: record.GetInt(utils.SpecialIDParam), Name : record.GetString(schserv.NAMEKEY), Label : label, 
 														  Workflow : d.BuildWorkFlow(record, tableName, isWorflow),  }.ToRecord()) }
 			
