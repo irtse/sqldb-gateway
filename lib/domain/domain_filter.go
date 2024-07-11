@@ -50,6 +50,8 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 	if order != "" { d.Params[utils.RootOrderParam] = order }
 	if dir != "" { d.Params[utils.RootDirParam] = dir }
 	SQLrestriction = d.restrictionBySchema(tableName, SQLrestriction)
+	if strings.Contains(tableName, "formalized_data") { fmt.Println(SQLrestriction) }
+
 	SQLOrder = d.orderFromParams(tableName, SQLOrder)
 	SQLLimit = d.limitFromParams(SQLLimit)
 	SQLview = d.viewbyFields(tableName)
@@ -61,12 +63,14 @@ func (d *MainService) ViewDefinition(tableName string, innerRestriction... strin
 		if len(SQLrestriction) > 0  && len(restr) > 0 { SQLrestriction = SQLrestriction + " AND " + restr } else { SQLrestriction = restr  }
 	}
 	if state != "" { SQLrestriction = d.LifeCycleRestriction(tableName, SQLrestriction, state) }
+	
 	return SQLrestriction, SQLview, SQLOrder, SQLLimit
 }
 func (d *MainService) restrictionBySchema(tableName string, restr string) (string) {
 	if len(restr) > 0 { restr +=  " AND " }
 	restr += "active=true"
 	schema, err := schserv.GetSchema(tableName)
+	if strings.Contains(tableName, "formalized_data") { fmt.Println(err) }
 	if err != nil { return restr }
 	if schema.HasField("is_meta") && !d.IsSuperCall() { 
 		if len(restr) > 0 { restr +=  " AND " }
@@ -75,12 +79,15 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 	already := []string{}
 	isSchema := false
 	alterRestr := ""
+	if strings.Contains(tableName, "formalized_data") { fmt.Println(d.Params[utils.RootFilterLine]) }
 	if line, ok := d.Params[utils.RootFilterLine]; ok && tableName != schserv.DBView.Name {
-		decodedLine, err := url.QueryUnescape(fmt.Sprint(line))
-		if err == nil {
-			ands := strings.Split(decodedLine, "+")
+		
+			ands := strings.Split(line, "+")
 			// todo order depending on the field index
-			for _, and := range ands {
+			for _, andUndecoded := range ands {
+				and, _ := url.QueryUnescape(fmt.Sprint(andUndecoded))
+			
+				if strings.Contains(tableName, "formalized_data") { fmt.Println("AND", and) }
 				if len(strings.Trim(alterRestr, " ")) > 0 { alterRestr +=  " AND " }
 				ors := strings.Split(and, "|")
 				if len(ors) == 0 { continue }
@@ -96,6 +103,8 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 					} else if strings.Contains(or, ":") { keyVal = strings.Split(or, ":"); operator = "="
 					} else if strings.Contains(or, "<") { keyVal = strings.Split(or, "<"); operator = "<"  
 					} else if strings.Contains(or, ">") { keyVal = strings.Split(or, ">"); operator = ">"  }
+					if strings.Contains(tableName, "formalized_data") { fmt.Println("KEYVAL", keyVal, or) }
+
 					if len(keyVal) != 2 { continue }
 					field, err := schema.GetField(keyVal[0])
 					if (err != nil && keyVal[0] != utils.SpecialIDParam) { continue  }
@@ -104,7 +113,6 @@ func (d *MainService) restrictionBySchema(tableName string, restr string) (strin
 				}
 				if len(orRestr) > 0 { alterRestr += "( " + orRestr + " )" }
 			}
-		}
 	}
 	alterRestr = strings.ReplaceAll(strings.ReplaceAll(alterRestr, " OR ()", ""), " AND ()", "")
 	alterRestr = strings.ReplaceAll(alterRestr, "()", "")
