@@ -85,9 +85,7 @@ func (db *Db) QueryRow(query string) (int64, error) {
 	if db == nil || db.Conn == nil { 
 		var err error
 		db.Conn, err = sql.Open(db.Driver, db.Url)
-		if err != nil { 
-			fmt.Println("Error ROW:", err)
-			return int64(id), fmt.Errorf("No connection to database") }
+		if err != nil { return int64(id), fmt.Errorf("No connection to database") }
 		defer db.Close()
 	}
 	err := db.Conn.QueryRow(query).Scan(&id)
@@ -99,9 +97,7 @@ func (db *Db) Query(query string) (error) {
 	if db == nil || db.Conn == nil { 
 		var err error
 		db.Conn, err = sql.Open(db.Driver, db.Url)
-		if err != nil { 
-			fmt.Println("Error ", err)
-			return fmt.Errorf("No connection to database") }
+		if err != nil { return fmt.Errorf("No connection to database") }
 		defer db.Close()
 	}
 	rows, err := db.Conn.Query(query)
@@ -121,6 +117,7 @@ func (db *Db) QueryAssociativeArray(query string) ([]map[string]interface{}, err
 		defer db.Close()
 	}
 	// fmt.Println("query: ", query)
+	if strings.Contains(query, "FROM dbtask") { fmt.Println(query) }
 	rows, err := db.Conn.Query(query)	
 	if err != nil { return nil, err }
 	defer rows.Close()
