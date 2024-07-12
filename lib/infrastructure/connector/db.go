@@ -117,7 +117,7 @@ func (db *Db) QueryAssociativeArray(query string) ([]map[string]interface{}, err
 		defer db.Close()
 	}
 	// fmt.Println("query: ", query)
-	if strings.Contains(query, "FROM dbtask") { fmt.Println(query) }
+	if strings.Contains(query, "FROM protection ") { fmt.Println(query) }
 	rows, err := db.Conn.Query(query)	
 	if err != nil { return nil, err }
 	defer rows.Close()

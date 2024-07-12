@@ -197,14 +197,14 @@ func (s *MainService) restrictionByEntityUser(tableName string, restr string) st
 	if (schema.HasField(userID) || schema.HasField(entityID)) {
 		if !s.IsOwnPermission(tableName, false, s.Method) && !s.IsOwn() { return restr }
 	} else if s.IsOwn() {
-		quer := "SELECT * FROM " + schserv.DBRequest.Name + " WHERE " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID) + " AND " 
+		quer := "SELECT * FROM " + schserv.DBDataAccess.Name + " WHERE write=true AND " + schserv.RootID(schserv.DBSchema.Name) + "=" + fmt.Sprintf("%v", schema.ID) + " AND "
 		quer += userID + " IN (SELECT id FROM " + schserv.DBUser.Name + " WHERE name=" + conn.Quote(s.GetUser()) + " OR email=" + conn.Quote(s.GetUser()) + ")" 
-		requests, err := s.Db.QueryAssociativeArray(quer)
-		ids := ""; 
-		if err == nil && len(requests) > 0 {
-			for _, request := range requests { 
-				if !strings.Contains(ids, fmt.Sprintf("%v", request[utils.RootDestTableIDParam])) {
-					ids += fmt.Sprintf("%v", request[utils.RootDestTableIDParam]) + "," 
+		dataAccess, err := s.Db.QueryAssociativeArray(quer)
+		ids := ""
+		if err == nil && len(dataAccess) > 0 {
+			for _, access := range dataAccess { 
+				if !strings.Contains(ids, fmt.Sprintf("%v", access[utils.RootDestTableIDParam])) {
+					ids += fmt.Sprintf("%v", access[utils.RootDestTableIDParam]) + "," 
 				}	
 			}
 			if len(ids) > 0 { 
@@ -212,7 +212,8 @@ func (s *MainService) restrictionByEntityUser(tableName string, restr string) st
 				if len(newRestr) > 0 { newRestr +=  " AND " }
 				newRestr += "id IN (" + ids + ")"
 			}
-		} 
+		}
+
 		if tableName[:2] != "db" && len(ids) == 0 { 
 			if len(newRestr) > 0 { newRestr +=  " AND " }
 			newRestr += "id IS NULL"
