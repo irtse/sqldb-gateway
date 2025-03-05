@@ -1,9 +1,9 @@
-package application
+package controllers
 
 import (
 	"errors"
 	"fmt"
-	"sqldb-ws/application/controller"
+	"sqldb-ws/controllers/controller"
 	"sqldb-ws/domain"
 	"sqldb-ws/domain/utils"
 
@@ -41,7 +41,8 @@ func (l *AuthController) Login() {
 		if ok && ok1 {
 			if ok, err := argon2.VerifyEncoded([]byte(pass.(string)), []byte(pwd)); ok && err == nil {
 				// when password matching
-				token := l.MySession(log.(string), response[0]["super_admin"].(bool), false) // update session variables
+				fmt.Println(response[0]["super_admin"] == false)
+				token := l.MySession(log.(string), response[0]["super_admin"] == false, false) // update session variables
 				response[0]["token"] = token
 				l.Response(response, nil)
 				return

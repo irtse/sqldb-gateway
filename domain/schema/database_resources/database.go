@@ -10,6 +10,7 @@ DB ROOT are all the ROOT database table needed in our generic API. They are rest
 and can be impacted by a specialized service at DOMAIN level.
 Their declarations is based on our Entity terminology, to help us in coding.
 */
+// DBSchema express a table in the database, it's a template for a table
 var DBSchema = models.SchemaModel{
 	Name:     RootName("schema"),
 	Label:    "template",
@@ -22,6 +23,7 @@ var DBSchema = models.SchemaModel{
 	},
 }
 
+// DBSchemaField express a column in a table, it's a template for a column
 var DBSchemaField = models.SchemaModel{
 	Name:     RootName("schema_column"),
 	Label:    "template field",
@@ -43,6 +45,7 @@ var DBSchemaField = models.SchemaModel{
 	},
 }
 
+// DBPermission express a permission in the database, ex: create, update, delete, read on a table
 var DBPermission = models.SchemaModel{
 	Name:     RootName("permission"),
 	Label:    "permission",
@@ -56,6 +59,7 @@ var DBPermission = models.SchemaModel{
 	},
 }
 
+// DBRole express a role in the database, ex: admin, user, guest with a set of permissions
 var DBRole = models.SchemaModel{
 	Name:     RootName("role"),
 	Label:    "role",
@@ -66,6 +70,7 @@ var DBRole = models.SchemaModel{
 	},
 }
 
+// DBRolePermission express a role permission attribution in the database
 var DBRolePermission = models.SchemaModel{
 	Name:     RootName("role_permission"),
 	Label:    "permission role attribution",
@@ -76,6 +81,7 @@ var DBRolePermission = models.SchemaModel{
 	},
 }
 
+// DBEntity express an entity in the database, ex: user, task, project
 var DBEntity = models.SchemaModel{
 	Name:     RootName("entity"),
 	Label:    "entity",
@@ -87,6 +93,7 @@ var DBEntity = models.SchemaModel{
 	},
 }
 
+// DBUser express a user in the database, with email, password, token, super_admin
 var DBUser = models.SchemaModel{
 	Name:     RootName("user"),
 	Label:    "user",
@@ -114,6 +121,7 @@ var DBHierarchy = models.SchemaModel{
 	},
 }
 
+// DBEntityAttribution express an entity attribution in the database
 var DBEntityUser = models.SchemaModel{
 	Name:     RootName("entity_user"),
 	Label:    "entity user attribution",
@@ -125,6 +133,8 @@ var DBEntityUser = models.SchemaModel{
 		{Name: models.ENDKEY, Type: models.TIMESTAMP.String(), Required: false, Index: 3},
 	},
 }
+
+// DBRoleAttribution express a role attribution in the database
 var DBRoleAttribution = models.SchemaModel{
 	Name:     RootName("role_attribution"),
 	Label:    "role attribution",
@@ -138,6 +148,7 @@ var DBRoleAttribution = models.SchemaModel{
 	},
 }
 
+// DBWorkflow express a workflow in the database, a workflow is a set of steps to achieve a request
 var DBWorkflow = models.SchemaModel{
 	Name:     RootName("workflow"),
 	Label:    "workflow",
@@ -151,6 +162,7 @@ var DBWorkflow = models.SchemaModel{
 	},
 }
 
+// DBWorkflowSchema express a workflow schema in the database, a workflow schema is a step in a workflow
 var DBWorkflowSchema = models.SchemaModel{
 	Name:     RootName("workflow_schema"),
 	Label:    "workflow schema attribution",
@@ -171,6 +183,7 @@ var DBWorkflowSchema = models.SchemaModel{
 	},
 }
 
+// DBRequest express a request in the database, a request is a set of tasks to achieve a goal
 var DBRequest = models.SchemaModel{
 	Name:     RootName("request"),
 	Label:    "request",
@@ -190,6 +203,7 @@ var DBRequest = models.SchemaModel{
 	},
 }
 
+// DBTask express a task in the database, a task is an activity to achieve a step in a request
 var DBTask = models.SchemaModel{
 	Name:     RootName("task"),
 	Label:    "activity",
@@ -215,6 +229,7 @@ var DBTask = models.SchemaModel{
 	},
 }
 
+// DBFilter express a filter in the database, a filter is a set of conditions to filter a view on a table
 var DBFilter = models.SchemaModel{
 	Name:     RootName("filter"),
 	Label:    "filter",
@@ -227,9 +242,11 @@ var DBFilter = models.SchemaModel{
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Index: 4},
 		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Index: 5},
 		{Name: "elder", Type: models.ENUMLIFESTATE.String(), Required: false, Default: "all", Index: 6},
+		{Name: "dashboard_restricted", Type: models.BOOLEAN.String(), Required: true, Default: false, Index: 7},
 	},
 }
 
+// DBFilterField express a filter field in the database, a filter field is a condition to filter a view on a table
 var DBFilterField = models.SchemaModel{
 	Name:     RootName("filter_field"),
 	Label:    "filter field",
@@ -246,7 +263,21 @@ var DBFilterField = models.SchemaModel{
 	},
 }
 
-/*
+// DBDashboardElement express a dashboard in the database, a dashboard is a set of views on a table
+var DBDashboard = models.SchemaModel{
+	Name:     RootName("dashboard"),
+	Label:    "dashboard",
+	Category: "filter",
+	Fields: []models.FieldModel{
+		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
+		{Name: "description", Type: models.BIGVARCHAR.String(), Required: false, Index: 1},
+		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Index: 2},
+		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Index: 3},
+		{Name: "is_selected", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 4},
+	},
+}
+
+// DBDashboardElement express a dashboard element in the database, a dashboard element is a view on a table with a filter
 var DBDashboardElement = models.SchemaModel{
 	Name:     RootName("dashboard_element"),
 	Label:    "dashboard element",
@@ -254,23 +285,26 @@ var DBDashboardElement = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
 		{Name: "description", Type: models.BIGVARCHAR.String(), Required: false, Index: 1},
-		{Name: RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Index: 7},
+		{Name: RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Index: 2},
+		{Name: "order_by_" + RootID(DBSchemaField.Name), Type: models.INTEGER.String(), Required: false, Index: 3}, // results if multiple must be ordered by
+		{Name: RootID(DBDashboard.Name), Type: models.INTEGER.String(), ForeignTable: DBDashboard.Name, Required: true, Index: 4},
 	},
 }
 
-var DBDashboardOperationField = models.SchemaModel{
-	Name:     RootName("dashboard_operation_field"),
-	Label:    "dashboard operation field",
+// DBDashboardMathField express a dashboard math field in the database, a dashboard math field is a math operation on a column
+var DBDashboardMathField = models.SchemaModel{
+	Name:     RootName("dashboard_math_field"),
+	Label:    "dashboard math field",
 	Category: "filter",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
-		{Name: RootID(DBSchemaField.Name), Type: models.INTEGER.String(), ForeignTable: DBSchemaField.Name, Required: false, Index: 0},
 		{Name: RootID(DBDashboardElement.Name), Type: models.INTEGER.String(), ForeignTable: DBDashboardElement.Name, Required: true, Index: 1},
-		{Name: "math_func", Type: models.ENUMMATHFUNC.String(), Required: true, Default: models.COUNT, Index: 2}, // func applied on operation added on column value
-		{Name: "operation", Type: models.VARCHAR.String(), Required: true, Index: 3},
+		{Name: "column_math_func", Type: models.ENUMMATHFUNC.String(), Required: false, Index: 2}, // func applied on operation added on column value ex: COUNT
+		{Name: "row_math_func", Type: models.VARCHAR.String(), Required: true, Index: 3},          // operation applied on row ex: field + 3
 	},
-}*/
+}
 
+// DBView express a view in the database, a view is a set of fields to display on a table
 var DBView = models.SchemaModel{
 	Name:     RootName("view"),
 	Label:    "view",
@@ -293,6 +327,7 @@ var DBView = models.SchemaModel{
 	},
 }
 
+// DBViewAttribution express a view attribution in the database for a user or an entity
 var DBViewAttribution = models.SchemaModel{
 	Name:     RootName("view_attribution"),
 	Label:    "view attribution",
@@ -304,6 +339,7 @@ var DBViewAttribution = models.SchemaModel{
 	},
 }
 
+// DBNotification express a notification in the database, a notification is a message to a user or an entity
 var DBNotification = models.SchemaModel{
 	Name:     RootName("notification"),
 	Label:    "notification",
@@ -313,11 +349,12 @@ var DBNotification = models.SchemaModel{
 		{Name: "description", Type: models.BIGVARCHAR.String(), Required: false, Index: 1},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Label: "user assignee", Index: 2},
 		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Readonly: true, Label: "entity assignee", Index: 3},
-		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 4},
+		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 4}, // reference to a table if needed
 		{Name: "link_id", Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Readonly: true, Label: "template attached", Index: 5},
 	},
 }
 
+// DBDataAccess express a data access in the database, a data access is a log of access to a table
 var DBDataAccess = models.SchemaModel{
 	Name:     RootName("data_access"),
 	Label:    "data access",
@@ -332,7 +369,8 @@ var DBDataAccess = models.SchemaModel{
 	},
 }
 
-var OWNPERMISSIONEXCEPTION = []string{DBFilter.Name, DBFilterField.Name, DBNotification.Name}
+var OWNPERMISSIONEXCEPTION = []string{DBFilter.Name, DBFilterField.Name, DBNotification.Name,
+	DBDashboard.Name, DBDashboardElement.Name, DBDashboardMathField.Name}
 var AllPERMISSIONEXCEPTION = []string{DBNotification.Name, DBViewAttribution.Name}
 var POSTPERMISSIONEXCEPTION = []string{DBRequest.Name}
 var PUPERMISSIONEXCEPTION = []string{DBTask.Name}
@@ -340,7 +378,9 @@ var PERMISSIONEXCEPTION = []string{DBView.Name, DBTask.Name, DBRequest.Name, DBW
 
 var ROOTTABLES = []models.SchemaModel{DBWorkflow, DBView, DBSchema, DBSchemaField, DBUser, DBPermission, DBEntity,
 	DBRole, DBDataAccess, DBNotification, DBEntityUser, DBRoleAttribution,
-	DBRequest, DBTask, DBWorkflowSchema, DBRolePermission, DBHierarchy, DBViewAttribution, DBFilter, DBFilterField}
+	DBRequest, DBTask, DBWorkflowSchema, DBRolePermission, DBHierarchy, DBViewAttribution, DBFilter, DBFilterField,
+	DBDashboard, DBDashboardElement, DBDashboardMathField,
+}
 
 func IsRootDB(name string) bool {
 	if len(name) > 1 {
@@ -370,3 +410,5 @@ var DestTableDBField = RootID("dest_table")
 var FilterDBField = RootID(DBFilter.Name)
 var ViewFilterDBField = "view_" + RootID(DBFilter.Name)
 var ViewDBField = RootID(DBView.Name)
+var DashboardDBField = RootID(DBDashboard.Name)
+var DashboardElementDBField = RootID(DBDashboardElement.Name)

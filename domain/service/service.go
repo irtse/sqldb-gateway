@@ -17,6 +17,7 @@ var SERVICES = []utils.SpecializedServiceITF{
 	&task.TaskService{},
 	&task.WorkflowService{},
 	&favorite.FilterService{},
+	&favorite.DashboardService{},
 }
 
 // funct to get specialized service depending on table reached

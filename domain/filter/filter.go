@@ -195,15 +195,17 @@ func (s *FilterService) GetFilterForQuery(filterID string, viewfilterID string, 
 }
 
 func (s *FilterService) ProcessFilterRestriction(filterID string, schemaID string) string {
-	if schemaID != "" || filterID != "" {
+	if filterID == "" {
 		return ""
 	}
 	var filter string
 	restriction := map[string]interface{}{
-		ds.SchemaFieldDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(
-			ds.DBSchemaField.Name,
-			map[string]interface{}{ds.SchemaDBField: schemaID}, false),
 		ds.FilterDBField: filterID,
+	}
+	if schemaID != "" {
+		restriction[ds.SchemaFieldDBField] = s.Domain.GetDb().BuildSelectQueryWithRestriction(
+			ds.DBSchemaField.Name,
+			map[string]interface{}{ds.SchemaDBField: schemaID}, false)
 	}
 	fields, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false)
 	if err == nil && len(fields) > 0 {

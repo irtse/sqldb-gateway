@@ -65,7 +65,7 @@ func (t *AbstractController) IsAuthorized() (string, bool, error) {
 	header := t.Ctx.Request.Header
 	a, ok := header["Authorization"] // extract token in HEADER
 	if !ok {
-		return "", false, errors.New("No authorization in header")
+		return "", false, errors.New("no authorization in header")
 	}
 	tokenService := &Token{}
 	token, err := tokenService.Verify(a[0]) // Verify if token is valid

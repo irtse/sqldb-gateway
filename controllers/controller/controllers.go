@@ -64,17 +64,8 @@ func (t *AbstractController) Call(auth bool, method utils.Method, args ...interf
 		}
 		t.Response(resp, error) // send back response
 	} else {
-		t.Respond(p, asLabel, d, args...)
+		t.Respond(p, asLabel, method, d, args...)
 	}
-}
-
-// paramsOver is an overide of params applying a manual addition of parameters into Params struct
-func (t *AbstractController) paramsOver(override map[string]string) map[string]string {
-	params, _ := t.params() // get initial params
-	for k, v := range override {
-		params[k] = v
-	} // add custom params
-	return params
 }
 
 // params will produce a Params struct compose of url & query parameters
@@ -86,7 +77,7 @@ func (t *AbstractController) params() (map[string]string, map[string]string) {
 	params := map[string]string{}
 	rawParams := t.Ctx.Input.Params() // extract all params from url and fill params
 	for key, val := range rawParams {
-		if strings.Contains(key, ":") && strings.Contains(key, "splat") == false {
+		if strings.Contains(key, ":") && !strings.Contains(key, "splat") {
 			params[key[1:]] = val
 		}
 	}

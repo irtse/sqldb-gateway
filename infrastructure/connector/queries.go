@@ -38,8 +38,8 @@ func (db *Database) SimpleMathQuery(algo string, name string, restrictions inter
 	return db.QueryAssociativeArray(db.BuildSimpleMathQueryWithRestriction(algo, name, restrictions, isOr))
 }
 
-func (db *Database) MathQuery(algo string, name string) ([]map[string]interface{}, error) {
-	return db.QueryAssociativeArray(db.BuildMathQuery(algo, name))
+func (db *Database) MathQuery(algo string, name string, naming ...string) ([]map[string]interface{}, error) {
+	return db.QueryAssociativeArray(db.BuildMathQuery(algo, name, naming...))
 }
 
 func (db *Database) SchemaQuery(name string) ([]map[string]interface{}, error) {

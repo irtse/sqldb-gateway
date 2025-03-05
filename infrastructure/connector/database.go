@@ -40,7 +40,7 @@ type Database struct {
 }
 
 func Open(beforeDB *Database) *Database {
-	if beforeDB == nil {
+	if beforeDB != nil {
 		beforeDB.Close()
 	}
 	db := &Database{Driver: os.Getenv("DBDRIVER")}

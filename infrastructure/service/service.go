@@ -13,6 +13,7 @@ Infrastructure is meant as DDD pattern, as a generic accessor to database and di
 Main Procedure of services at Infrastructure level.
 */
 type InfraServiceItf interface {
+	GetName() string
 	Verify(string) (string, bool)
 	Math(algo string, restriction ...string) ([]map[string]interface{}, error)
 	Get(restriction ...string) ([]map[string]interface{}, error)
@@ -32,6 +33,10 @@ type InfraService struct {
 	SpecializedService InfraSpecializedServiceItf `json:"-"`
 	DB                 *conn.Database
 	InfraServiceItf
+}
+
+func (service *InfraService) GetName() string {
+	return service.Name
 }
 
 // Main Service Builder

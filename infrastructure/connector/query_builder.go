@@ -61,7 +61,11 @@ func (db *Database) BuildSelectQueryWithRestriction(name string, restrictions in
 	return query
 }
 
-func (db *Database) BuildMathQuery(algo string, name string) string {
+func (db *Database) BuildMathQuery(algo string, name string, naming ...string) string {
+	resName := "result"
+	if len(naming) > 0 {
+		resName = naming[0]
+	}
 	col := "*" // default to all columns
 	cols := strings.Split(db.SQLView, ",")
 	if len(cols) > 0 { // if there are columns specified
@@ -76,7 +80,7 @@ func (db *Database) BuildMathQuery(algo string, name string) string {
 			}
 		}
 	}
-	query := "SELECT " + strings.ToUpper(algo) + "(" + col + ") as result FROM " + name
+	query := "SELECT " + strings.ToUpper(algo) + "(" + col + ") as " + resName + " FROM " + name
 	if db.SQLRestriction != "" {
 		query += " WHERE " + db.SQLRestriction
 	}

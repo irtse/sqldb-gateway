@@ -11,6 +11,7 @@ import (
 	utils "sqldb-ws/domain/utils"
 	"sqldb-ws/domain/view_convertor"
 	"strconv"
+	"strings"
 )
 
 // DONE - ~ 200 LINES - PARTIALLY TESTED
@@ -94,6 +95,9 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 }
 
 func (s *FilterService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
+	if !strings.Contains(strings.Join(innerestr, ","), "dashboard_restricted") {
+		innerestr = append(innerestr, "dashboard_restricted=false") // add dashboard_restricted filter if not present AD
+	}
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, innerestr...)
 }
 

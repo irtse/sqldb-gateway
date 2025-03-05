@@ -51,6 +51,11 @@ func (p Params) GetLimit(limited string) string {
 	return limited
 }
 
+func (p Params) RootShallow() Params {
+	p[RootShallow] = "enable"
+	return p
+}
+
 func (p Params) RootRaw() Params {
 	p[RootRawView] = "enable"
 	return p

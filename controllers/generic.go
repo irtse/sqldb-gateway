@@ -1,7 +1,7 @@
-package application
+package controllers
 
 import (
-	"sqldb-ws/application/controller"
+	"sqldb-ws/controllers/controller"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/utils"
 )
@@ -19,7 +19,7 @@ type GenericController struct{ controller.AbstractController }
 // @router / [get]
 func (l *MainController) Main() {
 	// Main is the default root of the API, it gives back all your allowed shallowed view
-	l.ParamsOverload = utils.AllParams(ds.DBView.Name).RootRaw().Enrich(
+	l.ParamsOverload = utils.AllParams(ds.DBView.Name).RootShallow().Enrich(
 		map[string]interface{}{
 			"indexable": true,
 		})

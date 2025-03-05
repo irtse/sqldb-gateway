@@ -7,6 +7,7 @@ import (
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
+	"strconv"
 )
 
 func SetToken(superAdmin bool, user string, token interface{}) (utils.Results, error) {
@@ -19,9 +20,17 @@ func IsLogged(superAdmin bool, user string, token string) (utils.Results, error)
 	params := utils.Params{utils.RootTableParam: ds.DBNotification.Name,
 		utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable"}
 	notifs, err := domain.SuperCall(params.RootRaw(), utils.Record{}, utils.SELECT, false)
+	if err != nil {
+		return nil, err
+	}
 	n := utils.Results{}
 	for _, notif := range notifs {
-		sch, err := schema.GetSchemaByID(int64(notif["link_id"].(float64)))
+		fmt.Println(notif["link_id"])
+		int, err := strconv.Atoi(fmt.Sprintf("%v", notif["link_id"]))
+		if err != nil {
+			continue
+		}
+		sch, err := schema.GetSchemaByID(int64(int))
 		if err != nil {
 			continue
 		}
@@ -34,7 +43,7 @@ func IsLogged(superAdmin bool, user string, token string) (utils.Results, error)
 		}
 		n = append(n, nn)
 	}
-	response, err := domain.Call(utils.AllParams(ds.DBUser.Name), utils.Record{}, utils.SELECT, getQueryFilter(user))
+	response, err := domain.SuperCall(utils.AllParams(ds.DBUser.Name), utils.Record{}, utils.SELECT, false, getQueryFilter(user))
 	if err != nil || len(response) == 0 {
 		return nil, err
 	}

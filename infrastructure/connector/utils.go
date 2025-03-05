@@ -21,6 +21,14 @@ func RemoveLastChar(s string) string {
 	return string(r)
 }
 
+func FormatMathViewQuery(algo string, col string, naming ...string) string {
+	resName := "result"
+	if len(naming) > 0 {
+		resName = naming[0]
+	}
+	return strings.ToUpper(algo) + "(" + col + ") as " + resName
+}
+
 func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(string) (string, string, error)) string {
 	alterRestr := ""
 	injection = SQLInjectionProtector(injection)

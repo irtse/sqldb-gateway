@@ -10,11 +10,11 @@ import (
 	"time"
 )
 
-func (t *AbstractController) Respond(params map[string]string, asLabel map[string]string, domain utils.DomainITF, args ...interface{}) {
+func (t *AbstractController) Respond(params map[string]string, asLabel map[string]string, method utils.Method, domain utils.DomainITF, args ...interface{}) {
 	if _, ok := params[utils.RootExport]; ok {
 		params[utils.RootRawView] = "disable"
 	}
-	response, err := domain.Call(params, t.Body(true), domain.GetMethod(), args...)
+	response, err := domain.Call(params, t.Body(true), method, args...)
 	if format, ok := params[utils.RootExport]; ok {
 		var cols, cmd, cmdCols string = "", "", ""
 		if pp, ok := params[utils.RootColumnsParam]; ok {

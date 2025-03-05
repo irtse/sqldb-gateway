@@ -3,6 +3,7 @@ package domain
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"slices"
 	permissions "sqldb-ws/domain/permission"
@@ -137,11 +138,11 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 		delete(d.Params, utils.RootTableParam)
 		tablename = strings.ToLower(tablename)
 		if rowName, ok := params[utils.RootRowsParam]; ok { // rows override columns
-			d.GetRowResults(rowName, specializedService, args...)
+			return d.GetRowResults(rowName, specializedService, args...)
 		}
 		if !d.SuperAdmin || method == utils.DELETE {
 			return utils.Results{}, errors.New(
-				"not authorized to " + method.String() + " " + d.Service.(*infrastructure.TableService).Name + " data")
+				"not authorized to " + method.String() + " " + d.Service.GetName() + " data")
 		}
 		if col, ok := params[utils.RootColumnsParam]; ok && tablename != utils.ReservedParam {
 			d.Service = d.Service.(*infrastructure.TableService).NewTableColumnService(specializedService, strings.ToLower(col))
@@ -179,9 +180,10 @@ func (d *SpecializedDomain) invoke(method utils.Method, args ...interface{}) (ut
 	if d.Service == nil {
 		return res, errors.New("no service available")
 	}
+	fmt.Println("invoke", method)
 	clazz := reflect.ValueOf(d.Service).MethodByName(method.Calling())
 	if !clazz.IsValid() || clazz.IsZero() {
-		return res, errors.New("not implemented <" + method.Calling())
+		return res, errors.New("not implemented <" + method.Calling() + ">")
 	}
 	vals := []reflect.Value{}
 	if method.IsMath() {

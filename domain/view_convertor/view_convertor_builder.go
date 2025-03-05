@@ -133,3 +133,5 @@ func (d *ViewConvertor) BuildPath(tableName string, rows string, extra ...string
 	}
 	return path
 }
+
+// TODO : Add hierarchical view in the workflow enrich

@@ -1,0 +1,325 @@
+package favorite_service
+
+import (
+	"errors"
+	"fmt"
+	"sqldb-ws/domain/filter"
+	"sqldb-ws/domain/schema"
+	ds "sqldb-ws/domain/schema/database_resources"
+	"sqldb-ws/domain/schema/models"
+	servutils "sqldb-ws/domain/service/utils"
+	utils "sqldb-ws/domain/utils"
+	"sqldb-ws/infrastructure/connector"
+	"strconv"
+	"strings"
+)
+
+// DONE - ~ 200 LINES - PARTIALLY TESTED
+type DashboardService struct {
+	servutils.AbstractSpecializedService
+	Elements       []map[string]interface{}
+	UpdateElements bool
+}
+
+// mainly should deserialize the data from the database
+// into a format that can be used by the front-end to display the data
+
+func (s *DashboardService) Entity() utils.SpecializedServiceInfo                                    { return ds.DBDashboard }
+func (s *DashboardService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {}
+func (s *DashboardService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
+	s.SpecializedCreateRow(record, ds.DBFilter.Name)
+}
+
+func (s *DashboardService) createDashboardMathOperation(elementID string, record map[string]interface{}) error {
+	if elementID == "" {
+		return errors.New("element id is required")
+	}
+	record[ds.DashboardElementDBField] = elementID
+	_, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBDashboardMathField.Name), record)
+	return err
+}
+
+func (s *DashboardService) createDashboardElement(dashboardID string, record map[string]interface{}) error {
+	if dashboardID == "" {
+		return errors.New("dashboard id is required")
+	}
+	record[ds.DashboardDBField] = dashboardID
+	_, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBDashboardElement.Name), record)
+	return err
+}
+
+func (s *DashboardService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
+	for _, element := range s.Elements {
+		err := s.createDashboardElement(fmt.Sprintf("%v", record[utils.SpecialIDParam]), element)
+		if fields, ok := record["fields"]; ok && err == nil {
+			for _, field := range fields.([]interface{}) {
+				err = s.createDashboardMathOperation(fmt.Sprintf("%v", record[utils.SpecialIDParam]), field.(map[string]interface{}))
+				if err != nil {
+					break
+				}
+			}
+		}
+		if err != nil {
+			fmt.Errorf("%v", err)
+		}
+	}
+}
+
+func (s *DashboardService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) (res utils.Results) {
+	// Should get the application of the dashboard filters. The filters are applied to the data
+	// and the data is then transformed into a generic view
+	res = utils.Results{}
+	for _, record := range results {
+		if record[utils.SpecialIDParam] != nil {
+			res = append(res, utils.Record{
+				"name":        fmt.Sprintf("%v", record[models.NAMEKEY]),
+				"description": fmt.Sprintf("%v", record["description"]),
+				"elements":    s.getDashboardElementView(fmt.Sprintf("%v", record[utils.SpecialIDParam])),
+			})
+		}
+	}
+	return results
+}
+
+func (s *DashboardService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
+	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, innerestr...)
+}
+
+func (s *DashboardService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
+	s.UpdateElements = false
+	method := s.Domain.GetMethod()
+
+	if method != utils.DELETE {
+		s.ProcessName(record)
+		s.ProcessElements(record)
+
+		if method == utils.UPDATE && s.UpdateElements {
+			s.HandleUpdate(record)
+		}
+	} else {
+		s.HandleDelete(record)
+	}
+
+	s.ProcessSelection(record)
+	return record, nil, true
+}
+
+func (s *DashboardService) ProcessName(record map[string]interface{}) {
+	if name, ok := record["name"]; ok {
+		if result, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBDashboard.Name, map[string]interface{}{
+			"name": name,
+		}, false); err == nil && len(result) > 0 {
+			record[utils.SpecialIDParam] = result[0][utils.SpecialIDParam]
+		}
+	}
+}
+
+func (s *DashboardService) ProcessElements(record map[string]interface{}) {
+	if els, ok := record["elements"]; ok {
+		s.UpdateElements = true
+		s.Elements = make([]map[string]interface{}, 0)
+		for _, el := range els.([]interface{}) {
+			s.Elements = append(s.Elements, el.(map[string]interface{}))
+		}
+	}
+}
+
+func (s *DashboardService) HandleUpdate(record map[string]interface{}) {
+	s.HandleDelete(record)
+}
+
+func (d *DashboardService) HandleDelete(record map[string]interface{}) {
+	elements, err := d.getDashBoardElement(fmt.Sprintf("%v", record[utils.SpecialIDParam]))
+	if err != nil {
+		return
+	}
+	for _, element := range elements {
+		// delete the operator element
+		if element[utils.SpecialIDParam] != nil && element[utils.SpecialIDParam] != "" {
+			params := utils.AllParams(ds.DBDashboardElement.Name)
+			params[ds.DashboardElementDBField] = fmt.Sprintf("%v", element[utils.SpecialIDParam])
+			d.Domain.DeleteSuperCall(params)
+			params = utils.AllParams(ds.DBDashboardElement.Name)
+			params[ds.DashboardDBField] = fmt.Sprintf("%v", record[utils.SpecialIDParam])
+			d.Domain.DeleteSuperCall(params)
+		}
+	}
+}
+
+func (d *DashboardService) getDashBoardElement(dashboardID string) ([]map[string]interface{}, error) {
+	return d.Domain.GetDb().SelectQueryWithRestriction(ds.DBDashboardElement.Name, map[string]interface{}{
+		ds.DashboardDBField: dashboardID,
+	}, false)
+}
+
+func (d *DashboardService) getDashboardElementView(dashboardID string) utils.Results {
+	results := utils.Results{}
+
+	elements, err := d.getDashBoardElement(dashboardID)
+	if err != nil || len(elements) == 0 {
+		return results
+	}
+
+	for _, element := range elements {
+		res, err := d.processDashboardElement(element)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		results = append(results, res)
+	}
+
+	return results
+}
+
+func (d *DashboardService) processDashboardElement(element map[string]interface{}) (utils.Record, error) {
+	filt, ok := element[ds.FilterDBField]
+	if !ok {
+		return nil, errors.New("missing filter field")
+	}
+
+	restriction, orderBy, err := d.getFilterRestrictionAndOrder(filt, element)
+	if err != nil {
+		return nil, err
+	}
+
+	res, isMultiple, err := d.getDashBoardMathFieldView(
+		fmt.Sprintf("%v", element[utils.SpecialIDParam]),
+		restriction, orderBy,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return utils.Record{
+		"name":        fmt.Sprintf("%v", element[models.NAMEKEY]),
+		"description": fmt.Sprintf("%v", element["description"]),
+		"is_multiple": isMultiple,
+		"results":     res,
+	}, nil
+}
+
+func (d *DashboardService) getFilterRestrictionAndOrder(filt interface{}, element map[string]interface{}) (string, string, error) {
+	var restriction, orderBy string
+	f := filter.NewFilterService(d.Domain)
+
+	res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{utils.SpecialIDParam: filt}, false)
+	if err != nil || len(res) == 0 {
+		return "", "", fmt.Errorf("failed to fetch filter: %v", err)
+	}
+
+	sch, err := schema.GetSchema(fmt.Sprintf("%v", res[0][ds.SchemaDBField]))
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get schema: %v", err)
+	}
+
+	restriction = f.ProcessFilterRestriction(fmt.Sprintf("%v", filt), fmt.Sprintf("%v", sch.ID))
+
+	if orderID, exists := element["order_by_"+ds.SchemaDBField]; exists {
+		if i, err := strconv.Atoi(fmt.Sprintf("%v", orderID)); err == nil {
+			if field, err := sch.GetFieldByID(int64(i)); err == nil {
+				orderBy = field.Name
+			}
+		}
+	}
+
+	return restriction, orderBy, nil
+}
+func (d *DashboardService) getDashBoardMathFieldView(elementID, restriction, orderBy string) (utils.Results, bool, error) {
+	if elementID == "" {
+		return nil, false, errors.New("element id is required")
+	}
+	db := d.Domain.GetDb()
+	fields, err := db.SelectQueryWithRestriction(ds.DBDashboardMathField.Name, map[string]interface{}{
+		ds.DashboardElementDBField: elementID,
+	}, false)
+	if err != nil {
+		return nil, false, err
+	}
+
+	names, views, err := d.processMathFields(fields)
+	if err != nil {
+		return nil, false, err
+	}
+
+	db.ClearQueryFilter()
+	db.SQLRestriction = restriction
+	db.SQLOrder = orderBy
+	db.SQLView = strings.Join(views, ",")
+
+	r, err := db.SelectQueryWithRestriction("", map[string]interface{}{}, false)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return d.processMathResults(r, names)
+}
+
+func (d *DashboardService) processMathFields(fields []map[string]interface{}) ([]string, []string, error) {
+	names := []string{}
+	views := []string{}
+
+	for _, field := range fields {
+		name, rowAlgo, colAlgo, err := d.extractMathFieldData(field)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		names = append(names, name)
+		views = append(views, connector.FormatMathViewQuery(colAlgo, rowAlgo, name))
+	}
+
+	return names, views, nil
+}
+
+func (d *DashboardService) extractMathFieldData(field map[string]interface{}) (string, string, string, error) {
+	name, ok := field[models.NAMEKEY].(string)
+	if !ok || name == "" {
+		return "", "", "", errors.New("name is required")
+	}
+
+	rowAlgo, ok := field["row_math_func"].(string)
+	if !ok || rowAlgo == "" {
+		return "", "", "", errors.New("row math func is required")
+	}
+
+	colAlgo, _ := field["column_math_func"].(string)
+	return name, rowAlgo, colAlgo, nil
+}
+
+func (d *DashboardService) processMathResults(r []map[string]interface{}, names []string) (utils.Results, bool, error) {
+	results := utils.Results{}
+	isMultiple := len(r) > 1
+
+	for i, rec := range r {
+		for _, n := range names {
+			f, err := strconv.ParseFloat(fmt.Sprintf("%v", rec[n]), 64)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			name := n
+			if isMultiple {
+				name += fmt.Sprintf("%v", i)
+			}
+
+			results = append(results, utils.Record{
+				"name":  name,
+				"value": f,
+			})
+		}
+	}
+
+	return results, isMultiple, nil
+}
+
+func (s *DashboardService) ProcessSelection(record map[string]interface{}) {
+	if sel, ok := record["is_selected"]; ok && sel.(bool) { // TODO
+		s.Domain.GetDb().UpdateQuery(ds.DBDashboard.Name, utils.Record{
+			"is_selected": false,
+		}, map[string]interface{}{
+			ds.DashboardDBField: record[ds.DashboardDBField],
+		}, true)
+	}
+}
