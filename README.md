@@ -25,10 +25,13 @@ Some special tables can be used for defining database access restrictions based 
 > export GOPRIVATE=forge.redroom.link
 before doing go mod tidy.
 
-bee generate routers
+To build :
+
+    bee generate routers
+    bee run -gendoc=true -downdoc=true
 
 RUN GO PROJECT 
-`sudo go run main.go` OR `sudo authmode=token go run main.go`
+`go run main.go` OR `authmode=token go run main.go`
 
 RUN DB
 Prerequisite : Get docker on your local machine. 

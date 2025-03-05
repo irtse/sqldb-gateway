@@ -1,0 +1,82 @@
+package database
+
+import "sqldb-ws/domain/schema/models"
+
+var DBRootViews = []map[string]interface{}{
+	{models.NAMEKEY: "submit data",
+		"is_list":     false,
+		"is_shortcut": true,
+		"indexable":   true,
+		"description": "select a form to submit an entry.",
+		"readonly":    false,
+		"index":       0,
+		"link":        DBRequest.Name,
+		"is_empty":    true,
+		"filter": map[string]interface{}{
+			"name":        "submit form",
+			"view_fields": []interface{}{map[string]interface{}{"name": "dbworkflow_id", "index": 0}},
+		},
+	},
+	{models.NAMEKEY: "my unvalidated requests",
+		"is_list":     true,
+		"indexable":   true,
+		"description": nil,
+		"readonly":    true,
+		"index":       1,
+		"own_view":    true,
+		"link":        DBRequest.Name,
+		"is_empty":    false,
+		"category":    "my requests",
+		"filter": map[string]interface{}{
+			"name": "unvalidated requests",
+			"fields": []interface{}{
+				map[string]interface{}{"name": "state", "value": "completed", "dir": "ASC", "index": 0, "operator": "!=", "separator": "and"},
+			},
+		}},
+	{models.NAMEKEY: "my validated requests",
+		"is_list":     true,
+		"indexable":   true,
+		"description": nil,
+		"readonly":    true,
+		"index":       1,
+		"own_view":    true,
+		"link":        DBRequest.Name,
+		"is_empty":    false,
+		"category":    "my requests",
+		"filter": map[string]interface{}{
+			"name": "validated requests",
+			"fields": []interface{}{
+				map[string]interface{}{"name": "state", "value": "completed", "dir": "ASC", "index": 0, "operator": "=", "separator": "and"},
+			},
+		}},
+	{models.NAMEKEY: "my assigned activity",
+		"is_list":     true,
+		"indexable":   true,
+		"description": nil,
+		"readonly":    false,
+		"index":       1,
+		"link":        DBTask.Name,
+		"category":    "my activities",
+		"is_empty":    false,
+		"filter": map[string]interface{}{
+			"name": "unvalidated tasks",
+			"fields": []interface{}{
+				map[string]interface{}{"name": "state", "value": "completed", "dir": "ASC", "index": 0, "operator": "!=", "separator": "and"},
+			},
+		}},
+	{models.NAMEKEY: "my archived activity",
+		"is_list":     true,
+		"indexable":   true,
+		"description": nil,
+		"readonly":    true,
+		"index":       1,
+		"category":    "my activities",
+		"link":        DBTask.Name,
+		"is_empty":    false,
+		"filter": map[string]interface{}{
+			"name": "validated tasks",
+			"fields": []interface{}{
+				map[string]interface{}{"name": "state", "value": "completed", "dir": "ASC", "index": 0, "operator": "=", "separator": "and"},
+			},
+		}},
+}

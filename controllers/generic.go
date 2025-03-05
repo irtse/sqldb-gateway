@@ -1,14 +1,15 @@
 package controllers
 
 import (
-	"fmt"
-	"sqldb-ws/lib/domain/utils"
-	"sqldb-ws/lib/domain/schema"
+	"sqldb-ws/controllers/controller"
+	ds "sqldb-ws/domain/schema/database_resources"
+	"sqldb-ws/domain/utils"
 )
 
-type MainController struct { AbstractController }
+type MainController struct{ controller.AbstractController }
+
 // Operations about table
-type GenericController struct { AbstractController }
+type GenericController struct{ controller.AbstractController }
 
 // @Title /
 // @Description Main call
@@ -18,10 +19,13 @@ type GenericController struct { AbstractController }
 // @router / [get]
 func (l *MainController) Main() {
 	// Main is the default root of the API, it gives back all your allowed shallowed view
-	l.paramsOverload = map[string]string{ utils.RootTableParam : schema.DBView.Name, utils.RootRowsParam : utils.ReservedParam,
-										  utils.RootShallow : "enable", "indexable" : fmt.Sprintf("%v", true) }
+	l.ParamsOverload = utils.AllParams(ds.DBView.Name).RootShallow().Enrich(
+		map[string]interface{}{
+			"indexable": true,
+		})
 	l.SafeCall(utils.SELECT)
 }
+
 // @Title Post data in table
 // @Description post data in table
 // @Param	table		path 	string	true		"Name of the table"
@@ -30,6 +34,7 @@ func (l *MainController) Main() {
 // @Failure 403 :table post issue
 // @router /:table [post]
 func (t *GenericController) Post() { t.SafeCall(utils.CREATE) }
+
 // @Title Put data in table
 // @Description put data in table
 // @Param	table		path 	string	true		"Name of the table"
@@ -38,6 +43,7 @@ func (t *GenericController) Post() { t.SafeCall(utils.CREATE) }
 // @Failure 403 :table put issue
 // @router /:table [put]
 func (t *GenericController) Put() { t.SafeCall(utils.UPDATE) }
+
 // web.InsertFilter("/*", web.BeforeRouter, FilterUserPost)
 // }
 
@@ -64,7 +70,7 @@ func (t *GenericController) Get() { t.SafeCall(utils.SELECT) }
 // @Success 200 {string} success !
 // @Failure 403 no table
 // @router /:table/:function [get]
-func (t *GenericController) Math() { 
+func (t *GenericController) Math() {
 	function := t.Ctx.Input.Params()[":function"]
-	t.SafeCall(utils.Found(function)) 
+	t.SafeCall(utils.Found(function))
 }
