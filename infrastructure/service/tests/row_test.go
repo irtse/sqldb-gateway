@@ -42,8 +42,7 @@ func TestRowGet(t *testing.T) {
 
 func TestRowCreate(t *testing.T) {
 	tcs := &service.TableRowService{}
-	tcs.Record = map[string]interface{}{"name": "test"}
-	_, err := tcs.Create()
+	_, err := tcs.Create(map[string]interface{}{"name": "test"})
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -51,8 +50,7 @@ func TestRowCreate(t *testing.T) {
 
 func TestRowCreateWithNoData(t *testing.T) {
 	tcs := &service.TableRowService{}
-	tcs.Record = map[string]interface{}{}
-	_, err := tcs.Create()
+	_, err := tcs.Create(map[string]interface{}{})
 	if err == nil || err.Error() != "no data to insert" {
 		t.Errorf("Expected error for no data, got: %v", err)
 	}
@@ -60,8 +58,7 @@ func TestRowCreateWithNoData(t *testing.T) {
 
 func TestRowUpdate(t *testing.T) {
 	tcs := &service.TableRowService{}
-	tcs.Record = map[string]interface{}{"name": "updated_test"}
-	_, err := tcs.Update("some_restriction")
+	_, err := tcs.Update(map[string]interface{}{"name": "updated_test"}, "some_restriction")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -85,8 +82,7 @@ func TestRowDeleteWithNoRestriction(t *testing.T) {
 
 func TestRowUpdateWithNoRecord(t *testing.T) {
 	tcs := &service.TableRowService{}
-	tcs.Record = map[string]interface{}{}
-	_, err := tcs.Update()
+	_, err := tcs.Update(map[string]interface{}{})
 	if err == nil {
 		t.Errorf("Expected error for empty record, but got nil")
 	}

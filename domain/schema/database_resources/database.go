@@ -31,7 +31,7 @@ var DBSchemaField = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
 		{Name: models.LABELKEY, Type: models.BIGVARCHAR.String(), Required: true, Index: 1},
-		{Name: models.TYPEKEY, Type: models.DataTypeToEnum(), Required: true, Index: 2},
+		{Name: models.TYPEKEY, Type: models.VARCHAR.String(), Required: true, Index: 2},
 		{Name: "description", Type: models.TEXT.String(), Required: false, Index: 3},
 		{Name: "placeholder", Type: models.VARCHAR.String(), Required: false, Index: 4},
 		{Name: "default_value", Type: models.BIGVARCHAR.String(), Required: false, Index: 5, Label: "default"},
@@ -116,7 +116,7 @@ var DBHierarchy = models.SchemaModel{
 		{Name: "parent_" + RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: true, Index: 0, Label: "hierarchical user"},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Index: 1, Label: "user with hierarchy"},
 		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Index: 2, Label: "entity with hierarchy"},
-		{Name: models.STARTKEY, Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_models.TIMESTAMP", Index: 3},
+		{Name: models.STARTKEY, Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_TIMESTAMP", Index: 3},
 		{Name: models.ENDKEY, Type: models.TIMESTAMP.String(), Required: false, Index: 4},
 	},
 }
@@ -129,7 +129,7 @@ var DBEntityUser = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: true, Readonly: true, Index: 0, Label: "user"},
 		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: true, Readonly: true, Index: 1, Label: "entity"},
-		{Name: models.STARTKEY, Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_models.TIMESTAMP", Index: 2},
+		{Name: models.STARTKEY, Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_TIMESTAMP", Index: 2},
 		{Name: models.ENDKEY, Type: models.TIMESTAMP.String(), Required: false, Index: 3},
 	},
 }
@@ -143,7 +143,7 @@ var DBRoleAttribution = models.SchemaModel{
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Index: 0, Label: "user"},
 		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Readonly: true, Index: 1, Label: "entity"},
 		{Name: RootID(DBRole.Name), Type: models.INTEGER.String(), ForeignTable: DBRole.Name, Required: true, Readonly: true, Index: 2, Label: "role"},
-		{Name: models.STARTKEY, Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_models.TIMESTAMP", Index: 3},
+		{Name: models.STARTKEY, Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_TIMESTAMP", Index: 3},
 		{Name: models.ENDKEY, Type: models.TIMESTAMP.String(), Required: false, Index: 4},
 	},
 }
@@ -193,7 +193,7 @@ var DBRequest = models.SchemaModel{
 		{Name: "state", Type: models.ENUMSTATE.String(), Required: false, Default: models.STATEPENDING, Level: models.LEVELRESPONSIBLE, Index: 1},
 		{Name: "is_close", Type: models.BOOLEAN.String(), Required: false, Default: false, Level: models.LEVELRESPONSIBLE, Index: 2},
 		{Name: "current_index", Type: models.INTEGER.String(), Required: false, Default: 0, Index: 3},
-		{Name: "created_date", Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_models.TIMESTAMP", Readonly: true, Level: models.LEVELRESPONSIBLE, Index: 4},
+		{Name: "created_date", Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_TIMESTAMP", Readonly: true, Level: models.LEVELRESPONSIBLE, Index: 4},
 		{Name: "closing_date", Type: models.TIMESTAMP.String(), Required: false, Readonly: true, Level: models.LEVELRESPONSIBLE, Index: 5},
 		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Level: models.LEVELRESPONSIBLE, Label: "reference", Index: 6},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Level: models.LEVELRESPONSIBLE, Label: "template attached", Index: 7},
@@ -218,7 +218,7 @@ var DBTask = models.SchemaModel{
 		{Name: "comment", Type: models.TEXT.String(), Required: false, Index: 6},
 		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Readonly: true, Label: "created by", Level: models.LEVELRESPONSIBLE, Index: 8},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Label: "created by", Level: models.LEVELRESPONSIBLE, Index: 8},
-		{Name: "created_date", Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_models.TIMESTAMP", Readonly: true, Index: 9},
+		{Name: "created_date", Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_TIMESTAMP", Readonly: true, Index: 9},
 		{Name: "closing_date", Type: models.TIMESTAMP.String(), Required: false, Readonly: true, Index: 10},
 		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 11},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 12},
@@ -362,7 +362,7 @@ var DBDataAccess = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: "update", Type: models.BOOLEAN.String(), Required: false, Default: false, Readonly: true, Label: "updated", Index: 0},
 		{Name: "write", Type: models.BOOLEAN.String(), Required: false, Default: false, Readonly: true, Label: "created", Index: 1},
-		{Name: "access_date", Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_models.TIMESTAMP", Readonly: true, Label: "access date", Index: 2},
+		{Name: "access_date", Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_TIMESTAMP", Readonly: true, Label: "access date", Index: 2},
 		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 3},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 4},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Label: "related user", Index: 5},
@@ -381,6 +381,9 @@ var ROOTTABLES = []models.SchemaModel{DBWorkflow, DBView, DBSchema, DBSchemaFiel
 	DBRequest, DBTask, DBWorkflowSchema, DBRolePermission, DBHierarchy, DBViewAttribution, DBFilter, DBFilterField,
 	DBDashboard, DBDashboardElement, DBDashboardMathField,
 }
+
+var NOAUTOLOADROOTTABLES = []models.SchemaModel{DBSchema, DBSchemaField, DBPermission, DBView, DBWorkflow}
+var NOAUTOLOADROOTTABLESSTR = []string{DBSchema.Name, DBSchemaField.Name, DBPermission.Name, DBView.Name, DBWorkflow.Name}
 
 func IsRootDB(name string) bool {
 	if len(name) > 1 {

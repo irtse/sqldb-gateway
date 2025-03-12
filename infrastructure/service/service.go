@@ -17,8 +17,8 @@ type InfraServiceItf interface {
 	Verify(string) (string, bool)
 	Math(algo string, restriction ...string) ([]map[string]interface{}, error)
 	Get(restriction ...string) ([]map[string]interface{}, error)
-	Create() ([]map[string]interface{}, error)
-	Update(restriction ...string) ([]map[string]interface{}, error)
+	Create(record map[string]interface{}) ([]map[string]interface{}, error)
+	Update(record map[string]interface{}, restriction ...string) ([]map[string]interface{}, error)
 	Delete(restriction ...string) ([]map[string]interface{}, error)
 	Template(restriction ...string) (interface{}, error)
 	GenerateFromTemplate(string) error
@@ -26,7 +26,6 @@ type InfraServiceItf interface {
 type InfraService struct {
 	Name               string                     `json:"name"`
 	User               string                     `json:"-"`
-	Record             map[string]interface{}     `json:"-"`
 	Results            []map[string]interface{}   `json:"-"`
 	SuperAdmin         bool                       `json:"-"`
 	NoLog              bool                       `json:"-"`
@@ -40,9 +39,8 @@ func (service *InfraService) GetName() string {
 }
 
 // Main Service Builder
-func (service *InfraService) Fill(name string, admin bool, user string, record map[string]interface{}) {
+func (service *InfraService) Fill(name string, admin bool, user string) {
 	service.Name = name
-	service.Record = record
 	service.User = user
 	service.SuperAdmin = admin
 }
@@ -76,6 +74,7 @@ func (service *InfraService) DBError(res []map[string]interface{}, err error) ([
 }
 
 type InfraSpecializedServiceItf interface {
+	ShouldVerify() bool
 	GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string)
 	SpecializedCreateRow(record map[string]interface{}, tableName string)
 	SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{})
@@ -84,6 +83,10 @@ type InfraSpecializedServiceItf interface {
 }
 
 type InfraSpecializedService struct{}
+
+func (s *InfraSpecializedService) ShouldVerify() bool {
+	return true
+}
 
 func (s *InfraSpecializedService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
 	return "", "", "", ""

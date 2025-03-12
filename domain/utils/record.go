@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"strconv"
 	// API COMMON query params !
 )
@@ -16,6 +15,22 @@ func AddMap(rec map[string]interface{}, add ...map[string]interface{}) map[strin
 		for k, v := range res {
 			rec[k] = v
 		}
+	}
+	return rec
+}
+
+func ToListStr(add []interface{}) []string {
+	rec := []string{}
+	for _, res := range add {
+		res = append(rec, ToString(res))
+	}
+	return rec
+}
+
+func ToResult(add []map[string]interface{}) Results {
+	rec := Results{}
+	for _, res := range add {
+		rec = append(rec, ToRecord(res))
 	}
 	return rec
 }
@@ -55,30 +70,30 @@ func (ar *Record) GetString(column string) string {
 	if (*ar)[column] == nil {
 		return ""
 	}
-	return fmt.Sprintf("%v", (*ar)[column])
+	return ToString((*ar)[column])
 }
 
 func GetString(record map[string]interface{}, column string) string {
 	if record[column] == nil {
 		return ""
 	}
-	return fmt.Sprintf("%v", record[column])
+	return ToString(record[column])
 }
 
 func GetInt(record map[string]interface{}, column string) int64 {
-	str := fmt.Sprintf("%v", record[column])
+	str := ToString(record[column])
 	val, _ := strconv.Atoi(str)
 	return int64(val)
 }
 
 func (ar *Record) GetInt(column string) int64 {
-	str := fmt.Sprintf("%v", (*ar)[column])
+	str := ToString((*ar)[column])
 	val, _ := strconv.Atoi(str)
 	return int64(val)
 }
 
 func (ar *Record) GetFloat(column string) float64 {
-	str := fmt.Sprintf("%v", (*ar)[column])
+	str := ToString((*ar)[column])
 	val, _ := strconv.ParseFloat(str, 64)
 	return val
 }

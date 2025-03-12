@@ -8,13 +8,11 @@ import (
 	servutils "sqldb-ws/domain/service/utils"
 	utils "sqldb-ws/domain/utils"
 	"sqldb-ws/domain/view_convertor"
-	infrastructure "sqldb-ws/infrastructure/service"
 )
 
 // DONE - UNDER 100 LINES - NOT TESTED
 type WorkflowService struct {
 	servutils.AbstractSpecializedService
-	infrastructure.InfraSpecializedService
 }
 
 func (s *WorkflowService) Entity() utils.SpecializedServiceInfo { return ds.DBWorkflow }
@@ -22,7 +20,7 @@ func (s *WorkflowService) Entity() utils.SpecializedServiceInfo { return ds.DBWo
 func (s *WorkflowService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
 	res := utils.Results{}
 	for _, rec := range results { // filter by allowed schemas
-		schema, err := schema.GetSchemaByID(int64(rec[SchemaDBField].(float64)))
+		schema, err := schema.GetSchemaByID(utils.ToInt64(rec[SchemaDBField]))
 		if err == nil && s.Domain.VerifyAuth(schema.Name, "", "", utils.CREATE) {
 			if !(!schema.HasField(sm.NAMEKEY) && !s.Domain.IsSuperAdmin()) {
 				res = append(res, rec)

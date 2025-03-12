@@ -29,7 +29,7 @@ func (v *ViewConvertor) TransformToView(results utils.Results, tableName string,
 	}
 
 	if ids, ok := v.Domain.GetParams()[utils.SpecialIDParam]; ok || v.Domain.GetMethod() != utils.SELECT {
-		v.NewDataAccess(schema.ID, strings.Split(ids, ","), v.Domain.GetMethod()) // FOUND IT !
+		v.NewDataAccess(schema.GetID(), strings.Split(ids, ","), v.Domain.GetMethod()) // FOUND IT !
 	}
 
 	if v.Domain.IsShallowed() {
@@ -149,7 +149,7 @@ func (d *ViewConvertor) ConvertRecordToView(index int, channel chan sm.ViewItemM
 	if !shallow {
 		schema, err := scheme.GetSchema(tableName)
 		if err == nil {
-			historyPath = d.BuildPath(ds.DBDataAccess.Name, utils.ReservedParam, utils.RootOrderParam+"=access_date", utils.RootDirParam+"=asc", utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+fmt.Sprintf("%v", schema.ID))
+			historyPath = d.BuildPath(ds.DBDataAccess.Name, utils.ReservedParam, utils.RootOrderParam+"=access_date", utils.RootDirParam+"=asc", utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
 		}
 		vals[utils.SpecialIDParam] = record.GetString(utils.SpecialIDParam)
 	}
@@ -185,11 +185,11 @@ func (d *ViewConvertor) HandleDBSchemaField(record utils.Record, field sm.FieldM
 	if !strings.Contains(field.Name, ds.DBSchema.Name) || !destOk || !idOk || dest == nil || id == nil {
 		return false
 	}
-	schema, err := scheme.GetSchemaByID(int64(id.(float64)))
+	schema, err := scheme.GetSchemaByID(utils.ToInt64(id))
 	if err != nil {
 		return false
 	}
-	*datapath = d.BuildPath(schema.Name, fmt.Sprintf("%v", dest))
+	*datapath = d.BuildPath(schema.Name, utils.ToString(dest))
 	shallowVals[ds.RootID(ds.DBSchema.Name)] = utils.Record{"id": schema.ID, "name": schema.Name, "label": schema.Label}
 	if t, err := d.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
 		utils.SpecialIDParam: dest,
@@ -198,17 +198,17 @@ func (d *ViewConvertor) HandleDBSchemaField(record utils.Record, field sm.FieldM
 			utils.SpecialIDParam: t[0][utils.SpecialIDParam],
 			sm.NAMEKEY:           t[0][sm.NAMEKEY],
 			sm.LABELKEY:          t[0][sm.NAMEKEY],
-			"data_ref":           "@" + fmt.Sprintf("%v", schema.ID) + ":" + fmt.Sprintf("%v", t[0][utils.SpecialIDParam])}
+			"data_ref":           "@" + utils.ToString(schema.ID) + ":" + utils.ToString(t[0][utils.SpecialIDParam])}
 	}
 	return true
 }
 
 func (d *ViewConvertor) HandleLinkField(record utils.Record, field sm.FieldModel, tableName string, shallow bool,
 	shallowVals map[string]interface{}, manyVals map[string]utils.Results, manyPathVals map[string]string) {
-	if record.GetString(field.Name) == "" || field.Link <= 0 || shallow {
+	if record.GetString(field.Name) == "" || field.GetLink() <= 0 || shallow {
 		return
 	}
-	link := scheme.GetTablename(fmt.Sprintf("%v", field.Link))
+	link := scheme.GetTablename(utils.ToString(field.Link))
 	if strings.Contains(field.Type, "many") {
 		d.HandleManyField(record, field, tableName, link, manyVals, manyPathVals)
 		return
@@ -218,9 +218,9 @@ func (d *ViewConvertor) HandleLinkField(record utils.Record, field sm.FieldModel
 
 func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel, tableName, link string, manyVals map[string]utils.Results, manyPathVals map[string]string) {
 	if !d.Domain.IsShallowed() {
-		l, _ := scheme.GetSchemaByID(field.Link)
+		l, _ := scheme.GetSchemaByID(field.GetLink())
 		for _, f := range l.Fields {
-			if field.Type == sm.ONETOMANY.String() && field.Link > 0 {
+			if field.Type == sm.ONETOMANY.String() && field.GetLink() > 0 {
 				if strings.Contains(f.Name, tableName) && strings.Contains(f.Name, "_id") {
 					manyPathVals[field.Name] = d.BuildPath(
 						link, utils.ReservedParam,
@@ -229,10 +229,10 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 				}
 				continue
 			}
-			if strings.Contains(f.Name, tableName) || f.Name == utils.SpecialIDParam || f.Link <= 0 {
+			if strings.Contains(f.Name, tableName) || f.Name == utils.SpecialIDParam || f.GetLink() <= 0 {
 				continue
 			}
-			lid, _ := scheme.GetSchemaByID(f.Link)
+			lid, _ := scheme.GetSchemaByID(f.GetLink())
 			views := []string{utils.SpecialIDParam, sm.NAMEKEY}
 			if lid.HasField(sm.LABELKEY) {
 				views = append(views, sm.LABELKEY)

@@ -2,7 +2,6 @@ package task_service
 
 import (
 	"errors"
-	"fmt"
 	"sqldb-ws/domain/filter"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -20,6 +19,7 @@ type TaskService struct {
 	servutils.AbstractSpecializedService
 }
 
+func (s *TaskService) ShouldVerify() bool                                                   { return true }
 func (s *TaskService) SpecializedCreateRow(record map[string]interface{}, tableName string) {}
 func (s *TaskService) Entity() utils.SpecializedServiceInfo                                 { return ds.DBTask }
 func (s *TaskService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
@@ -43,7 +43,7 @@ func (s *TaskService) VerifyDataIntegrity(record map[string]interface{}, tablena
 	case utils.UPDATE:
 		// check if task is already closed
 		if elder, _ := s.Domain.SuperCall(utils.GetRowTargetParameters(ds.DBTask.Name, record[utils.SpecialIDParam]),
-			utils.Record{}, utils.SELECT, false); len(elder) > 0 && CheckStateIsEnded(elder[0]["state"].(string)) {
+			utils.Record{}, utils.SELECT, false); len(elder) > 0 && CheckStateIsEnded(utils.ToString(elder[0]["state"])) {
 			return record, errors.New("task is already closed, cannot change its state"), false
 		}
 		record = SetClosureStatus(record) // check if task is already progressing
@@ -61,24 +61,24 @@ func (s *TaskService) SpecializedDeleteRow(results []map[string]interface{}, tab
 
 func (s *TaskService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
 	for _, res := range results {
-		if CheckStateIsEnded(res["state"].(string)) {
+		if CheckStateIsEnded(utils.ToString(res["state"])) {
 			continue
 		}
 		p := utils.GetRowTargetParameters(ds.DBRequest.Name, utils.GetString(res, RequestDBField))
 		requests, err := s.Domain.SuperCall(p, utils.Record{}, utils.SELECT, false)
-		if err != nil || len(requests) == 0 || requests[0]["current_index"] == nil || requests[0]["current_index"].(float64) < 1 {
+		if err != nil || len(requests) == 0 || utils.ToInt64(requests[0]["current_index"]) < 1 {
 			continue
 		}
 		order := requests[0]["current_index"]
 		if otherPendingTasks, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name,
 			map[string]interface{}{ // delete all notif
-				RequestDBField: fmt.Sprintf("%v", res[RequestDBField]),
+				RequestDBField: utils.ToString(res[RequestDBField]),
 				"state":        []string{"pending", "progressing"},
 			}, false); err == nil && len(otherPendingTasks) > 0 {
 			continue
 		}
 
-		current_index := order.(float64)
+		current_index := utils.ToInt64(order)
 		switch res["state"] {
 		case "completed":
 			current_index++

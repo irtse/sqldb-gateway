@@ -13,7 +13,7 @@ func TestDeserialize(t *testing.T) {
 	rec := utils.Record{"id": int64(1), "name": "TestSchema", "label": "Test Label", "category": "TestCategory"}
 	schema := models.SchemaModel{}.Deserialize(rec)
 
-	if schema.ID != 1 || schema.Name != "TestSchema" || schema.Label != "Test Label" || schema.Category != "TestCategory" {
+	if schema.GetID() != 1 || schema.Name != "TestSchema" || schema.Label != "Test Label" || schema.Category != "TestCategory" {
 		t.Errorf("Unexpected deserialization result: %+v", schema)
 	}
 }
@@ -37,7 +37,7 @@ func TestHasField(t *testing.T) {
 }
 
 func TestGetField(t *testing.T) {
-	schema := models.SchemaModel{Fields: []models.FieldModel{{Name: "Field1", ID: 1}}}
+	schema := models.SchemaModel{Fields: []models.FieldModel{{Name: "Field1", ID: "1"}}}
 
 	field, err := schema.GetField("Field1")
 	if err != nil || field.Name != "Field1" {
@@ -51,10 +51,10 @@ func TestGetField(t *testing.T) {
 }
 
 func TestGetFieldByID(t *testing.T) {
-	schema := models.SchemaModel{Fields: []models.FieldModel{{Name: "Field1", ID: 1}}}
+	schema := models.SchemaModel{Fields: []models.FieldModel{{Name: "Field1", ID: "1"}}}
 
 	field, err := schema.GetFieldByID(1)
-	if err != nil || field.ID != 1 {
+	if err != nil || field.GetID() != 1 {
 		t.Errorf("Expected to retrieve field with ID 1, got error: %v", err)
 	}
 

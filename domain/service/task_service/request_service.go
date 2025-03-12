@@ -2,7 +2,6 @@ package task_service
 
 import (
 	"errors"
-	"fmt"
 	"sqldb-ws/domain/filter"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -19,6 +18,7 @@ type RequestService struct {
 	servutils.AbstractSpecializedService
 }
 
+func (s *RequestService) ShouldVerify() bool { return true }
 func (s *RequestService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
 	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true)
 }
@@ -84,8 +84,8 @@ func (s *RequestService) VerifyDataIntegrity(record map[string]interface{}, tabl
 func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
 	for _, rec := range results {
 		p := utils.AllParams(ds.DBNotification.Name)
-		p[ds.UserDBField] = fmt.Sprintf("%v", rec[ds.UserDBField])
-		p[ds.DestTableDBField] = fmt.Sprintf("%v", rec[utils.SpecialIDParam])
+		p[ds.UserDBField] = utils.ToString(rec[ds.UserDBField])
+		p[ds.DestTableDBField] = utils.ToString(rec[utils.SpecialIDParam])
 		switch rec["state"] {
 		case "dismiss":
 			p[sm.NAMEKEY] = "Rejected " + utils.GetString(rec, sm.NAMEKEY)
@@ -95,7 +95,7 @@ func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, 
 			p["description"] = utils.GetString(rec, sm.NAMEKEY) + " is accepted and closed."
 		}
 		schema, err := schserv.GetSchema(ds.DBRequest.Name)
-		if err == nil && !rec["is_meta"].(bool) && CheckStateIsEnded(rec["state"]) {
+		if err == nil && !utils.Compare(rec["is_meta"], true) && CheckStateIsEnded(rec["state"]) {
 			if t, err := s.Domain.SuperCall(p, utils.Record{}, utils.SELECT, false); err == nil && len(t) > 0 {
 				return
 			}
@@ -105,9 +105,9 @@ func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, 
 			rec["link_id"] = schema.ID
 			s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), rec)
 		}
-		if rec["is_close"].(bool) {
+		if utils.Compare(rec["is_close"], true) {
 			p := utils.AllParams(ds.DBTask.Name)
-			p["meta_"+ds.RequestDBField] = fmt.Sprintf("%v", rec[utils.SpecialIDParam])
+			p["meta_"+ds.RequestDBField] = utils.ToString(rec[utils.SpecialIDParam])
 			res, err := s.Domain.SuperCall(p, utils.Record{}, utils.SELECT, false)
 			if err == nil && len(res) > 0 {
 				for _, task := range res {
@@ -129,7 +129,7 @@ func (s *RequestService) SpecializedCreateRow(record map[string]interface{}, tab
 
 func (s *RequestService) handleInitialWorkflow(record map[string]interface{}) {
 	wfs, err := s.Domain.SuperCall(utils.AllParams(ds.DBWorkflowSchema.Name), utils.Record{},
-		utils.SELECT, false, "index=1 AND "+ds.WorkflowDBField+"="+fmt.Sprintf("%v", record[ds.WorkflowDBField]))
+		utils.SELECT, false, "index=1 AND "+ds.WorkflowDBField+"="+utils.ToString(record[ds.WorkflowDBField]))
 	if err != nil || len(wfs) == 0 {
 		params := utils.Params{utils.RootTableParam: ds.DBRequest.Name, utils.RootRowsParam: utils.GetString(record, utils.SpecialIDParam)}
 		s.Domain.DeleteSuperCall(params)

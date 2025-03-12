@@ -43,7 +43,7 @@ func TestColumnVerify(t *testing.T) {
 
 func TestColumnCreate(t *testing.T) {
 	tcs := &service.TableColumnService{}
-	_, err := tcs.Create()
+	_, err := tcs.Create(map[string]interface{}{})
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestColumnCreate(t *testing.T) {
 
 func TestColumnUpdate(t *testing.T) {
 	tcs := &service.TableColumnService{}
-	_, err := tcs.Update("some_restriction")
+	_, err := tcs.Update(map[string]interface{}{}, "some_restriction")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -67,8 +67,7 @@ func TestColumnDelete(t *testing.T) {
 
 func TestColumnUpdateWithMissingValues(t *testing.T) {
 	tcs := &service.TableColumnService{}
-	tcs.Record = map[string]interface{}{"type": "", "name": ""}
-	_, err := tcs.Update()
+	_, err := tcs.Update(map[string]interface{}{"type": "", "name": ""})
 	if err == nil {
 		t.Errorf("Expected error for missing type & name, but got nil")
 	}
@@ -85,8 +84,7 @@ func TestColumnDeleteProtectedDBColumn(t *testing.T) {
 
 func TestColumnCreateWithoutQueries(t *testing.T) {
 	tcs := &service.TableColumnService{}
-	tcs.Record = map[string]interface{}{}
-	_, err := tcs.Create()
+	_, err := tcs.Create(map[string]interface{}{})
 	if err == nil || err.Error() != "no query to execute" {
 		t.Errorf("Expected error for no queries, got: %v", err)
 	}

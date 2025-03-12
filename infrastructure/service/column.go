@@ -49,32 +49,30 @@ func (t *TableColumnService) Verify(name string) (string, bool) {
 	return typ, typ != ""
 }
 
-func (t *TableColumnService) Create() ([]map[string]interface{}, error) {
+func (t *TableColumnService) Create(record map[string]interface{}) ([]map[string]interface{}, error) {
 	queries := t.DB.ClearQueryFilter().BuildCreateQueries(t.Name, "",
-		fmt.Sprintf("%v", t.Record["name"]),
-		fmt.Sprintf("%v", t.Record["type"]))
+		fmt.Sprintf("%v", record["name"]), fmt.Sprintf("%v", record["type"]))
 	for i, query := range queries {
-		if err := t.DB.Query(query); err != nil && i != 0 {
-			return t.DBError(nil, err)
-		} else if err = t.update(); err != nil {
+		if err := t.DB.Query(query); err != nil && len(queries)-1 == i {
 			return t.DBError(nil, err)
 		}
 	}
+	t.update(record)
 	if len(queries) > 0 {
-		t.Views = fmt.Sprintf("%v", t.Record["name"])
+		t.Views = fmt.Sprintf("%v", record["name"])
 		return t.Get()
 	}
 	return nil, errors.New("no query to execute")
 }
 
-func (t *TableColumnService) Update(restr ...string) ([]map[string]interface{}, error) {
+func (t *TableColumnService) Update(record map[string]interface{}, restr ...string) ([]map[string]interface{}, error) {
 	t.DB.ClearQueryFilter()
-	typ := fmt.Sprintf("%v", t.Record["type"])
-	name := fmt.Sprintf("%v", t.Record["name"])
+	typ := fmt.Sprintf("%v", record["type"])
+	name := fmt.Sprintf("%v", record["name"])
 	if typ == "" || typ == "<nil>" || name == "" || name == "<nil>" {
 		return nil, errors.New("missing one of the needed value type & name")
 	}
-	if err := t.update(); err != nil {
+	if err := t.update(record); err != nil {
 		return t.DBError(nil, err)
 	}
 	if strings.TrimSpace(name) != "" && !strings.Contains(t.Name, "db") {
@@ -101,12 +99,14 @@ func (t *TableColumnService) Delete(restriction ...string) ([]map[string]interfa
 	return t.Results, nil
 }
 
-func (t *TableColumnService) update() error {
-	if queries, err := t.DB.BuildUpdateColumnQueries(t.Name, t.Record, nil); err != nil {
+func (t *TableColumnService) update(record map[string]interface{}) error {
+	if queries, err := t.DB.BuildUpdateColumnQueries(t.Name, record, nil); err != nil {
 		return err
 	} else {
 		for _, query := range queries {
-			fmt.Println(t.DB.Query(query))
+			if err := t.DB.Query(query); err != nil && !strings.Contains(query, "DROP") {
+				fmt.Println(query, t.DB.Query(query))
+			}
 		}
 	}
 	return nil

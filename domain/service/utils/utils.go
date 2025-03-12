@@ -6,9 +6,17 @@ import (
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/domain/view_convertor"
+	"sqldb-ws/infrastructure/service"
 )
 
-type AbstractSpecializedService struct{ Domain utils.DomainITF }
+type AbstractSpecializedService struct {
+	service.InfraSpecializedService
+	Domain utils.DomainITF
+}
+
+func (s *AbstractSpecializedService) SpecializedCreateColumn(record map[string]interface{}, tableName string) map[string]interface{} {
+	return record
+}
 
 func (s *AbstractSpecializedService) SetDomain(d utils.DomainITF) { s.Domain = d }
 
@@ -28,7 +36,7 @@ func CheckAutoLoad(tablename string, record utils.Record, domain utils.DomainITF
 			return rec, err, false
 		}
 	}
-	return record, nil, domain.GetMethod() == utils.DELETE
+	return record, nil, false
 }
 
 func GetUserRecord(domain utils.DomainITF) (utils.Record, bool) {

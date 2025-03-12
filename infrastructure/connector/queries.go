@@ -28,6 +28,7 @@ func (db *Database) SelectQueryWithRestrictionList(name string, restrictions []s
 }
 
 func (db *Database) SelectQueryWithRestriction(name string, restrictions interface{}, isOr bool) ([]map[string]interface{}, error) {
+	COUNTREQUEST++
 	return db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
 }
 

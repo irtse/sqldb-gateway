@@ -119,7 +119,7 @@ func (t *AbstractController) Body(hashed bool) utils.Record {
 	json.Unmarshal(t.Ctx.Input.RequestBody, &res)
 	if pass, ok := res["password"]; ok { // if any password founded hash it
 		argon := argon2.DefaultConfig()
-		hash, err := argon.HashEncoded([]byte(pass.(string)))
+		hash, err := argon.HashEncoded([]byte(utils.ToString(pass)))
 		if err != nil {
 			log.Error().Msg(err.Error())
 		}

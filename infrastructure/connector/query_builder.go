@@ -153,7 +153,7 @@ func (db *Database) BuildCreateQueries(tableName string, values string, cols str
 			queries = append(queries, "ALTER TABLE "+tableName+" ADD "+cols+" "+typ+" NULL")
 		}
 	} else {
-		queries = append(queries, "INSERT INTO "+tableName+"("+RemoveLastChar(values)+") VALUES ("+RemoveLastChar(cols)+")")
+		queries = append(queries, "INSERT INTO "+tableName+"("+cols+") VALUES ("+values+")")
 		if db.Driver == PostgresDriver {
 			queries[len(queries)-1] = queries[len(queries)-1] + " RETURNING ID"
 		}
@@ -193,17 +193,22 @@ func (db *Database) ApplyQueryFilters(restr string, order string, limit string, 
 	}
 }
 
-func (db *Database) BuildUpdateQuery(col string, value interface{}, set string, cols string, colValues string, verify func(string) (string, bool)) (string, string, string) {
-	if strings.Contains(col, "_id") || col == "id" {
-		if col == "id" && fmt.Sprintf("%v", value) != "0" && fmt.Sprintf("%v", value) != "" {
-			db.SQLRestriction = "id=" + fmt.Sprintf("%v", value) + " "
-		}
-		return set, cols, colValues
+func (db *Database) BuildUpdateQuery(col string, value interface{}, set string,
+	cols []string, colValues []string, verify func(string) (string, bool)) (string, []string, []string) {
+	if col == "id" && fmt.Sprintf("%v", value) != "0" && fmt.Sprintf("%v", value) != "" {
+		db.SQLRestriction = "id=" + fmt.Sprintf("%v", value) + " "
 	}
 	if typ, ok := verify(col); ok && !slices.Contains([]string{"NULL", ""}, FormatForSQL(strings.Split(typ, ":")[0], value)) {
-		set += col + "=" + FormatForSQL(strings.Split(typ, ":")[0], value) + ","
-		cols += col + ","
-		colValues += FormatForSQL(strings.Split(typ, ":")[0], value) + ","
+		if value == "" {
+			set += col + "=" + Quote(fmt.Sprintf("%v", value)) + ","
+			cols = append(cols, col)
+			colValues = append(cols, Quote(fmt.Sprintf("%v", value)))
+		} else {
+			set += col + "=" + FormatForSQL(strings.Split(typ, ":")[0], value) + ","
+			cols = append(cols, col)
+			colValues = append(colValues, FormatForSQL(strings.Split(typ, ":")[0], value))
+		}
+
 	}
 	return set, cols, colValues
 }
@@ -211,7 +216,7 @@ func (db *Database) BuildUpdateQuery(col string, value interface{}, set string, 
 func (db *Database) BuildUpdateQueryWithRestriction(tableName string, record map[string]interface{}, restrictions map[string]interface{}, isOr bool) (string, error) {
 	set := ""
 	for key, element := range record {
-		set, _, _ = db.BuildUpdateQuery(key, element, set, "", "", func(s string) (string, bool) { return "", true })
+		set, _, _ = db.BuildUpdateQuery(key, element, set, []string{}, []string{}, func(s string) (string, bool) { return "", true })
 		set = RemoveLastChar(set)
 	}
 	if set == "" {
@@ -227,7 +232,7 @@ func (db *Database) BuildUpdateQueryWithRestriction(tableName string, record map
 func (db *Database) BuildUpdateRowQuery(tableName string, record map[string]interface{}, verify func(string) (string, bool)) (string, error) {
 	set := ""
 	for key, element := range record {
-		set, _, _ = db.BuildUpdateQuery(key, element, set, "", "", verify)
+		set, _, _ = db.BuildUpdateQuery(key, element, set, []string{}, []string{}, verify)
 		set = RemoveLastChar(set)
 	}
 	if set == "" {

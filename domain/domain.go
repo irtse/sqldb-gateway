@@ -1,10 +1,7 @@
 package domain
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
-	"reflect"
 	"slices"
 	permissions "sqldb-ws/domain/permission"
 	schserv "sqldb-ws/domain/schema"
@@ -60,10 +57,10 @@ func (d *SpecializedDomain) VerifyAuth(tableName string, colName string, level s
 }
 
 func (s *SpecializedDomain) HandleRecordAttributes(record utils.Record) {
-	s.isGenericService = record["is_custom"] != nil && record["is_custom"].(bool)
-	s.Empty = record["is_empty"] != nil && record["is_empty"].(bool)
-	s.LowerRes = record["is_list"] != nil && record["is_list"].(bool)
-	s.Own = record["own_view"] != nil && record["own_view"].(bool)
+	s.isGenericService = utils.Compare(record["is_custom"], true)
+	s.Empty = utils.Compare(record["is_empty"], true)
+	s.LowerRes = utils.Compare(record["is_list"], true)
+	s.Own = utils.Compare(record["own_view"], true)
 }
 func (d *SpecializedDomain) IsOwn(checkPerm bool, force bool, method utils.Method) bool {
 	if checkPerm {
@@ -74,11 +71,11 @@ func (d *SpecializedDomain) IsOwn(checkPerm bool, force bool, method utils.Metho
 func (d *SpecializedDomain) GetDb() *conn.Database { return d.Db }
 
 func (d *SpecializedDomain) CreateSuperCall(params utils.Params, record utils.Record, args ...interface{}) (utils.Results, error) {
-	return d.SuperCall(params, utils.Record{}, utils.CREATE, false, args...) // how to...
+	return d.SuperCall(params, record, utils.CREATE, false, args...) // how to...
 }
 
 func (d *SpecializedDomain) UpdateSuperCall(params utils.Params, record utils.Record, args ...interface{}) (utils.Results, error) {
-	return d.SuperCall(params, utils.Record{}, utils.UPDATE, false, args...) // how to...
+	return d.SuperCall(params, record, utils.UPDATE, false, args...) // how to...
 }
 
 func (d *SpecializedDomain) DeleteSuperCall(params utils.Params, args ...interface{}) (utils.Results, error) {
@@ -134,11 +131,11 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + tablename + " data")
 		}
 		// load the highest entity avaiable Table level.
-		d.Service = infrastructure.NewTableService(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename), record)
+		d.Service = infrastructure.NewTableService(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename))
 		delete(d.Params, utils.RootTableParam)
 		tablename = strings.ToLower(tablename)
 		if rowName, ok := params[utils.RootRowsParam]; ok { // rows override columns
-			return d.GetRowResults(rowName, specializedService, args...)
+			return d.GetRowResults(rowName, record, specializedService, args...)
 		}
 		if !d.SuperAdmin || method == utils.DELETE {
 			return utils.Results{}, errors.New(
@@ -149,12 +146,12 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 		} else if tablename == utils.ReservedParam {
 			return utils.Results{}, errors.New("can't load table as " + utils.ReservedParam)
 		}
-		return d.invoke(method, args...)
+		return d.invoke(record, method, args...)
 	}
 	return utils.Results{}, errors.New("no service available")
 }
 
-func (d *SpecializedDomain) GetRowResults(rowName string, specializedService utils.SpecializedServiceITF, args ...interface{}) (utils.Results, error) {
+func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, specializedService utils.SpecializedServiceITF, args ...interface{}) (utils.Results, error) {
 	if id, ok := d.Params[utils.SpecialIDParam]; ok {
 		d.Params[utils.SpecialSubIDParam] = id
 	}
@@ -164,42 +161,40 @@ func (d *SpecializedDomain) GetRowResults(rowName string, specializedService uti
 	delete(d.Params, utils.RootRowsParam)
 	if d.Params[utils.SpecialIDParam] == "" || d.Params[utils.SpecialIDParam] == utils.ReservedParam || d.Params[utils.SpecialIDParam] == "<nil>" {
 		delete(d.Params, utils.SpecialIDParam)
-	} else if d.Service.(*infrastructure.TableService).Record != nil {
-		d.Service.(*infrastructure.TableService).Record[utils.SpecialIDParam] = d.Params[utils.SpecialIDParam]
+	} else if record != nil {
+		record[utils.SpecialIDParam] = d.Params[utils.SpecialIDParam]
 	}
 	d.Service = d.Service.(*infrastructure.TableService).NewTableRowService(specializedService)
-	res, err := d.invoke(d.Method, args...)
+	res, err := d.invoke(record, d.Method, args...)
 	if err == nil && d.Params[utils.RootRawView] != "enable" && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
 		return specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestTableIDParam)...), nil
 	}
 	return res, err
 }
 
-func (d *SpecializedDomain) invoke(method utils.Method, args ...interface{}) (utils.Results, error) {
-	res := utils.Results{}
+func (d *SpecializedDomain) invoke(record utils.Record, method utils.Method, args ...interface{}) (utils.Results, error) {
+	var err error
+	res := []map[string]interface{}{}
 	if d.Service == nil {
-		return res, errors.New("no service available")
+		return utils.ToResult(res), errors.New("no service available")
 	}
-	fmt.Println("invoke", method)
-	clazz := reflect.ValueOf(d.Service).MethodByName(method.Calling())
-	if !clazz.IsValid() || clazz.IsZero() {
-		return res, errors.New("not implemented <" + method.Calling() + ">")
+	switch method {
+	case utils.CREATE:
+		res, err = d.Service.Create(record)
+	case utils.UPDATE:
+		res, err = d.Service.Update(record, utils.ToListStr(args)...)
+	case utils.DELETE:
+		res, err = d.Service.Delete(utils.ToListStr(args)...)
+	case utils.SELECT:
+		res, err = d.Service.Get(utils.ToListStr(args)...)
+	default:
+		if method.IsMath() {
+			res, err = d.Service.Math(method.String(), utils.ToListStr(args)...)
+		} else {
+			err = errors.New("unknow method " + method.Calling())
+		}
 	}
-	vals := []reflect.Value{}
-	if method.IsMath() {
-		vals = append(vals, reflect.ValueOf(method.String()))
-	}
-	for _, arg := range args {
-		vals = append(vals, reflect.ValueOf(arg))
-	}
-	values := clazz.Call(vals)
-	if len(values) > 0 {
-		data, _ := json.Marshal(values[0].Interface())
-		json.Unmarshal(data, &res)
-	} else if len(values) > 1 {
-		return res, values[1].Interface().(error)
-	}
-	return res, nil
+	return utils.ToResult(res), err
 }
 
 func (d *SpecializedDomain) ClearDeprecatedDatas(tableName string) {

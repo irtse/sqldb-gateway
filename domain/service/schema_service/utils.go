@@ -7,7 +7,7 @@ import (
 	"sqldb-ws/domain/utils"
 )
 
-func NewView(name string, desc string, category string, schemaDB int64, index int,
+func NewView(name string, desc string, category string, schemaDB int64, index int64,
 	indexable bool, empty bool, isList bool, readonly bool, ownView bool) utils.Record {
 	return utils.Record{
 		sm.NAMEKEY:       name,
@@ -59,7 +59,7 @@ func UpdatePermissions(record utils.Record, schemaName string, readLevels []stri
 				}, mainPerms.Anonymized(),
 			)
 			if col, ok := record[sm.NAMEKEY]; ok {
-				rec[sm.NAMEKEY] = schemaName + ":" + fmt.Sprintf("%v", col) + ":" + l + ":" + role
+				rec[sm.NAMEKEY] = schemaName + ":" + utils.ToString(col) + ":" + l + ":" + role
 			}
 			domain.CreateSuperCall(utils.AllParams(ds.DBPermission.Name), rec)
 		}

@@ -35,16 +35,8 @@ type CustomService struct {
 	servutils.SpecializedService
 }
 
+func (s *CustomService) ShouldVerify() bool                   { return true }
 func (s *CustomService) Entity() utils.SpecializedServiceInfo { return nil }
 func (s *CustomService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
 	return servutils.CheckAutoLoad(tablename, record, s.Domain)
-}
-func (s *CustomService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {
-	// EMPTY AND PROUD TO BE
-}
-func (s *CustomService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
-	// EMPTY AND PROUD TO BE
-}
-func (s *CustomService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
-	// EMPTY AND PROUD TO BE
 }

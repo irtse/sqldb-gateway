@@ -3,87 +3,73 @@ package domain
 import (
 	"fmt"
 	"os"
-
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
-	"sqldb-ws/infrastructure/service"
+
+	"github.com/schollz/progressbar/v3"
 )
 
 func Load() {
 	database := connector.Open(nil)
 	defer database.Conn.Close()
 
-	initializeTables(database)
-	domainInstance := initializeDomain(database)
-	initializeRootTables(database, domainInstance)
-	createSuperAdmin(domainInstance)
+	domainInstance := initializeDomain()
+	bar := progressbar.Default(int64(len(ds.NOAUTOLOADROOTTABLES) + len(ds.ROOTTABLES) + len(ds.DEMOROOTTABLES) + len(ds.DBRootViews)))
+	initializeTables(domainInstance, bar)               // Create tables if they don't exist, needed for the next step
+	initializeRootTables(database, domainInstance, bar) // Create root tables if they don't exist, needed for the next step
+	createSuperAdmin(domainInstance, bar)
+	createRootView(domainInstance, bar)
+	schserv.LoadCache(utils.ReservedParam, database)
 }
 
-func initializeTables(database *connector.Database) {
-	for _, table := range []sm.SchemaModel{ds.DBSchema, ds.DBSchemaField, ds.DBPermission, ds.DBView, ds.DBWorkflow} {
-		service := service.NewTableService(database, true, "", table.Name, table.ToRecord())
-		service.NoLog = true
-		service.Update()
+func initializeTables(domainInstance *SpecializedDomain, bar *progressbar.ProgressBar) {
+	for _, table := range ds.NOAUTOLOADROOTTABLES {
+		domainInstance.CreateSuperCall(utils.GetTableTargetParameters(table.Name), table.ToRecord())
+		bar.Add(1)
 	}
 }
 
-func initializeDomain(database *connector.Database) *SpecializedDomain {
+func initializeDomain() *SpecializedDomain {
 	domainInstance := Domain(true, os.Getenv("SUPERADMIN_NAME"), false, nil)
 	domainInstance.AutoLoad = true
-	schserv.LoadCache(utils.ReservedParam, database)
 	return domainInstance
 }
 
-func initializeRootTables(database *connector.Database, domainInstance *SpecializedDomain) {
+func initializeRootTables(database *connector.Database, domainInstance *SpecializedDomain, bar *progressbar.ProgressBar) {
 	var wfNew, viewNew bool
 	rootTables := append(ds.ROOTTABLES, ds.DEMOROOTTABLES...)
-
 	for _, table := range rootTables {
 		if _, err := schserv.GetSchema(table.Name); err != nil {
-			if !createRootTable(domainInstance, table, table.ToRecord()) {
-				continue
-			}
-			schserv.LoadCache(table.Name, database)
-			if table.Name == ds.DBWorkflow.Name {
-				wfNew = true
-			}
-			if table.Name == ds.DBView.Name {
-				viewNew = true
+			if createRootTable(domainInstance, table.ToRecord()) {
+				schserv.LoadCache(table.Name, database)
+				if table.Name == ds.DBWorkflow.Name {
+					wfNew = true
+				}
+				if table.Name == ds.DBView.Name {
+					viewNew = true
+				}
+				schema, err := schserv.GetSchema(table.Name)
+				if err == nil {
+					if table.Name == ds.DBWorkflow.Name && wfNew {
+						createWorkflowView(domainInstance, schema)
+					}
+					if table.Name == ds.DBView.Name && viewNew {
+						createView(domainInstance, schema)
+					}
+				}
 			}
 		}
+		bar.Add(1)
 	}
-
-	updateRootTables(rootTables, domainInstance, wfNew, viewNew)
 }
 
-func createRootTable(domainInstance *SpecializedDomain, table sm.SchemaModel, record utils.Record) bool {
-	params := utils.AllParams(ds.DBSchema.Name)
-	params[utils.RootRawView] = "enable"
-	res, err := domainInstance.Call(params, record, utils.CREATE)
-	if err != nil || len(res) == 0 {
-		return false
-	}
-	addFields(table, domainInstance, sm.SchemaModel{}.Deserialize(res[0]), false)
-	return true
-}
-
-func updateRootTables(rootTables []sm.SchemaModel, domainInstance *SpecializedDomain, wfNew, viewNew bool) {
-	for _, table := range rootTables {
-		schema, err := schserv.GetSchema(table.Name)
-		if err != nil {
-			continue
-		}
-		if table.Name == ds.DBWorkflow.Name && wfNew {
-			createWorkflowView(domainInstance, schema)
-		}
-		if table.Name == ds.DBView.Name && viewNew {
-			createView(domainInstance, schema)
-		}
-		addFields(table, domainInstance, schema, true)
-	}
+func createRootTable(domainInstance *SpecializedDomain, record utils.Record) bool {
+	params := utils.AllParams(ds.DBSchema.Name).RootRaw()
+	res, err := domainInstance.CreateSuperCall(params, record)
+	return !(err != nil || len(res) == 0)
 }
 
 func createWorkflowView(domainInstance *SpecializedDomain, schema sm.SchemaModel) {
@@ -103,7 +89,15 @@ func createWorkflowView(domainInstance *SpecializedDomain, schema sm.SchemaModel
 		"readonly":       false,
 		ds.SchemaDBField: schema.ID,
 	}
-	domainInstance.Call(params, newWorkflow, utils.CREATE)
+	domainInstance.CreateSuperCall(params, newWorkflow)
+}
+
+func createRootView(domainInstance *SpecializedDomain, bar *progressbar.ProgressBar) {
+	for _, view := range ds.DBRootViews {
+		params := utils.AllParams(ds.DBView.Name).RootRaw()
+		domainInstance.CreateSuperCall(params, view)
+		bar.Add(1)
+	}
 }
 
 func createView(domainInstance *SpecializedDomain, schema sm.SchemaModel) {
@@ -113,34 +107,17 @@ func createView(domainInstance *SpecializedDomain, schema sm.SchemaModel) {
 		"description":    fmt.Sprintf("new %s workflow", ds.DBView.Name),
 		ds.SchemaDBField: schema.ID,
 	}
-	domainInstance.Call(params, newView, utils.CREATE)
+	domainInstance.CreateSuperCall(params, newView)
 }
 
-func createSuperAdmin(domainInstance *SpecializedDomain) {
+func createSuperAdmin(domainInstance *SpecializedDomain, bar *progressbar.ProgressBar) {
 	params := utils.AllParams(ds.DBUser.Name)
 	params[utils.RootRawView] = "enable"
-	domainInstance.Call(params, utils.Record{
+	domainInstance.CreateSuperCall(params, utils.Record{
 		"name":        os.Getenv("SUPERADMIN_NAME"),
 		"email":       os.Getenv("SUPERADMIN_EMAIL"),
 		"super_admin": true,
 		"password":    os.Getenv("SUPERADMIN_PASSWORD"),
-	}, utils.CREATE)
-}
-
-func addFields(table sm.SchemaModel, domainInstance *SpecializedDomain, schema sm.SchemaModel, enforce bool) {
-	for _, col := range table.Fields {
-		if schema.HasField(col.Name) && enforce {
-			continue
-		}
-		colData := col.ToRecord()
-		if col.ForeignTable != "" {
-			foreignSchema, err := schserv.GetSchema(col.ForeignTable)
-			if err == nil {
-				colData["link_id"] = foreignSchema.ID
-			}
-		}
-		colData[ds.SchemaDBField] = schema.ID
-		domainInstance.AutoLoad = true
-		domainInstance.Call(utils.AllParams(ds.SchemaFieldDBField), colData, utils.CREATE)
-	}
+	})
+	bar.Add(1)
 }

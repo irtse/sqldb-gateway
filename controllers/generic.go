@@ -4,6 +4,7 @@ import (
 	"sqldb-ws/controllers/controller"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/utils"
+	"sqldb-ws/infrastructure/connector"
 )
 
 type MainController struct{ controller.AbstractController }
@@ -18,6 +19,7 @@ type GenericController struct{ controller.AbstractController }
 // @Failure 403 user does not exist
 // @router / [get]
 func (l *MainController) Main() {
+	connector.COUNTREQUEST = 0
 	// Main is the default root of the API, it gives back all your allowed shallowed view
 	l.ParamsOverload = utils.AllParams(ds.DBView.Name).RootShallow().Enrich(
 		map[string]interface{}{

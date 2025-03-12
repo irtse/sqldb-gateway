@@ -56,7 +56,7 @@ func (d *FilterService) CountNewDataAccess(tableName string, filter []string, co
 	if len(res) == 0 || err != nil || res[0]["result"] == nil {
 		return ids, 0
 	}
-	return ids, int64(res[0]["result"].(int64))
+	return ids, utils.ToInt64(res[0]["result"])
 }
 
 func (s *FilterService) GetFilterFields(viewfilterID string, schemaID string) []map[string]interface{} {
@@ -71,7 +71,9 @@ func (s *FilterService) GetFilterFields(viewfilterID string, schemaID string) []
 	}
 	restriction[ds.FilterDBField] = viewfilterID
 	if fields, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false); err == nil {
-		sort.SliceStable(fields, func(i, j int) bool { return fields[i]["index"].(int64) <= fields[j]["index"].(int64) })
+		sort.SliceStable(fields, func(i, j int) bool {
+			return utils.ToInt64(fields[i]["index"]) <= utils.ToInt64(fields[j]["index"])
+		})
 		return fields
 	}
 	return []map[string]interface{}{}

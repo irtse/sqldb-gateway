@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"fmt"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -17,16 +16,14 @@ func SetToken(superAdmin bool, user string, token interface{}) (utils.Results, e
 
 func IsLogged(superAdmin bool, user string, token string) (utils.Results, error) {
 	domain := Domain(superAdmin, user, false, nil)
-	params := utils.Params{utils.RootTableParam: ds.DBNotification.Name,
-		utils.RootRowsParam: utils.ReservedParam, utils.RootRawView: "enable"}
+	params := utils.AllParams(ds.DBNotification.Name).RootRaw()
 	notifs, err := domain.SuperCall(params.RootRaw(), utils.Record{}, utils.SELECT, false)
 	if err != nil {
 		return nil, err
 	}
 	n := utils.Results{}
 	for _, notif := range notifs {
-		fmt.Println(notif["link_id"])
-		int, err := strconv.Atoi(fmt.Sprintf("%v", notif["link_id"]))
+		int, err := strconv.Atoi(utils.ToString(notif["link_id"]))
 		if err != nil {
 			continue
 		}
@@ -39,11 +36,12 @@ func IsLogged(superAdmin bool, user string, token string) (utils.Results, error)
 			sm.NAMEKEY:           notif.GetString(sm.NAMEKEY),
 			"description":        notif.GetString("description"),
 			"link_path":          "/" + utils.MAIN_PREFIX + "/" + ds.DBNotification.Name + "?" + utils.RootRowsParam + "=" + notif.GetString("id"),
-			"data_ref":           "@" + fmt.Sprintf("%v", sch.ID) + ":" + fmt.Sprintf("%v", notif[utils.RootDestTableIDParam]),
+			"data_ref":           "@" + utils.ToString(sch.ID) + ":" + utils.ToString(notif[utils.RootDestTableIDParam]),
 		}
 		n = append(n, nn)
 	}
-	response, err := domain.SuperCall(utils.AllParams(ds.DBUser.Name), utils.Record{}, utils.SELECT, false, getQueryFilter(user))
+	response, err := domain.SuperCall(utils.AllParams(ds.DBUser.Name),
+		utils.Record{}, utils.SELECT, false, getQueryFilter(user))
 	if err != nil || len(response) == 0 {
 		return nil, err
 	}
@@ -55,7 +53,7 @@ func IsLogged(superAdmin bool, user string, token string) (utils.Results, error)
 
 func getQueryFilter(user string) string {
 	return connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
-		"name":  user,
-		"email": user,
+		"name":  connector.Quote(user),
+		"email": connector.Quote(user),
 	}, true)
 }

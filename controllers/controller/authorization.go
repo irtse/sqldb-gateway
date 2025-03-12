@@ -58,7 +58,7 @@ func (t *AbstractController) IsAuthorized() (string, bool, error) {
 	// session auth will look in session variables in API ONLY
 	if os.Getenv("AUTH_MODE") == AUTHMODE[0] {
 		if t.GetSession(SESSIONS_KEY) != nil {
-			return t.GetSession(SESSIONS_KEY).(string), t.GetSession(ADMIN_KEY).(bool), nil
+			return utils.ToString(t.GetSession(SESSIONS_KEY)), utils.Compare(t.GetSession(ADMIN_KEY), true), nil
 		}
 		return "", false, errors.New("user not found in session")
 	} // TOKEN verification is a little bit verbose by extractin token in Authorization Header and look after its properties
@@ -74,7 +74,7 @@ func (t *AbstractController) IsAuthorized() (string, bool, error) {
 	}
 	claims := token.Claims.(jwt.MapClaims)
 	if user_id, ok := claims[SESSIONS_KEY]; ok { // if all in claims send back super mode and user as confirmation
-		return user_id.(string), claims[ADMIN_KEY].(bool), nil
+		return utils.ToString(user_id), utils.Compare(claims[ADMIN_KEY], true), nil
 	}
 	return "", false, errors.New("user not found in token")
 }

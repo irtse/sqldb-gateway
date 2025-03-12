@@ -23,7 +23,7 @@ type DashboardService struct {
 
 // mainly should deserialize the data from the database
 // into a format that can be used by the front-end to display the data
-
+func (s *DashboardService) ShouldVerify() bool                                                      { return true }
 func (s *DashboardService) Entity() utils.SpecializedServiceInfo                                    { return ds.DBDashboard }
 func (s *DashboardService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {}
 func (s *DashboardService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
@@ -50,10 +50,10 @@ func (s *DashboardService) createDashboardElement(dashboardID string, record map
 
 func (s *DashboardService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
 	for _, element := range s.Elements {
-		err := s.createDashboardElement(fmt.Sprintf("%v", record[utils.SpecialIDParam]), element)
+		err := s.createDashboardElement(utils.ToString(record[utils.SpecialIDParam]), element)
 		if fields, ok := record["fields"]; ok && err == nil {
-			for _, field := range fields.([]interface{}) {
-				err = s.createDashboardMathOperation(fmt.Sprintf("%v", record[utils.SpecialIDParam]), field.(map[string]interface{}))
+			for _, field := range utils.ToList(fields) {
+				err = s.createDashboardMathOperation(utils.ToString(record[utils.SpecialIDParam]), utils.ToMap(field))
 				if err != nil {
 					break
 				}
@@ -72,9 +72,9 @@ func (s *DashboardService) TransformToGenericView(results utils.Results, tableNa
 	for _, record := range results {
 		if record[utils.SpecialIDParam] != nil {
 			res = append(res, utils.Record{
-				"name":        fmt.Sprintf("%v", record[models.NAMEKEY]),
-				"description": fmt.Sprintf("%v", record["description"]),
-				"elements":    s.getDashboardElementView(fmt.Sprintf("%v", record[utils.SpecialIDParam])),
+				"name":        utils.ToString(record[models.NAMEKEY]),
+				"description": utils.ToString(record["description"]),
+				"elements":    s.getDashboardElementView(utils.ToString(record[utils.SpecialIDParam])),
 			})
 		}
 	}
@@ -118,8 +118,8 @@ func (s *DashboardService) ProcessElements(record map[string]interface{}) {
 	if els, ok := record["elements"]; ok {
 		s.UpdateElements = true
 		s.Elements = make([]map[string]interface{}, 0)
-		for _, el := range els.([]interface{}) {
-			s.Elements = append(s.Elements, el.(map[string]interface{}))
+		for _, el := range utils.ToList(els) {
+			s.Elements = append(s.Elements, utils.ToMap(el))
 		}
 	}
 }
@@ -129,7 +129,7 @@ func (s *DashboardService) HandleUpdate(record map[string]interface{}) {
 }
 
 func (d *DashboardService) HandleDelete(record map[string]interface{}) {
-	elements, err := d.getDashBoardElement(fmt.Sprintf("%v", record[utils.SpecialIDParam]))
+	elements, err := d.getDashBoardElement(utils.ToString(record[utils.SpecialIDParam]))
 	if err != nil {
 		return
 	}
@@ -137,10 +137,10 @@ func (d *DashboardService) HandleDelete(record map[string]interface{}) {
 		// delete the operator element
 		if element[utils.SpecialIDParam] != nil && element[utils.SpecialIDParam] != "" {
 			params := utils.AllParams(ds.DBDashboardElement.Name)
-			params[ds.DashboardElementDBField] = fmt.Sprintf("%v", element[utils.SpecialIDParam])
+			params[ds.DashboardElementDBField] = utils.ToString(element[utils.SpecialIDParam])
 			d.Domain.DeleteSuperCall(params)
 			params = utils.AllParams(ds.DBDashboardElement.Name)
-			params[ds.DashboardDBField] = fmt.Sprintf("%v", record[utils.SpecialIDParam])
+			params[ds.DashboardDBField] = utils.ToString(record[utils.SpecialIDParam])
 			d.Domain.DeleteSuperCall(params)
 		}
 	}
@@ -184,7 +184,7 @@ func (d *DashboardService) processDashboardElement(element map[string]interface{
 	}
 
 	res, isMultiple, err := d.getDashBoardMathFieldView(
-		fmt.Sprintf("%v", element[utils.SpecialIDParam]),
+		utils.ToString(element[utils.SpecialIDParam]),
 		restriction, orderBy,
 	)
 	if err != nil {
@@ -192,8 +192,8 @@ func (d *DashboardService) processDashboardElement(element map[string]interface{
 	}
 
 	return utils.Record{
-		"name":        fmt.Sprintf("%v", element[models.NAMEKEY]),
-		"description": fmt.Sprintf("%v", element["description"]),
+		"name":        utils.ToString(element[models.NAMEKEY]),
+		"description": utils.ToString(element["description"]),
 		"is_multiple": isMultiple,
 		"results":     res,
 	}, nil
@@ -208,15 +208,15 @@ func (d *DashboardService) getFilterRestrictionAndOrder(filt interface{}, elemen
 		return "", "", fmt.Errorf("failed to fetch filter: %v", err)
 	}
 
-	sch, err := schema.GetSchema(fmt.Sprintf("%v", res[0][ds.SchemaDBField]))
+	sch, err := schema.GetSchema(utils.ToString(res[0][ds.SchemaDBField]))
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get schema: %v", err)
 	}
 
-	restriction = f.ProcessFilterRestriction(fmt.Sprintf("%v", filt), fmt.Sprintf("%v", sch.ID))
+	restriction = f.ProcessFilterRestriction(utils.ToString(filt), utils.ToString(sch.ID))
 
 	if orderID, exists := element["order_by_"+ds.SchemaDBField]; exists {
-		if i, err := strconv.Atoi(fmt.Sprintf("%v", orderID)); err == nil {
+		if i, err := strconv.Atoi(utils.ToString(orderID)); err == nil {
 			if field, err := sch.GetFieldByID(int64(i)); err == nil {
 				orderBy = field.Name
 			}
@@ -273,18 +273,16 @@ func (d *DashboardService) processMathFields(fields []map[string]interface{}) ([
 }
 
 func (d *DashboardService) extractMathFieldData(field map[string]interface{}) (string, string, string, error) {
-	name, ok := field[models.NAMEKEY].(string)
-	if !ok || name == "" {
+	name := utils.ToString(field[models.NAMEKEY])
+	if name == "" {
 		return "", "", "", errors.New("name is required")
 	}
 
-	rowAlgo, ok := field["row_math_func"].(string)
-	if !ok || rowAlgo == "" {
+	rowAlgo := utils.ToString(field["row_math_func"])
+	if rowAlgo == "" {
 		return "", "", "", errors.New("row math func is required")
 	}
-
-	colAlgo, _ := field["column_math_func"].(string)
-	return name, rowAlgo, colAlgo, nil
+	return name, rowAlgo, utils.ToString(field["column_math_func"]), nil
 }
 
 func (d *DashboardService) processMathResults(r []map[string]interface{}, names []string) (utils.Results, bool, error) {
@@ -293,7 +291,7 @@ func (d *DashboardService) processMathResults(r []map[string]interface{}, names 
 
 	for i, rec := range r {
 		for _, n := range names {
-			f, err := strconv.ParseFloat(fmt.Sprintf("%v", rec[n]), 64)
+			f, err := strconv.ParseFloat(utils.ToString(rec[n]), 64)
 			if err != nil {
 				fmt.Println(err)
 				continue
@@ -301,7 +299,7 @@ func (d *DashboardService) processMathResults(r []map[string]interface{}, names 
 
 			name := n
 			if isMultiple {
-				name += fmt.Sprintf("%v", i)
+				name += utils.ToString(i)
 			}
 
 			results = append(results, utils.Record{
@@ -315,7 +313,7 @@ func (d *DashboardService) processMathResults(r []map[string]interface{}, names 
 }
 
 func (s *DashboardService) ProcessSelection(record map[string]interface{}) {
-	if sel, ok := record["is_selected"]; ok && sel.(bool) { // TODO
+	if sel, ok := record["is_selected"]; ok && utils.Compare(sel, true) { // TODO
 		s.Domain.GetDb().UpdateQuery(ds.DBDashboard.Name, utils.Record{
 			"is_selected": false,
 		}, map[string]interface{}{

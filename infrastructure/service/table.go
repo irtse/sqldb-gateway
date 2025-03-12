@@ -17,10 +17,12 @@ type TableService struct {
 }
 
 // Generate an Empty TableService Service
-func NewTableService(database *conn.Database, admin bool, user string, name string, record map[string]interface{}) *TableService {
+func NewTableService(database *conn.Database, admin bool, user string, name string) *TableService {
 	table := &TableService{}
+	table.Name = name
+	table.SuperAdmin = admin
+	table.User = user
 	table.DB = database
-	table.Fill(name, admin, user, record)
 	if table.SpecializedService == nil {
 		table.SpecializedService = &InfraSpecializedService{}
 	}
@@ -29,7 +31,7 @@ func NewTableService(database *conn.Database, admin bool, user string, name stri
 
 func (t *TableService) NewTableRowService(specializedService InfraSpecializedServiceItf) *TableRowService {
 	row := &TableRowService{
-		Table: NewTableService(t.DB, t.SuperAdmin, t.User, t.Name, map[string]interface{}{}),
+		Table: NewTableService(t.DB, t.SuperAdmin, t.User, t.Name),
 		EmptyCol: &TableColumnService{InfraService: InfraService{
 			DB:                 t.DB,
 			SpecializedService: &InfraSpecializedService{},
@@ -40,7 +42,7 @@ func (t *TableService) NewTableRowService(specializedService InfraSpecializedSer
 			SpecializedService: specializedService,
 		},
 	}
-	row.Fill(t.Name, t.SuperAdmin, t.User, t.Record)
+	row.Fill(t.Name, t.SuperAdmin, t.User)
 	if row.SpecializedService == nil {
 		row.SpecializedService = &InfraSpecializedService{}
 	}
@@ -49,10 +51,11 @@ func (t *TableService) NewTableRowService(specializedService InfraSpecializedSer
 
 func (t *TableService) NewTableColumnService(specializedService InfraSpecializedServiceItf, views string) *TableColumnService {
 	col := &TableColumnService{
-		Views:        views,
-		InfraService: InfraService{DB: t.DB, NoLog: t.NoLog, SpecializedService: specializedService},
+		Views: views,
+		InfraService: InfraService{
+			DB: t.DB, NoLog: t.NoLog, SpecializedService: specializedService},
 	}
-	col.Fill(t.Name, t.SuperAdmin, t.User, t.Record)
+	col.Fill(t.Name, t.SuperAdmin, t.User)
 	if col.SpecializedService == nil {
 		col.SpecializedService = &InfraSpecializedService{}
 	}
@@ -105,28 +108,30 @@ func (t *TableService) Verify(name string) (string, bool) {
 	return name, len(schema) == 0 || err != nil
 }
 
-func (t *TableService) Create() ([]map[string]interface{}, error) {
-	return t.write(false)
+func (t *TableService) Create(record map[string]interface{}) ([]map[string]interface{}, error) {
+	return t.Write(record, false)
 }
 
-func (t *TableService) Update(restr ...string) ([]map[string]interface{}, error) {
-	return t.write(true)
+func (t *TableService) Update(record map[string]interface{}, restr ...string) ([]map[string]interface{}, error) {
+	return t.Write(record, true)
 }
 
-func (t *TableService) write(isUpdate bool) ([]map[string]interface{}, error) {
+func (t *TableService) Write(record map[string]interface{}, isUpdate bool) ([]map[string]interface{}, error) {
 	t.DB.ClearQueryFilter()
-	t.Name = fmt.Sprintf("%v", t.Record["name"])
+	t.Name = fmt.Sprintf("%v", record["name"])
 	if t.Name == "" || t.Name == "<nil>" {
 		return nil, errors.New("missing one of the needed value type & name")
 	}
-	for _, rowtype := range t.Record["fields"].([]interface{}) {
-		tc := t.NewTableColumnService(nil, "")
-		if col, err := json.Marshal(rowtype); err == nil {
-			json.Unmarshal(col, &tc.Record)
+	if !isUpdate {
+		t.DB.CreateTableQuery(t.Name)
+	}
+	if fields, ok := record["fields"]; ok {
+		for _, rowtype := range fields.([]interface{}) {
+			tc := t.NewTableColumnService(t.SpecializedService, "")
 			if isUpdate {
-				tc.Update()
+				tc.Update(rowtype.(map[string]interface{}))
 			} else {
-				tc.Create()
+				tc.Create(rowtype.(map[string]interface{}))
 			}
 		}
 	}

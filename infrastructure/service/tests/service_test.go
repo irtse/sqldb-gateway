@@ -9,7 +9,7 @@ import (
 
 func TestFill(t *testing.T) {
 	infra := &service.InfraService{}
-	infra.Fill("test_table", true, "admin_user", map[string]interface{}{"key": "value"})
+	infra.Fill("test_table", true, "admin_user")
 
 	if infra.Name != "test_table" {
 		t.Errorf("Expected name to be 'test_table', got %v", infra.Name)

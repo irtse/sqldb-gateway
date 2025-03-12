@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+var COUNTREQUEST = 0
+
 var SpecialTypes = []string{"char", "text", "date", "time", "interval", "var", "blob", "set", "enum", "year", "USER-DEFINED"}
 
 func Quote(s string) string { return "'" + s + "'" }
@@ -184,7 +186,7 @@ func FormatSQLRestrictionWhereByMap(SQLrestriction string, restrictions map[stri
 				SQLrestriction += k + " NOT IN (" + fmt.Sprintf("%v", r) + ")"
 			} else if reflect.TypeOf(r).Kind() == reflect.Slice {
 				str := ""
-				for _, rr := range r.([]interface{}) {
+				for _, rr := range r.([]string) {
 					str += fmt.Sprintf("%v", rr) + ","
 				}
 				SQLrestriction += k + " IN (" + RemoveLastChar(str) + ")"

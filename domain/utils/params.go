@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"sqldb-ws/infrastructure/connector"
 	"strings"
 	"sync"
@@ -22,9 +21,9 @@ func (p Params) GetOrder(condition func(string) bool, order []string) []string {
 	if orderBy, ok := p[RootOrderParam]; ok {
 		direction := []string{}
 		if dir, ok2 := p[RootDirParam]; ok2 {
-			direction = strings.Split(fmt.Sprintf("%v", dir), ",")
+			direction = strings.Split(ToString(dir), ",")
 		}
-		for i, el := range strings.Split(fmt.Sprintf("%v", orderBy), ",") {
+		for i, el := range strings.Split(ToString(orderBy), ",") {
 			if (!condition(el) && el != SpecialIDParam) || len(direction) <= i {
 				continue
 			} // ???
@@ -63,7 +62,7 @@ func (p Params) RootRaw() Params {
 
 func (p Params) Enrich(param map[string]interface{}) Params {
 	for k, v := range param {
-		p[k] = fmt.Sprintf("%v", v)
+		p[k] = ToString(v)
 	}
 	return p
 }
@@ -72,7 +71,7 @@ func (p Params) Add(k string, val interface{}, condition func(string) bool) {
 	if val == nil || val == "" || !condition(k) {
 		return
 	}
-	p[k] = fmt.Sprintf("%v", val)
+	p[k] = ToString(val)
 }
 
 func (p Params) AddMap(vals map[string]interface{}, condition func(string) bool) {
@@ -131,21 +130,21 @@ func GetTableTargetParameters(tableName interface{}) Params {
 	if tableName == nil {
 		return Params{}
 	}
-	return Params{RootTableParam: fmt.Sprintf("%v", tableName)}
+	return Params{RootTableParam: ToString(tableName)}
 }
 
 func GetColumnTargetParameters(tableName interface{}, col interface{}) Params {
-	if col == nil || fmt.Sprintf("%v", col) == "" {
+	if col == nil || ToString(col) == "" {
 		col = ReservedParam
 	}
-	return Params{RootTableParam: fmt.Sprintf("%v", tableName), RootColumnsParam: fmt.Sprintf("%v", col)}
+	return Params{RootTableParam: ToString(tableName), RootColumnsParam: ToString(col)}
 }
 
 func GetRowTargetParameters(tableName interface{}, row interface{}) Params {
-	if row == nil || fmt.Sprintf("%v", row) == "" {
+	if row == nil || ToString(row) == "" {
 		row = ReservedParam
 	}
-	return Params{RootTableParam: fmt.Sprintf("%v", tableName), RootRowsParam: fmt.Sprintf("%v", row)}
+	return Params{RootTableParam: ToString(tableName), RootRowsParam: ToString(row)}
 }
 
 const ReservedParam = "all" // IMPORTANT IS THE DEFAULT PARAMS FOR ROWS & COLUMNS PARAMS

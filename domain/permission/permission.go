@@ -2,7 +2,6 @@ package permission
 
 import (
 	"encoding/json"
-	"fmt"
 	"slices"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -88,7 +87,7 @@ func (p *PermDomainService) EntitySelectQuery() string {
 }
 
 func (p *PermDomainService) ProcessPermissionRecord(record map[string]interface{}) {
-	names := strings.Split(fmt.Sprintf("%v", record[sm.NAMEKEY]), ":")
+	names := strings.Split(utils.ToString(record[sm.NAMEKEY]), ":")
 	if len(names) < 2 {
 		return
 	}
@@ -225,9 +224,9 @@ func (p *PermDomainService) checkUpdateCreatePermissions(tableName, destID strin
 	schema, _ := schserv.GetSchema(tableName)
 	res, err := p.db.SimpleMathQuery("COUNT", ds.DBRequest.Name, map[string]interface{}{
 		utils.RootDestTableIDParam: destID,
-		ds.SchemaDBField:           fmt.Sprintf("%v", schema.ID),
+		ds.SchemaDBField:           utils.ToString(schema.ID),
 	}, false)
-	if err != nil || len(res) == 0 || res[0]["result"] == nil || res[0]["result"].(int64) == 0 {
+	if err != nil || len(res) == 0 || res[0]["result"] == nil || utils.ToInt64(res[0]["result"]) == 0 {
 		return false
 	}
 	res, err = p.db.SimpleMathQuery("COUNT", ds.DBTask.Name, map[string]interface{}{
@@ -235,5 +234,5 @@ func (p *PermDomainService) checkUpdateCreatePermissions(tableName, destID strin
 		ds.UserDBField:             p.UserSelectQuery(),
 		ds.EntityDBField:           p.EntitySelectQuery(),
 	}, true)
-	return err == nil && len(res) > 0 && res[0]["result"] != nil && res[0]["result"].(int64) > 0
+	return err == nil && len(res) > 0 && res[0]["result"] != nil && utils.ToInt64(res[0]["result"]) > 0
 }

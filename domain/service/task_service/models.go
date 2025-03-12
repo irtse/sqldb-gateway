@@ -1,7 +1,6 @@
 package task_service
 
 import (
-	"fmt"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/utils"
 	"time"
@@ -45,7 +44,7 @@ func CheckStateIsEnded(state interface{}) bool {
 }
 
 func SetClosureStatus(res map[string]interface{}) map[string]interface{} {
-	if state, ok := res["state"]; ok && CheckStateIsEnded(fmt.Sprintf("%v", state)) {
+	if state, ok := res["state"]; ok && CheckStateIsEnded(utils.ToString(state)) {
 		res["is_close"] = true
 		res["closing_date"] = time.Now().Format(time.RFC3339)
 	} else {

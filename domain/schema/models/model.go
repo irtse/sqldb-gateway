@@ -4,16 +4,25 @@ import (
 	"encoding/json"
 	"errors"
 	"sqldb-ws/domain/utils"
+	"strconv"
 )
 
 var SchemaRegistry = map[string]SchemaModel{}
 
 type SchemaModel struct { // lightest definition a db table
-	ID       int64        `json:"id"`
+	ID       string       `json:"id"`
 	Name     string       `json:"name"`
 	Label    string       `json:"label"`
 	Category string       `json:"category"`
-	Fields   []FieldModel `json:"fields"`
+	Fields   []FieldModel `json:"fields,omitempty"`
+}
+
+func (t SchemaModel) GetID() int64 {
+	i, err := strconv.Atoi(t.ID)
+	if err != nil {
+		return -1
+	}
+	return int64(i)
 }
 
 func (t SchemaModel) Deserialize(rec utils.Record) SchemaModel {
@@ -38,7 +47,7 @@ func (t SchemaModel) HasField(name string) bool {
 func GetSchemaByID(id int64) (SchemaModel, error) {
 	CacheMutex.Lock()
 	for _, schema := range SchemaRegistry {
-		if schema.ID == id {
+		if schema.GetID() == id {
 			CacheMutex.Unlock()
 			return schema, nil
 		}
@@ -52,7 +61,7 @@ func (t SchemaModel) GetTypeAndLinkForField(name string) (string, string, error)
 	if err != nil {
 		return "", "", err
 	}
-	foreign, err := GetSchemaByID(field.Link)
+	foreign, err := GetSchemaByID(field.GetLink())
 	if err != nil {
 		return "", "", err
 	}
@@ -68,7 +77,7 @@ func (t SchemaModel) GetField(name string) (FieldModel, error) {
 }
 func (t SchemaModel) GetFieldByID(id int64) (FieldModel, error) {
 	for _, field := range t.Fields {
-		if field.ID == id {
+		if field.GetID() == id {
 			return field, nil
 		}
 	}
@@ -83,7 +92,7 @@ func (v SchemaModel) ToRecord() utils.Record {
 }
 
 type FieldModel struct { // definition a db table columns
-	ID           int64       `json:"id"`
+	ID           string      `json:"id"`
 	Name         string      `json:"name"`
 	Label        string      `json:"label"`
 	Desc         string      `json:"description"`
@@ -91,12 +100,28 @@ type FieldModel struct { // definition a db table columns
 	Index        int64       `json:"index"`
 	Placeholder  string      `json:"placeholder"`
 	Default      interface{} `json:"default_value"`
-	Level        string      `json:"read_level"`
+	Level        string      `json:"read_level,omitempty"`
 	Readonly     bool        `json:"readonly"`
-	Link         int64       `json:"link_id"`
-	ForeignTable string      `json:"foreign_table"` // Special case for foreign key
-	Constraint   string      `json:"constraints"`   // Special case for constraint on field
+	Link         string      `json:"link_id"`
+	ForeignTable string      `json:"-"`           // Special case for foreign key
+	Constraint   string      `json:"constraints"` // Special case for constraint on field
 	Required     bool        `json:"required"`
+}
+
+func (t FieldModel) GetID() int64 {
+	i, err := strconv.Atoi(t.ID)
+	if err != nil {
+		return -1
+	}
+	return int64(i)
+}
+
+func (t FieldModel) GetLink() int64 {
+	i, err := strconv.Atoi(t.Link)
+	if err != nil {
+		return -1
+	}
+	return int64(i)
 }
 
 func (v FieldModel) ToRecord() utils.Record {

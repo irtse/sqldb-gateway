@@ -3,68 +3,73 @@ package schema_service
 import (
 	"fmt"
 	"math/rand"
+	"slices"
 	sch "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	servutils "sqldb-ws/domain/service/utils"
 	"sqldb-ws/domain/utils"
-	"strconv"
 	"strings"
 )
 
 // DONE - UNDER 100 LINES - NOT TESTED
 type SchemaFields struct{ servutils.SpecializedService }
 
+func (s *SchemaFields) ShouldVerify() bool { return true }
+
 func (s *SchemaFields) Entity() utils.SpecializedServiceInfo { return ds.DBSchemaField }
 
 func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
 	if s.Domain.GetMethod() == utils.DELETE { // delete root schema field
-		if i, err := strconv.Atoi(s.Domain.GetParams()[utils.RootRowsParam]); err != nil {
-			return record, err, false
-		} else if schema, err := sch.GetSchemaByFieldID(int64(i)); err != nil || !ds.IsRootDB(schema.Name) {
-			return record, fmt.Errorf("cannot delete root schema field  %v", err), false
-		}
-		return record, nil, false
+		return record, fmt.Errorf("cannot delete root schema field"), false
 	}
-	// validate schema field
 	utils.Add(record, sm.TYPEKEY, record[sm.TYPEKEY],
 		func(i interface{}) bool { return i != nil && i != "" },
-		func(i interface{}) interface{} { return utils.PrepareEnum(fmt.Sprintf("%v", i)) })
+		func(i interface{}) interface{} { return utils.PrepareEnum(utils.ToString(i)) })
+	if !strings.Contains(sm.DataTypeToEnum(), utils.ToString(record[sm.TYPEKEY])) {
+		return record, fmt.Errorf("invalid type"), false
+	}
 	utils.Add(record, sm.LABELKEY, record[sm.LABELKEY],
-		func(i interface{}) bool { return i != nil && i != "" },
-		func(i interface{}) interface{} { return strings.Replace(fmt.Sprintf("%v", i), "_", " ", -1) })
-	if rec, err := sch.ValidateBySchema(record, tablename, s.Domain.GetMethod(), s.Domain.VerifyAuth); err != nil && !s.Domain.GetAutoload() {
-		return rec, err, false
+		func(i interface{}) bool { return true },
+		func(i interface{}) interface{} {
+			if i == nil || i == "" {
+				i = utils.ToString(record[sm.NAMEKEY])
+			}
+			return strings.Replace(utils.ToString(i), "_", " ", -1)
+
+		})
+	if !slices.Contains(ds.NOAUTOLOADROOTTABLESSTR, tablename) {
+		if rec, err := sch.ValidateBySchema(record, tablename, s.Domain.GetMethod(), s.Domain.VerifyAuth); err != nil && !s.Domain.GetAutoload() {
+			return rec, err, false
+		}
 	}
 	return record, nil, true
 }
 
 func (s *SchemaFields) SpecializedCreateRow(record map[string]interface{}, tableName string) { // THERE
-	if schema, err := s.write(record, record, false); err != nil || schema == nil {
-		return
-	} else if record[sm.NAMEKEY] == ds.UserDBField || record[sm.NAMEKEY] == ds.EntityDBField { // create view
+	if schema, err := s.Write(record, record, false); err == nil && schema != nil && (record[sm.NAMEKEY] == ds.UserDBField || record[sm.NAMEKEY] == ds.EntityDBField) { // create view
 		r := rand.New(rand.NewSource(9999999999))
 		newView := NewView("my"+schema.Name,
 			"View description for my "+schema.Name+" datas.",
-			"my data", schema.ID, r.Int(), true, false, true, false, true)
+			"my data", schema.GetID(), int64(r.Int()), true, false, true, false, true)
 		s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)
 	}
 }
 
 func (s *SchemaFields) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
 	for _, r := range results {
-		s.write(r, record, true)
+		s.Write(r, record, true)
 	}
 }
 
-func (s *SchemaFields) write(r map[string]interface{}, record map[string]interface{}, isUpdate bool) (*sm.SchemaModel, error) {
-	schema, err := sch.GetSchemaByID(r[ds.SchemaDBField].(int64))
+func (s *SchemaFields) Write(r map[string]interface{}, record map[string]interface{}, isUpdate bool) (*sm.SchemaModel, error) {
+	schema, err := sch.GetSchemaByID(utils.ToInt64(r[ds.SchemaDBField]))
 	if err != nil {
 		return nil, err
 	}
 	readLevels := []string{sm.LEVELNORMAL}
-	if level, ok := record["read_level"]; ok && level != "" && level != sm.LEVELOWN {
-		readLevels = append(readLevels, strings.Replace(fmt.Sprintf("%v", level), "'", "", -1))
+	if level, ok := record["read_level"]; ok && level != "" && level != sm.LEVELOWN && slices.Contains(sm.READLEVELACCESS, utils.ToString(level)) {
+		readLevels = append(readLevels, strings.Replace(utils.ToString(level), "'", "", -1))
 	}
 	UpdatePermissions(record, schema.Name, readLevels, s.Domain)
 	if isUpdate {
@@ -82,12 +87,12 @@ func (s *SchemaFields) write(r map[string]interface{}, record map[string]interfa
 
 func (s *SchemaFields) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {
 	for _, record := range results { // delete all columns
-		schema, err := sch.GetSchemaByID(record[ds.SchemaDBField].(int64))
+		schema, err := sch.GetSchemaByID(utils.ToInt64(record[ds.SchemaDBField]))
 		if err != nil { // schema not found
 			s.Domain.DeleteSuperCall(utils.GetColumnTargetParameters(schema.Name, record[sm.NAMEKEY]))
 			s.Domain.DeleteSuperCall(
 				utils.AllParams(schema.Name).Enrich(map[string]interface{}{
-					sm.NAMEKEY: "%" + record[sm.NAMEKEY].(string) + "%",
+					sm.NAMEKEY: "%" + utils.ToString(record[sm.NAMEKEY]) + "%",
 				}),
 			)
 			if schema.HasField(ds.UserDBField) || schema.HasField(ds.EntityDBField) { // delete view

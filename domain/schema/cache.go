@@ -3,7 +3,6 @@ package schema
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
@@ -28,7 +27,7 @@ func GetSchemaByFieldID(id int64) (models.SchemaModel, error) {
 	defer models.CacheMutex.Unlock()
 	for _, t := range models.SchemaRegistry {
 		for _, field := range t.Fields {
-			if field.ID == id {
+			if field.GetID() == id {
 				return t, nil
 			}
 		}
@@ -41,7 +40,7 @@ func GetFieldByID(id int64) (models.FieldModel, error) {
 	defer models.CacheMutex.Unlock()
 	for _, t := range models.SchemaRegistry {
 		for _, field := range t.Fields {
-			if field.ID == id {
+			if field.GetID() == id {
 				return field, nil
 			}
 		}
@@ -70,7 +69,7 @@ func LoadCache(name string, db *conn.Database) {
 		}
 
 		newSchema.Fields = []models.FieldModel{} // Initialize fields
-		db.SQLRestriction = ds.RootID(ds.DBSchema.Name) + "=" + fmt.Sprintf("%v", newSchema.ID)
+		db.SQLRestriction = ds.RootID(ds.DBSchema.Name) + "=" + utils.ToString(newSchema.ID)
 		fields, err := db.SelectQueryWithRestriction(
 			ds.DBSchemaField.Name, map[string]interface{}{}, false) // Get fields
 		db.SQLRestriction = "" // Reset restriction
@@ -162,7 +161,7 @@ func ValidateBySchema(data utils.Record, tableName string, method utils.Method,
 		if v, ok := data[field.Name]; ok {
 			newData[field.Name] = v
 			if field.Name == models.FOREIGNTABLEKEY {
-				schema, err := GetSchema(v.(string))
+				schema, err := GetSchema(utils.ToString(v))
 				if err != nil {
 					newData[models.LINKKEY] = schema.ID
 				}

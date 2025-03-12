@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"errors"
-	"fmt"
 	"sqldb-ws/controllers/controller"
 	"sqldb-ws/domain"
 	"sqldb-ws/domain/utils"
@@ -26,7 +25,7 @@ func (l *AuthController) Login() {
 	// login function will overide generic procedure foundable in controllers.go
 	body := l.Body(false)             // extracting body
 	if log, ok := body["login"]; ok { // search for login in body
-		response, err := domain.IsLogged(false, fmt.Sprintf("%v", log), "")
+		response, err := domain.IsLogged(false, utils.ToString(log), "")
 		if err != nil {
 			l.Response(response, err)
 			return
@@ -37,12 +36,12 @@ func (l *AuthController) Login() {
 		}
 		// if no problem check if logger is authorized to work on API and properly registered
 		pass, ok := body["password"] // then compare password founded in base and ... whatever... you know what's about
-		pwd, ok1 := response[0]["password"].(string)
+		pwd, ok1 := response[0]["password"]
 		if ok && ok1 {
-			if ok, err := argon2.VerifyEncoded([]byte(pass.(string)), []byte(pwd)); ok && err == nil {
+			if ok, err := argon2.VerifyEncoded([]byte(utils.ToString(pass)),
+				[]byte(utils.ToString(pwd))); ok && err == nil {
 				// when password matching
-				fmt.Println(response[0]["super_admin"] == false)
-				token := l.MySession(log.(string), response[0]["super_admin"] == false, false) // update session variables
+				token := l.MySession(utils.ToString(log), response[0]["super_admin"] == false, false) // update session variables
 				response[0]["token"] = token
 				l.Response(response, nil)
 				return

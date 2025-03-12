@@ -2,7 +2,6 @@ package controller
 
 import (
 	"encoding/csv"
-	"fmt"
 	"net/http"
 	"net/url"
 	"sqldb-ws/domain/utils"
@@ -41,12 +40,11 @@ func (t *AbstractController) Response(resp utils.Results, err error) {
 			t.Ctx.Output.SetStatus(http.StatusPartialContent)
 			t.Data[JSON] = map[string]interface{}{DATA: resp, ERROR: err.Error()}
 		} else {
-			fmt.Println(err)
 			t.Data[JSON] = map[string]interface{}{DATA: utils.Results{}, ERROR: err.Error()}
 		}
 	} else { // if success precise an error if no datas is founded
 		t.Data[JSON] = map[string]interface{}{DATA: resp, ERROR: nil}
-		for _, json := range t.Data[JSON].(map[string]interface{})[DATA].(utils.Results) {
+		for _, json := range utils.ToMap(t.Data[JSON])[DATA].(utils.Results) {
 			delete(json, "password") // never send back a password in any manner
 		}
 	}
@@ -72,7 +70,6 @@ func (t *AbstractController) csv(d utils.DomainITF, colsFunc map[string]string, 
 	for _, c := range cols {
 		if v, ok := colsFunc[c]; ok && v != "" {
 			r, err := d.GetDb().QueryAssociativeArray("SELECT " + v + " as result FROM " + d.GetTable() + " WHERE " + d.GetDb().SQLRestriction)
-			fmt.Println(r, err)
 			if err == nil && len(r) > 0 {
 				splitted := strings.Split(v, "(")
 				lastLine = append(lastLine, splitted[0]+": "+utils.GetString(r[0], "result"))
@@ -88,7 +85,7 @@ func (t *AbstractController) csv(d utils.DomainITF, colsFunc map[string]string, 
 				row = append(row, "")
 				continue
 			}
-			row = append(row, fmt.Sprintf("%v", r[c]))
+			row = append(row, utils.ToString(r[c]))
 		}
 		data = append(data, row)
 	}
@@ -106,7 +103,7 @@ func (t *AbstractController) mapping(col string, colsCmd string, cmd string, map
 	r := resp[0]
 	additionnalCol := ""
 	order := []interface{}{"id"}
-	order = append(order, r["order"].([]interface{})...)
+	order = append(order, utils.ToList(r["order"])...)
 	if cmd != "" {
 		decodedLine, _ := url.QueryUnescape(cmd)
 		re := strings.Split(decodedLine, " as ")
@@ -127,43 +124,44 @@ func (t *AbstractController) mapping(col string, colsCmd string, cmd string, map
 			}
 		}
 	}
-	schema := r["schema"].(map[string]interface{})
+	schema := utils.ToMap(r["schema"])
 	for _, o := range order {
-		key := o.(string)
+		key := utils.ToString(o)
 		if col != "" && !strings.Contains(col, key) && !(additionnalCol == "" || strings.Contains(additionnalCol, key)) {
 			continue
 		}
-		if scheme, ok := schema[o.(string)]; ok && strings.Contains(scheme.(map[string]interface{})["type"].(string), "many") {
+		if scheme, ok := schema[key]; ok && strings.Contains(utils.ToString(utils.ToMap(scheme)["type"]), "many") {
 			continue
 		}
 		label := key
 		if scheme, ok := schema[key]; ok {
-			label = strings.Replace(scheme.(map[string]interface{})["label"].(string), "_", " ", -1)
+			label = strings.Replace(utils.ToString(utils.ToMap(scheme)["label"]), "_", " ", -1)
 		}
 		if mapKey, ok := mapping[key]; ok && mapKey != "" {
 			label = mapKey
 		}
 		cols = append(cols, label)
 	}
-	for _, item := range r["items"].([]interface{}) {
+	for _, item := range utils.ToList(r["items"]) {
 		record := utils.Record{}
 		for _, o := range order {
-			key := o.(string)
-			it := item.(map[string]interface{})
-			if scheme, ok := schema[key]; ok && key != "id" && strings.Contains(scheme.(map[string]interface{})["type"].(string), "many") {
+			key := utils.ToString(o)
+			it := utils.ToMap(item)
+			if scheme, ok := schema[key]; ok && key != "id" && strings.Contains(
+				utils.ToString(utils.ToMap(scheme)["type"]), "many") {
 				continue
 			}
 			label := key
 			if scheme, ok := schema[key]; ok {
-				label = strings.Replace(scheme.(map[string]interface{})["label"].(string), "_", " ", -1)
+				label = strings.Replace(utils.ToString(utils.ToMap(scheme)["label"]), "_", " ", -1)
 			}
 			if mapKey, ok := mapping[key]; ok && mapKey != "" {
 				label = mapKey
 			}
-			if v, ok := it["values_shallow"].(map[string]interface{})[key]; ok {
-				record[label] = v.(map[string]interface{})["name"].(string)
-			} else if v, ok := it["values"].(map[string]interface{})[key]; ok && v != nil {
-				record[label] = fmt.Sprintf("%v", v)
+			if v, ok := utils.ToMap(it["values_shallow"])[key]; ok {
+				record[label] = utils.ToString(utils.ToMap(v)["name"])
+			} else if v, ok := utils.ToMap(it["values"])[key]; ok && v != nil {
+				record[label] = utils.ToString(v)
 			} else {
 				record[label] = ""
 			}

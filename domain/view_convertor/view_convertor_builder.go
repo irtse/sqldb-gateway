@@ -22,8 +22,8 @@ func (d *ViewConvertor) EnrichWithWorkFlowView(record utils.Record, tableName st
 		id = record.GetString(utils.SpecialIDParam)
 	case ds.DBRequest.Name:
 		if t := d.FetchRecord(ds.DBRequest.Name, record.GetString(utils.SpecialIDParam)); len(t) > 0 {
-			id = fmt.Sprintf("%v", t[0][ds.RootID(ds.DBWorkflow.Name)])
-			requestID = fmt.Sprintf("%v", t[0][utils.SpecialIDParam])
+			id = utils.ToString(t[0][ds.RootID(ds.DBWorkflow.Name)])
+			requestID = utils.ToString(t[0][utils.SpecialIDParam])
 			workflow = d.initializeWorkflow(t[0])
 		} else {
 			return nil
@@ -46,8 +46,8 @@ func (d *ViewConvertor) EnrichWithWorkFlowView(record utils.Record, tableName st
 func (d *ViewConvertor) initializeWorkflow(record map[string]interface{}) sm.WorkflowModel {
 	return sm.WorkflowModel{
 		IsDismiss: record["state"] == "dismiss",
-		Current:   fmt.Sprintf("%v", record["current_index"]),
-		Position:  fmt.Sprintf("%v", record["current_index"]),
+		Current:   utils.ToString(record["current_index"]),
+		Position:  utils.ToString(record["current_index"]),
 		IsClose:   record["state"] == "completed" || record["state"] == "dismiss",
 	}
 }
@@ -59,7 +59,7 @@ func (d *ViewConvertor) handleTaskWorkflow(record utils.Record) (sm.WorkflowMode
 		return workflow, "", "", nil
 	}
 
-	reqRecord := d.FetchRecord(ds.DBRequest.Name, fmt.Sprintf("%v", taskRecord[0][ds.RootID(ds.DBRequest.Name)]))
+	reqRecord := d.FetchRecord(ds.DBRequest.Name, utils.ToString(taskRecord[0][ds.RootID(ds.DBRequest.Name)]))
 	if len(reqRecord) > 0 {
 		workflow = d.initializeWorkflow(reqRecord[0])
 	}
@@ -70,11 +70,11 @@ func (d *ViewConvertor) handleTaskWorkflow(record utils.Record) (sm.WorkflowMode
 		workflow.CurrentDismiss = record["state"] == "dismiss"
 		workflow.CurrentClose = record["state"] == "completed" || record["state"] == "dismiss"
 
-		schemaRecord := d.FetchRecord(ds.DBWorkflowSchema.Name, fmt.Sprintf("%v", taskRecord[0][ds.RootID(ds.DBWorkflowSchema.Name)]))
+		schemaRecord := d.FetchRecord(ds.DBWorkflowSchema.Name, utils.ToString(taskRecord[0][ds.RootID(ds.DBWorkflowSchema.Name)]))
 		if len(schemaRecord) > 0 {
 			workflow.Current = utils.GetString(schemaRecord[0], "index")
-			workflow.CurrentHub = schemaRecord[0]["hub"].(bool)
-			return workflow, fmt.Sprintf("%v", schemaRecord[0][ds.RootID(ds.DBWorkflow.Name)]), requestID, nexts
+			workflow.CurrentHub = utils.Compare(schemaRecord[0]["hub"], true)
+			return workflow, utils.ToString(schemaRecord[0][ds.RootID(ds.DBWorkflow.Name)]), requestID, nexts
 		}
 	}
 	return workflow, "", "", nil
@@ -84,7 +84,7 @@ func (d *ViewConvertor) parseNextSteps(record map[string]interface{}) []string {
 	if record["nexts"] == "all" || record["nexts"] == "" || record["nexts"] == nil {
 		return nil
 	}
-	return strings.Split(fmt.Sprintf("%v", record["nexts"]), ",")
+	return strings.Split(utils.ToString(record["nexts"]), ",")
 }
 
 func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id, requestID string, nexts []string) *sm.WorkflowModel {
@@ -95,12 +95,12 @@ func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id, re
 
 	workflow.Steps = make(map[string][]sm.WorkflowStepModel)
 	for _, step := range steps {
-		index := fmt.Sprintf("%v", step["index"])
+		index := utils.ToString(step["index"])
 		newStep := sm.WorkflowStepModel{
 			ID:        utils.GetInt(step, utils.SpecialIDParam),
-			Name:      fmt.Sprintf("%v", step[sm.NAMEKEY]),
-			Optionnal: step["optionnal"].(bool),
-			IsSet:     !step["optionnal"].(bool) || slices.Contains(nexts, fmt.Sprintf("%v", step["wrapped_"+ds.RootID(ds.DBWorkflow.Name)])),
+			Name:      utils.ToString(step[sm.NAMEKEY]),
+			Optionnal: utils.Compare(step["optionnal"], true),
+			IsSet:     !utils.Compare(step["optionnal"], true) || slices.Contains(nexts, utils.ToString(step["wrapped_"+ds.RootID(ds.DBWorkflow.Name)])),
 		}
 
 		if workflow.Current != "" {
@@ -118,11 +118,11 @@ func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id, re
 }
 
 func (d *ViewConvertor) populateTaskDetails(newStep *sm.WorkflowStepModel, step map[string]interface{}, requestID string) {
-	tasks := d.FetchRecord(ds.DBTask.Name, fmt.Sprintf("%v", step[utils.SpecialIDParam]))
+	tasks := d.FetchRecord(ds.DBTask.Name, utils.ToString(step[utils.SpecialIDParam]))
 	if len(tasks) > 0 {
-		newStep.IsClose = tasks[0]["is_close"].(bool)
-		newStep.IsCurrent = tasks[0]["state"] == "pending"
-		newStep.IsDismiss = tasks[0]["is_dismiss"] == "dismiss"
+		newStep.IsClose = utils.Compare(tasks[0]["is_close"], true)
+		newStep.IsCurrent = utils.Compare(tasks[0]["state"], "pending")
+		newStep.IsDismiss = utils.Compare(tasks[0]["is_dismiss"], "dismiss")
 	}
 }
 

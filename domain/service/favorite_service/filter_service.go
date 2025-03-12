@@ -21,6 +21,7 @@ type FilterService struct {
 	UpdateFields bool
 }
 
+func (s *FilterService) ShouldVerify() bool                                                      { return true }
 func (s *FilterService) Entity() utils.SpecializedServiceInfo                                    { return ds.DBFilter }
 func (s *FilterService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {}
 func (s *FilterService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
@@ -31,10 +32,10 @@ func (s *FilterService) SpecializedCreateRow(record map[string]interface{}, tabl
 		if _, ok := record[ds.SchemaDBField]; !ok {
 			continue
 		}
-		if schema, err := schserv.GetSchemaByID(record[ds.SchemaDBField].(int64)); err == nil && field["name"] != nil {
+		if schema, err := schserv.GetSchemaByID(utils.ToInt64(record[ds.SchemaDBField])); err == nil && field["name"] != nil {
 			delete(field, "name")
 			field[ds.FilterDBField] = record[utils.SpecialIDParam]
-			f, err := schema.GetField(fmt.Sprintf("%v", field["name"]))
+			f, err := schema.GetField(utils.ToString(field["name"]))
 			if err == nil {
 				field[ds.SchemaDBField] = f.ID
 			}
@@ -47,7 +48,7 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 	selected := make(map[string]bool)
 	for _, rec := range results { // memorize selected filters
 		id := rec.GetString(utils.SpecialIDParam)
-		selected[id] = rec["is_selected"] == nil || rec["is_selected"].(bool)
+		selected[id] = rec["is_selected"] == nil || utils.Compare(rec["is_selected"], true)
 	}
 	for _, rec := range view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true) { // transform to generic view
 		rec["is_selected"] = selected[rec.GetString(utils.SpecialIDParam)] // restore selected filters
@@ -58,7 +59,7 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 			false,
 		); err == nil && err2 == nil { // sort fields by index
 			sort.SliceStable(fields, func(i, j int) bool {
-				return fields[i]["index"].(int64) <= fields[j]["index"].(int64)
+				return utils.ToInt64(fields[i]["index"]) <= utils.ToInt64(fields[j]["index"])
 			})
 			rec["filter_fields"] = []sm.FilterModel{} // add fields to filter
 			for _, field := range fields {
@@ -67,14 +68,14 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 						ID:        utils.GetInt(rec, utils.SpecialIDParam),
 						Name:      ff.Name,
 						Label:     ff.Label,
-						Index:     float64(field["index"].(int64)),
+						Index:     float64(utils.ToInt64(field["index"])),
 						Type:      ff.Type,
-						Value:     fmt.Sprintf("%v", field["value"]),
-						Separator: fmt.Sprintf("%v", field["separator"]),
-						Operator:  fmt.Sprintf("%v", field["operator"]),
-						Dir:       fmt.Sprintf("%v", field["dir"]),
+						Value:     utils.ToString(field["value"]),
+						Separator: utils.ToString(field["separator"]),
+						Operator:  utils.ToString(field["operator"]),
+						Dir:       utils.ToString(field["dir"]),
 					}
-					if width, err := strconv.ParseFloat(fmt.Sprintf("%v", field["width"]), 64); err == nil {
+					if width, err := strconv.ParseFloat(utils.ToString(field["width"]), 64); err == nil {
 						model.Width = width
 					}
 					rec["filter_fields"] = append(rec["filter_fields"].([]sm.FilterModel), model)
@@ -130,7 +131,7 @@ func (s *FilterService) VerifyDataIntegrity(record map[string]interface{}, table
 
 func (s *FilterService) ProcessLink(record map[string]interface{}) error {
 	if link, ok := record["link"]; ok {
-		schema, err := schserv.GetSchema(fmt.Sprintf("%v", link))
+		schema, err := schserv.GetSchema(utils.ToString(link))
 		delete(record, "link")
 		if err != nil {
 			return err
@@ -155,15 +156,15 @@ func (s *FilterService) ProcessFields(record map[string]interface{}, fieldType s
 	if fields, ok := record[fieldType]; ok {
 		s.UpdateFields = true
 		s.Fields = make([]map[string]interface{}, 0)
-		for _, field := range fields.([]interface{}) {
-			s.Fields = append(s.Fields, field.(map[string]interface{}))
+		for _, field := range utils.ToList(fields) {
+			s.Fields = append(s.Fields, utils.ToMap(field))
 		}
 	}
 }
 
 func (s *FilterService) HandleUpdate(record map[string]interface{}) {
 	params := utils.AllParams(ds.DBFilterField.Name)
-	params[ds.FilterDBField] = fmt.Sprintf("%v", record[utils.SpecialIDParam])
+	params[ds.FilterDBField] = utils.ToString(record[utils.SpecialIDParam])
 	s.Domain.DeleteSuperCall(params)
 }
 
@@ -174,7 +175,7 @@ func (s *FilterService) HandleCreate(record map[string]interface{}) {
 		record["is_view"] = true
 	}
 	if schemaID := record[ds.SchemaDBField]; schemaID != nil {
-		schema, _ := schserv.GetSchemaByID(schemaID.(int64))
+		schema, _ := schserv.GetSchemaByID(utils.ToInt64(schemaID))
 		if _, ok := record[ds.DBEntity.Name]; !ok {
 			s.HandleUserFilterNaming(record, schema, &name)
 		} else {
@@ -207,12 +208,12 @@ func (s *FilterService) HandleEntityFilterNaming(record map[string]interface{}, 
 
 func (s *FilterService) HandleDelete(record map[string]interface{}) {
 	params := utils.AllParams(ds.DBFilterField.Name)
-	params[ds.FilterDBField] = fmt.Sprintf("%v", record[utils.SpecialIDParam])
+	params[ds.FilterDBField] = utils.ToString(record[utils.SpecialIDParam])
 	s.Domain.DeleteSuperCall(params)
 }
 
 func (s *FilterService) ProcessSelection(record map[string]interface{}) {
-	if sel, ok := record["is_selected"]; ok && sel.(bool) { // TODO
+	if sel, ok := record["is_selected"]; ok && utils.Compare(sel, true) { // TODO
 		s.Domain.GetDb().UpdateQuery(ds.DBFilter.Name, utils.Record{
 			"is_selected": false,
 		}, map[string]interface{}{

@@ -66,7 +66,7 @@ func TestVerify(t *testing.T) {
 
 func TestCreate(t *testing.T) {
 	ts := &service.TableService{}
-	_, err := ts.Create()
+	_, err := ts.Create(map[string]interface{}{})
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestCreate(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	ts := &service.TableService{}
-	_, err := ts.Update("some_restriction")
+	_, err := ts.Update(map[string]interface{}{}, "some_restriction")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestDeleteWithNonExistentTable(t *testing.T) {
 
 func TestCreateWithoutValues(t *testing.T) {
 	ts := &service.TableService{}
-	_, err := ts.Create()
+	_, err := ts.Create(map[string]interface{}{})
 	if err == nil {
 		t.Errorf("Expected error for missing values, got nil")
 	}
@@ -98,7 +98,7 @@ func TestCreateWithoutValues(t *testing.T) {
 
 func TestUpdateWithoutValues(t *testing.T) {
 	ts := &service.TableService{}
-	_, err := ts.Update()
+	_, err := ts.Update(map[string]interface{}{})
 	if err == nil {
 		t.Errorf("Expected error for missing update values, got nil")
 	}
@@ -128,8 +128,7 @@ func TestGetWithNoResults(t *testing.T) {
 
 func TestUpdateWithValidValues(t *testing.T) {
 	tcs := &service.TableService{}
-	tcs.Record = map[string]interface{}{"type": "varchar", "name": "updated_column"}
-	_, err := tcs.Update()
+	_, err := tcs.Update(map[string]interface{}{"type": "varchar", "name": "updated_column"})
 	if err != nil {
 		t.Errorf("Unexpected error while updating: %v", err)
 	}
@@ -162,8 +161,7 @@ func TestRetrieveTableInvalid(t *testing.T) {
 
 func TestWriteCreate(t *testing.T) {
 	tcs := &service.TableService{}
-	tcs.Record = map[string]interface{}{"name": "test_table", "fields": []interface{}{}}
-	_, err := tcs.Create()
+	_, err := tcs.Create(map[string]interface{}{"name": "test_table", "fields": []interface{}{}})
 	if err != nil {
 		t.Errorf("Unexpected error while creating table: %v", err)
 	}
@@ -171,8 +169,7 @@ func TestWriteCreate(t *testing.T) {
 
 func TestWriteUpdate(t *testing.T) {
 	tcs := &service.TableService{}
-	tcs.Record = map[string]interface{}{"name": "test_table", "fields": []interface{}{}}
-	_, err := tcs.Update()
+	_, err := tcs.Update(map[string]interface{}{"name": "test_table", "fields": []interface{}{}})
 	if err != nil {
 		t.Errorf("Unexpected error while updating table: %v", err)
 	}

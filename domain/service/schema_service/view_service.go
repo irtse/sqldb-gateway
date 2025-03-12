@@ -12,14 +12,12 @@ import (
 	servutils "sqldb-ws/domain/service/utils"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/domain/view_convertor"
-	infrastructure "sqldb-ws/infrastructure/service"
 	"strings"
 )
 
 // DONE - ~ 200 LINES - NOT TESTED
 type ViewService struct {
 	servutils.AbstractSpecializedService
-	infrastructure.InfraSpecializedService
 }
 
 func (s *ViewService) Entity() utils.SpecializedServiceInfo { return ds.DBView }
@@ -35,9 +33,10 @@ func (s *ViewService) GenerateQueryFilter(tableName string, innerestr ...string)
 
 func (s *ViewService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) (res utils.Results) {
 	runtime.GOMAXPROCS(5)
+	userRecord, _ := servutils.GetUserRecord(s.Domain)
 	channel := make(chan utils.Record, len(results))
 	for _, record := range results {
-		go s.TransformToView(record, channel, dest_id...)
+		go s.TransformToView(record, userRecord, channel, dest_id...)
 	}
 	for range results {
 		if rec := <-channel; rec != nil {
@@ -45,18 +44,18 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 		}
 	}
 	sort.SliceStable(res, func(i, j int) bool {
-		return int64(res[i]["index"].(float64)) <= int64(res[j]["index"].(float64))
+		return utils.ToInt64(res[i]["index"]) <= utils.ToInt64(res[j]["index"])
 	})
 	return
 }
 
-func (s *ViewService) TransformToView(record utils.Record, channel chan utils.Record, dest_id ...string) {
+func (s *ViewService) TransformToView(record utils.Record, userRecord utils.Record, channel chan utils.Record, dest_id ...string) {
 	if schema, err := schserv.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err != nil {
 		channel <- nil
 	} else {
 		s.Domain.HandleRecordAttributes(record)
 		rec := NewViewFromRecord(schema, record)
-		if userRecord, exists := servutils.GetUserRecord(s.Domain); exists {
+		if userRecord != nil {
 			s.addFavorizeInfo(userRecord, record, rec)
 		}
 		params := utils.GetRowTargetParameters(schema.Name, s.combineDestinations(dest_id))
@@ -76,7 +75,7 @@ func (s *ViewService) TransformToView(record utils.Record, channel chan utils.Re
 			fmt.Errorf("error while fetching data: %v", err)
 			channel <- nil
 		} else {
-			if record["is_list"] != nil && record["is_list"].(bool) {
+			if utils.Compare(record["is_list"], true) {
 				filterService := filterserv.NewFilterService(s.Domain)
 				SQLrestriction, _, _, _ := filterService.GetQueryFilter(schema.Name, sqlFilter)
 				rec["new"], rec["max"] = filterService.CountNewDataAccess(schema.Name, []string{SQLrestriction}, params.Anonymized())
@@ -85,7 +84,7 @@ func (s *ViewService) TransformToView(record utils.Record, channel chan utils.Re
 			if view != "" {
 				rec["order"] = strings.Split(view, ",")
 			}
-			rec["link_path"] = "/" + utils.MAIN_PREFIX + "/" + fmt.Sprintf(ds.DBView.Name) + "?rows=" + fmt.Sprintf("%v", record[utils.SpecialIDParam])
+			rec["link_path"] = "/" + utils.MAIN_PREFIX + "/" + fmt.Sprintf(ds.DBView.Name) + "?rows=" + utils.ToString(record[utils.SpecialIDParam])
 			channel <- rec
 		}
 	}
@@ -124,7 +123,7 @@ func (s *ViewService) fetchData(params utils.Params, sqlFilter string, record ut
 	datas := utils.Results{}
 	if !s.Domain.GetEmpty() {
 		d, _ := s.Domain.SuperCall(params, utils.Record{}, utils.SELECT, true, sqlFilter)
-		if record["is_list"] != nil && record["is_list"].(bool) {
+		if utils.Compare(record["is_list"], true) {
 			filterService := filterserv.NewFilterService(s.Domain)
 			SQLrestriction, _, _, _ := filterService.GetQueryFilter(schema.Name, sqlFilter)
 			rec["new"], rec["max"] = filterService.CountNewDataAccess(schema.Name, []string{SQLrestriction}, params.Anonymized())
@@ -147,11 +146,11 @@ func (s *ViewService) processData(rec *utils.Record, datas utils.Results, schema
 				if v != nil {
 					switch k {
 					case "items":
-						(*rec)[k] = s.extractItems(v.([]interface{}), record, schema)
+						(*rec)[k] = s.extractItems(utils.ToList(v), record, schema)
 					case "schema":
-						(*rec)[k] = s.extractSchema(v.(map[string]interface{}), record, schema, params, view)
+						(*rec)[k] = s.extractSchema(utils.ToMap(v), record, schema, params, view)
 					case "shortcuts":
-						(*rec)[k] = s.extractShortcuts(v.(map[string]interface{}), record)
+						(*rec)[k] = s.extractShortcuts(utils.ToMap(v), record)
 					}
 				} else if recValue, exists := (*rec)[k]; !exists || recValue == "" {
 					(*rec)[k] = v
@@ -165,11 +164,11 @@ func (s *ViewService) processData(rec *utils.Record, datas utils.Results, schema
 func (s *ViewService) extractSchema(value map[string]interface{}, record utils.Record, schema sm.SchemaModel, params utils.Params, view string) map[string]interface{} {
 	newV := map[string]interface{}{}
 	for fieldName, field := range value {
-		if fieldName != ds.WorkflowDBField && schema.Name == ds.DBRequest.Name && record["is_empty"].(bool) {
+		if fieldName != ds.WorkflowDBField && schema.Name == ds.DBRequest.Name && utils.Compare(record["is_empty"], true) {
 			continue
 		}
 		col, ok := params[utils.RootColumnsParam]
-		field.(map[string]interface{})["active"] = !ok || col == "" || strings.Contains(view, fieldName)
+		utils.ToMap(field)["active"] = !ok || col == "" || strings.Contains(view, fieldName)
 		newV[fieldName] = field
 	}
 	return newV
@@ -177,14 +176,15 @@ func (s *ViewService) extractSchema(value map[string]interface{}, record utils.R
 
 func (s *ViewService) extractItems(value []interface{}, record utils.Record, schema sm.SchemaModel) []interface{} {
 	for _, item := range value {
-		values := item.(map[string]interface{})["values"]
-		if list, ok := record["is_list"]; ok && list.(bool) {
+		values := utils.ToMap(item)["values"]
+		if utils.Compare(record["is_list"], true) {
 			path := utils.RootRowsParam
 			if strings.Contains(path, ds.DBView.Name) {
 				path = utils.RootDestTableIDParam
 			}
-			item.(map[string]interface{})["link_path"] = fmt.Sprintf("/%s/%s?%s=%v", utils.MAIN_PREFIX, schema.Name, utils.RootRowsParam, values.(map[string]interface{})[utils.SpecialIDParam])
-			item.(map[string]interface{})["data_path"] = ""
+			utils.ToMap(item)["link_path"] = fmt.Sprintf("/%s/%s?%s=%v", utils.MAIN_PREFIX, schema.Name,
+				utils.RootRowsParam, utils.ToMap(values)[utils.SpecialIDParam])
+			utils.ToMap(item)["data_path"] = ""
 		}
 	}
 	return value

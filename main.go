@@ -35,8 +35,9 @@ func main() {
 		os.Setenv("SUPERADMIN_PASSWORD", string(hash))
 	}
 	fmt.Printf("%s\n", "Service in "+os.Getenv("AUTH_MODE")+" mode")
-	fmt.Printf("%s\n", "Checking for root DBBases... Wait for server to launch... (may take a while on first start)")
+	fmt.Printf("%s\n", "Checking for root DBBases...")
 	domain.Load()
+	fmt.Printf("%s\n", "Running server...")
 	beego.Run()
 }
 
