@@ -11,6 +11,10 @@ func PrepareEnum(enum string) string {
 	if !strings.Contains(enum, "enum") {
 		return enum
 	}
+	return TransformType(enum)
+}
+
+func TransformType(enum string) string {
 	e := strings.Replace(ToString(enum), " ", "", -1)
 	e = strings.Replace(e, "'", "", -1)
 	e = strings.Replace(e, "(", "__", -1)

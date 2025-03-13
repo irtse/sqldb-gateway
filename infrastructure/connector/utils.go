@@ -185,11 +185,7 @@ func FormatSQLRestrictionWhereByMap(SQLrestriction string, restrictions map[stri
 			} else if len(divided) > 1 && slices.Contains([]string{"!SELECT", "!INSERT", "!UPDATE", "!DELETE"}, strings.ToUpper(divided[0])) {
 				SQLrestriction += k + " NOT IN (" + fmt.Sprintf("%v", r) + ")"
 			} else if reflect.TypeOf(r).Kind() == reflect.Slice {
-				str := ""
-				for _, rr := range r.([]string) {
-					str += fmt.Sprintf("%v", rr) + ","
-				}
-				SQLrestriction += k + " IN (" + RemoveLastChar(str) + ")"
+				SQLrestriction += k + " IN (" + strings.Join(r.([]string), ",") + ")"
 			} else {
 				SQLrestriction += k + "=" + fmt.Sprintf("%v", r)
 			}

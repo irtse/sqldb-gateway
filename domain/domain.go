@@ -27,19 +27,17 @@ var EXCEPTION_FUNC = []string{"Count"}
 
 type SpecializedDomain struct {
 	utils.AbstractDomain
-	isGenericService bool
-	PermsService     *permissions.PermDomainService
-	Service          infrastructure.InfraServiceItf
-	Db               *conn.Database
+	PermsService *permissions.PermDomainService
+	Service      infrastructure.InfraServiceItf
+	Db           *conn.Database
 }
 
 // generate a new domain controller.
-func Domain(superAdmin bool, user string, isGenericService bool, permsService *permissions.PermDomainService) *SpecializedDomain {
+func Domain(superAdmin bool, user string, permsService *permissions.PermDomainService) *SpecializedDomain {
 	if permsService == nil {
 		permsService = permissions.NewPermDomainService(conn.Open(nil), user, superAdmin, false)
 	}
 	return &SpecializedDomain{
-		isGenericService: isGenericService, // generic specialized service is CustomService
 		AbstractDomain: utils.AbstractDomain{
 			SuperAdmin: superAdmin, // carry the security level of the "User" or an inner action
 			User:       user,       // current user...
@@ -57,7 +55,6 @@ func (d *SpecializedDomain) VerifyAuth(tableName string, colName string, level s
 }
 
 func (s *SpecializedDomain) HandleRecordAttributes(record utils.Record) {
-	s.isGenericService = utils.Compare(record["is_custom"], true)
 	s.Empty = utils.Compare(record["is_empty"], true)
 	s.LowerRes = utils.Compare(record["is_list"], true)
 	s.Own = utils.Compare(record["own_view"], true)
@@ -85,11 +82,10 @@ func (d *SpecializedDomain) DeleteSuperCall(params utils.Params, args ...interfa
 // Infra func caller with admin view && superadmin right (not a structured view made around data for view reason)
 func (d *SpecializedDomain) SuperCall(params utils.Params, record utils.Record, method utils.Method, isOwn bool, args ...interface{}) (utils.Results, error) {
 	params[utils.RootRawView] = "enable"
-	d2 := Domain(true, d.User, d.isGenericService, d.PermsService)
+	d2 := Domain(true, d.User, d.PermsService)
 	if isOwn {
 		d2.Own = d.IsOwn(false, false, method)
 	}
-	d2.ExternalSuperAdmin = d.ExternalSuperAdmin
 	return d2.call(params, record, method, args...)
 }
 
@@ -117,10 +113,7 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 				d.ClearDeprecatedDatas(tablename)
 			}
 		})
-		var specializedService utils.SpecializedServiceITF = &domain.CustomService{}
-		if !d.isGenericService {
-			specializedService = domain.SpecializedService(tablename)
-		}
+		specializedService := domain.SpecializedService(tablename)
 		specializedService.SetDomain(d)
 		d.Db = conn.Open(d.Db)
 		defer d.Db.Close()

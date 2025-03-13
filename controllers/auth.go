@@ -41,7 +41,7 @@ func (l *AuthController) Login() {
 			if ok, err := argon2.VerifyEncoded([]byte(utils.ToString(pass)),
 				[]byte(utils.ToString(pwd))); ok && err == nil {
 				// when password matching
-				token := l.MySession(utils.ToString(log), response[0]["super_admin"] == false, false) // update session variables
+				token := l.MySession(utils.ToString(log), utils.Compare(response[0]["super_admin"], true), false) // update session variables
 				response[0]["token"] = token
 				l.Response(response, nil)
 				return

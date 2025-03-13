@@ -69,35 +69,13 @@ func DeleteSchemaField(tableName string, fieldName string) {
 	delete(models.SchemaRegistry, tableName)
 }
 
-func SetSchemaField(tableName string, field map[string]interface{}) {
+func SetSchema(schema map[string]interface{}) (models.SchemaModel, error) {
 	models.CacheMutex.Lock()
 	defer models.CacheMutex.Unlock()
-	var newField models.FieldModel
-	if err := json.Unmarshal(mustMarshal(field), &newField); err != nil {
-		return
-	}
-	schema, err := GetSchema(tableName)
-	if err == nil {
-		if field, err := schema.GetField(newField.Name); err != nil {
-			if sch, ok := models.SchemaRegistry[schema.Name]; ok {
-				sch.Fields = append(sch.Fields, newField)
-			}
-		} else {
-			for _, f := range schema.Fields {
-				if field.Name != f.Name {
-					f = newField
-				}
-			}
-		}
-	}
-}
 
-func SetSchema(schema map[string]interface{}) {
-	models.CacheMutex.Lock()
-	defer models.CacheMutex.Unlock()
 	var newSchema models.SchemaModel
 	if err := json.Unmarshal(mustMarshal(schema), &newSchema); err != nil {
-		return
+		return models.SchemaRegistry[newSchema.Name], errors.New("error while unmarshalling schema")
 	}
 	if s, ok := models.SchemaRegistry[newSchema.Name]; ok {
 		models.SchemaRegistry[newSchema.Name] = models.SchemaModel{
@@ -110,6 +88,7 @@ func SetSchema(schema map[string]interface{}) {
 	} else {
 		models.SchemaRegistry[newSchema.Name] = newSchema
 	}
+	return models.SchemaRegistry[newSchema.Name], nil
 }
 
 func LoadCache(name string, db *conn.Database) {
@@ -123,33 +102,23 @@ func LoadCache(name string, db *conn.Database) {
 	if err != nil || len(schemas) == 0 {
 		return
 	}
-
 	for _, schema := range schemas {
-		var newSchema models.SchemaModel
-		if err := json.Unmarshal(mustMarshal(schema), &newSchema); err != nil {
+		s, err := SetSchema(schema) // Add schema to cache
+		if err != nil {
 			continue
 		}
-		newSchema.Fields = []models.FieldModel{} // Initialize fields
 		db.ClearQueryFilter()
 		fields, err := db.SelectQueryWithRestriction(
 			ds.DBSchemaField.Name, map[string]interface{}{
-				ds.SchemaDBField: utils.ToString(newSchema.ID),
+				ds.SchemaDBField: utils.ToString(s.ID),
 			}, false) // Get fields
 		db.SQLRestriction = "" // Reset restriction
-
 		if err == nil && len(fields) > 0 {
 			for _, field := range fields {
-				var newField models.FieldModel
-				if err := json.Unmarshal(mustMarshal(field), &newField); err != nil {
-					continue
-				}
-				newSchema.Fields = append(newSchema.Fields, newField) // Add field to schema
+				s = s.SetField(field) // Add field to schema
 			}
 		}
 
-		models.CacheMutex.Lock()
-		models.SchemaRegistry[newSchema.Name] = newSchema // Add schema to cache
-		models.CacheMutex.Unlock()
 	}
 }
 

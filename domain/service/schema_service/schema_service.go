@@ -49,7 +49,10 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 	if err != nil || len(res) == 0 {
 		return
 	}
-	schserv.SetSchema(record)
+	schema, err = schserv.SetSchema(record)
+	if err != nil {
+		return
+	}
 	for _, field := range s.Fields {
 		f := utils.ToMap(field)
 		f[ds.SchemaDBField] = schema.ID
@@ -57,7 +60,7 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 		if err != nil || len(field) == 0 {
 			continue
 		}
-		schserv.SetSchemaField(utils.ToString(record[sm.NAMEKEY]), field[0])
+		schema = schema.SetField(field[0])
 	}
 	if schema.Name != ds.DBDataAccess.Name {
 		if !slices.Contains([]string{ds.DBView.Name, ds.DBRequest.Name, ds.DBTask.Name,
@@ -103,7 +106,10 @@ func (s *SchemaService) SpecializedUpdateRow(datas []map[string]interface{}, rec
 		if err != nil || len(res) == 0 {
 			return
 		}
-		schserv.SetSchema(res[0])
+		schema, err = schserv.SetSchema(res[0])
+		if err != nil {
+			return
+		}
 		for _, field := range s.Fields {
 			f := utils.ToMap(field)
 			f[ds.SchemaDBField] = schema.ID
@@ -112,7 +118,7 @@ func (s *SchemaService) SpecializedUpdateRow(datas []map[string]interface{}, rec
 			} else {
 				s.Domain.CreateSuperCall(utils.AllParams(ds.DBSchemaField.Name), f)
 			}
-			schserv.SetSchemaField(utils.ToString(res[0]), f)
+			schema = schema.SetField(f)
 		}
 	}
 	UpdatePermissions(utils.Record{}, utils.ToString(record[sm.NAMEKEY]), []string{sm.LEVELOWN, sm.LEVELNORMAL}, s.Domain)

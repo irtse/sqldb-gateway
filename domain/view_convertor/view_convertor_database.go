@@ -68,7 +68,10 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 	if err != nil {
 		return schemes, -1, keysOrdered, cols, additionalActions, true
 	}
+	fmt.Println("sch", schema.Fields)
+
 	for _, scheme := range schema.Fields {
+
 		if !d.Domain.IsSuperAdmin() && !d.Domain.VerifyAuth(tableName, scheme.Name, scheme.Level, utils.SELECT) {
 			continue
 		}
@@ -84,6 +87,8 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 
 		if scheme.Name == utils.RootDestTableIDParam {
 			shallowField.Type = "link"
+		} else {
+			shallowField.Type = utils.TransformType(scheme.Type)
 		}
 
 		if scheme.GetLink() > 0 && !d.Domain.IsLowerResult() {
@@ -107,6 +112,8 @@ func (d *ViewConvertor) processLinkedSchema(shallowField *sm.ViewFieldModel, sch
 
 	if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") {
 		shallowField.Type = "link"
+	} else {
+		shallowField.Type = utils.TransformType(scheme.Type)
 	}
 
 	shallowField.ActionPath = fmt.Sprintf("/%s/%s?rows=all", utils.MAIN_PREFIX, schema.Name)
@@ -147,13 +154,15 @@ func (d *ViewConvertor) processPermissions(shallowField *sm.ViewFieldModel, sche
 }
 
 func (d *ViewConvertor) checkAndAddImportAction(additionalActions *[]string, schema sm.SchemaModel) {
-	res, err := d.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + ds.DBWorkflow.Name + " WHERE " + ds.SchemaDBField + "=" + utils.ToString(schema.ID))
+	res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{ds.SchemaDBField: schema.GetID()}, false)
 	if err == nil && len(res) > 0 {
-		ids := ""
+		ids := []string{}
 		for _, rec := range res {
-			ids += utils.ToString(rec[utils.SpecialIDParam]) + ","
+			ids = append(ids, utils.ToString(rec[utils.SpecialIDParam]))
 		}
-		res, err = d.Domain.GetDb().QueryAssociativeArray("SELECT * FROM " + ds.DBWorkflowSchema.Name + " WHERE " + ds.WorkflowDBField + " IN (" + ids[:len(ids)-1] + ")")
+		res, _ = d.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
+			ds.WorkflowDBField: ids,
+		}, false)
 		if len(res) == 0 {
 			*additionalActions = append(*additionalActions, "import")
 		}
@@ -167,6 +176,8 @@ func (d *ViewConvertor) handleRecursivePermissions(shallowField *sm.ViewFieldMod
 		shallowField.DataSchema = sch
 		if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") {
 			shallowField.Type = "link"
+		} else {
+			shallowField.Type = utils.TransformType(scheme.Type)
 		}
 		shallowField.ActionPath = fmt.Sprintf("/%s/%s?rows=%s", utils.MAIN_PREFIX, schema.Name, utils.ReservedParam)
 		shallowField.Actions = append(shallowField.Actions, meth.Method())

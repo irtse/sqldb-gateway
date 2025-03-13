@@ -48,8 +48,7 @@ func (t *AbstractController) Call(auth bool, method utils.Method, args ...interf
 			return
 		}
 	} // then proceed to exec by calling domain
-	d := domain.Domain(superAdmin, user, false, nil)
-	d.SetExternalSuperAdmin(superAdmin)
+	d := domain.Domain(superAdmin, user, nil)
 	p, asLabel := t.params()
 	if files, err := t.FormFile(asLabel); err == nil && len(files) > 0 {
 		resp := utils.Results{}

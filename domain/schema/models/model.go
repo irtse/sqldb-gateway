@@ -33,6 +33,25 @@ func (t SchemaModel) Deserialize(rec utils.Record) SchemaModel {
 }
 func (t SchemaModel) GetName() string { return t.Name }
 
+func (t SchemaModel) SetField(field map[string]interface{}) SchemaModel {
+	newField := FieldModel{}.Map(field)
+	if !t.HasField(newField.Name) {
+		CacheMutex.Lock()
+		defer CacheMutex.Unlock()
+		t.Fields = append(t.Fields, *newField)
+	} else {
+		CacheMutex.Lock()
+		defer CacheMutex.Unlock()
+		for _, f := range t.Fields {
+			if newField.Name != f.Name {
+				f = *newField
+			}
+		}
+	}
+	SchemaRegistry[t.Name] = t
+	return t
+}
+
 func (t SchemaModel) HasField(name string) bool {
 	CacheMutex.Lock()
 	defer CacheMutex.Unlock()
@@ -125,6 +144,24 @@ type FieldModel struct { // definition a db table columns
 	ForeignTable string      `json:"-"`           // Special case for foreign key
 	Constraint   string      `json:"constraints"` // Special case for constraint on field
 	Required     bool        `json:"required"`
+}
+
+func (t FieldModel) Map(m map[string]interface{}) *FieldModel {
+	return &FieldModel{
+		ID:          utils.ToString(m["id"]),
+		Name:        utils.ToString(m["name"]),
+		Label:       utils.ToString(m["label"]),
+		Desc:        utils.ToString(m["description"]),
+		Type:        utils.ToString(m["type"]),
+		Index:       utils.ToInt64(m["index"]),
+		Placeholder: utils.ToString(m["placeholder"]),
+		Default:     m["default_value"],
+		Level:       utils.ToString(m["read_level"]),
+		Readonly:    utils.Compare(m["readonly"], true),
+		Link:        utils.ToString(m["link_id"]),
+		Constraint:  utils.ToString(m["constraints"]),
+		Required:    utils.Compare(m["required"], true),
+	}
 }
 
 func (t FieldModel) GetID() int64 {

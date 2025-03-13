@@ -10,12 +10,12 @@ import (
 )
 
 func SetToken(superAdmin bool, user string, token interface{}) (utils.Results, error) {
-	return Domain(superAdmin, user, false, nil).Call( // replace token by a nil
+	return Domain(superAdmin, user, nil).Call( // replace token by a nil
 		utils.AllParams(ds.DBUser.Name), utils.Record{"token": token}, utils.UPDATE, getQueryFilter(user))
 }
 
 func IsLogged(superAdmin bool, user string, token string) (utils.Results, error) {
-	domain := Domain(superAdmin, user, false, nil)
+	domain := Domain(superAdmin, user, nil)
 	params := utils.AllParams(ds.DBNotification.Name).RootRaw()
 	notifs, err := domain.SuperCall(params.RootRaw(), utils.Record{}, utils.SELECT, false)
 	if err != nil {

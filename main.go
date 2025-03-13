@@ -36,7 +36,7 @@ func main() {
 		os.Setenv("SUPERADMIN_PASSWORD", string(hash))
 	}
 	fmt.Printf("%s\n", "Service in "+os.Getenv("AUTH_MODE")+" mode")
-	schema.Load(domain.Domain(true, os.Getenv("SUPERADMIN_NAME"), false, nil))
+	schema.Load(domain.Domain(true, os.Getenv("SUPERADMIN_NAME"), nil))
 	fmt.Printf("%s\n", "Running server...")
 	beego.Run()
 }

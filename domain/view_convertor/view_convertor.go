@@ -41,6 +41,7 @@ func (v *ViewConvertor) TransformToView(results utils.Results, tableName string,
 
 func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.SchemaModel, tableName string, isWorkflow bool) utils.Results {
 	schemes, id, order, cols, addAction, readonly := v.GetViewFields(tableName, false)
+	fmt.Println("schemes", schemes, id, order, cols, addAction, readonly)
 	view := sm.ViewModel{
 		ID:          id,
 		Name:        schema.Label,

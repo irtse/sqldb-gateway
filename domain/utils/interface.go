@@ -31,7 +31,6 @@ type DomainITF interface {
 	GetParams() Params
 
 	// Main accessor defined by DomainITF interface
-	SetExternalSuperAdmin(external bool)
 	HandleRecordAttributes(record Record)
 
 	// Main accessor defined by DomainITF interface

@@ -85,7 +85,7 @@ func (s *SchemaFields) Write(r map[string]interface{}, record map[string]interfa
 			s.Domain.CreateSuperCall(utils.GetColumnTargetParameters(schema.Name, r[sm.NAMEKEY]), record)
 		}
 	}
-	sch.SetSchemaField(utils.ToString(record[sm.NAMEKEY]), r)
+	schema = schema.SetField(r)
 	return &schema, nil
 }
 

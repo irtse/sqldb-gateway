@@ -72,7 +72,7 @@ func (s *ViewService) TransformToView(record utils.Record, userRecord utils.Reco
 			return k == utils.RootRowsParam || k == utils.SpecialIDParam || k == utils.RootTableParam || k == utils.SpecialSubIDParam
 		})
 		if datas, rec, err := s.fetchData(params, sqlFilter, record, rec, schema); err != nil {
-			fmt.Errorf("error while fetching data: %v", err)
+			fmt.Println("error while fetching data: ", err)
 			channel <- nil
 		} else {
 			if utils.Compare(record["is_list"], true) {
@@ -141,6 +141,7 @@ func (s *ViewService) processData(rec *utils.Record, datas utils.Results, schema
 	record utils.Record, view string, params utils.Params) *utils.Record {
 	if !s.Domain.IsShallowed() {
 		treated := view_convertor.NewViewConvertor(s.Domain).TransformToView(datas, schema.Name, false)
+		fmt.Println("treated: ", treated)
 		if len(treated) > 0 {
 			for k, v := range treated[0] {
 				if v != nil {
