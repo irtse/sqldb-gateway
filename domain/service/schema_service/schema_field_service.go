@@ -36,7 +36,6 @@ func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablen
 				i = utils.ToString(record[sm.NAMEKEY])
 			}
 			return strings.Replace(utils.ToString(i), "_", " ", -1)
-
 		})
 	if !slices.Contains(ds.NOAUTOLOADROOTTABLESSTR, tablename) {
 		if rec, err := sch.ValidateBySchema(record, tablename, s.Domain.GetMethod(), s.Domain.VerifyAuth); err != nil && !s.Domain.GetAutoload() {
@@ -67,21 +66,26 @@ func (s *SchemaFields) Write(r map[string]interface{}, record map[string]interfa
 	if err != nil {
 		return nil, err
 	}
+	if typ, ok := record[sm.TYPEKEY]; !ok || strings.Contains(utils.ToString(typ), "many") || schema.HasField(utils.ToString(record[sm.NAMEKEY])) {
+		return nil, fmt.Errorf("field already exists")
+	}
 	readLevels := []string{sm.LEVELNORMAL}
 	if level, ok := record["read_level"]; ok && level != "" && level != sm.LEVELOWN && slices.Contains(sm.READLEVELACCESS, utils.ToString(level)) {
 		readLevels = append(readLevels, strings.Replace(utils.ToString(level), "'", "", -1))
 	}
 	UpdatePermissions(record, schema.Name, readLevels, s.Domain)
-	if isUpdate {
-		newRecord := utils.ToRecord(record, map[string]interface{}{
-			sm.TYPEKEY: r[sm.TYPEKEY],
-			sm.NAMEKEY: r[sm.NAMEKEY],
-		})
-		s.Domain.UpdateSuperCall(utils.GetColumnTargetParameters(schema.Name, r[sm.NAMEKEY]), newRecord)
-	} else {
-		s.Domain.CreateSuperCall(utils.GetColumnTargetParameters(schema.Name, r[sm.NAMEKEY]), record)
+	if !slices.Contains(ds.NOAUTOLOADROOTTABLESSTR, utils.ToString(record[sm.NAMEKEY])) {
+		if isUpdate {
+			newRecord := utils.ToRecord(record, map[string]interface{}{
+				sm.TYPEKEY: r[sm.TYPEKEY],
+				sm.NAMEKEY: r[sm.NAMEKEY],
+			})
+			s.Domain.UpdateSuperCall(utils.GetColumnTargetParameters(schema.Name, r[sm.NAMEKEY]), newRecord)
+		} else {
+			s.Domain.CreateSuperCall(utils.GetColumnTargetParameters(schema.Name, r[sm.NAMEKEY]), record)
+		}
 	}
-	sch.LoadCache(schema.Name, s.Domain.GetDb())
+	sch.SetSchemaField(utils.ToString(record[sm.NAMEKEY]), r)
 	return &schema, nil
 }
 
@@ -100,7 +104,7 @@ func (s *SchemaFields) SpecializedDeleteRow(results []map[string]interface{}, ta
 					sm.NAMEKEY: "my " + schema.Name,
 				}))
 			}
-			sch.LoadCache(schema.Name, s.Domain.GetDb()) // reload schema
+			sch.DeleteSchemaField(tableName, utils.ToString(record[sm.NAMEKEY]))
 		}
 	}
 }

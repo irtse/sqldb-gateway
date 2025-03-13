@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sqldb-ws/domain/utils"
 	"strconv"
+	"strings"
 )
 
 var SchemaRegistry = map[string]SchemaModel{}
@@ -34,13 +35,12 @@ func (t SchemaModel) GetName() string { return t.Name }
 
 func (t SchemaModel) HasField(name string) bool {
 	CacheMutex.Lock()
+	defer CacheMutex.Unlock()
 	for _, field := range t.Fields {
 		if field.Name == name {
-			CacheMutex.Unlock()
 			return true
 		}
 	}
-	CacheMutex.Unlock()
 	return false
 }
 
@@ -87,6 +87,25 @@ func (t SchemaModel) GetFieldByID(id int64) (FieldModel, error) {
 func (v SchemaModel) ToRecord() utils.Record {
 	var r utils.Record
 	b, _ := json.Marshal(v)
+	json.Unmarshal(b, &r)
+	return r
+}
+
+func (v SchemaModel) ToSchemaRecord() utils.Record {
+	fields := []FieldModel{}
+	for _, field := range v.Fields {
+		if !strings.Contains(field.Type, "many") {
+			fields = append(fields, field)
+		}
+	}
+	var r utils.Record
+	b, _ := json.Marshal(SchemaModel{
+		ID:       v.ID,
+		Name:     v.Name,
+		Label:    v.Label,
+		Category: v.Category,
+		Fields:   fields,
+	})
 	json.Unmarshal(b, &r)
 	return r
 }

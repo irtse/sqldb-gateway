@@ -153,6 +153,9 @@ func (db *Database) BuildCreateQueries(tableName string, values string, cols str
 			queries = append(queries, "ALTER TABLE "+tableName+" ADD "+cols+" "+typ+" NULL")
 		}
 	} else {
+		if values == "" || cols == "" {
+			return []string{""}
+		}
 		queries = append(queries, "INSERT INTO "+tableName+"("+cols+") VALUES ("+values+")")
 		if db.Driver == PostgresDriver {
 			queries[len(queries)-1] = queries[len(queries)-1] + " RETURNING ID"

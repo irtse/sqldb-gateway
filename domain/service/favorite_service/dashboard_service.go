@@ -163,7 +163,6 @@ func (d *DashboardService) getDashboardElementView(dashboardID string) utils.Res
 	for _, element := range elements {
 		res, err := d.processDashboardElement(element)
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 		results = append(results, res)
@@ -293,7 +292,6 @@ func (d *DashboardService) processMathResults(r []map[string]interface{}, names 
 		for _, n := range names {
 			f, err := strconv.ParseFloat(utils.ToString(rec[n]), 64)
 			if err != nil {
-				fmt.Println(err)
 				continue
 			}
 

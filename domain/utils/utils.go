@@ -8,6 +8,9 @@ import (
 )
 
 func PrepareEnum(enum string) string {
+	if !strings.Contains(enum, "enum") {
+		return enum
+	}
 	e := strings.Replace(ToString(enum), " ", "", -1)
 	e = strings.Replace(e, "'", "", -1)
 	e = strings.Replace(e, "(", "__", -1)

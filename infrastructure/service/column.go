@@ -53,6 +53,9 @@ func (t *TableColumnService) Create(record map[string]interface{}) ([]map[string
 	queries := t.DB.ClearQueryFilter().BuildCreateQueries(t.Name, "",
 		fmt.Sprintf("%v", record["name"]), fmt.Sprintf("%v", record["type"]))
 	for i, query := range queries {
+		if query == "" {
+			return nil, errors.New("missing values")
+		}
 		if err := t.DB.Query(query); err != nil && len(queries)-1 == i {
 			return t.DBError(nil, err)
 		}

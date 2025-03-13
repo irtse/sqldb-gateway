@@ -292,7 +292,7 @@ func SQLInjectionProtector(injection string) string {
 		log.Error().Msg("injection alert: strange activity of quoting founded")
 		return ""
 	}
-	notAllowedChar := []string{"«", "#", "union", ";", ")", "%27", "%22", "%23", "%3B", "%29"}
+	notAllowedChar := []string{"«", "#", "union", ";", "%27", "%22", "%23", "%3B", "%29", "{", "}", "%7b", "%7d"}
 	for _, char := range notAllowedChar {
 		if strings.Contains(strings.ToLower(injection), char) {
 			log.Error().Msg("injection alert: not allowed " + char + " filter")

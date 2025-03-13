@@ -48,30 +48,93 @@ func GetFieldByID(id int64) (models.FieldModel, error) {
 	return models.FieldModel{}, errors.New("no field corresponding to reference")
 }
 
+func DeleteSchema(tableName string) {
+	models.CacheMutex.Lock()
+	defer models.CacheMutex.Unlock()
+	delete(models.SchemaRegistry, tableName)
+}
+
+func DeleteSchemaField(tableName string, fieldName string) {
+	models.CacheMutex.Lock()
+	defer models.CacheMutex.Unlock()
+	if schema, ok := models.SchemaRegistry[tableName]; ok {
+		fields := []models.FieldModel{}
+		for i, field := range schema.Fields {
+			if field.Name != fieldName {
+				fields = append(fields, schema.Fields[i])
+			}
+		}
+		schema.Fields = fields
+	}
+	delete(models.SchemaRegistry, tableName)
+}
+
+func SetSchemaField(tableName string, field map[string]interface{}) {
+	models.CacheMutex.Lock()
+	defer models.CacheMutex.Unlock()
+	var newField models.FieldModel
+	if err := json.Unmarshal(mustMarshal(field), &newField); err != nil {
+		return
+	}
+	schema, err := GetSchema(tableName)
+	if err == nil {
+		if field, err := schema.GetField(newField.Name); err != nil {
+			if sch, ok := models.SchemaRegistry[schema.Name]; ok {
+				sch.Fields = append(sch.Fields, newField)
+			}
+		} else {
+			for _, f := range schema.Fields {
+				if field.Name != f.Name {
+					f = newField
+				}
+			}
+		}
+	}
+}
+
+func SetSchema(schema map[string]interface{}) {
+	models.CacheMutex.Lock()
+	defer models.CacheMutex.Unlock()
+	var newSchema models.SchemaModel
+	if err := json.Unmarshal(mustMarshal(schema), &newSchema); err != nil {
+		return
+	}
+	if s, ok := models.SchemaRegistry[newSchema.Name]; ok {
+		models.SchemaRegistry[newSchema.Name] = models.SchemaModel{
+			ID:       s.ID,
+			Name:     newSchema.Name,
+			Label:    newSchema.Label,
+			Category: newSchema.Category,
+			Fields:   s.Fields,
+		}
+	} else {
+		models.SchemaRegistry[newSchema.Name] = newSchema
+	}
+}
+
 func LoadCache(name string, db *conn.Database) {
 	db.ClearQueryFilter()
-
+	t := map[string]interface{}{}
 	if name != utils.ReservedParam {
-		db.SQLRestriction = "name=" + conn.Quote(name)
+		t["name"] = conn.Quote(name)
 	} // Filter out system tables
 
-	schemas, err := db.SelectQueryWithRestriction(
-		ds.DBSchema.Name, map[string]interface{}{}, false) // Load schemas from base
+	schemas, err := db.SelectQueryWithRestriction(ds.DBSchema.Name, t, false) // Load schemas from base
 	if err != nil || len(schemas) == 0 {
 		return
 	}
 
-	db.ClearQueryFilter()
 	for _, schema := range schemas {
 		var newSchema models.SchemaModel
 		if err := json.Unmarshal(mustMarshal(schema), &newSchema); err != nil {
 			continue
 		}
-
 		newSchema.Fields = []models.FieldModel{} // Initialize fields
-		db.SQLRestriction = ds.RootID(ds.DBSchema.Name) + "=" + utils.ToString(newSchema.ID)
+		db.ClearQueryFilter()
 		fields, err := db.SelectQueryWithRestriction(
-			ds.DBSchemaField.Name, map[string]interface{}{}, false) // Get fields
+			ds.DBSchemaField.Name, map[string]interface{}{
+				ds.SchemaDBField: utils.ToString(newSchema.ID),
+			}, false) // Get fields
 		db.SQLRestriction = "" // Reset restriction
 
 		if err == nil && len(fields) > 0 {
