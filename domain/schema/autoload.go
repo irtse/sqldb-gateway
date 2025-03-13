@@ -120,11 +120,11 @@ func createView(domainInstance utils.DomainITF, schema sm.SchemaModel, bar *prog
 
 func createSuperAdmin(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
 	bar.AddDetail("Create SuperAdmin profile user ")
-	fmt.Println(domainInstance.CreateSuperCall(utils.AllParams(ds.DBUser.Name).RootRaw(), utils.Record{
+	domainInstance.CreateSuperCall(utils.AllParams(ds.DBUser.Name).RootRaw(), utils.Record{
 		"name":        os.Getenv("SUPERADMIN_NAME"),
 		"email":       os.Getenv("SUPERADMIN_EMAIL"),
 		"super_admin": true,
 		"password":    os.Getenv("SUPERADMIN_PASSWORD"),
-	}))
+	})
 	bar.Add(1)
 }
