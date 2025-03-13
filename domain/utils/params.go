@@ -18,26 +18,16 @@ func (p Params) GetAsArgs(key string) []string {
 }
 
 func (p Params) GetOrder(condition func(string) bool, order []string) []string {
+	direction := []string{}
 	if orderBy, ok := p[RootOrderParam]; ok {
-		direction := []string{}
 		if dir, ok2 := p[RootDirParam]; ok2 {
 			direction = strings.Split(ToString(dir), ",")
 		}
-		for i, el := range strings.Split(ToString(orderBy), ",") {
-			if (!condition(el) && el != SpecialIDParam) || len(direction) <= i {
-				continue
-			} // ???
-			upper := strings.Replace(strings.ToUpper(direction[i]), " ", "", -1)
-			if upper == "ASC" || upper == "DESC" {
-				order = append(order, connector.SQLInjectionProtector(el+" "+upper))
-				continue
-			}
-			order = append(order, connector.SQLInjectionProtector(el+" ASC"))
-		}
-	} else {
-		return []string{"id DESC"}
+		order = strings.Split(ToString(orderBy), ",")
 	}
-	return order
+	return connector.FormatSQLOrderBy(order, direction, func(el string) bool {
+		return !condition(el) && el != SpecialIDParam
+	})
 }
 
 func (p Params) GetLimit(limited string) string {

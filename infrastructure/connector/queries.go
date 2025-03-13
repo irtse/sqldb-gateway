@@ -6,25 +6,8 @@ import (
 	"strings"
 )
 
-/*
-* Prepare a query for execution.
- */
-func (db *Database) Prepare(query string) (*sql.Stmt, error) {
-	if db.Conn == nil {
-		return nil, fmt.Errorf("no connection to database")
-	}
-	if db.LogQueries {
-		log.Info().Msg(query)
-	}
-	return db.Conn.Prepare(query)
-}
-
 func (db *Database) DeleteQueryWithRestriction(name string, restrictions map[string]interface{}, isOr bool) error {
 	return db.Query(db.BuildDeleteQueryWithRestriction(name, restrictions, isOr))
-}
-
-func (db *Database) SelectQueryWithRestrictionList(name string, restrictions []string, isOr bool) ([]map[string]interface{}, error) {
-	return db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
 }
 
 func (db *Database) SelectQueryWithRestriction(name string, restrictions interface{}, isOr bool) ([]map[string]interface{}, error) {
@@ -32,9 +15,6 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 	return db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
 }
 
-/*
-* SelectQuery returns the results of a select query.
- */
 func (db *Database) SimpleMathQuery(algo string, name string, restrictions interface{}, isOr bool) ([]map[string]interface{}, error) {
 	return db.QueryAssociativeArray(db.BuildSimpleMathQueryWithRestriction(algo, name, restrictions, isOr))
 }
@@ -68,17 +48,25 @@ func (db *Database) DeleteQuery(name string, colName string) error {
 }
 
 /*
+* Prepare a query for execution.
+ */
+func (db *Database) Prepare(query string) (*sql.Stmt, error) {
+	if db.Conn == nil {
+		return nil, fmt.Errorf("no connection to database")
+	}
+	return db.Conn.Prepare(query)
+}
+
+/*
 * QueryRow executes a query that is expected to return at most one row.
  */
 func (db *Database) QueryRow(query string) (int64, error) {
 	if db.Conn == nil {
 		return 0, fmt.Errorf("no connection to database")
 	}
-	var id int64
-	if err := db.Conn.QueryRow(query).Scan(&id); err != nil {
-		return 0, err
-	}
-	return id, nil
+	id := int64(0)
+	err := db.Conn.QueryRow(query).Scan(&id)
+	return id, err
 }
 
 /*
@@ -102,20 +90,17 @@ func (db *Database) QueryAssociativeArray(query string) ([]map[string]interface{
 	if db.Conn == nil || strings.Contains(query, "<nil>") {
 		return nil, fmt.Errorf("invalid query or no connection")
 	}
-
 	rows, err := db.Conn.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
 	cols, _ := rows.Columns()
 	columnTypes, _ := rows.ColumnTypes()
 	columnType := map[string]string{}
 	for _, col := range columnTypes {
 		columnType[col.Name()] = strings.ToUpper(col.DatabaseTypeName())
 	}
-
 	var results []map[string]interface{}
 	for rows.Next() {
 		if res, err := db.RowResultToMap(rows, cols, columnType); err == nil {
@@ -126,5 +111,3 @@ func (db *Database) QueryAssociativeArray(query string) ([]map[string]interface{
 	}
 	return results, nil
 }
-
-// FAIRE DU MENAGE

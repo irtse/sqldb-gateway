@@ -103,14 +103,11 @@ func (t *TableColumnService) Delete(restriction ...string) ([]map[string]interfa
 }
 
 func (t *TableColumnService) update(record map[string]interface{}) error {
-	if queries, err := t.DB.BuildUpdateColumnQueries(t.Name, record, nil); err != nil {
-		return err
-	} else {
-		for _, query := range queries {
-			if err := t.DB.Query(query); err != nil && !strings.Contains(query, "DROP") {
-				fmt.Println(query, t.DB.Query(query))
-			}
+	queries, err := t.DB.BuildUpdateColumnQueries(t.Name, record, nil)
+	for _, query := range queries {
+		if err2 := t.DB.Query(query); err2 != nil && !strings.Contains(query, "DROP") {
+			fmt.Println(query, t.DB.Query(query))
 		}
 	}
-	return nil
+	return err
 }

@@ -223,33 +223,22 @@ func FormatSQLRestrictionWhere(SQLrestriction string, restriction string, verify
 	return SQLrestriction, lateAddition
 }
 
-func FormatSQLLimit(limit string, offset string) string {
-	var SQLlimit string
-	if i, err := strconv.Atoi(limit); err == nil {
-		SQLlimit = "LIMIT " + fmt.Sprintf("%v", i)
-		if i2, err := strconv.Atoi(offset); err == nil {
-			SQLlimit += " OFFSET " + fmt.Sprintf("%v", i2)
-		}
-	}
-	return SQLlimit
-}
-
-func FormatSQLOrderBy(orderBy []string, ascDesc []string, verify func(string) bool) string {
-	var order string
+func FormatSQLOrderBy(orderBy []string, ascDesc []string, verify func(string) bool) []string {
+	var order []string = []string{}
 	if len(orderBy) == 0 {
-		return "id DESC"
+		return []string{"id DESC"}
 	}
 	for i, el := range orderBy {
 		if verify(el) && len(ascDesc) > i {
 			upperAscDesc := strings.Replace(strings.ToUpper(ascDesc[i]), " ", "", -1)
 			if upperAscDesc == "ASC" || upperAscDesc == "DESC" {
-				order += SQLInjectionProtector(el + " " + upperAscDesc + ",")
+				order = append(order, SQLInjectionProtector(el+" "+upperAscDesc))
 				continue
 			}
-			order += SQLInjectionProtector(el + " ASC,")
+			order = append(order, SQLInjectionProtector(el+" ASC"))
 		}
 	}
-	return RemoveLastChar(order)
+	return order
 }
 
 func FormatForSQL(datatype string, value interface{}) string {

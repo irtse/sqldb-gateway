@@ -266,5 +266,3 @@ func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []
 	}
 	return SQLrestriction
 }
-
-// set up in DB SIDE

@@ -51,9 +51,8 @@ func (t *TableService) NewTableRowService(specializedService InfraSpecializedSer
 
 func (t *TableService) NewTableColumnService(specializedService InfraSpecializedServiceItf, views string) *TableColumnService {
 	col := &TableColumnService{
-		Views: views,
-		InfraService: InfraService{
-			DB: t.DB, NoLog: t.NoLog, SpecializedService: specializedService},
+		Views:        views,
+		InfraService: InfraService{DB: t.DB, NoLog: t.NoLog, SpecializedService: specializedService},
 	}
 	col.Fill(t.Name, t.SuperAdmin, t.User)
 	if col.SpecializedService == nil {
