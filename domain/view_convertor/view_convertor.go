@@ -289,5 +289,5 @@ func (d *ViewConvertor) IsReadonly(tableName string, record utils.Record) bool {
 			}
 		}
 	}
-	return readonly || record["state"] == "completed" || record["state"] == "dismiss"
+	return readonly || record["state"] == "completed" || record["state"] == "dismiss" || record["state"] == "refused" || record["state"] == "canceled"
 }

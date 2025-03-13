@@ -7,7 +7,7 @@ import "sqldb-ws/domain/schema/models"
 var ConfidentialityLevel = models.SchemaModel{
 	Name:     "confidentiality_level",
 	Label:    "confidentiality level",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 	},
@@ -17,7 +17,7 @@ var confDatas = []string{"public", "confidential project", "IRT confidential", "
 var FormalizedDataProject = models.SchemaModel{
 	Name:     "formalized_data_project",
 	Label:    "formalized data project",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(FormalizedData.Name), Type: models.INTEGER.String(), ForeignTable: FormalizedData.Name, Required: true, Index: 0, Label: "binded formalized data"},
 		{Name: RootID(Project.Name), Type: models.INTEGER.String(), ForeignTable: Project.Name, Required: true, Index: 1, Label: "binded project"},
@@ -27,7 +27,7 @@ var FormalizedDataProject = models.SchemaModel{
 var FormalizedDataStorageType = models.SchemaModel{
 	Name:     "formalized_data_storage_type",
 	Label:    "formalized data storage type",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(FormalizedData.Name), Type: models.INTEGER.String(), ForeignTable: FormalizedData.Name, Required: true, Index: 0, Label: "binded formalized data"},
 		{Name: RootID(SupportType.Name), Type: models.INTEGER.String(), ForeignTable: SupportType.Name, Required: true, Index: 1, Label: "binded storage type"},
@@ -48,7 +48,7 @@ var Project = models.SchemaModel{ // todo
 var Protection = models.SchemaModel{ // TODO
 	Name:     "protection",
 	Label:    "protection",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 	},
@@ -59,7 +59,7 @@ var protArDatas = []string{"france", "UE", "out of the UE"}
 var ProtectionArea = models.SchemaModel{
 	Name:     "protection_area",
 	Label:    "protection area",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 	},
@@ -69,7 +69,7 @@ var protTypDatas = []string{"SOLEAU envelope", "timestamp", "patent application 
 var ProtectionType = models.SchemaModel{
 	Name:     "protection_type",
 	Label:    "protection type",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 	},
@@ -78,7 +78,7 @@ var ProtectionType = models.SchemaModel{
 var RestrictionType = models.SchemaModel{
 	Name:     "restriction_type",
 	Label:    "restriction type",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 		{Name: "formalized_data_id", Type: models.INTEGER.String(), ForeignTable: "formalized_data", Required: true, Index: 1, Label: "related formalized data"},
@@ -90,7 +90,7 @@ var resFamDatas = []string{"report", "internal technical note", "laboratory work
 var ResultFamily = models.SchemaModel{
 	Name:     "result_family",
 	Label:    "result family",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 	},
@@ -101,7 +101,7 @@ var resTypDatas = []string{"process", "method", "algorithm", "software", "specif
 var ResultType = models.SchemaModel{
 	Name:     "result_type",
 	Label:    "result type",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 	},
@@ -112,7 +112,7 @@ var supTypDatas = []string{"IRT server", "external data center", "hard disk", "U
 var SupportType = models.SchemaModel{
 	Name:     "support_type",
 	Label:    "support type",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 	},
@@ -123,7 +123,7 @@ var supDatas = []string{"paper", "digital"}
 var Support = models.SchemaModel{
 	Name:     "support",
 	Label:    "support",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 	},
@@ -146,7 +146,7 @@ var valFormDatas = []string{"scientific journal article", "conference presentati
 var ValuationFormat = models.SchemaModel{
 	Name:     "valuation_format",
 	Label:    "valuation format",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 	},
@@ -157,7 +157,7 @@ var valTyp = []string{"scientific", "economic"}
 var ValuationType = models.SchemaModel{
 	Name:     "valuation_type",
 	Label:    "valuation type",
-	Category: "global data",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 	},
@@ -166,6 +166,7 @@ var ValuationType = models.SchemaModel{
 var FormalizedData = models.SchemaModel{
 	Name:     "formalized_data",
 	Label:    "formalized data",
+	CanOwned: true,
 	Category: "global data",
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},

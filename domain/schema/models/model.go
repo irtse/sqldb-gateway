@@ -15,6 +15,7 @@ type SchemaModel struct { // lightest definition a db table
 	Name     string       `json:"name"`
 	Label    string       `json:"label"`
 	Category string       `json:"category"`
+	CanOwned bool         `json:"can_owned"` // Special case for ownership, it's schema that can be owned by any user (like a request)
 	Fields   []FieldModel `json:"fields,omitempty"`
 }
 

@@ -17,7 +17,7 @@ func Load(domainInstance utils.DomainITF) {
 	defer db.Close()
 	progressbar.OptionSetMaxDetailRow(1)
 	bar := progressbar.NewOptions64(
-		int64(len(ds.NOAUTOLOADROOTTABLES)+len(ds.ROOTTABLES)+len(ds.DEMOROOTTABLES)+len(ds.DBRootViews)),
+		int64(len(ds.NOAUTOLOADROOTTABLES)+len(ds.ROOTTABLES)+len(ds.DEMOROOTTABLES)+len(ds.DBRootViews)+2),
 		progressbar.OptionSetDescription("Setup root DB"),
 		progressbar.OptionSetWriter(os.Stderr),
 		progressbar.OptionSetWidth(10),
@@ -36,6 +36,7 @@ func Load(domainInstance utils.DomainITF) {
 	initializeRootTables(domainInstance, bar) // Create root tables if they don't exist, needed for the next step
 	createSuperAdmin(domainInstance, bar)
 	createRootView(domainInstance, bar)
+	createEnums(domainInstance, bar)
 }
 
 func initializeTables(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
@@ -126,5 +127,16 @@ func createSuperAdmin(domainInstance utils.DomainITF, bar *progressbar.ProgressB
 		"super_admin": true,
 		"password":    os.Getenv("SUPERADMIN_PASSWORD"),
 	})
+	bar.Add(1)
+}
+
+func createEnums(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
+	bar.AddDetail("Create Demo Enums")
+	for k, enum := range ds.DEMODATASENUM {
+		for _, v := range enum {
+			domainInstance.CreateSuperCall(utils.AllParams(k), utils.Record{sm.NAMEKEY: v})
+		}
+	}
+	bar.AddDetail("")
 	bar.Add(1)
 }

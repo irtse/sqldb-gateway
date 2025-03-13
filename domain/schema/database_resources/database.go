@@ -74,7 +74,7 @@ var DBRole = models.SchemaModel{
 var DBRolePermission = models.SchemaModel{
 	Name:     RootName("role_permission"),
 	Label:    "permission role attribution",
-	Category: "role & permission",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBRole.Name), Type: models.INTEGER.String(), ForeignTable: DBRole.Name, Required: true, Readonly: true, Index: 0, Label: "role"},
 		{Name: RootID(DBPermission.Name), Type: models.INTEGER.String(), ForeignTable: DBPermission.Name, Required: true, Readonly: true, Index: 1, Label: "permission"},
@@ -86,6 +86,7 @@ var DBEntity = models.SchemaModel{
 	Name:     RootName("entity"),
 	Label:    "entity",
 	Category: "entity",
+	CanOwned: true,
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
 		{Name: "description", Type: models.TEXT.String(), Required: false, Index: 1},
@@ -112,6 +113,7 @@ var DBHierarchy = models.SchemaModel{
 	Name:     RootName("hierarchy"),
 	Label:    "hierarchy",
 	Category: "user",
+	CanOwned: true,
 	Fields: []models.FieldModel{
 		{Name: "parent_" + RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: true, Index: 0, Label: "hierarchical user"},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Index: 1, Label: "user with hierarchy"},
@@ -125,7 +127,7 @@ var DBHierarchy = models.SchemaModel{
 var DBEntityUser = models.SchemaModel{
 	Name:     RootName("entity_user"),
 	Label:    "entity user attribution",
-	Category: "entity",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: true, Readonly: true, Index: 0, Label: "user"},
 		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: true, Readonly: true, Index: 1, Label: "entity"},
@@ -138,7 +140,7 @@ var DBEntityUser = models.SchemaModel{
 var DBRoleAttribution = models.SchemaModel{
 	Name:     RootName("role_attribution"),
 	Label:    "role attribution",
-	Category: "role & permission",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Index: 0, Label: "user"},
 		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Readonly: true, Index: 1, Label: "entity"},
@@ -166,7 +168,7 @@ var DBWorkflow = models.SchemaModel{
 var DBWorkflowSchema = models.SchemaModel{
 	Name:     RootName("workflow_schema"),
 	Label:    "workflow schema attribution",
-	Category: "workflow",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Constraint: "unique", Readonly: true, Index: 0},
 		{Name: "description", Type: models.TEXT.String(), Required: false, Index: 1},
@@ -215,17 +217,28 @@ var DBTask = models.SchemaModel{
 		{Name: "is_close", Type: models.BOOLEAN.String(), Required: false, Default: false, Level: models.LEVELRESPONSIBLE, Index: 3},
 		{Name: "urgency", Type: models.ENUMURGENCY.String(), Required: false, Default: models.LEVELNORMAL, Readonly: true, Index: 4},
 		{Name: "priority", Type: models.ENUMURGENCY.String(), Required: false, Default: models.LEVELNORMAL, Readonly: true, Index: 5},
-		{Name: "comment", Type: models.TEXT.String(), Required: false, Index: 6},
-		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Readonly: true, Label: "created by", Level: models.LEVELRESPONSIBLE, Index: 8},
-		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Label: "created by", Level: models.LEVELRESPONSIBLE, Index: 8},
-		{Name: "created_date", Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_TIMESTAMP", Readonly: true, Index: 9},
-		{Name: "closing_date", Type: models.TIMESTAMP.String(), Required: false, Readonly: true, Index: 10},
-		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 11},
-		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 12},
-		{Name: RootID(DBRequest.Name), Type: models.INTEGER.String(), ForeignTable: DBRequest.Name, Required: true, Readonly: true, Label: "request attached", Index: 13},
-		{Name: RootID(DBWorkflowSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBWorkflowSchema.Name, Required: false, Readonly: true, Label: "workflow attached", Index: 14},
-		{Name: "nexts", Type: models.BIGVARCHAR.String(), Required: false, Default: "all", Level: models.LEVELRESPONSIBLE, Index: 15},
-		{Name: "meta_" + RootID(DBRequest.Name), Type: models.INTEGER.String(), ForeignTable: DBRequest.Name, Required: false, Readonly: true, Label: "meta request attached", Index: 16},
+		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Readonly: true, Label: "created by", Level: models.LEVELRESPONSIBLE, Index: 6},
+		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Label: "created by", Level: models.LEVELRESPONSIBLE, Index: 7},
+		{Name: "created_date", Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_TIMESTAMP", Readonly: true, Index: 8},
+		{Name: "closing_date", Type: models.TIMESTAMP.String(), Required: false, Readonly: true, Index: 9},
+		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 10},
+		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 11},
+		{Name: RootID(DBRequest.Name), Type: models.INTEGER.String(), ForeignTable: DBRequest.Name, Required: true, Readonly: true, Label: "request attached", Index: 12},
+		{Name: RootID(DBWorkflowSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBWorkflowSchema.Name, Required: false, Readonly: true, Label: "workflow attached", Index: 13},
+		{Name: "nexts", Type: models.BIGVARCHAR.String(), Required: false, Default: "all", Level: models.LEVELRESPONSIBLE, Index: 14},
+		{Name: "meta_" + RootID(DBRequest.Name), Type: models.INTEGER.String(), ForeignTable: DBRequest.Name, Required: false, Readonly: true, Label: "meta request attached", Index: 15},
+	},
+}
+
+var DBComment = models.SchemaModel{
+	Name:     RootName("comment"),
+	Label:    "commentary",
+	Category: "",
+	Fields: []models.FieldModel{
+		{Name: "content", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
+		{Name: "created_date", Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_TIMESTAMP", Readonly: true, Level: models.LEVELRESPONSIBLE, Index: 1},
+		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Label: "comment by", Level: models.LEVELRESPONSIBLE, Index: 2},
+		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 3},
 	},
 }
 
@@ -233,7 +246,7 @@ var DBTask = models.SchemaModel{
 var DBFilter = models.SchemaModel{
 	Name:     RootName("filter"),
 	Label:    "filter",
-	Category: "filter",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
 		{Name: "is_view", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 1},
@@ -250,7 +263,7 @@ var DBFilter = models.SchemaModel{
 var DBFilterField = models.SchemaModel{
 	Name:     RootName("filter_field"),
 	Label:    "filter field",
-	Category: "filter",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBSchemaField.Name), Type: models.INTEGER.String(), ForeignTable: DBSchemaField.Name, Required: false, Index: 0},
 		{Name: "value", Type: models.BIGVARCHAR.String(), Required: false, Index: 1},
@@ -267,7 +280,7 @@ var DBFilterField = models.SchemaModel{
 var DBDashboard = models.SchemaModel{
 	Name:     RootName("dashboard"),
 	Label:    "dashboard",
-	Category: "filter",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
 		{Name: "description", Type: models.BIGVARCHAR.String(), Required: false, Index: 1},
@@ -281,7 +294,7 @@ var DBDashboard = models.SchemaModel{
 var DBDashboardElement = models.SchemaModel{
 	Name:     RootName("dashboard_element"),
 	Label:    "dashboard element",
-	Category: "filter",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
 		{Name: "description", Type: models.BIGVARCHAR.String(), Required: false, Index: 1},
@@ -295,7 +308,7 @@ var DBDashboardElement = models.SchemaModel{
 var DBDashboardMathField = models.SchemaModel{
 	Name:     RootName("dashboard_math_field"),
 	Label:    "dashboard math field",
-	Category: "filter",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
 		{Name: RootID(DBDashboardElement.Name), Type: models.INTEGER.String(), ForeignTable: DBDashboardElement.Name, Required: true, Index: 1},
@@ -331,7 +344,7 @@ var DBView = models.SchemaModel{
 var DBViewAttribution = models.SchemaModel{
 	Name:     RootName("view_attribution"),
 	Label:    "view attribution",
-	Category: "view",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBView.Name), Type: models.INTEGER.String(), ForeignTable: DBView.Name, Required: true, Index: 0},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Index: 1},
@@ -343,7 +356,7 @@ var DBViewAttribution = models.SchemaModel{
 var DBNotification = models.SchemaModel{
 	Name:     RootName("notification"),
 	Label:    "notification",
-	Category: "notification",
+	Category: "",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
 		{Name: "description", Type: models.BIGVARCHAR.String(), Required: false, Index: 1},
@@ -379,7 +392,7 @@ var PERMISSIONEXCEPTION = []string{DBView.Name, DBTask.Name, DBRequest.Name, DBW
 var ROOTTABLES = []models.SchemaModel{DBWorkflow, DBView, DBSchema, DBSchemaField, DBUser, DBPermission, DBEntity,
 	DBRole, DBDataAccess, DBNotification, DBEntityUser, DBRoleAttribution,
 	DBRequest, DBTask, DBWorkflowSchema, DBRolePermission, DBHierarchy, DBViewAttribution, DBFilter, DBFilterField,
-	DBDashboard, DBDashboardElement, DBDashboardMathField,
+	DBDashboard, DBDashboardElement, DBDashboardMathField, DBComment,
 }
 
 var NOAUTOLOADROOTTABLES = []models.SchemaModel{DBSchema, DBSchemaField, DBPermission, DBView, DBWorkflow}

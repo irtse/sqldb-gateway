@@ -2,7 +2,6 @@ package schema_service
 
 import (
 	"fmt"
-	"math/rand"
 	"slices"
 	sch "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -46,13 +45,7 @@ func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablen
 }
 
 func (s *SchemaFields) SpecializedCreateRow(record map[string]interface{}, tableName string) { // THERE
-	if schema, err := s.Write(record, record, false); err == nil && schema != nil && (record[sm.NAMEKEY] == ds.UserDBField || record[sm.NAMEKEY] == ds.EntityDBField) { // create view
-		r := rand.New(rand.NewSource(9999999999))
-		newView := NewView("my"+schema.Name,
-			"View description for my "+schema.Name+" datas.",
-			"my data", schema.GetID(), int64(r.Int()), true, false, true, false, true)
-		s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)
-	}
+	s.Write(record, record, false)
 }
 
 func (s *SchemaFields) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {

@@ -48,7 +48,7 @@ func (d *ViewConvertor) initializeWorkflow(record map[string]interface{}) sm.Wor
 		IsDismiss: record["state"] == "dismiss",
 		Current:   utils.ToString(record["current_index"]),
 		Position:  utils.ToString(record["current_index"]),
-		IsClose:   record["state"] == "completed" || record["state"] == "dismiss",
+		IsClose:   record["state"] == "completed" || record["state"] == "dismiss" || record["state"] == "refused" || record["state"] == "canceled",
 	}
 }
 
@@ -68,7 +68,7 @@ func (d *ViewConvertor) handleTaskWorkflow(record utils.Record) (sm.WorkflowMode
 		nexts := d.parseNextSteps(taskRecord[0])
 		requestID := record.GetString(ds.RootID(ds.DBRequest.Name))
 		workflow.CurrentDismiss = record["state"] == "dismiss"
-		workflow.CurrentClose = record["state"] == "completed" || record["state"] == "dismiss"
+		workflow.CurrentClose = record["state"] == "completed" || record["state"] == "dismiss" || record["state"] == "refused" || record["state"] == "canceled"
 
 		schemaRecord := d.FetchRecord(ds.DBWorkflowSchema.Name, utils.ToString(taskRecord[0][ds.RootID(ds.DBWorkflowSchema.Name)]))
 		if len(schemaRecord) > 0 {

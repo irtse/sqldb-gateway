@@ -21,6 +21,8 @@ var ENDKEY = "end_date"
 var STATEPENDING = "pending"
 var STATEPROGRESSING = "progressing"
 var STATEDISMISS = "dismiss"
+var STATEREFUSED = "refused"
+var STATECANCELED = "canceled"
 var STATECOMPLETED = "completed"
 
 var LEVELADMIN = "admin"
@@ -87,7 +89,7 @@ func DataTypeList() []string {
 		"TEXT", "VARCHAR(6)", "ENUM('and', 'or')",
 		"ENUM('" + LEVELADMIN + "', '" + LEVELMODERATOR + "', '" + LEVELRESPONSIBLE + "', '" + LEVELNORMAL + "')",
 		"ENUM('" + LEVELADMIN + "', '" + LEVELMODERATOR + "', '" + LEVELRESPONSIBLE + "', '" + LEVELNORMAL + "', '" + LEVELOWN + "')",
-		"ENUM('" + STATEPENDING + "', '" + STATEPROGRESSING + "', '" + STATEDISMISS + "', '" + STATECOMPLETED + "')",
+		"ENUM('" + STATEPENDING + "', '" + STATEPROGRESSING + "', '" + STATEDISMISS + "', '" + STATEREFUSED + "', '" + STATECANCELED + "', '" + STATECOMPLETED + "')",
 		"ENUM('low', 'normal', 'high')",
 		"ENUM('all', 'new', 'old')",
 		"ENUM('" + COUNT + "', '" + AVG + "', '" + MIN + "', '" + MAX + "', '" + SUM + "')",

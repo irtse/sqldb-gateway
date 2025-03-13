@@ -2,6 +2,7 @@ package schema_service
 
 import (
 	"fmt"
+	"math/rand"
 	"slices"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -75,10 +76,19 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 			if utils.ToString(record["name"])[:2] == "db" {
 				cat = "technical data"
 			}
-			newView := NewView("view "+schema.Label, "View description for "+schema.Label+" datas.",
-				cat, schema.GetID(), index, true, false, true, false, false,
-			)
-			s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)
+			if schema.Category != "" {
+				newView := NewView(schema.Label, "View description for "+schema.Label+" datas.",
+					cat, schema.GetID(), index, true, false, true, false, false)
+				s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)
+				if schema.CanOwned {
+					r := rand.New(rand.NewSource(9999999999))
+					newView = NewView("my "+schema.Name,
+						"View description for my "+schema.Name+" datas.",
+						"my data", schema.GetID(), int64(r.Int()), true, false, true, false, true)
+
+				}
+				s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)
+			}
 		}
 		// create workflow except for the following schemas
 		if !slices.Contains([]string{

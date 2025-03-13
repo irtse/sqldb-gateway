@@ -40,7 +40,7 @@ func NewTask(name interface{}, description interface{}, urgency interface{}, pri
 }
 
 func CheckStateIsEnded(state interface{}) bool {
-	return state == "completed" || state == "dismiss"
+	return state == "completed" || state == "dismiss" || state == "refused" || state == "canceled"
 }
 
 func SetClosureStatus(res map[string]interface{}) map[string]interface{} {
