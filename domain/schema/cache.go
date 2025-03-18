@@ -73,11 +73,8 @@ func SetSchema(schema map[string]interface{}) (models.SchemaModel, error) {
 	models.CacheMutex.Lock()
 	defer models.CacheMutex.Unlock()
 
-	var newSchema models.SchemaModel
-	if err := json.Unmarshal(mustMarshal(schema), &newSchema); err != nil {
-		return models.SchemaRegistry[newSchema.Name], errors.New("error while unmarshalling schema")
-	}
-	if s, ok := models.SchemaRegistry[newSchema.Name]; ok {
+	newSchema := models.SchemaModel{}.Map(schema)
+	if s, ok := models.SchemaRegistry[newSchema.Name]; ok && newSchema != nil {
 		models.SchemaRegistry[newSchema.Name] = models.SchemaModel{
 			ID:       s.ID,
 			Name:     newSchema.Name,
@@ -85,8 +82,8 @@ func SetSchema(schema map[string]interface{}) (models.SchemaModel, error) {
 			Category: newSchema.Category,
 			Fields:   s.Fields,
 		}
-	} else {
-		models.SchemaRegistry[newSchema.Name] = newSchema
+	} else if newSchema != nil {
+		models.SchemaRegistry[newSchema.Name] = *newSchema
 	}
 	return models.SchemaRegistry[newSchema.Name], nil
 }

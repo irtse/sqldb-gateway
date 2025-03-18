@@ -30,6 +30,14 @@ func (p Params) GetOrder(condition func(string) bool, order []string) []string {
 	})
 }
 
+func (p Params) Copy() map[string]string {
+	to := map[string]string{}
+	for k, v := range p {
+		to[k] = v
+	}
+	return to
+}
+
 func (p Params) GetLimit(limited string) string {
 	if limit, ok := p[RootLimit]; ok {
 		if offset, ok2 := p[RootOffset]; ok2 {

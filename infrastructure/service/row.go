@@ -82,8 +82,7 @@ func (t *TableRowService) Create(record map[string]interface{}) ([]map[string]in
 	}
 	t.DB.ClearQueryFilter().ApplyQueryFilters(fmt.Sprintf("id=%d", id), "", "", "")
 
-	if t.Results, err = t.DB.SelectQueryWithRestriction(
-		t.Table.Name, map[string]interface{}{}, false); len(t.Results) > 0 {
+	if t.Results, err = t.DB.SelectQueryWithRestriction(t.Table.Name, map[string]interface{}{}, false); len(t.Results) > 0 {
 		t.SpecializedService.SpecializedCreateRow(t.Results[0], t.Table.Name)
 	}
 	return t.Results, err

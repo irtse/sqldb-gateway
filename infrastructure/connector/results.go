@@ -30,19 +30,25 @@ func (db *Database) RowResultToMap(rows *sql.Rows,
 * parseColumnValue converts the column value to the appropriate type.
  */
 func (db *Database) parseColumnValue(colType string, val *interface{}) interface{} {
-	if val == nil || *val == nil {
-		return nil
+	v := *val
+	if v == nil {
+		return v
 	}
-	strVal := fmt.Sprintf("%v", *val)
+	if colType == "" {
+		return fmt.Sprintf("%v", string(v.([]uint8)))
+	}
 	switch colType {
 	case "MONEY", "NUMERIC", "DECIMAL", "DOUBLE", "FLOAT":
-		if num, err := strconv.ParseFloat(strVal, 64); err == nil {
+		if num, err := strconv.ParseFloat(string(v.([]uint8)), 64); err == nil {
 			return num
 		}
+		return fmt.Sprintf("%v", v)
 	case "TIMESTAMP", "DATE":
-		if len(strVal) > 10 {
-			return strVal[:10]
+		if len(fmt.Sprintf("%v", *val)) > 10 {
+			return fmt.Sprintf("%v", v)[:10]
 		}
+		return fmt.Sprintf("%v", v)
+	default:
+		return v
 	}
-	return strVal
 }

@@ -34,7 +34,7 @@ func (s *RequestService) GenerateQueryFilter(tableName string, innerestr ...stri
 		}, true)+")")
 	}
 	n = append(n, innerestr...)
-	return f.GetQueryFilter(tableName, n...)
+	return f.GetQueryFilter(tableName, s.Domain.GetParams().Copy(), n...)
 }
 
 func (s *RequestService) GetHierarchical() ([]map[string]interface{}, error) {

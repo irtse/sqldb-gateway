@@ -3,6 +3,7 @@ package filter
 import (
 	"net/url"
 	"slices"
+	"sort"
 	sch "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -20,14 +21,14 @@ func NewFilterService(domain utils.DomainITF) *FilterService {
 	return &FilterService{Domain: domain}
 }
 
-func (f *FilterService) GetQueryFilter(tableName string, innerRestriction ...string) (string, string, string, string) {
+func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Params, innerRestriction ...string) (string, string, string, string) {
 	schema, err := sch.GetSchema(tableName)
 	if err != nil {
 		return "", "", "", ""
 	}
 	var SQLview, SQLrestriction, SQLOrder []string = []string{}, []string{}, []string{}
 	var SQLLimit string
-	restr, view, order, dir, state := f.GetFilterForQuery("", "", utils.ToString(schema.ID))
+	restr, view, order, dir, state := f.GetFilterForQuery("", "", utils.ToString(schema.ID), domainParams)
 	if restr != "" && !f.Domain.IsSuperCall() {
 		SQLrestriction = append(SQLrestriction, restr)
 	}
@@ -43,20 +44,20 @@ func (f *FilterService) GetQueryFilter(tableName string, innerRestriction ...str
 			SQLrestriction = r
 		}
 	}
-	f.Domain.GetParams().Add(utils.RootColumnsParam, view, func(v string) bool { return !f.Domain.IsSuperCall() })
-	f.Domain.GetParams().Add(utils.RootOrderParam, order, func(v string) bool { return true })
-	f.Domain.GetParams().Add(utils.RootDirParam, dir, func(v string) bool { return true })
+	domainParams.Add(utils.RootColumnsParam, view, func(v string) bool { return !f.Domain.IsSuperCall() })
+	domainParams.Add(utils.RootOrderParam, order, func(v string) bool { return true })
+	domainParams.Add(utils.RootDirParam, dir, func(v string) bool { return true })
 
-	SQLrestriction = f.restrictionBySchema(tableName, SQLrestriction)
-	SQLOrder = f.Domain.GetParams().GetOrder(func(el string) bool { return schema.HasField(el) }, SQLOrder)
-	SQLLimit = f.Domain.GetParams().GetLimit(SQLLimit)
-	SQLview = f.viewbyFields(schema)
+	SQLrestriction = f.restrictionBySchema(tableName, SQLrestriction, domainParams)
+	SQLOrder = domainParams.GetOrder(func(el string) bool { return schema.HasField(el) }, SQLOrder)
+	SQLLimit = domainParams.GetLimit(SQLLimit)
+	SQLview = f.viewbyFields(schema, domainParams)
 
 	if f.Domain.IsSuperCall() {
 		return strings.Join(SQLrestriction, " AND "), strings.Join(SQLview, ","), strings.Join(SQLOrder, ","), SQLLimit
 	}
 	SQLrestriction = f.restrictionByEntityUser(schema, SQLrestriction) // admin can see all on admin view
-	if s, ok := f.Domain.GetParams()[utils.RootFilterNewState]; ok && s != "" {
+	if s, ok := domainParams[utils.RootFilterNewState]; ok && s != "" {
 		state = s
 	}
 	SQLrestriction = append(SQLrestriction, later...)
@@ -67,7 +68,7 @@ func (f *FilterService) GetQueryFilter(tableName string, innerRestriction ...str
 	return strings.Join(SQLrestriction, " AND "), strings.Join(SQLOrder, ","), SQLLimit, strings.Join(SQLview, ",")
 }
 
-func (d *FilterService) restrictionBySchema(tableName string, restr []string) []string {
+func (d *FilterService) restrictionBySchema(tableName string, restr []string, domainParams utils.Params) []string {
 	restriction := map[string]interface{}{}
 	restriction["active"] = true
 	if schema, err := sch.GetSchema(tableName); err == nil {
@@ -75,10 +76,10 @@ func (d *FilterService) restrictionBySchema(tableName string, restr []string) []
 			restriction["is_meta"] = false
 		}
 		alterRestr := []string{}
-		if line, ok := d.Domain.GetParams()[utils.RootFilterLine]; ok && tableName != ds.DBView.Name {
+		if line, ok := domainParams[utils.RootFilterLine]; ok && tableName != ds.DBView.Name {
 			alterRestr = append(alterRestr, connector.FormatSQLRestrictionWhereInjection(line, schema.GetTypeAndLinkForField))
 		}
-		for key, val := range d.Domain.GetParams() {
+		for key, val := range domainParams {
 			typ, foreign, err := schema.GetTypeAndLinkForField(key)
 			if (err != nil && key != utils.SpecialIDParam) || key != utils.SpecialIDParam && tableName == ds.DBView.Name {
 				continue
@@ -89,7 +90,7 @@ func (d *FilterService) restrictionBySchema(tableName string, restr []string) []
 			}
 		}
 		restr = append(alterRestr, restr...)
-		if schema.HasField(ds.SchemaDBField) && !d.Domain.IsSuperCall() {
+		if schema.HasField(ds.SchemaDBField) && !d.Domain.IsSuperAdmin() {
 			except := []string{ds.DBRequest.Name, ds.DBTask.Name}
 			enum := []string{}
 			for _, s := range sm.SchemaRegistry {
@@ -161,9 +162,9 @@ func (s *FilterService) restrictionByEntityUser(schema sm.SchemaModel, restr []s
 	return restr
 }
 
-func (d *FilterService) viewbyFields(schema sm.SchemaModel) []string {
+func (d *FilterService) viewbyFields(schema sm.SchemaModel, domainParams utils.Params) []string {
 	SQLview := []string{}
-	views := d.Domain.GetParams()[utils.RootColumnsParam]
+	views := domainParams[utils.RootColumnsParam]
 
 	for _, field := range schema.Fields {
 		manyOK := field.Type == sm.MANYTOMANY.String() || field.Type == sm.ONETOMANY.String()
@@ -174,7 +175,7 @@ func (d *FilterService) viewbyFields(schema sm.SchemaModel) []string {
 			SQLview = append(SQLview, field.Name)
 		}
 	}
-	if p, ok := d.Domain.GetParams()[utils.RootCommandRow]; ok {
+	if p, ok := domainParams[utils.RootCommandRow]; ok {
 		decodedLine, err := url.QueryUnescape(p)
 		if err == nil {
 			SQLview = append(SQLview, decodedLine)
@@ -186,9 +187,9 @@ func (d *FilterService) viewbyFields(schema sm.SchemaModel) []string {
 	return SQLview
 }
 
-func (s *FilterService) GetFilterForQuery(filterID string, viewfilterID string, schemaID string) (string, string, string, string, string) {
+func (s *FilterService) GetFilterForQuery(filterID string, viewfilterID string, schemaID string, domainParams utils.Params) (string, string, string, string, string) {
 	ids := s.GetFilterIDs(filterID, viewfilterID, schemaID)
-	view, order, dir := s.ProcessViewAndOrder(ids[utils.RootViewFilter], schemaID)
+	view, order, dir := s.ProcessViewAndOrder(ids[utils.RootViewFilter], schemaID, domainParams)
 	filter := s.ProcessFilterRestriction(ids[utils.RootFilter], schemaID)
 	state := ""
 	if filterID != "" {
@@ -225,17 +226,28 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schemaID strin
 	return strings.Join(filter, " AND ")
 }
 
-func (s *FilterService) ProcessViewAndOrder(viewfilterID string, schemaID string) (string, string, string) {
+func (s *FilterService) ProcessViewAndOrder(viewfilterID string, schemaID string, domainParams utils.Params) (string, string, string) {
 	var viewFilter, order, dir []string = []string{}, []string{}, []string{}
-	for _, field := range s.GetFilterFields(viewfilterID, schemaID) {
-		f, err := sch.GetFieldByID(utils.GetInt(field, ds.RootID(ds.DBSchemaField.Name)))
-		cols, ok := s.Domain.GetParams()[utils.RootColumnsParam]
-		if err == nil && !slices.Contains(viewFilter, f.Name) && ok && strings.Contains(cols, f.Name) {
-			viewFilter = append(viewFilter, f.Name)
-			if field["dir"] != nil && field["dir"] != "" && !slices.Contains(order, f.Name) {
-				dir = append(dir, strings.ToUpper(utils.ToString(field["dir"])))
-			} else if !slices.Contains(order, f.Name) {
-				dir = append(dir, f.Name+" ASC")
+	if viewfilterID != "" {
+		for _, field := range s.GetFilterFields(viewfilterID, schemaID) {
+			f, err := sch.GetFieldByID(utils.GetInt(field, ds.RootID(ds.DBSchemaField.Name)))
+			cols, ok := domainParams[utils.RootColumnsParam]
+			if err == nil && !slices.Contains(viewFilter, f.Name) && ok && strings.Contains(cols, f.Name) {
+				viewFilter = append(viewFilter, f.Name)
+				if field["dir"] != nil && field["dir"] != "" && !slices.Contains(order, f.Name) {
+					dir = append(dir, strings.ToUpper(utils.ToString(field["dir"])))
+				} else if !slices.Contains(order, f.Name) {
+					dir = append(dir, f.Name+" ASC")
+				}
+			}
+		}
+	} else if schema, err := sch.GetSchemaByID(utils.ToInt64(schemaID)); err == nil {
+		sort.SliceStable(schema.Fields, func(i, j int) bool {
+			return schema.Fields[i].Index <= schema.Fields[j].Index
+		})
+		for _, field := range schema.Fields {
+			if field.Name != "id" {
+				viewFilter = append(viewFilter, field.Name)
 			}
 		}
 	}
@@ -247,7 +259,7 @@ func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []
 		return SQLrestriction
 	}
 	var operator string
-	news, _ := d.CountNewDataAccess(tableName, SQLrestriction, map[string]interface{}{})
+	news, _ := d.CountNewDataAccess(tableName, SQLrestriction)
 	if state == "new" {
 		operator = "IN"
 		if len(news) == 0 {

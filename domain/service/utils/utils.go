@@ -26,7 +26,7 @@ func (s *SpecializedService) TransformToGenericView(results utils.Results, table
 	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true)
 }
 func (s *SpecializedService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
-	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, innerestr...)
+	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }
 
 func CheckAutoLoad(tablename string, record utils.Record, domain utils.DomainITF) (utils.Record, error, bool) {

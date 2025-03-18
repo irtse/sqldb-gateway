@@ -19,6 +19,16 @@ type SchemaModel struct { // lightest definition a db table
 	Fields   []FieldModel `json:"fields,omitempty"`
 }
 
+func (t SchemaModel) Map(m map[string]interface{}) *SchemaModel {
+	return &SchemaModel{
+		ID:       utils.ToString(m["id"]),
+		Name:     utils.ToString(m["name"]),
+		Label:    utils.ToString(m["label"]),
+		Category: utils.ToString(m["category"]),
+		CanOwned: utils.Compare(m["can_owned"], true),
+	}
+}
+
 func (t SchemaModel) GetID() int64 {
 	i, err := strconv.Atoi(t.ID)
 	if err != nil {

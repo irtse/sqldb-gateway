@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -26,7 +27,7 @@ func (d *FilterService) GetUserFilterQuery(field string) string {
 		}, true, field)
 }
 
-func (d *FilterService) CountNewDataAccess(tableName string, filter []string, countParams map[string]interface{}) ([]string, int64) {
+func (d *FilterService) CountNewDataAccess(tableName string, filter []string) ([]string, int64) {
 	newFilter := []interface{}{
 		connector.FormatSQLRestrictionWhereByMap("",
 			map[string]interface{}{
@@ -39,8 +40,8 @@ func (d *FilterService) CountNewDataAccess(tableName string, filter []string, co
 						ds.UserDBField: d.GetUserFilterQuery("id"),
 					}, true, ds.DestTableDBField),
 			}, false)}
-	for k, v := range filter {
-		newFilter[k] = v
+	for _, v := range filter {
+		newFilter = append(newFilter, v)
 	}
 	ids := []string{}
 	if res, err := d.Domain.GetDb().SelectQueryWithRestriction(tableName, newFilter, false); err != nil {
@@ -52,8 +53,9 @@ func (d *FilterService) CountNewDataAccess(tableName string, filter []string, co
 			}
 		}
 	}
-	res, err := d.Domain.GetDb().SimpleMathQuery("COUNT", tableName, newFilter, false)
-	if len(res) == 0 || err != nil || res[0]["result"] == nil {
+	res, err := d.Domain.GetDb().SimpleMathQuery("COUNT", tableName, filter, false)
+	fmt.Println("newFilter", tableName, filter, res, filter)
+	if len(res) == 0 || err != nil || res[0]["result"] == nil || utils.ToInt64(res[0]["result"]) == 0 {
 		return ids, 0
 	}
 	return ids, utils.ToInt64(res[0]["result"])
@@ -87,18 +89,16 @@ func (s *FilterService) GetFilterIDs(filterID string, viewfilterID string, schem
 	utils.ParamsMutex.Lock()
 	defer utils.ParamsMutex.Unlock()
 	for _, v := range filtersID {
-		if s.Domain.GetParams()[v] != "" {
-			params[ds.FilterDBField] = s.Domain.GetParams()[v]
+		if p, ok := s.Domain.GetParams()[v]; ok && p != "" {
+			params[ds.FilterDBField] = p
 			restriction := map[string]interface{}{
 				ds.SchemaDBField: schemaID,
-				ds.FilterDBField: s.Domain.GetParams()[v],
+				ds.FilterDBField: p,
 			}
-			if v == utils.RootViewFilter {
-				restriction["is_view"] = true
-			}
+			restriction["is_view"] = v == utils.RootViewFilter
 			if fields, err := s.Domain.GetDb().SelectQueryWithRestriction(
 				ds.DBFilterField.Name, restriction, false); err == nil && len(fields) > 0 {
-				filtersID[v] = s.Domain.GetParams()[v]
+				filtersID[v] = p
 			}
 		}
 	}

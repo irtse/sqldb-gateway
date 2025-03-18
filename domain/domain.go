@@ -4,6 +4,7 @@ import (
 	"errors"
 	"slices"
 	permissions "sqldb-ws/domain/permission"
+	"sqldb-ws/domain/schema"
 	schserv "sqldb-ws/domain/schema"
 	sm "sqldb-ws/domain/schema/models"
 	domain "sqldb-ws/domain/service"
@@ -107,6 +108,9 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 	d.onBooleanValue(utils.RootSuperCall, func(b bool) { d.Super = b })
 	d.onBooleanValue(utils.RootShallow, func(b bool) { d.Shallowed = b })
 	if tablename, ok := params[utils.RootTableParam]; ok { // retrieve tableName in query (not optionnal)
+		if _, err := schema.GetSchema(tablename); err != nil {
+			return utils.Results{}, errors.New("no schema available for " + tablename)
+		}
 		d.TableName = schserv.GetTablename(tablename)
 		d.onBooleanValue(utils.RootRawView, func(b bool) {
 			if !b {

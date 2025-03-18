@@ -103,6 +103,42 @@ func createRootView(domainInstance utils.DomainITF, bar *progressbar.ProgressBar
 	for _, view := range ds.DBRootViews {
 		bar.AddDetail("Creating Root View " + utils.ToString(utils.ToMap(view)[sm.NAMEKEY]))
 		params := utils.AllParams(ds.DBView.Name).RootRaw()
+		sch, err := GetSchema(utils.ToString(view["foreign_table"]))
+		if err == nil {
+			view[ds.SchemaDBField] = sch.ID
+			delete(view, "foreign_table")
+			if filter, ok := view["filter"]; ok {
+				delete(view, "filter")
+				mFilter := utils.ToMap(filter)
+				attr := "fields"
+				if _, ok := mFilter["view_fields"]; ok {
+					attr = "view_fields"
+				}
+				if res, err := domainInstance.CreateSuperCall(utils.AllParams(ds.DBFilter.Name), utils.Record{
+					sm.NAMEKEY:       utils.ToString(mFilter[sm.NAMEKEY]),
+					"is_view":        attr == "view_fields",
+					ds.SchemaDBField: sch.ID,
+				}); err == nil && len(res) > 0 {
+					if fields := mFilter[attr]; fields != nil {
+						f := utils.Record{ds.FilterDBField: res[0][utils.SpecialIDParam]}
+						for _, field := range utils.ToList(fields) {
+							if n, ok := utils.ToMap(field)["name"]; ok {
+								if ff, err := sch.GetField(utils.ToString(n)); err == nil {
+									utils.ToMap(field)[ds.SchemaFieldDBField] = ff.ID
+								}
+								delete(utils.ToMap(field), "name")
+							}
+							for k, v := range utils.ToMap(field) {
+								f[k] = v
+							}
+						}
+						domainInstance.CreateSuperCall(utils.AllParams(ds.DBFilterField.Name), f)
+					}
+					view[ds.FilterDBField] = res[0][utils.SpecialIDParam]
+				}
+			}
+		}
+
 		domainInstance.CreateSuperCall(params, view)
 		bar.Add(1)
 	}

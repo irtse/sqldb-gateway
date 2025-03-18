@@ -20,6 +20,7 @@ var DBSchema = models.SchemaModel{
 		{Name: models.LABELKEY, Type: models.BIGVARCHAR.String(), Required: true, Readonly: true, Index: 1},
 		{Name: "category", Type: models.BIGVARCHAR.String(), Required: false, Default: "general", Readonly: true, Index: 2},
 		{Name: "fields", Type: "onetomany", ForeignTable: RootName("schema_column"), Required: false, Index: 3},
+		{Name: "can_owned", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 4},
 	},
 }
 
@@ -248,7 +249,7 @@ var DBFilter = models.SchemaModel{
 	Label:    "filter",
 	Category: "",
 	Fields: []models.FieldModel{
-		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
+		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Index: 0},
 		{Name: "is_view", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 1},
 		{Name: "is_selected", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 2},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: false, Index: 3},
@@ -334,7 +335,7 @@ var DBView = models.SchemaModel{
 		{Name: "readonly", Type: models.BOOLEAN.String(), Required: true, Index: 8},
 		{Name: "view_" + RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Index: 9},
 		{Name: RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Index: 10},
-		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Index: 11},
+		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Index: 11},
 		{Name: "own_view", Type: models.BOOLEAN.String(), Required: false, Index: 12},
 		{Name: "only_not_empty", Type: models.BOOLEAN.String(), Required: false, Index: 13},
 	},

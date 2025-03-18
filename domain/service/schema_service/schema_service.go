@@ -82,8 +82,8 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 				s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)
 				if schema.CanOwned {
 					r := rand.New(rand.NewSource(9999999999))
-					newView = NewView("my "+schema.Name,
-						"View description for my "+schema.Name+" datas.",
+					newView = NewView("my "+schema.Label,
+						"View description for my "+schema.Label+" datas.",
 						"my data", schema.GetID(), int64(r.Int()), true, false, true, false, true)
 
 				}

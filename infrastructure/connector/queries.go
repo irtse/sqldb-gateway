@@ -16,6 +16,7 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 }
 
 func (db *Database) SimpleMathQuery(algo string, name string, restrictions interface{}, isOr bool) ([]map[string]interface{}, error) {
+	fmt.Println(db.BuildSimpleMathQueryWithRestriction(algo, name, restrictions, isOr))
 	return db.QueryAssociativeArray(db.BuildSimpleMathQueryWithRestriction(algo, name, restrictions, isOr))
 }
 

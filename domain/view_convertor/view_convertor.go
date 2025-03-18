@@ -14,8 +14,7 @@ import (
 )
 
 type ViewConvertor struct {
-	tableName string
-	Domain    utils.DomainITF
+	Domain utils.DomainITF
 }
 
 func NewViewConvertor(domain utils.DomainITF) *ViewConvertor {
@@ -25,23 +24,22 @@ func NewViewConvertor(domain utils.DomainITF) *ViewConvertor {
 func (v *ViewConvertor) TransformToView(results utils.Results, tableName string, isWorkflow bool) utils.Results {
 	schema, err := scheme.GetSchema(tableName)
 	if err != nil {
+		if results == nil {
+			return utils.Results{}
+		}
 		return results
 	}
-
 	if ids, ok := v.Domain.GetParams()[utils.SpecialIDParam]; ok || v.Domain.GetMethod() != utils.SELECT {
 		v.NewDataAccess(schema.GetID(), strings.Split(ids, ","), v.Domain.GetMethod()) // FOUND IT !
 	}
-
 	if v.Domain.IsShallowed() {
 		return v.transformShallowedView(results, tableName, isWorkflow)
 	}
-
 	return v.transformFullView(results, schema, tableName, isWorkflow)
 }
 
 func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.SchemaModel, tableName string, isWorkflow bool) utils.Results {
 	schemes, id, order, cols, addAction, readonly := v.GetViewFields(tableName, false)
-	fmt.Println("schemes", schemes, id, order, cols, addAction, readonly)
 	view := sm.ViewModel{
 		ID:          id,
 		Name:        schema.Label,
@@ -96,10 +94,10 @@ func (v *ViewConvertor) processResultsConcurrently(results utils.Results, tableN
 			fmt.Printf("panic occurred: %v\n%v\n", err, string(debug.Stack()))
 		}
 	}()
+	fmt.Println("cols", results, cols, v.Domain.GetEmpty())
 	for index, record := range results {
 		go v.ConvertRecordToView(index, channel, record, tableName, cols, v.Domain.GetEmpty(), isWorkflow)
 	}
-
 	for range results {
 		rec := <-channel
 		if !rec.IsEmpty {
@@ -142,31 +140,34 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 }
 
 func (d *ViewConvertor) ConvertRecordToView(index int, channel chan sm.ViewItemModel,
-	record utils.Record, tableName string, cols map[string]sm.FieldModel, shallow, isWorkflow bool) {
+	record utils.Record, tableName string, cols map[string]sm.FieldModel, isEmpty bool, isWorkflow bool) {
 	vals, shallowVals, manyPathVals := make(map[string]interface{}), make(map[string]interface{}), make(map[string]string)
 	manyVals := make(map[string]utils.Results)
-	var datapath, historyPath string
+	var ok bool = false
+	var datapath, historyPath string = "", ""
 
-	if !shallow {
+	if !isEmpty {
 		schema, err := scheme.GetSchema(tableName)
 		if err == nil {
 			historyPath = d.BuildPath(ds.DBDataAccess.Name, utils.ReservedParam, utils.RootOrderParam+"=access_date", utils.RootDirParam+"=asc", utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
 		}
 		vals[utils.SpecialIDParam] = record.GetString(utils.SpecialIDParam)
 	}
+	fmt.Println("field.Name", cols, isEmpty)
+
 	for _, field := range cols {
-		if d.HandleDBSchemaField(record, field, tableName, shallowVals, &datapath) {
+		if datapath, ok = d.HandleDBSchemaField(record, field, tableName, shallowVals); ok {
 			continue
 		}
-		d.HandleLinkField(record, field, tableName, shallow, shallowVals, manyVals, manyPathVals)
-		if shallow {
+		d.HandleLinkField(record, field, tableName, isEmpty, shallowVals, manyVals, manyPathVals)
+		if isEmpty {
 			vals[field.Name] = nil
 		} else if v, ok := record[field.Name]; ok {
 			vals[field.Name] = v
 		}
 	}
 	d.ApplyCommandRow(record, vals)
-
+	fmt.Println("ddd", datapath)
 	channel <- sm.ViewItemModel{
 		Values:        vals,
 		DataPaths:     datapath,
@@ -180,28 +181,31 @@ func (d *ViewConvertor) ConvertRecordToView(index int, channel chan sm.ViewItemM
 	}
 }
 
-func (d *ViewConvertor) HandleDBSchemaField(record utils.Record, field sm.FieldModel, tableName string, shallowVals map[string]interface{}, datapath *string) bool {
+func (d *ViewConvertor) HandleDBSchemaField(record utils.Record, field sm.FieldModel, tableName string, shallowVals map[string]interface{}) (string, bool) {
+	datapath := ""
 	id, idOk := record[field.Name]
 	dest, destOk := record[ds.DestTableDBField]
-	if !strings.Contains(field.Name, ds.DBSchema.Name) || !destOk || !idOk || dest == nil || id == nil {
-		return false
+	if !strings.Contains(field.Name, ds.DBSchema.Name) || !idOk || id == nil {
+		return datapath, false
 	}
 	schema, err := scheme.GetSchemaByID(utils.ToInt64(id))
 	if err != nil {
-		return false
+		return datapath, false
 	}
-	*datapath = d.BuildPath(schema.Name, utils.ToString(dest))
-	shallowVals[ds.RootID(ds.DBSchema.Name)] = utils.Record{"id": schema.ID, "name": schema.Name, "label": schema.Label}
-	if t, err := d.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
-		utils.SpecialIDParam: dest,
-	}, false); err == nil && len(t) > 0 {
-		shallowVals[ds.DestTableDBField] = utils.Record{
-			utils.SpecialIDParam: t[0][utils.SpecialIDParam],
-			sm.NAMEKEY:           t[0][sm.NAMEKEY],
-			sm.LABELKEY:          t[0][sm.NAMEKEY],
-			"data_ref":           "@" + utils.ToString(schema.ID) + ":" + utils.ToString(t[0][utils.SpecialIDParam])}
+	shallowVals[ds.SchemaDBField] = utils.Record{"id": utils.ToString(schema.ID), "name": utils.ToString(schema.Name), "label": utils.ToString(schema.Label)}
+	if destOk && dest != nil {
+		datapath = d.BuildPath(schema.Name, utils.ToString(dest))
+		if t, err := d.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
+			utils.SpecialIDParam: dest,
+		}, false); err == nil && len(t) > 0 {
+			shallowVals[ds.DestTableDBField] = utils.Record{
+				utils.SpecialIDParam: utils.ToString(t[0][utils.SpecialIDParam]),
+				sm.NAMEKEY:           utils.ToString(t[0][sm.NAMEKEY]),
+				sm.LABELKEY:          utils.ToString(t[0][sm.NAMEKEY]),
+				"data_ref":           "@" + utils.ToString(schema.ID) + ":" + utils.ToString(t[0][utils.SpecialIDParam])}
+		}
 	}
-	return true
+	return datapath, true
 }
 
 func (d *ViewConvertor) HandleLinkField(record utils.Record, field sm.FieldModel, tableName string, shallow bool,

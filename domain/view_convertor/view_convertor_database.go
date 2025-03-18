@@ -68,10 +68,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 	if err != nil {
 		return schemes, -1, keysOrdered, cols, additionalActions, true
 	}
-	fmt.Println("sch", schema.Fields)
-
 	for _, scheme := range schema.Fields {
-
 		if !d.Domain.IsSuperAdmin() && !d.Domain.VerifyAuth(tableName, scheme.Name, scheme.Level, utils.SELECT) {
 			continue
 		}

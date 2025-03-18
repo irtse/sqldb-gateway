@@ -51,6 +51,9 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 		selected[id] = rec["is_selected"] == nil || utils.Compare(rec["is_selected"], true)
 	}
 	for _, rec := range view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true) { // transform to generic view
+		if rec == nil {
+			continue
+		}
 		rec["is_selected"] = selected[rec.GetString(utils.SpecialIDParam)] // restore selected filters
 		schema, err := schserv.GetSchemaByID(rec.GetInt("schema_id"))
 		if fields, err2 := s.Domain.GetDb().SelectQueryWithRestriction( // get filter fields
@@ -99,7 +102,7 @@ func (s *FilterService) GenerateQueryFilter(tableName string, innerestr ...strin
 	if !strings.Contains(strings.Join(innerestr, ","), "dashboard_restricted") {
 		innerestr = append(innerestr, "dashboard_restricted=false") // add dashboard_restricted filter if not present AD
 	}
-	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, innerestr...)
+	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }
 
 func (s *FilterService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {

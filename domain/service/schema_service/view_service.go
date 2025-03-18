@@ -27,7 +27,7 @@ func (s *ViewService) VerifyDataIntegrity(record map[string]interface{}, tablena
 }
 
 func (s *ViewService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
-	restr, _, _, _ := filterserv.NewFilterService(s.Domain).GetQueryFilter(tableName, innerestr...)
+	restr, _, _, _ := filterserv.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 	return restr, "", "", ""
 }
 
@@ -35,8 +35,9 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 	runtime.GOMAXPROCS(5)
 	userRecord, _ := servutils.GetUserRecord(s.Domain)
 	channel := make(chan utils.Record, len(results))
+	params := s.Domain.GetParams().Copy()
 	for _, record := range results {
-		go s.TransformToView(record, userRecord, channel, dest_id...)
+		go s.TransformToView(record, userRecord, params, channel, dest_id...)
 	}
 	for range results {
 		if rec := <-channel; rec != nil {
@@ -49,7 +50,8 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 	return
 }
 
-func (s *ViewService) TransformToView(record utils.Record, userRecord utils.Record, channel chan utils.Record, dest_id ...string) {
+func (s *ViewService) TransformToView(record utils.Record, userRecord utils.Record, domainParams utils.Params,
+	channel chan utils.Record, dest_id ...string) {
 	if schema, err := schserv.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err != nil {
 		channel <- nil
 	} else {
@@ -59,34 +61,33 @@ func (s *ViewService) TransformToView(record utils.Record, userRecord utils.Reco
 			s.addFavorizeInfo(userRecord, record, rec)
 		}
 		params := utils.GetRowTargetParameters(schema.Name, s.combineDestinations(dest_id))
-		params.EnrichCondition(s.Domain.GetParams(), func(k string) bool {
+		params.EnrichCondition(domainParams, func(k string) bool {
 			_, ok := params[k]
 			return !ok && k != "new" && !strings.Contains(k, "dest_table") && k != "id"
 		})
 		sqlFilter, view, dir := s.getFilterDetails(record)
 		params.UpdateParamsWithFilters(view, dir)
-		params.EnrichCondition(s.Domain.GetParams(), func(k string) bool {
+		params.EnrichCondition(domainParams, func(k string) bool {
 			return k != utils.RootRowsParam && k != utils.SpecialIDParam && k != utils.RootTableParam
 		})
-		s.Domain.GetParams().Delete(func(k string) bool {
+		domainParams.Delete(func(k string) bool {
 			return k == utils.RootRowsParam || k == utils.SpecialIDParam || k == utils.RootTableParam || k == utils.SpecialSubIDParam
 		})
-		if datas, rec, err := s.fetchData(params, sqlFilter, record, rec, schema); err != nil {
-			fmt.Println("error while fetching data: ", err)
-			channel <- nil
-		} else {
-			if utils.Compare(record["is_list"], true) {
-				filterService := filterserv.NewFilterService(s.Domain)
-				SQLrestriction, _, _, _ := filterService.GetQueryFilter(schema.Name, sqlFilter)
-				rec["new"], rec["max"] = filterService.CountNewDataAccess(schema.Name, []string{SQLrestriction}, params.Anonymized())
-			}
-			rec = *s.processData(&rec, datas, schema, record, view, params)
-			if view != "" {
-				rec["order"] = strings.Split(view, ",")
-			}
-			rec["link_path"] = "/" + utils.MAIN_PREFIX + "/" + fmt.Sprintf(ds.DBView.Name) + "?rows=" + utils.ToString(record[utils.SpecialIDParam])
-			channel <- rec
+		datas, rec := s.fetchData(params, domainParams, sqlFilter, record, rec, schema)
+		if utils.Compare(record["is_list"], true) {
+			filterService := filterserv.NewFilterService(s.Domain)
+			delete(params, "limit")
+			delete(params, "offset")
+			s.Domain.GetDb().ClearQueryFilter()
+			SQLrestriction, _, _, _ := filterService.GetQueryFilter(schema.Name, params, sqlFilter)
+			rec["new"], rec["max"] = filterService.CountNewDataAccess(schema.Name, []string{SQLrestriction})
 		}
+		rec = *s.processData(&rec, datas, schema, record, view, params)
+		if view != "" {
+			rec["order"] = strings.Split(view, ",")
+		}
+		rec["link_path"] = "/" + utils.MAIN_PREFIX + "/" + fmt.Sprintf(ds.DBView.Name) + "?rows=" + utils.ToString(record[utils.SpecialIDParam])
+		channel <- rec
 	}
 }
 
@@ -115,33 +116,40 @@ func (s *ViewService) combineDestinations(dest_id []string) string {
 func (s *ViewService) getFilterDetails(record utils.Record) (string, string, string) {
 	filter := utils.GetString(record, ds.FilterDBField)
 	viewFilter := utils.GetString(record, ds.ViewFilterDBField)
-	sqlFilter, view, _, dir, _ := filterserv.NewFilterService(s.Domain).GetFilterForQuery(filter, viewFilter, utils.GetString(record, ds.SchemaDBField))
+	sqlFilter, view, _, dir, _ := filterserv.NewFilterService(s.Domain).GetFilterForQuery(
+		filter, viewFilter, utils.GetString(record, ds.SchemaDBField), s.Domain.GetParams())
 	return sqlFilter, view, dir
 }
 
-func (s *ViewService) fetchData(params utils.Params, sqlFilter string, record utils.Record, rec utils.Record, schema sm.SchemaModel) (utils.Results, utils.Record, error) {
+func (s *ViewService) fetchData(params utils.Params, domainParams utils.Params, sqlFilter string, record utils.Record, rec utils.Record, schema sm.SchemaModel) (utils.Results, utils.Record) {
 	datas := utils.Results{}
 	if !s.Domain.GetEmpty() {
 		d, _ := s.Domain.SuperCall(params, utils.Record{}, utils.SELECT, true, sqlFilter)
 		if utils.Compare(record["is_list"], true) {
+			delete(params, "limit")
+			delete(params, "offset")
 			filterService := filterserv.NewFilterService(s.Domain)
-			SQLrestriction, _, _, _ := filterService.GetQueryFilter(schema.Name, sqlFilter)
-			rec["new"], rec["max"] = filterService.CountNewDataAccess(schema.Name, []string{SQLrestriction}, params.Anonymized())
+			s.Domain.GetDb().ClearQueryFilter()
+			SQLrestriction, _, _, _ := filterService.GetQueryFilter(schema.Name, params, sqlFilter)
+			fmt.Println("SQLrestriction", params, SQLrestriction)
+			rec["new"], rec["max"] = filterService.CountNewDataAccess(schema.Name, []string{sqlFilter})
 		}
 		for _, data := range d {
-			if s.Domain.GetParams()["new"] != "enable" || slices.Contains(record["new"].([]string), data.GetString("id")) {
+			if domainParams["new"] != "enable" || slices.Contains(record["new"].([]string), data.GetString("id")) {
 				datas = append(datas, data)
 			}
 		}
 	}
-	return datas, rec, nil
+	return datas, rec
 }
 
 func (s *ViewService) processData(rec *utils.Record, datas utils.Results, schema sm.SchemaModel,
 	record utils.Record, view string, params utils.Params) *utils.Record {
+	if utils.Compare(record["is_empty"], true) {
+		datas = append(datas, utils.Record{})
+	}
 	if !s.Domain.IsShallowed() {
 		treated := view_convertor.NewViewConvertor(s.Domain).TransformToView(datas, schema.Name, false)
-		fmt.Println("treated: ", treated)
 		if len(treated) > 0 {
 			for k, v := range treated[0] {
 				if v != nil {

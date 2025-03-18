@@ -182,7 +182,7 @@ func (s *TaskService) GenerateQueryFilter(tableName string, innerestr ...string)
 			UserDBField:              service.GetUserFilterQuery("id"),
 			EntityDBField:            service.GetEntityFilterQuery("id"),
 		}, false))
-		return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, innerestr...)
+		return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 	}
-	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, innerestr...)
+	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }
