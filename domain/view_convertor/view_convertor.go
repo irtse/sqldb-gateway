@@ -65,7 +65,6 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 	if view.Readonly { // if the view is readonly, we remove the actions
 		view.Actions = []string{"get"}
 	}
-
 	sort.SliceStable(view.Items, func(i, j int) bool { return view.Items[i].Sort < view.Items[j].Sort })
 	return utils.Results{view.ToRecord()}
 }
@@ -88,13 +87,11 @@ func (v *ViewConvertor) processResultsConcurrently(results utils.Results, tableN
 	runtime.GOMAXPROCS(maxConcurrent)
 	channel := make(chan sm.ViewItemModel, len(results))
 	defer close(channel)
-
 	go func() {
 		if err := recover(); err != nil {
 			fmt.Printf("panic occurred: %v\n%v\n", err, string(debug.Stack()))
 		}
 	}()
-	fmt.Println("cols", results, cols, v.Domain.GetEmpty())
 	for index, record := range results {
 		go v.ConvertRecordToView(index, channel, record, tableName, cols, v.Domain.GetEmpty(), isWorkflow)
 	}
@@ -117,9 +114,8 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 		Label:    label,
 		Workflow: v.EnrichWithWorkFlowView(record, tableName, isWorkflow),
 	}
-	if record[ds.RootID(ds.DBSchema.Name)] != nil {
-
-		if sch, err := scheme.GetSchemaByID(record.GetInt(ds.RootID(ds.DBSchema.Name))); err == nil {
+	if record[ds.SchemaDBField] != nil {
+		if sch, err := scheme.GetSchemaByID(record.GetInt(ds.SchemaDBField)); err != nil {
 			return nil
 		} else {
 			schema, id, order, _, addAction, readonly := v.GetViewFields(sch.Name, false) // FOUND IT
@@ -153,8 +149,6 @@ func (d *ViewConvertor) ConvertRecordToView(index int, channel chan sm.ViewItemM
 		}
 		vals[utils.SpecialIDParam] = record.GetString(utils.SpecialIDParam)
 	}
-	fmt.Println("field.Name", cols, isEmpty)
-
 	for _, field := range cols {
 		if datapath, ok = d.HandleDBSchemaField(record, field, tableName, shallowVals); ok {
 			continue
@@ -167,7 +161,6 @@ func (d *ViewConvertor) ConvertRecordToView(index int, channel chan sm.ViewItemM
 		}
 	}
 	d.ApplyCommandRow(record, vals)
-	fmt.Println("ddd", datapath)
 	channel <- sm.ViewItemModel{
 		Values:        vals,
 		DataPaths:     datapath,

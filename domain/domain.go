@@ -4,7 +4,6 @@ import (
 	"errors"
 	"slices"
 	permissions "sqldb-ws/domain/permission"
-	"sqldb-ws/domain/schema"
 	schserv "sqldb-ws/domain/schema"
 	sm "sqldb-ws/domain/schema/models"
 	domain "sqldb-ws/domain/service"
@@ -108,29 +107,25 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 	d.onBooleanValue(utils.RootSuperCall, func(b bool) { d.Super = b })
 	d.onBooleanValue(utils.RootShallow, func(b bool) { d.Shallowed = b })
 	if tablename, ok := params[utils.RootTableParam]; ok { // retrieve tableName in query (not optionnal)
-		if _, err := schema.GetSchema(tablename); err != nil {
-			return utils.Results{}, errors.New("no schema available for " + tablename)
-		}
-		d.TableName = schserv.GetTablename(tablename)
+		d.TableName = strings.ToLower(schserv.GetTablename(tablename))
 		d.onBooleanValue(utils.RootRawView, func(b bool) {
 			if !b {
-				d.ClearDeprecatedDatas(tablename)
+				d.ClearDeprecatedDatas(d.TableName)
 			}
 		})
-		specializedService := domain.SpecializedService(tablename)
+		specializedService := domain.SpecializedService(d.TableName)
 		specializedService.SetDomain(d)
 		d.Db = conn.Open(d.Db)
 		defer d.Db.Close()
 		if d.Method.IsMath() {
 			d.Method = utils.SELECT
 		}
-		if !d.SuperAdmin && !d.PermsService.PermsCheck(tablename, "", "", d.Method) && !d.AutoLoad {
-			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + tablename + " data")
+		if !d.SuperAdmin && !d.PermsService.PermsCheck(d.TableName, "", "", d.Method) && !d.AutoLoad {
+			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + d.TableName + " data")
 		}
 		// load the highest entity avaiable Table level.
-		d.Service = infrastructure.NewTableService(d.Db, d.SuperAdmin, d.User, strings.ToLower(tablename))
+		d.Service = infrastructure.NewTableService(d.Db, d.SuperAdmin, d.User, strings.ToLower(d.TableName))
 		delete(d.Params, utils.RootTableParam)
-		tablename = strings.ToLower(tablename)
 		if rowName, ok := params[utils.RootRowsParam]; ok { // rows override columns
 			return d.GetRowResults(rowName, record, specializedService, args...)
 		}
@@ -138,9 +133,9 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 			return utils.Results{}, errors.New(
 				"not authorized to " + method.String() + " " + d.Service.GetName() + " data")
 		}
-		if col, ok := params[utils.RootColumnsParam]; ok && tablename != utils.ReservedParam {
+		if col, ok := params[utils.RootColumnsParam]; ok && d.TableName != utils.ReservedParam {
 			d.Service = d.Service.(*infrastructure.TableService).NewTableColumnService(specializedService, strings.ToLower(col))
-		} else if tablename == utils.ReservedParam {
+		} else if d.TableName == utils.ReservedParam {
 			return utils.Results{}, errors.New("can't load table as " + utils.ReservedParam)
 		}
 		return d.invoke(record, method, args...)

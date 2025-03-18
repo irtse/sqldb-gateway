@@ -1,7 +1,6 @@
 package filter
 
 import (
-	"fmt"
 	"slices"
 	"sort"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -54,7 +53,6 @@ func (d *FilterService) CountNewDataAccess(tableName string, filter []string) ([
 		}
 	}
 	res, err := d.Domain.GetDb().SimpleMathQuery("COUNT", tableName, filter, false)
-	fmt.Println("newFilter", tableName, filter, res, filter)
 	if len(res) == 0 || err != nil || res[0]["result"] == nil || utils.ToInt64(res[0]["result"]) == 0 {
 		return ids, 0
 	}

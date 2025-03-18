@@ -22,7 +22,6 @@ type DomainITF interface {
 	Call(params Params, rec Record, m Method, args ...interface{}) (Results, error)
 
 	// Main accessor defined by DomainITF interface
-	GetAutoload() bool
 	GetDb() *conn.Database
 	GetMethod() Method
 	GetTable() string

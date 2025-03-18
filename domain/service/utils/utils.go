@@ -6,6 +6,7 @@ import (
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/domain/view_convertor"
+	"sqldb-ws/infrastructure/connector"
 	"sqldb-ws/infrastructure/service"
 )
 
@@ -32,7 +33,7 @@ func (s *SpecializedService) GenerateQueryFilter(tableName string, innerestr ...
 func CheckAutoLoad(tablename string, record utils.Record, domain utils.DomainITF) (utils.Record, error, bool) {
 	if domain.GetMethod() != utils.DELETE {
 		if rec, err := sch.ValidateBySchema(record, tablename,
-			domain.GetMethod(), domain.VerifyAuth); err != nil && !domain.GetAutoload() {
+			domain.GetMethod(), domain.VerifyAuth); err != nil {
 			return rec, err, false
 		}
 	}
@@ -43,8 +44,8 @@ func GetUserRecord(domain utils.DomainITF) (utils.Record, bool) {
 	userRecords, _ := domain.GetDb().SelectQueryWithRestriction(
 		ds.DBUser.Name,
 		map[string]interface{}{
-			"name":  domain.GetUser(),
-			"email": domain.GetUser(),
+			"name":  connector.Quote(domain.GetUser()),
+			"email": connector.Quote(domain.GetUser()),
 		}, true)
 	if len(userRecords) > 0 {
 		return userRecords[0], true

@@ -9,6 +9,7 @@ import (
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
+	"sqldb-ws/infrastructure/connector"
 	"strings"
 )
 
@@ -31,8 +32,9 @@ func (d *ViewConvertor) FetchRecord(tableName, id string) []map[string]interface
 }
 
 func (d *ViewConvertor) NewDataAccess(schemaID int64, destIDs []string, meth utils.Method) {
+	d.Domain.GetDb().ClearQueryFilter()
 	if users, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-		"name": d.Domain.GetUser(), "email": d.Domain.GetUser(),
+		"name": connector.Quote(d.Domain.GetUser()), "email": connector.Quote(d.Domain.GetUser()),
 	}, true); err == nil && len(users) > 0 {
 		for _, destID := range destIDs {
 			id := utils.GetString(users[0], utils.SpecialIDParam)
@@ -72,7 +74,6 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 		if !d.Domain.IsSuperAdmin() && !d.Domain.VerifyAuth(tableName, scheme.Name, scheme.Level, utils.SELECT) {
 			continue
 		}
-
 		shallowField := sm.ViewFieldModel{
 			ActionPath: "",
 			Actions:    []string{},
@@ -87,13 +88,13 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 		} else {
 			shallowField.Type = utils.TransformType(scheme.Type)
 		}
-
 		if scheme.GetLink() > 0 && !d.Domain.IsLowerResult() {
 			d.processLinkedSchema(&shallowField, scheme, tableName)
 		}
 
 		d.processPermissions(&shallowField, scheme, tableName, &additionalActions, schema)
 		schemes[scheme.Name] = shallowField
+		keysOrdered = append(keysOrdered, scheme.Name)
 	}
 
 	sort.SliceStable(keysOrdered, func(i, j int) bool {
@@ -106,7 +107,6 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 
 func (d *ViewConvertor) processLinkedSchema(shallowField *sm.ViewFieldModel, scheme sm.FieldModel, tableName string) {
 	schema, _ := sch.GetSchemaByID(scheme.GetLink())
-
 	if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") {
 		shallowField.Type = "link"
 	} else {
@@ -157,8 +157,9 @@ func (d *ViewConvertor) checkAndAddImportAction(additionalActions *[]string, sch
 		for _, rec := range res {
 			ids = append(ids, utils.ToString(rec[utils.SpecialIDParam]))
 		}
+		d.Domain.GetDb().ClearQueryFilter()
 		res, _ = d.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
-			ds.WorkflowDBField: ids,
+			utils.SpecialIDParam: ids,
 		}, false)
 		if len(res) == 0 {
 			*additionalActions = append(*additionalActions, "import")

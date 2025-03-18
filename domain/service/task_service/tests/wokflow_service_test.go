@@ -25,7 +25,6 @@ func (m *MockDomain) DefineQueryFilter(tableName string, innerestr ...string) (s
 	return "", "", "", ""
 }
 func (m *MockDomain) GetMethod() utils.Method { return utils.CREATE }
-func (m *MockDomain) GetAutoload() bool       { return false }
 func (m *MockDomain) ValidateBySchema(record utils.Record, tableName string) (utils.Record, error) {
 	return record, nil
 }

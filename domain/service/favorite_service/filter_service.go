@@ -10,6 +10,7 @@ import (
 	servutils "sqldb-ws/domain/service/utils"
 	utils "sqldb-ws/domain/utils"
 	"sqldb-ws/domain/view_convertor"
+	"sqldb-ws/infrastructure/connector"
 	"strconv"
 	"strings"
 )
@@ -148,7 +149,7 @@ func (s *FilterService) ProcessName(record map[string]interface{}) {
 	if name, ok := record["name"]; ok {
 		if result, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
 			ds.SchemaDBField: record[ds.SchemaDBField],
-			"name":           name,
+			"name":           connector.Quote(utils.ToString(name)),
 		}, false); err == nil && len(result) > 0 {
 			record[utils.SpecialIDParam] = result[0][utils.SpecialIDParam]
 		}

@@ -37,7 +37,7 @@ func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablen
 			return strings.Replace(utils.ToString(i), "_", " ", -1)
 		})
 	if !slices.Contains(ds.NOAUTOLOADROOTTABLESSTR, tablename) {
-		if rec, err := sch.ValidateBySchema(record, tablename, s.Domain.GetMethod(), s.Domain.VerifyAuth); err != nil && !s.Domain.GetAutoload() {
+		if rec, err := sch.ValidateBySchema(record, tablename, s.Domain.GetMethod(), s.Domain.VerifyAuth); err != nil {
 			return rec, err, false
 		}
 	}

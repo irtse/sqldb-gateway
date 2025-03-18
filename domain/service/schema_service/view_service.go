@@ -130,8 +130,6 @@ func (s *ViewService) fetchData(params utils.Params, domainParams utils.Params, 
 			delete(params, "offset")
 			filterService := filterserv.NewFilterService(s.Domain)
 			s.Domain.GetDb().ClearQueryFilter()
-			SQLrestriction, _, _, _ := filterService.GetQueryFilter(schema.Name, params, sqlFilter)
-			fmt.Println("SQLrestriction", params, SQLrestriction)
 			rec["new"], rec["max"] = filterService.CountNewDataAccess(schema.Name, []string{sqlFilter})
 		}
 		for _, data := range d {
@@ -160,9 +158,11 @@ func (s *ViewService) processData(rec *utils.Record, datas utils.Results, schema
 						(*rec)[k] = s.extractSchema(utils.ToMap(v), record, schema, params, view)
 					case "shortcuts":
 						(*rec)[k] = s.extractShortcuts(utils.ToMap(v), record)
+					default:
+						if recValue, exists := (*rec)[k]; !exists || recValue == "" {
+							(*rec)[k] = v
+						}
 					}
-				} else if recValue, exists := (*rec)[k]; !exists || recValue == "" {
-					(*rec)[k] = v
 				}
 			}
 		}
@@ -191,8 +191,12 @@ func (s *ViewService) extractItems(value []interface{}, record utils.Record, sch
 			if strings.Contains(path, ds.DBView.Name) {
 				path = utils.RootDestTableIDParam
 			}
-			utils.ToMap(item)["link_path"] = fmt.Sprintf("/%s/%s?%s=%v", utils.MAIN_PREFIX, schema.Name,
-				utils.RootRowsParam, utils.ToMap(values)[utils.SpecialIDParam])
+			if !(len(schema.Fields) == 1 && schema.Fields[0].Name == "name") {
+				fmt.Println("ERROR: schema fields not equal to 1 or name", schema.Name)
+				utils.ToMap(item)["link_path"] = fmt.Sprintf("/%s/%s?%s=%v", utils.MAIN_PREFIX, schema.Name,
+					utils.RootRowsParam, utils.ToMap(values)[utils.SpecialIDParam])
+			}
+
 			utils.ToMap(item)["data_path"] = ""
 		}
 	}

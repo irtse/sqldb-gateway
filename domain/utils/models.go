@@ -15,7 +15,6 @@ type AbstractDomain struct {
 	Params     Params
 }
 
-func (d *AbstractDomain) GetAutoload() bool   { return d.AutoLoad }
 func (d *AbstractDomain) GetMethod() Method   { return d.Method }
 func (d *AbstractDomain) GetEmpty() bool      { return d.Empty }
 func (d *AbstractDomain) GetUser() string     { return d.User }

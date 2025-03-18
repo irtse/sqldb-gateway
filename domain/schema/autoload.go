@@ -32,14 +32,14 @@ func Load(domainInstance utils.DomainITF) {
 		progressbar.OptionSetRenderBlankState(true),
 	)
 	LoadCache(utils.ReservedParam, db)
-	initializeTables(domainInstance, bar)     // Create tables if they don't exist, needed for the next step
-	initializeRootTables(domainInstance, bar) // Create root tables if they don't exist, needed for the next step
-	createSuperAdmin(domainInstance, bar)
-	createRootView(domainInstance, bar)
-	createEnums(domainInstance, bar)
+	InitializeTables(domainInstance, bar)     // Create tables if they don't exist, needed for the next step
+	InitializeRootTables(domainInstance, bar) // Create root tables if they don't exist, needed for the next step
+	CreateSuperAdmin(domainInstance, bar)
+	CreateRootView(domainInstance, bar)
+	CreateEnums(domainInstance, bar)
 }
 
-func initializeTables(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
+func InitializeTables(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
 	for _, table := range ds.NOAUTOLOADROOTTABLES {
 		if _, err := GetSchema(table.Name); err != nil {
 			bar.AddDetail("Creating table " + table.Name)
@@ -49,21 +49,31 @@ func initializeTables(domainInstance utils.DomainITF, bar *progressbar.ProgressB
 	}
 }
 
-func initializeRootTables(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
+func InitializeRootTables(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
 	var wfNew, viewNew bool
 	rootTables := append(ds.ROOTTABLES, ds.DEMOROOTTABLES...)
 	for _, table := range rootTables {
 		if _, err := GetSchema(table.Name); err != nil {
 			bar.AddDetail("Creating Schema " + table.Name)
-			if createRootTable(domainInstance, table.ToRecord()) {
+			r := table.ToRecord()
+			for _, field := range table.Fields {
+				if schema, err := GetSchema(field.ForeignTable); err == nil {
+					for _, f := range utils.ToList(r["fields"]) {
+						if utils.ToString(utils.ToMap(f)["name"]) == field.Name {
+							utils.ToMap(f)["link_id"] = schema.ID
+						}
+					}
+				}
+			}
+			if CreateRootTable(domainInstance, r) {
 				wfNew = table.Name == ds.DBWorkflow.Name
 				viewNew = table.Name == ds.DBView.Name
 				if schema, err := GetSchema(table.Name); err == nil {
 					if wfNew {
-						createWorkflowView(domainInstance, schema, bar)
+						CreateWorkflowView(domainInstance, schema, bar)
 					}
 					if viewNew {
-						createView(domainInstance, schema, bar)
+						CreateView(domainInstance, schema, bar)
 					}
 				}
 			}
@@ -72,13 +82,13 @@ func initializeRootTables(domainInstance utils.DomainITF, bar *progressbar.Progr
 	}
 }
 
-func createRootTable(domainInstance utils.DomainITF, record utils.Record) bool {
+func CreateRootTable(domainInstance utils.DomainITF, record utils.Record) bool {
 	params := utils.AllParams(ds.DBSchema.Name).RootRaw()
 	res, err := domainInstance.CreateSuperCall(params, record)
 	return !(err != nil || len(res) == 0)
 }
 
-func createWorkflowView(domainInstance utils.DomainITF, schema sm.SchemaModel, bar *progressbar.ProgressBar) {
+func CreateWorkflowView(domainInstance utils.DomainITF, schema sm.SchemaModel, bar *progressbar.ProgressBar) {
 	bar.AddDetail("Creating Integration Workflow for Schema " + schema.Name)
 	params := utils.Params{
 		utils.RootTableParam: ds.DBView.Name,
@@ -99,7 +109,7 @@ func createWorkflowView(domainInstance utils.DomainITF, schema sm.SchemaModel, b
 	domainInstance.CreateSuperCall(params, newWorkflow)
 }
 
-func createRootView(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
+func CreateRootView(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
 	for _, view := range ds.DBRootViews {
 		bar.AddDetail("Creating Root View " + utils.ToString(utils.ToMap(view)[sm.NAMEKEY]))
 		params := utils.AllParams(ds.DBView.Name).RootRaw()
@@ -144,7 +154,7 @@ func createRootView(domainInstance utils.DomainITF, bar *progressbar.ProgressBar
 	}
 }
 
-func createView(domainInstance utils.DomainITF, schema sm.SchemaModel, bar *progressbar.ProgressBar) {
+func CreateView(domainInstance utils.DomainITF, schema sm.SchemaModel, bar *progressbar.ProgressBar) {
 	bar.AddDetail("Create View for Schema " + schema.Name)
 	params := utils.AllParams(ds.DBWorkflow.Name).RootRaw()
 	newView := utils.Record{
@@ -155,7 +165,7 @@ func createView(domainInstance utils.DomainITF, schema sm.SchemaModel, bar *prog
 	domainInstance.CreateSuperCall(params, newView)
 }
 
-func createSuperAdmin(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
+func CreateSuperAdmin(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
 	bar.AddDetail("Create SuperAdmin profile user ")
 	domainInstance.CreateSuperCall(utils.AllParams(ds.DBUser.Name).RootRaw(), utils.Record{
 		"name":        os.Getenv("SUPERADMIN_NAME"),
@@ -166,7 +176,7 @@ func createSuperAdmin(domainInstance utils.DomainITF, bar *progressbar.ProgressB
 	bar.Add(1)
 }
 
-func createEnums(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
+func CreateEnums(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
 	bar.AddDetail("Create Demo Enums")
 	for k, enum := range ds.DEMODATASENUM {
 		for _, v := range enum {

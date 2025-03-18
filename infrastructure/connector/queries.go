@@ -3,6 +3,7 @@ package connector
 import (
 	"database/sql"
 	"fmt"
+	"runtime/debug"
 	"strings"
 )
 
@@ -16,7 +17,6 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 }
 
 func (db *Database) SimpleMathQuery(algo string, name string, restrictions interface{}, isOr bool) ([]map[string]interface{}, error) {
-	fmt.Println(db.BuildSimpleMathQueryWithRestriction(algo, name, restrictions, isOr))
 	return db.QueryAssociativeArray(db.BuildSimpleMathQueryWithRestriction(algo, name, restrictions, isOr))
 }
 
@@ -93,6 +93,8 @@ func (db *Database) QueryAssociativeArray(query string) ([]map[string]interface{
 	}
 	rows, err := db.Conn.Query(query)
 	if err != nil {
+		fmt.Println(query, err)
+		debug.PrintStack()
 		return nil, err
 	}
 	defer rows.Close()

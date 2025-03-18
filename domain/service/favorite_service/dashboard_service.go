@@ -30,7 +30,7 @@ func (s *DashboardService) SpecializedUpdateRow(results []map[string]interface{}
 	s.SpecializedCreateRow(record, ds.DBFilter.Name)
 }
 
-func (s *DashboardService) createDashboardMathOperation(elementID string, record map[string]interface{}) error {
+func (s *DashboardService) CreateDashboardMathOperation(elementID string, record map[string]interface{}) error {
 	if elementID == "" {
 		return errors.New("element id is required")
 	}
@@ -39,7 +39,7 @@ func (s *DashboardService) createDashboardMathOperation(elementID string, record
 	return err
 }
 
-func (s *DashboardService) createDashboardElement(dashboardID string, record map[string]interface{}) error {
+func (s *DashboardService) CreateDashboardElement(dashboardID string, record map[string]interface{}) error {
 	if dashboardID == "" {
 		return errors.New("dashboard id is required")
 	}
@@ -50,17 +50,17 @@ func (s *DashboardService) createDashboardElement(dashboardID string, record map
 
 func (s *DashboardService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
 	for _, element := range s.Elements {
-		err := s.createDashboardElement(utils.ToString(record[utils.SpecialIDParam]), element)
+		err := s.CreateDashboardElement(utils.ToString(record[utils.SpecialIDParam]), element)
 		if fields, ok := record["fields"]; ok && err == nil {
 			for _, field := range utils.ToList(fields) {
-				err = s.createDashboardMathOperation(utils.ToString(record[utils.SpecialIDParam]), utils.ToMap(field))
+				err = s.CreateDashboardMathOperation(utils.ToString(record[utils.SpecialIDParam]), utils.ToMap(field))
 				if err != nil {
 					break
 				}
 			}
 		}
 		if err != nil {
-			fmt.Errorf("%v", err)
+			fmt.Println(err)
 		}
 	}
 }
