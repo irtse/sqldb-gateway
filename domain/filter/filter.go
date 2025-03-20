@@ -48,7 +48,7 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 	domainParams.Add(utils.RootOrderParam, order, func(v string) bool { return true })
 	domainParams.Add(utils.RootDirParam, dir, func(v string) bool { return true })
 
-	SQLrestriction = f.restrictionBySchema(tableName, SQLrestriction, domainParams)
+	SQLrestriction = f.RestrictionBySchema(tableName, SQLrestriction, domainParams)
 	SQLOrder = domainParams.GetOrder(func(el string) bool { return schema.HasField(el) }, SQLOrder)
 	SQLLimit = domainParams.GetLimit(SQLLimit)
 	SQLview = f.viewbyFields(schema, domainParams)
@@ -64,11 +64,10 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 	if state != "" {
 		SQLrestriction = f.LifeCycleRestriction(tableName, SQLrestriction, state)
 	}
-
 	return strings.Join(SQLrestriction, " AND "), strings.Join(SQLOrder, ","), SQLLimit, strings.Join(SQLview, ",")
 }
 
-func (d *FilterService) restrictionBySchema(tableName string, restr []string, domainParams utils.Params) []string {
+func (d *FilterService) RestrictionBySchema(tableName string, restr []string, domainParams utils.Params) []string {
 	restriction := map[string]interface{}{}
 	restriction["active"] = true
 	if schema, err := sch.GetSchema(tableName); err == nil {
@@ -214,6 +213,7 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schemaID strin
 			ds.DBSchemaField.Name,
 			map[string]interface{}{ds.SchemaDBField: schemaID}, false)
 	}
+	s.Domain.GetDb().ClearQueryFilter()
 	fields, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false)
 	if err == nil && len(fields) > 0 {
 		for _, field := range fields {

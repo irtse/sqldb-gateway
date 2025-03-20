@@ -138,7 +138,7 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 		} else if d.TableName == utils.ReservedParam {
 			return utils.Results{}, errors.New("can't load table as " + utils.ReservedParam)
 		}
-		return d.invoke(record, method, args...)
+		return d.Invoke(record, method, args...)
 	}
 	return utils.Results{}, errors.New("no service available")
 }
@@ -157,14 +157,14 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 		record[utils.SpecialIDParam] = d.Params[utils.SpecialIDParam]
 	}
 	d.Service = d.Service.(*infrastructure.TableService).NewTableRowService(specializedService)
-	res, err := d.invoke(record, d.Method, args...)
+	res, err := d.Invoke(record, d.Method, args...)
 	if err == nil && d.Params[utils.RootRawView] != "enable" && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
 		return specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestTableIDParam)...), nil
 	}
 	return res, err
 }
 
-func (d *SpecializedDomain) invoke(record utils.Record, method utils.Method, args ...interface{}) (utils.Results, error) {
+func (d *SpecializedDomain) Invoke(record utils.Record, method utils.Method, args ...interface{}) (utils.Results, error) {
 	var err error
 	res := []map[string]interface{}{}
 	if d.Service == nil {

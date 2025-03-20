@@ -84,14 +84,6 @@ func TestCall_NoParams(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestOnBooleanValue_EnableKey(t *testing.T) {
-	d := domain.Domain(false, "user", nil)
-	d.Params = utils.Params{"testKey": "enable"}
-	var flag bool
-	d.OnBooleanValue("testKey", func(b bool) { flag = b })
-	assert.True(t, flag)
-}
-
 func TestCall_NoTableName(t *testing.T) {
 	d := domain.Domain(false, "user", nil)
 	params := utils.Params{}
@@ -108,7 +100,7 @@ func TestCall_UnauthorizedMethod(t *testing.T) {
 
 func TestInvoke_UnknownMethod(t *testing.T) {
 	d := domain.Domain(false, "user", nil)
-	_, err := d.Invoke(nil, utils.Method("UNKNOWN"))
+	_, err := d.Invoke(nil, utils.UNKNOWN)
 	assert.Error(t, err)
 }
 

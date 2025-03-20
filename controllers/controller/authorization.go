@@ -34,7 +34,7 @@ func (t *AbstractController) MySession(userId string, superAdmin bool, delete bo
 		tokenService := &Token{} // generate a new token with all needed claims
 		token, err = tokenService.Create(userId, superAdmin)
 		if err != nil {
-			t.Response(utils.Results{}, err)
+			t.Response(utils.Results{}, err, "")
 			return token
 		} // then update user with its brand new token.
 		domain.SetToken(superAdmin, userId, token)

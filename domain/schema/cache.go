@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"encoding/json"
 	"errors"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/schema/models"
@@ -118,12 +117,6 @@ func LoadCache(name string, db *conn.Database) {
 
 	}
 }
-
-func mustMarshal(v interface{}) []byte {
-	data, _ := json.Marshal(v)
-	return data
-}
-
 func HasSchema(tableName string) bool {
 	models.CacheMutex.Lock()
 	if _, ok := models.SchemaRegistry[tableName]; !ok {

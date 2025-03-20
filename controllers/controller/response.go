@@ -28,11 +28,11 @@ func (t *AbstractController) Respond(params map[string]string, asLabel map[strin
 		t.download(domain, cols, cmdCols, cmd, format, params[utils.RootFilename], asLabel, response, err)
 		return
 	}
-	t.Response(response, err) // send back response
+	t.Response(response, err, "") // send back response
 }
 
 // response rules every http response
-func (t *AbstractController) Response(resp utils.Results, err error) {
+func (t *AbstractController) Response(resp utils.Results, err error, format string) {
 	t.Ctx.Output.SetStatus(http.StatusOK) // defaulting on absolute success
 	if err != nil {                       // Check nature of error if there is one
 		//if strings.Contains(err.Error(), "AUTH") { t.Ctx.Output.SetStatus(http.StatusUnauthorized) }
@@ -42,31 +42,66 @@ func (t *AbstractController) Response(resp utils.Results, err error) {
 		} else {
 			t.Data[JSON] = map[string]interface{}{DATA: utils.Results{}, ERROR: err.Error()}
 		}
+		if format == "json" {
+			t.Data[JSON] = map[string]interface{}{}
+		}
 	} else { // if success precise an error if no datas is founded
 		t.Data[JSON] = map[string]interface{}{DATA: resp, ERROR: nil}
 		for _, json := range utils.ToMap(t.Data[JSON])[DATA].(utils.Results) {
 			delete(json, "password") // never send back a password in any manner
+		}
+		if format == "json" {
+			t.Data[JSON] = resp
 		}
 	}
 	t.ServeJSON() // then serve response by beego
 }
 
 func (t *AbstractController) download(d utils.DomainITF, col string, colsCmd string, cmd string, format string, name string, mapping map[string]string, resp utils.Results, error error) {
-	cols, lastLineMap, results := t.mapping(col, colsCmd, cmd, mapping, resp) // mapping
+	cols, lastLine, results := t.mapping(col, colsCmd, cmd, mapping, resp) // mapping
 	t.Ctx.ResponseWriter.Header().Set("Content-Type", "text/"+format)
 	t.Ctx.ResponseWriter.Header().Set("Content-Disposition", "attachment; filename="+name+"_"+strings.Replace(time.Now().Format(time.RFC3339), " ", "_", -1)+"."+format)
-	data := t.csv(d, lastLineMap, cols, results) // rationalize to CSV
 	if format == "csv" {
-		csv.NewWriter(t.Ctx.ResponseWriter).WriteAll(data)
+		csv.NewWriter(t.Ctx.ResponseWriter).WriteAll(t.csv(d, lastLine, mapping, cols, results))
+	} else if format == "json" {
+		t.json(d, lastLine, mapping, cols, results)
 	} else {
-		t.Response(results, error)
+		t.Response(results, error, format)
 	}
 }
 
-func (t *AbstractController) csv(d utils.DomainITF, colsFunc map[string]string, cols []string, results utils.Results) [][]string {
+func (t *AbstractController) json(d utils.DomainITF, colsFunc map[string]string, mapping map[string]string, cols []string, results utils.Results) {
+	for _, r := range results {
+		for _, c := range cols {
+			if v, ok := mapping[c+"_aslabel"]; ok && v != "" {
+				r[v] = r[c+"_aslabel"]
+				delete(r, c)
+			}
+			if v, ok := colsFunc[c]; ok && v != "" {
+				res, err := d.GetDb().QueryAssociativeArray("SELECT " + v + " as result FROM " + d.GetTable() + " WHERE " + d.GetDb().SQLRestriction)
+				if err == nil && len(res) > 0 {
+					splitted := strings.Split(v, "(")
+					r["results"] = splitted[0] + ": " + utils.GetString(res[0], "result")
+				}
+			} else {
+				r["results"] = ""
+			}
+		}
+	}
+	t.Response(results, nil, "json")
+}
+
+func (t *AbstractController) csv(d utils.DomainITF, colsFunc map[string]string, mapping map[string]string, cols []string, results utils.Results) [][]string {
 	var data [][]string
-	data = append(data, cols)
-	lastLine := []string{}
+	lastLine, labs := []string{}, []string{}
+	for _, c := range cols {
+		if v, ok := mapping[c+"_aslabel"]; ok && v != "" {
+			labs = append(labs, v)
+		} else {
+			labs = append(labs, c)
+		}
+	}
+	data = append(data, labs)
 	for _, c := range cols {
 		if v, ok := colsFunc[c]; ok && v != "" {
 			r, err := d.GetDb().QueryAssociativeArray("SELECT " + v + " as result FROM " + d.GetTable() + " WHERE " + d.GetDb().SQLRestriction)
@@ -94,9 +129,8 @@ func (t *AbstractController) csv(d utils.DomainITF, colsFunc map[string]string, 
 }
 
 func (t *AbstractController) mapping(col string, colsCmd string, cmd string, mapping map[string]string, resp utils.Results) ([]string, map[string]string, utils.Results) {
-	cols := []string{}
+	cols, colsFunc := []string{}, map[string]string{}
 	results := utils.Results{}
-	colsFunc := map[string]string{}
 	if len(resp) == 0 {
 		return cols, colsFunc, results
 	}
@@ -122,6 +156,7 @@ func (t *AbstractController) mapping(col string, colsCmd string, cmd string, map
 			} else {
 				colsFunc[re[0]] = re[1]
 			}
+
 		}
 	}
 	schema := utils.ToMap(r["schema"])

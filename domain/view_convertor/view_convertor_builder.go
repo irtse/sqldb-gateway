@@ -24,7 +24,7 @@ func (d *ViewConvertor) EnrichWithWorkFlowView(record utils.Record, tableName st
 		if t := d.FetchRecord(ds.DBRequest.Name, record.GetString(utils.SpecialIDParam)); len(t) > 0 {
 			id = utils.ToString(t[0][ds.RootID(ds.DBWorkflow.Name)])
 			requestID = utils.ToString(t[0][utils.SpecialIDParam])
-			workflow = d.initializeWorkflow(t[0])
+			workflow = d.InitializeWorkflow(t[0])
 		} else {
 			return nil
 		}
@@ -43,7 +43,7 @@ func (d *ViewConvertor) EnrichWithWorkFlowView(record utils.Record, tableName st
 	return d.populateWorkflowSteps(&workflow, id, requestID, nexts)
 }
 
-func (d *ViewConvertor) initializeWorkflow(record map[string]interface{}) sm.WorkflowModel {
+func (d *ViewConvertor) InitializeWorkflow(record map[string]interface{}) sm.WorkflowModel {
 	return sm.WorkflowModel{
 		IsDismiss: record["state"] == "dismiss",
 		Current:   utils.ToString(record["current_index"]),
@@ -61,11 +61,11 @@ func (d *ViewConvertor) handleTaskWorkflow(record utils.Record) (sm.WorkflowMode
 
 	reqRecord := d.FetchRecord(ds.DBRequest.Name, utils.ToString(taskRecord[0][ds.RootID(ds.DBRequest.Name)]))
 	if len(reqRecord) > 0 {
-		workflow = d.initializeWorkflow(reqRecord[0])
+		workflow = d.InitializeWorkflow(reqRecord[0])
 	}
 
 	if taskRecord[0][ds.RootID(ds.DBWorkflowSchema.Name)] != nil {
-		nexts := d.parseNextSteps(taskRecord[0])
+		nexts := d.ParseNextSteps(taskRecord[0])
 		requestID := record.GetString(ds.RootID(ds.DBRequest.Name))
 		workflow.CurrentDismiss = record["state"] == "dismiss"
 		workflow.CurrentClose = record["state"] == "completed" || record["state"] == "dismiss" || record["state"] == "refused" || record["state"] == "canceled"
@@ -80,7 +80,7 @@ func (d *ViewConvertor) handleTaskWorkflow(record utils.Record) (sm.WorkflowMode
 	return workflow, "", "", nil
 }
 
-func (d *ViewConvertor) parseNextSteps(record map[string]interface{}) []string {
+func (d *ViewConvertor) ParseNextSteps(record map[string]interface{}) []string {
 	if record["nexts"] == "all" || record["nexts"] == "" || record["nexts"] == nil {
 		return nil
 	}
@@ -104,7 +104,7 @@ func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id, re
 		}
 
 		if workflow.Current != "" {
-			d.populateTaskDetails(&newStep, step, requestID)
+			d.populateTaskDetails(&newStep, step)
 		}
 
 		if wrapped, ok := step["wrapped_"+ds.RootID(ds.DBWorkflow.Name)]; ok {
@@ -117,7 +117,7 @@ func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id, re
 	return workflow
 }
 
-func (d *ViewConvertor) populateTaskDetails(newStep *sm.WorkflowStepModel, step map[string]interface{}, requestID string) {
+func (d *ViewConvertor) populateTaskDetails(newStep *sm.WorkflowStepModel, step map[string]interface{}) {
 	tasks := d.FetchRecord(ds.DBTask.Name, utils.ToString(step[utils.SpecialIDParam]))
 	if len(tasks) > 0 {
 		newStep.IsClose = utils.Compare(tasks[0]["is_close"], true)

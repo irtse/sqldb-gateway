@@ -105,7 +105,7 @@ func MakeSqlItem(alterRestr string, typ string, foreignName string, key string, 
 	}
 	if foreignName != "" {
 		if strings.Contains(sql, "%") {
-			alterRestr += key + " IN (SELECT id FROM " + foreignName + " WHERE name::text LIKE " + sql + " OR id::text " + operator + sql + ")"
+			alterRestr += key + " IN (SELECT id FROM " + foreignName + " WHERE name::text LIKE " + sql + " OR id::text LIKE " + sql + ")"
 		} else {
 			if strings.Contains(sql, "'") {
 				if strings.Contains(sql, "NULL") {
@@ -118,7 +118,7 @@ func MakeSqlItem(alterRestr string, typ string, foreignName string, key string, 
 			}
 		}
 	} else if strings.Contains(sql, "%") {
-		alterRestr += key + "::text " + operator + sql
+		alterRestr += key + "::text LIKE " + sql
 	} else {
 		alterRestr += key + " " + operator + " " + sql
 	}

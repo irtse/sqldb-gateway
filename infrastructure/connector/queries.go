@@ -3,7 +3,6 @@ package connector
 import (
 	"database/sql"
 	"fmt"
-	"runtime/debug"
 	"strings"
 )
 
@@ -45,6 +44,7 @@ func (db *Database) UpdateQuery(name string, record map[string]interface{}, rest
 }
 
 func (db *Database) DeleteQuery(name string, colName string) error {
+	fmt.Println(db.BuildDeleteQuery(name, colName))
 	return db.Query(db.BuildDeleteQuery(name, colName))
 }
 
@@ -93,8 +93,6 @@ func (db *Database) QueryAssociativeArray(query string) ([]map[string]interface{
 	}
 	rows, err := db.Conn.Query(query)
 	if err != nil {
-		fmt.Println(query, err)
-		debug.PrintStack()
 		return nil, err
 	}
 	defer rows.Close()

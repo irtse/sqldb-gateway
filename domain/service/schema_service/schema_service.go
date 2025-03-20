@@ -24,6 +24,9 @@ func (s *SchemaService) ShouldVerify() bool { return false }
 
 func (s *SchemaService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
 	if s.Domain.GetMethod() == utils.DELETE {
+		if s.Domain.IsSuperAdmin() {
+			return record, nil, false
+		}
 		return record, fmt.Errorf("cannot delete schema field on schemaDB"), false
 	}
 	s.Fields = []interface{}{}
@@ -39,9 +42,23 @@ func (s *SchemaService) VerifyDataIntegrity(record map[string]interface{}, table
 }
 
 func (s *SchemaService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {
-	s.Domain.HandleRecordAttributes(utils.Record{"is_custom": true})
-	s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(ds.DBPermission.Name, sm.NAMEKEY).Enrich(map[string]interface{}{sm.NAMEKEY: tableName}))
-	schserv.DeleteSchema(tableName)
+	for _, res := range results {
+		schema, err := schserv.GetSchema(utils.ToString(res[sm.NAMEKEY]))
+		if err != nil {
+			return
+		}
+		s.Domain.HandleRecordAttributes(utils.Record{"is_custom": true})
+		s.Domain.DeleteSuperCall(utils.AllParams(ds.DBSchemaField.Name).Enrich(map[string]interface{}{
+			ds.SchemaDBField: schema.ID,
+		}))
+		s.Domain.DeleteSuperCall(utils.AllParams(ds.DBPermission.Name).Enrich(map[string]interface{}{
+			sm.NAMEKEY: "%" + utils.ToString(res[sm.NAMEKEY]) + "%",
+		}))
+		s.Domain.DeleteSuperCall(utils.AllParams(ds.DBView.Name).Enrich(map[string]interface{}{
+			sm.NAMEKEY: "%" + schema.Name + "%",
+		}))
+		schserv.DeleteSchema(utils.ToString(res[sm.NAMEKEY]))
+	}
 }
 
 func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tableName string) {

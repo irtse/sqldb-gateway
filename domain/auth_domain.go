@@ -11,7 +11,7 @@ import (
 
 func SetToken(superAdmin bool, user string, token interface{}) (utils.Results, error) {
 	return Domain(superAdmin, user, nil).Call( // replace token by a nil
-		utils.AllParams(ds.DBUser.Name), utils.Record{"token": token}, utils.UPDATE, getQueryFilter(user))
+		utils.AllParams(ds.DBUser.Name), utils.Record{"token": token}, utils.UPDATE, GetQueryFilter(user))
 }
 
 func IsLogged(superAdmin bool, user string, token string) (utils.Results, error) {
@@ -41,7 +41,7 @@ func IsLogged(superAdmin bool, user string, token string) (utils.Results, error)
 		n = append(n, nn)
 	}
 	response, err := domain.SuperCall(utils.AllParams(ds.DBUser.Name),
-		utils.Record{}, utils.SELECT, false, getQueryFilter(user))
+		utils.Record{}, utils.SELECT, false, GetQueryFilter(user))
 	if err != nil || len(response) == 0 {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func IsLogged(superAdmin bool, user string, token string) (utils.Results, error)
 	return utils.Results{resp}, nil
 }
 
-func getQueryFilter(user string) string {
+func GetQueryFilter(user string) string {
 	return connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
 		"name":  connector.Quote(user),
 		"email": connector.Quote(user),

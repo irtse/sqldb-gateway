@@ -21,15 +21,15 @@ func (db *Database) RowResultToMap(rows *sql.Rows,
 	}
 	rowMap := map[string]interface{}{}
 	for i, colName := range columnNames {
-		rowMap[colName] = db.parseColumnValue(columnType[colName], columnPointers[i].(*interface{}))
+		rowMap[colName] = db.ParseColumnValue(columnType[colName], columnPointers[i].(*interface{}))
 	}
 	return rowMap, nil
 }
 
 /*
-* parseColumnValue converts the column value to the appropriate type.
+* ParseColumnValue converts the column value to the appropriate type.
  */
-func (db *Database) parseColumnValue(colType string, val *interface{}) interface{} {
+func (db *Database) ParseColumnValue(colType string, val *interface{}) interface{} {
 	v := *val
 	if v == nil {
 		return v

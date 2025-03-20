@@ -74,7 +74,7 @@ func (s *DashboardService) TransformToGenericView(results utils.Results, tableNa
 			res = append(res, utils.Record{
 				"name":        utils.ToString(record[models.NAMEKEY]),
 				"description": utils.ToString(record["description"]),
-				"elements":    s.getDashboardElementView(utils.ToString(record[utils.SpecialIDParam])),
+				"elements":    s.GetDashboardElementView(utils.ToString(record[utils.SpecialIDParam])),
 			})
 		}
 	}
@@ -152,7 +152,7 @@ func (d *DashboardService) getDashBoardElement(dashboardID string) ([]map[string
 	}, false)
 }
 
-func (d *DashboardService) getDashboardElementView(dashboardID string) utils.Results {
+func (d *DashboardService) GetDashboardElementView(dashboardID string) utils.Results {
 	results := utils.Results{}
 
 	elements, err := d.getDashBoardElement(dashboardID)
@@ -161,7 +161,7 @@ func (d *DashboardService) getDashboardElementView(dashboardID string) utils.Res
 	}
 
 	for _, element := range elements {
-		res, err := d.processDashboardElement(element)
+		res, err := d.ProcessDashboardElement(element)
 		if err != nil {
 			continue
 		}
@@ -171,13 +171,13 @@ func (d *DashboardService) getDashboardElementView(dashboardID string) utils.Res
 	return results
 }
 
-func (d *DashboardService) processDashboardElement(element map[string]interface{}) (utils.Record, error) {
+func (d *DashboardService) ProcessDashboardElement(element map[string]interface{}) (utils.Record, error) {
 	filt, ok := element[ds.FilterDBField]
 	if !ok {
 		return nil, errors.New("missing filter field")
 	}
 
-	restriction, orderBy, err := d.getFilterRestrictionAndOrder(filt, element)
+	restriction, orderBy, err := d.GetFilterRestrictionAndOrder(filt, element)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +198,7 @@ func (d *DashboardService) processDashboardElement(element map[string]interface{
 	}, nil
 }
 
-func (d *DashboardService) getFilterRestrictionAndOrder(filt interface{}, element map[string]interface{}) (string, string, error) {
+func (d *DashboardService) GetFilterRestrictionAndOrder(filt interface{}, element map[string]interface{}) (string, string, error) {
 	var restriction, orderBy string
 	f := filter.NewFilterService(d.Domain)
 
@@ -251,7 +251,7 @@ func (d *DashboardService) getDashBoardMathFieldView(elementID, restriction, ord
 		return nil, false, err
 	}
 
-	return d.processMathResults(r, names)
+	return d.ProcessMathResults(r, names)
 }
 
 func (d *DashboardService) processMathFields(fields []map[string]interface{}) ([]string, []string, error) {
@@ -259,7 +259,7 @@ func (d *DashboardService) processMathFields(fields []map[string]interface{}) ([
 	views := []string{}
 
 	for _, field := range fields {
-		name, rowAlgo, colAlgo, err := d.extractMathFieldData(field)
+		name, rowAlgo, colAlgo, err := d.ExtractMathFieldData(field)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -271,7 +271,7 @@ func (d *DashboardService) processMathFields(fields []map[string]interface{}) ([
 	return names, views, nil
 }
 
-func (d *DashboardService) extractMathFieldData(field map[string]interface{}) (string, string, string, error) {
+func (d *DashboardService) ExtractMathFieldData(field map[string]interface{}) (string, string, string, error) {
 	name := utils.ToString(field[models.NAMEKEY])
 	if name == "" {
 		return "", "", "", errors.New("name is required")
@@ -284,7 +284,7 @@ func (d *DashboardService) extractMathFieldData(field map[string]interface{}) (s
 	return name, rowAlgo, utils.ToString(field["column_math_func"]), nil
 }
 
-func (d *DashboardService) processMathResults(r []map[string]interface{}, names []string) (utils.Results, bool, error) {
+func (d *DashboardService) ProcessMathResults(r []map[string]interface{}, names []string) (utils.Results, bool, error) {
 	results := utils.Results{}
 	isMultiple := len(r) > 1
 

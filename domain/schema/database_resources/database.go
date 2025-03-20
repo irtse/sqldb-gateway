@@ -103,7 +103,7 @@ var DBUser = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 		{Name: "email", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 1},
-		{Name: "password", Type: models.TEXT.String(), Required: true, Level: models.LEVELRESPONSIBLE, Index: 2},
+		{Name: "password", Type: models.TEXT.String(), Required: false, Default: "", Level: models.LEVELRESPONSIBLE, Index: 2},
 		{Name: "token", Type: models.TEXT.String(), Required: false, Default: "", Index: 3},
 		{Name: "super_admin", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 4},
 	},

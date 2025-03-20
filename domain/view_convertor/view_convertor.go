@@ -57,7 +57,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 		Shortcuts:   v.GetShortcuts(),
 	}
 
-	v.processResultsConcurrently(results, tableName, cols, isWorkflow, &view)
+	v.ProcessResultsConcurrently(results, tableName, cols, isWorkflow, &view)
 	// if there is only one item in the view, we can set the view readonly to the item readonly
 	if len(view.Items) == 1 {
 		view.Readonly = view.Items[0].Readonly
@@ -81,7 +81,7 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 	return res
 }
 
-func (v *ViewConvertor) processResultsConcurrently(results utils.Results, tableName string,
+func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, tableName string,
 	cols map[string]sm.FieldModel, isWorkflow bool, view *sm.ViewModel) {
 	const maxConcurrent = 5
 	runtime.GOMAXPROCS(maxConcurrent)

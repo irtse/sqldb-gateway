@@ -11,22 +11,16 @@ import (
 )
 
 // Mock domain struct
-type MockDomain struct {
-	mock.Mock
-}
-
-func (m *MockDomain) Call(params map[string]string, record utils.Record, method utils.Method, filter string) (utils.Results, error) {
-	args := m.Called(params, record, method, filter)
-	return args.Get(0).(utils.Results), args.Error(1)
-}
 
 func TestSetToken_Success(t *testing.T) {
 	mockDomain := new(MockDomain)
-	mockDomain.On("Call", mock.Anything, mock.Anything, utils.UPDATE, mock.Anything).Return(utils.Results{"success": true}, nil)
+	mockDomain.On("Call", mock.Anything, mock.Anything, utils.UPDATE, mock.Anything).Return(utils.Results{
+		utils.Record{"success": true},
+	}, nil)
 
 	result, err := domain.SetToken(false, "user1", "token")
 	assert.NoError(t, err)
-	assert.Equal(t, utils.Results{"success": true}, result)
+	assert.Equal(t, utils.Results{utils.Record{"success": true}}, result)
 }
 
 func TestSetToken_Error(t *testing.T) {

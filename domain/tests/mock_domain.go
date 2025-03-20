@@ -5,9 +5,12 @@ import (
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
 	"sync"
+
+	"github.com/stretchr/testify/mock"
 )
 
 type MockDomain struct {
+	mock.Mock
 	records map[string][]map[string]interface{}
 	params  utils.Params
 	mu      sync.Mutex

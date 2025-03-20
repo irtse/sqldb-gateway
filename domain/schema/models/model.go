@@ -93,7 +93,7 @@ func (t SchemaModel) GetTypeAndLinkForField(name string) (string, string, error)
 	}
 	foreign, err := GetSchemaByID(field.GetLink())
 	if err != nil {
-		return "", "", err
+		return field.Type, "", nil
 	}
 	return field.Type, foreign.Name, nil
 }

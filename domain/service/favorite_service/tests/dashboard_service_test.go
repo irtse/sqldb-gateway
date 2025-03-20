@@ -50,7 +50,7 @@ func TestCreateDashboardElement_Fail(t *testing.T) {
 
 func TestSpecializedCreateRow_Success(t *testing.T) {
 	s := &favorite_service.DashboardService{Elements: []map[string]interface{}{{"test": "value"}}}
-	record := map[string]interface{}{utils.SpecialIDParam: "id123", "fields": []interface{}{{}}}
+	record := map[string]interface{}{utils.SpecialIDParam: "id123", "fields": []interface{}{}}
 	s.SpecializedCreateRow(record, "test_table")
 	assert.True(t, true)
 }
@@ -96,33 +96,33 @@ func TestHandleDelete(t *testing.T) {
 
 func TestGetDashboardElementView(t *testing.T) {
 	s := &favorite_service.DashboardService{}
-	res := s.getDashboardElementView("dashboard123")
+	res := s.GetDashboardElementView("dashboard123")
 	assert.NotNil(t, res)
 }
 
 func TestProcessDashboardElement_Fail(t *testing.T) {
 	s := &favorite_service.DashboardService{}
 	element := map[string]interface{}{}
-	_, err := s.processDashboardElement(element)
+	_, err := s.ProcessDashboardElement(element)
 	assert.Error(t, err)
 }
 
 func TestGetFilterRestrictionAndOrder_Fail(t *testing.T) {
 	s := &favorite_service.DashboardService{}
-	_, _, err := s.getFilterRestrictionAndOrder(nil, map[string]interface{}{})
+	_, _, err := s.GetFilterRestrictionAndOrder(nil, map[string]interface{}{})
 	assert.Error(t, err)
 }
 
 func TestExtractMathFieldData_Fail(t *testing.T) {
 	s := &favorite_service.DashboardService{}
 	element := map[string]interface{}{models.NAMEKEY: ""}
-	_, _, _, err := s.extractMathFieldData(element)
+	_, _, _, err := s.ExtractMathFieldData(element)
 	assert.Error(t, err)
 }
 
 func TestProcessMathResults_Empty(t *testing.T) {
 	s := &favorite_service.DashboardService{}
-	res, isMultiple, err := s.processMathResults([]map[string]interface{}{}, []string{"name"})
+	res, isMultiple, err := s.ProcessMathResults([]map[string]interface{}{}, []string{"name"})
 	assert.Nil(t, res)
 	assert.False(t, isMultiple)
 	assert.Error(t, err)

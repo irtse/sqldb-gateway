@@ -20,6 +20,9 @@ func (s *SchemaFields) Entity() utils.SpecializedServiceInfo { return ds.DBSchem
 
 func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
 	if s.Domain.GetMethod() == utils.DELETE { // delete root schema field
+		if s.Domain.IsSuperAdmin() {
+			return record, nil, false
+		}
 		return record, fmt.Errorf("cannot delete root schema field"), false
 	}
 	utils.Add(record, sm.TYPEKEY, record[sm.TYPEKEY],
@@ -88,16 +91,11 @@ func (s *SchemaFields) SpecializedDeleteRow(results []map[string]interface{}, ta
 		if err != nil { // schema not found
 			s.Domain.DeleteSuperCall(utils.GetColumnTargetParameters(schema.Name, record[sm.NAMEKEY]))
 			s.Domain.DeleteSuperCall(
-				utils.AllParams(schema.Name).Enrich(map[string]interface{}{
-					sm.NAMEKEY: "%" + utils.ToString(record[sm.NAMEKEY]) + "%",
+				utils.AllParams(ds.DBPermission.Name).Enrich(map[string]interface{}{
+					sm.NAMEKEY: "%" + schema.Name + ":" + utils.ToString(record[sm.NAMEKEY]) + "%",
 				}),
 			)
-			if schema.HasField(ds.UserDBField) || schema.HasField(ds.EntityDBField) { // delete view
-				s.Domain.DeleteSuperCall(utils.AllParams(ds.DBView.Name).Enrich(map[string]interface{}{
-					sm.NAMEKEY: "my " + schema.Name,
-				}))
-			}
-			sch.DeleteSchemaField(tableName, utils.ToString(record[sm.NAMEKEY]))
+			sch.DeleteSchemaField(schema.Name, utils.ToString(record[sm.NAMEKEY]))
 		}
 	}
 }
