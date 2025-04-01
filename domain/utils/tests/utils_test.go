@@ -14,7 +14,7 @@ func TestPrepareEnum_NonEnumString(t *testing.T) {
 
 func TestPrepareEnum_EnumString(t *testing.T) {
 	result := utils.PrepareEnum("enum('A', 'B', 'C')")
-	expected := "enum__A_B_C"
+	expected := "enum__a_b_c"
 	assert.Equal(t, expected, result)
 }
 

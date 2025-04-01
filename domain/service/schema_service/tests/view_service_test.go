@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func ViewTestVerifyDataIntegrity(t *testing.T) {
+func TestViewVerifyDataIntegrity(t *testing.T) {
 	service := service.ViewService{}
 	record := map[string]interface{}{"id": 1}
 	tablename := "test_table"
@@ -16,7 +16,7 @@ func ViewTestVerifyDataIntegrity(t *testing.T) {
 	}
 }
 
-func ViewTestGenerateQueryFilter(t *testing.T) {
+func TestViewGenerateQueryFilter(t *testing.T) {
 	service := service.ViewService{}
 	restr, _, _, _ := service.GenerateQueryFilter("test_table")
 	if restr == "" {
@@ -24,7 +24,7 @@ func ViewTestGenerateQueryFilter(t *testing.T) {
 	}
 }
 
-func ViewTestTransformToGenericView(t *testing.T) {
+func TestViewTransformToGenericView(t *testing.T) {
 	service := service.ViewService{}
 	results := utils.Results{{"index": 1}, {"index": 2}}
 	res := service.TransformToGenericView(results, "test_table")

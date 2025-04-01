@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"net/url"
 	"slices"
 	"sort"
@@ -29,6 +30,7 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 	var SQLview, SQLrestriction, SQLOrder []string = []string{}, []string{}, []string{}
 	var SQLLimit string
 	restr, view, order, dir, state := f.GetFilterForQuery("", "", utils.ToString(schema.ID), domainParams)
+	fmt.Println("VIEW", view)
 	if restr != "" && !f.Domain.IsSuperCall() {
 		SQLrestriction = append(SQLrestriction, restr)
 	}
@@ -228,26 +230,26 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schemaID strin
 
 func (s *FilterService) ProcessViewAndOrder(viewfilterID string, schemaID string, domainParams utils.Params) (string, string, string) {
 	var viewFilter, order, dir []string = []string{}, []string{}, []string{}
+	cols, ok := domainParams[utils.RootColumnsParam]
+	fields := []sm.FieldModel{}
 	if viewfilterID != "" {
 		for _, field := range s.GetFilterFields(viewfilterID, schemaID) {
-			f, err := sch.GetFieldByID(utils.GetInt(field, ds.RootID(ds.DBSchemaField.Name)))
-			cols, ok := domainParams[utils.RootColumnsParam]
-			if err == nil && !slices.Contains(viewFilter, f.Name) && ok && strings.Contains(cols, f.Name) {
-				viewFilter = append(viewFilter, f.Name)
-				if field["dir"] != nil && field["dir"] != "" && !slices.Contains(order, f.Name) {
-					dir = append(dir, strings.ToUpper(utils.ToString(field["dir"])))
-				} else if !slices.Contains(order, f.Name) {
-					dir = append(dir, f.Name+" ASC")
-				}
+			if f, err := sch.GetFieldByID(utils.GetInt(field, ds.RootID(ds.DBSchemaField.Name))); err == nil {
+				fields = append(fields, f)
 			}
 		}
 	} else if schema, err := sch.GetSchemaByID(utils.ToInt64(schemaID)); err == nil {
 		sort.SliceStable(schema.Fields, func(i, j int) bool {
 			return schema.Fields[i].Index <= schema.Fields[j].Index
 		})
-		for _, field := range schema.Fields {
-			if field.Name != "id" {
-				viewFilter = append(viewFilter, field.Name)
+	}
+	for _, field := range fields {
+		if field.Name != "id" && (!ok || cols == "" || (strings.Contains(cols, field.Name))) {
+			viewFilter = append(viewFilter, field.Name)
+			if field.Dir != "" {
+				dir = append(dir, strings.ToUpper(field.Dir))
+			} else if !slices.Contains(order, field.Name) {
+				dir = append(dir, field.Name+" ASC")
 			}
 		}
 	}

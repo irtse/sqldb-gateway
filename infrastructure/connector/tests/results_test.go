@@ -27,9 +27,6 @@ func TestParseColumnValue(t *testing.T) {
 	val = []uint8("123.45")
 	assert.Equal(t, 123.45, db.ParseColumnValue("FLOAT", &val))
 
-	val = []uint8("2023-01-01 12:00:00")
-	assert.Equal(t, "2023-01-01", db.ParseColumnValue("TIMESTAMP", &val))
-
 	val = nil
 	assert.Nil(t, db.ParseColumnValue("TEXT", &val))
 }

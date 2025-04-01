@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	connector_test "sqldb-ws/infrastructure/connector/tests"
 	"sqldb-ws/infrastructure/service"
 	"testing"
 )
@@ -116,7 +117,11 @@ func TestVerifyNonExistentTable(t *testing.T) {
 }
 
 func TestGetWithNoResults(t *testing.T) {
-	ts := &service.TableService{}
+	ts := &service.TableService{
+		InfraService: service.InfraService{
+			DB: &connector_test.MockDB{},
+		},
+	}
 	res, err := ts.Get("non_existent_condition")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)

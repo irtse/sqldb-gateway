@@ -17,7 +17,7 @@ func (m *MockDomain) GetDb() *connector.Database {
 	return args.Get(0).(*connector.Database)
 }
 
-func SchemaTestVerifyDataIntegrity(t *testing.T) {
+func TestSchemaVerifyDataIntegrity(t *testing.T) {
 	mockDomain := new(MockDomain)
 	svc := service.SchemaService{}
 	svc.Domain = mockDomain
@@ -66,7 +66,7 @@ func SchemaTestVerifyDataIntegrity(t *testing.T) {
 	}
 }
 
-func SchemaTestSpecializedDeleteRow(t *testing.T) {
+func TestSchemaSpecializedDeleteRow(t *testing.T) {
 	svc := service.SchemaService{}
 	mockDomain := new(MockDomain)
 	svc.Domain = mockDomain
@@ -81,7 +81,7 @@ func SchemaTestSpecializedDeleteRow(t *testing.T) {
 	mockDomain.AssertCalled(t, "DeleteSuperCall", mock.Anything)
 }
 
-func SchemaTestSpecializedCreateRow(t *testing.T) {
+func TestSchemaSpecializedCreateRow(t *testing.T) {
 	svc := service.SchemaService{}
 	mockDomain := new(MockDomain)
 	svc.Domain = mockDomain
@@ -92,7 +92,7 @@ func SchemaTestSpecializedCreateRow(t *testing.T) {
 	mockDomain.AssertCalled(t, "CreateSuperCall", mock.Anything, mock.Anything)
 }
 
-func SchemaTestSpecializedUpdateRow(t *testing.T) {
+func TestSchemaSpecializedUpdateRow(t *testing.T) {
 	svc := service.SchemaService{}
 	mockDomain := new(MockDomain)
 	svc.Domain = mockDomain

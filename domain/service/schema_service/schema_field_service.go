@@ -64,6 +64,8 @@ func (s *SchemaFields) Write(r map[string]interface{}, record map[string]interfa
 	}
 	if typ, ok := record[sm.TYPEKEY]; !ok || strings.Contains(utils.ToString(typ), "many") || schema.HasField(utils.ToString(record[sm.NAMEKEY])) {
 		return nil, fmt.Errorf("field already exists")
+	} else if utils.ToString(typ) == "link" {
+		record[sm.TYPEKEY] = "varchar"
 	}
 	readLevels := []string{sm.LEVELNORMAL}
 	if level, ok := record["read_level"]; ok && level != "" && level != sm.LEVELOWN && slices.Contains(sm.READLEVELACCESS, utils.ToString(level)) {

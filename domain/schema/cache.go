@@ -108,7 +108,7 @@ func LoadCache(name string, db *conn.Database) {
 			ds.DBSchemaField.Name, map[string]interface{}{
 				ds.SchemaDBField: utils.ToString(s.ID),
 			}, false) // Get fields
-		db.SQLRestriction = "" // Reset restriction
+		db.SetSQLRestriction("") // Reset restriction
 		if err == nil && len(fields) > 0 {
 			for _, field := range fields {
 				s = s.SetField(field) // Add field to schema

@@ -66,6 +66,8 @@ const (
 	ENUMMATHFUNC
 	ONETOMANY
 	MANYTOMANY
+	LINK // is a link to the outside
+
 )
 
 func DataTypeToEnum() string {
@@ -93,7 +95,10 @@ func DataTypeList() []string {
 		"ENUM('low', 'normal', 'high')",
 		"ENUM('all', 'new', 'old')",
 		"ENUM('" + COUNT + "', '" + AVG + "', '" + MIN + "', '" + MAX + "', '" + SUM + "')",
-		"ONETOMANY", "MANYTOMANY"}
+		"ONETOMANY",
+		"MANYTOMANY",
+		"LINK",
+	}
 }
 
 func (s DataType) String() string { return strings.ToLower(DataTypeList()[s-1]) }

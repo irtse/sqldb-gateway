@@ -66,11 +66,11 @@ func (t *TableRowService) Create(record map[string]interface{}) ([]map[string]in
 		_, columns, values = t.DB.BuildUpdateQuery(key, element, "", columns, values, verify)
 	}
 	for _, query := range t.DB.BuildCreateQueries(t.Name, strings.Join(values, ","), strings.Join(columns, ","), "") {
-		if t.DB.Driver == conn.PostgresDriver {
+		if t.DB.GetDriver() == conn.PostgresDriver {
 			if id, err = t.DB.QueryRow(query); err != nil {
 				return t.DBError(nil, err)
 			}
-		} else if t.DB.Driver == conn.MySQLDriver {
+		} else if t.DB.GetDriver() == conn.MySQLDriver {
 			if stmt, err := t.DB.Prepare(query); err != nil {
 				return t.DBError(nil, err)
 			} else if res, err := stmt.Exec(); err != nil {
@@ -118,7 +118,7 @@ func (t *TableRowService) Delete(restriction ...string) ([]map[string]interface{
 		return nil, err
 	}
 	if t.Results, err = t.Get(restriction...); err == nil {
-		if t.DB.SQLRestriction == "" {
+		if t.DB.GetSQLRestriction() == "" {
 			return t.DBError(nil, errors.New("no restriction can't delete all"))
 		} else if err = t.DB.DeleteQuery(t.Table.Name, ""); err != nil {
 			return t.DBError(nil, err)
@@ -139,8 +139,8 @@ func (t *TableRowService) setupFilter(record map[string]interface{}, verify bool
 	restr, order, limit, view := t.SpecializedService.GenerateQueryFilter(t.Table.Name, restriction...)
 
 	t.DB.ClearQueryFilter().ApplyQueryFilters(restr, order, limit, view)
-	if len(t.DB.SQLRestriction) > 5 && t.DB.SQLRestriction[len(t.DB.SQLRestriction)-5:] == " AND " {
-		t.DB.SQLRestriction = t.DB.SQLRestriction[:len(t.DB.SQLRestriction)-5]
+	if len(t.DB.GetSQLRestriction()) > 5 && t.DB.GetSQLRestriction()[len(t.DB.GetSQLRestriction())-5:] == " AND " {
+		t.DB.SetSQLRestriction(t.DB.GetSQLRestriction()[:len(t.DB.GetSQLRestriction())-5])
 	}
 	return record, nil
 }

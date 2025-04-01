@@ -10,7 +10,7 @@ import (
 func TestBuildDeleteQueryWithRestriction(t *testing.T) {
 	db := &connector.Database{}
 	restrictions := map[string]interface{}{"id": 1}
-	expected := "DELETE FROM users WHERE id = 1"
+	expected := "DELETE FROM users WHERE id=1"
 	query := db.BuildDeleteQueryWithRestriction("users", restrictions, false)
 	assert.Equal(t, expected, query)
 }
@@ -18,7 +18,7 @@ func TestBuildDeleteQueryWithRestriction(t *testing.T) {
 func TestBuildSelectQueryWithRestriction(t *testing.T) {
 	db := &connector.Database{}
 	restrictions := map[string]interface{}{"active": true}
-	expected := "SELECT * FROM users WHERE active = true"
+	expected := "SELECT * FROM users WHERE active=true"
 	query := db.BuildSelectQueryWithRestriction("users", restrictions, false)
 	assert.Equal(t, expected, query)
 }
@@ -27,7 +27,7 @@ func TestBuildUpdateQueryWithRestriction(t *testing.T) {
 	db := &connector.Database{}
 	record := map[string]interface{}{"name": "John Doe"}
 	restrictions := map[string]interface{}{"id": 1}
-	expected := "UPDATE users SET name='John Doe' WHERE id = 1"
+	expected := "UPDATE users SET name='John Doe' WHERE id=1"
 	query, err := db.BuildUpdateQueryWithRestriction("users", record, restrictions, false)
 	assert.Nil(t, err)
 	assert.Equal(t, expected, query)

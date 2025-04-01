@@ -31,7 +31,7 @@ func (m *MockDomain) ValidateBySchema(record utils.Record, tablename string) (ut
 	return args.Get(0).(utils.Record), args.Error(1)
 }
 
-func SchemaFieldTestVerifyDataIntegrity(t *testing.T) {
+func TestSchemaFieldVerifyDataIntegrity(t *testing.T) {
 	mockDomain := new(MockDomain)
 	schemaFields := schema_service.SchemaFields{}
 	schemaFields.Domain = mockDomain
@@ -56,7 +56,7 @@ func SchemaFieldTestVerifyDataIntegrity(t *testing.T) {
 	assert.Equal(t, "valid_type", result[sm.TYPEKEY])
 }
 
-func SchemaFieldTestSpecializedCreateRow(t *testing.T) {
+func TestSchemaFieldSpecializedCreateRow(t *testing.T) {
 	mockDomain := new(MockDomain)
 	schemaFields := schema_service.SchemaFields{}
 	schemaFields.Domain = mockDomain
@@ -69,7 +69,7 @@ func SchemaFieldTestSpecializedCreateRow(t *testing.T) {
 	mockDomain.AssertCalled(t, "SuperCall", mock.Anything, mock.Anything, utils.CREATE)
 }
 
-func SchemaFieldTestSpecializedUpdateRow(t *testing.T) {
+func TestSchemaFieldSpecializedUpdateRow(t *testing.T) {
 	mockDomain := new(MockDomain)
 	schemaFields := schema_service.SchemaFields{}
 	schemaFields.Domain = mockDomain
@@ -83,7 +83,7 @@ func SchemaFieldTestSpecializedUpdateRow(t *testing.T) {
 	mockDomain.AssertCalled(t, "UpdateSuperCall", mock.Anything, mock.Anything)
 }
 
-func SchemaFieldTestSpecializedDeleteRow(t *testing.T) {
+func TestSchemaFieldSpecializedDeleteRow(t *testing.T) {
 	mockDomain := new(MockDomain)
 	schemaFields := schema_service.SchemaFields{}
 	schemaFields.Domain = mockDomain

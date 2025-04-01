@@ -2,12 +2,18 @@ package service_test
 
 import (
 	"errors"
+	connector_test "sqldb-ws/infrastructure/connector/tests"
 	"sqldb-ws/infrastructure/service"
 	"testing"
 )
 
 func TestColumnTemplate(t *testing.T) {
-	tcs := &service.TableColumnService{}
+	tcs := &service.TableColumnService{
+		InfraService: service.InfraService{
+			DB:                 &connector_test.MockDB{},
+			SpecializedService: &service.InfraSpecializedService{},
+		},
+	}
 	_, err := tcs.Template("some_restriction")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)

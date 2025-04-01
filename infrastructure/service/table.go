@@ -17,7 +17,7 @@ type TableService struct {
 }
 
 // Generate an Empty TableService Service
-func NewTableService(database *conn.Database, admin bool, user string, name string) *TableService {
+func NewTableService(database conn.DB, admin bool, user string, name string) *TableService {
 	table := &TableService{}
 	table.Name = name
 	table.SuperAdmin = admin
@@ -156,7 +156,7 @@ func (t *TableService) getTableSchema(name string) ([]models.TableEntity, error)
 	return schema, nil
 }
 
-func RetrieveTable(name string, db *conn.Database) (map[string]models.TableColumnEntity, []string, error) {
+func RetrieveTable(name string, db conn.DB) (map[string]models.TableColumnEntity, []string, error) {
 	cols, err := db.SchemaQuery(name)
 	if err != nil {
 		return nil, nil, err

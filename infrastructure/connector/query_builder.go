@@ -202,7 +202,7 @@ func (db *Database) BuildUpdateQuery(col string, value interface{}, set string,
 		db.SQLRestriction = "id=" + fmt.Sprintf("%v", value) + " "
 	}
 	if typ, ok := verify(col); ok && !slices.Contains([]string{"NULL", ""}, FormatForSQL(strings.Split(typ, ":")[0], value)) {
-		if value == "" {
+		if value == "" || reflect.TypeOf(value).Kind().String() == "string" {
 			set += col + "=" + Quote(fmt.Sprintf("%v", value)) + ","
 			cols = append(cols, col)
 			colValues = append(cols, Quote(fmt.Sprintf("%v", value)))

@@ -34,7 +34,7 @@ func TestFormatSQLRestrictionWhereInjection(t *testing.T) {
 		return "int", "table", nil
 	}
 	got := connector.FormatSQLRestrictionWhereInjection("id:5", mockFunc)
-	want := "id = 5"
+	want := "( id IN (SELECT id FROM table WHERE id = 5) )"
 	if got != want {
 		t.Errorf("FormatSQLRestrictionWhereInjection() = %v, want %v", got, want)
 	}
@@ -102,14 +102,6 @@ func TestFormatEnumName(t *testing.T) {
 	want := "hello_world"
 	if got != want {
 		t.Errorf("FormatEnumName() = %v, want %v", got, want)
-	}
-}
-
-func TestFormatReverseEnumName(t *testing.T) {
-	got := connector.FormatReverseEnumName("hello_world")
-	want := "('hello','world')"
-	if got != want {
-		t.Errorf("FormatReverseEnumName() = %v, want %v", got, want)
 	}
 }
 

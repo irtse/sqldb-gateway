@@ -30,7 +30,7 @@ type InfraService struct {
 	SuperAdmin         bool                       `json:"-"`
 	NoLog              bool                       `json:"-"`
 	SpecializedService InfraSpecializedServiceItf `json:"-"`
-	DB                 *conn.Database
+	DB                 conn.DB
 	InfraServiceItf
 }
 

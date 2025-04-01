@@ -151,6 +151,7 @@ type FieldModel struct { // definition a db table columns
 	Default      interface{} `json:"default_value"`
 	Level        string      `json:"read_level,omitempty"`
 	Readonly     bool        `json:"readonly"`
+	Dir          string      `json:"dir"`
 	Link         string      `json:"link_id"`
 	ForeignTable string      `json:"-"`           // Special case for foreign key
 	Constraint   string      `json:"constraints"` // Special case for constraint on field
