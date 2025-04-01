@@ -2,6 +2,7 @@ package schema
 
 import (
 	"errors"
+	"fmt"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
@@ -174,6 +175,7 @@ func ValidateBySchema(data utils.Record, tableName string, method utils.Method,
 			if _, ok := data[field.Name]; ok || field.Name == utils.SpecialIDParam || !check(tableName, field.Name, field.Level, utils.SELECT) {
 				continue
 			}
+			fmt.Println(field.Name, field.Label, data[field.Name], check(tableName, field.Name, field.Level, utils.SELECT))
 			if field.Label != "" {
 				return data, errors.New("Missing a required field " + field.Label + " (can't see it ? you probably missing permissions)")
 			} else {

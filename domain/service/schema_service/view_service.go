@@ -92,9 +92,10 @@ func (s *ViewService) TransformToView(record utils.Record, userRecord utils.Reco
 }
 
 func (s *ViewService) addFavorizeInfo(userRecord utils.Record, record utils.Record, rec utils.Record) utils.Record {
+	fmt.Println(s.Domain.GetParams(), record, rec)
 	rec["favorize_body"] = utils.Record{
-		ds.UserDBField:   userRecord[utils.SpecialIDParam],
-		ds.EntityDBField: record[utils.SpecialIDParam],
+		ds.ViewDBField: record.GetInt(utils.SpecialIDParam),
+		ds.UserDBField: userRecord[utils.SpecialIDParam],
 	}
 	rec["favorize_path"] = fmt.Sprintf("/%s/%s?%s=%s",
 		utils.MAIN_PREFIX, ds.DBViewAttribution.Name, utils.RootRowsParam, utils.ReservedParam)
