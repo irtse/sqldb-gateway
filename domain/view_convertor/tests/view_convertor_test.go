@@ -67,7 +67,7 @@ func TestConvertRecordToView(t *testing.T) {
 	channel := make(chan sm.ViewItemModel, 1)
 
 	record := utils.Record{"id": "1", "name": "Test"}
-	vc.ConvertRecordToView(0, channel, record, "test_table", nil, false, false, utils.NewParams(map[string]string{}), []string{})
+	vc.ConvertRecordToView(0, nil, channel, record, "test_table", nil, false, false, utils.NewParams(map[string]string{}), []string{})
 
 	result := <-channel
 	assert.NotEmpty(t, result.Values)
