@@ -67,7 +67,12 @@ const (
 	ONETOMANY
 	MANYTOMANY
 	LINK // is a link to the outside
-
+	ENUMPLATFORM
+	ENUMTRANSFORM
+	ENUMBOOLEAN
+	ENUMTIME
+	ENUMCHART
+	ENUMTRIGGER
 )
 
 func DataTypeToEnum() string {
@@ -98,6 +103,12 @@ func DataTypeList() []string {
 		"ONETOMANY",
 		"MANYTOMANY",
 		"LINK",
+		"ENUM('email', 'sms', 'teams')",
+		"ENUM('lowercase', 'uppercase')",
+		"ENUM('yes', 'no', 'i don't know')",
+		"ENUM('second', 'minute', 'hour','day', 'week', 'month', 'year')",
+		"ENUM('line', 'pie', 'bar')", // enrich later
+		"ENUM('mail', 'sms', 'teams notification', 'data')",
 	}
 }
 

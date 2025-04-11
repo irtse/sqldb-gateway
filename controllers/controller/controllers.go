@@ -54,7 +54,7 @@ func (t *AbstractController) Call(auth bool, method utils.Method, args ...interf
 		resp := utils.Results{}
 		var error error
 		for _, file := range files {
-			response, err := d.Call(p, file, method, args...)
+			response, err := d.Call(utils.NewParams(p), file, method, args...)
 			if err != nil {
 				error = fmt.Errorf("%v|%v", error, err)
 			} else {

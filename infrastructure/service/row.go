@@ -13,6 +13,26 @@ type TableRowService struct {
 	InfraService
 }
 
+func NewTableRowService(database conn.DB, admin bool, user string, name string, specializedService InfraSpecializedServiceItf) *TableRowService {
+	row := &TableRowService{
+		Table: NewTableService(database, admin, user, name),
+		EmptyCol: &TableColumnService{InfraService: InfraService{
+			DB:                 database,
+			SpecializedService: &InfraSpecializedService{},
+		}},
+		InfraService: InfraService{
+			DB:                 database,
+			NoLog:              false,
+			SpecializedService: specializedService,
+		},
+	}
+	row.Fill(name, admin, user)
+	if row.SpecializedService == nil {
+		row.SpecializedService = &InfraSpecializedService{}
+	}
+	return row
+}
+
 func (t *TableRowService) Template(restriction ...string) (interface{}, error) {
 	return t.Get(restriction...)
 }
@@ -23,7 +43,7 @@ func (t *TableRowService) Verify(name string) (string, bool) {
 }
 
 func (t *TableRowService) Math(algo string, restriction ...string) ([]map[string]interface{}, error) {
-	if _, err := t.setupFilter(map[string]interface{}{}, false, restriction...); err != nil {
+	if _, err := t.setupFilter(map[string]interface{}{}, false, false, restriction...); err != nil {
 		return nil, err
 	}
 	res, err := t.DB.MathQuery(algo, t.Table.Name)
@@ -36,7 +56,7 @@ func (t *TableRowService) Math(algo string, restriction ...string) ([]map[string
 
 func (t *TableRowService) Get(restriction ...string) ([]map[string]interface{}, error) {
 	var err error
-	if _, err = t.setupFilter(map[string]interface{}{}, false, restriction...); err != nil {
+	if _, err = t.setupFilter(map[string]interface{}{}, false, false, restriction...); err != nil {
 		return nil, err
 	}
 	if t.Results, err = t.DB.SelectQueryWithRestriction(
@@ -81,8 +101,9 @@ func (t *TableRowService) Create(record map[string]interface{}) ([]map[string]in
 		}
 	}
 	t.DB.ClearQueryFilter().ApplyQueryFilters(fmt.Sprintf("id=%d", id), "", "", "")
-
-	if t.Results, err = t.DB.SelectQueryWithRestriction(t.Table.Name, map[string]interface{}{}, false); len(t.Results) > 0 {
+	r, err := t.DB.SelectQueryWithRestriction(t.Table.Name, map[string]interface{}{}, false)
+	if len(r) > 0 {
+		t.Results = r
 		t.SpecializedService.SpecializedCreateRow(t.Results[0], t.Table.Name)
 	}
 	return t.Results, err
@@ -90,7 +111,7 @@ func (t *TableRowService) Create(record map[string]interface{}) ([]map[string]in
 
 func (t *TableRowService) Update(record map[string]interface{}, restriction ...string) ([]map[string]interface{}, error) {
 	var err error
-	if record, err = t.setupFilter(record, true, restriction...); err != nil {
+	if record, err = t.setupFilter(record, true, true, restriction...); err != nil {
 		return nil, err
 	}
 	t.EmptyCol.Name = t.Name
@@ -98,23 +119,21 @@ func (t *TableRowService) Update(record map[string]interface{}, restriction ...s
 		if err := t.DB.Query(query); err != nil {
 			return t.DBError(nil, err)
 		}
-		t.DB.ClearQueryFilter().ApplyQueryFilters("", "", "", "")
-		if restr := strings.Split(query, "WHERE"); len(restr) > 1 {
-			t.DB.ApplyQueryFilters(restr[len(restr)-1], "", "", "")
-		}
 	} else {
 		return t.DBError(nil, err)
 	}
-	if t.Results, err = t.DB.SelectQueryWithRestriction(
-		t.Table.Name, map[string]interface{}{}, false); err != nil {
+	r, err := t.DB.SelectQueryWithRestriction(t.Table.Name, map[string]interface{}{}, false)
+	if err != nil {
 		return t.DBError(nil, err)
+	} else {
+		t.Results = r
 	}
 	t.SpecializedService.SpecializedUpdateRow(t.Results, record)
 	return t.Results, nil
 }
 func (t *TableRowService) Delete(restriction ...string) ([]map[string]interface{}, error) {
 	var err error
-	if _, err = t.setupFilter(map[string]interface{}{}, true, restriction...); err != nil {
+	if _, err = t.setupFilter(map[string]interface{}{}, true, true, restriction...); err != nil {
 		return nil, err
 	}
 	if t.Results, err = t.Get(restriction...); err == nil {
@@ -128,7 +147,7 @@ func (t *TableRowService) Delete(restriction ...string) ([]map[string]interface{
 	return t.Results, err
 }
 
-func (t *TableRowService) setupFilter(record map[string]interface{}, verify bool, restriction ...string) (map[string]interface{}, error) {
+func (t *TableRowService) setupFilter(record map[string]interface{}, verify bool, write bool, restriction ...string) (map[string]interface{}, error) {
 	if verify {
 		if r, err, forceChange := t.SpecializedService.VerifyDataIntegrity(record, t.Name); err != nil {
 			return record, err
@@ -137,10 +156,10 @@ func (t *TableRowService) setupFilter(record map[string]interface{}, verify bool
 		}
 	}
 	restr, order, limit, view := t.SpecializedService.GenerateQueryFilter(t.Table.Name, restriction...)
-
-	t.DB.ClearQueryFilter().ApplyQueryFilters(restr, order, limit, view)
-	if len(t.DB.GetSQLRestriction()) > 5 && t.DB.GetSQLRestriction()[len(t.DB.GetSQLRestriction())-5:] == " AND " {
-		t.DB.SetSQLRestriction(t.DB.GetSQLRestriction()[:len(t.DB.GetSQLRestriction())-5])
+	if write {
+		t.DB.ClearQueryFilter().ApplyQueryFilters(restr, "", "", view)
+	} else {
+		t.DB.ClearQueryFilter().ApplyQueryFilters(restr, order, limit, view)
 	}
 	return record, nil
 }

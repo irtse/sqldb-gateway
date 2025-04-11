@@ -20,6 +20,11 @@ func (m *MockDB) GetConn() *sql.DB {
 	return args.Get(0).(*sql.DB)
 }
 
+func (m *MockDB) GetSQLGroupBy() string {
+	args := m.Called()
+	return args.String(0)
+}
+
 func (m *MockDB) GetSQLView() string {
 	args := m.Called()
 	return args.String(0)
@@ -50,6 +55,10 @@ func (m *MockDB) SetSQLView(s string) {
 }
 
 func (m *MockDB) SetSQLOrder(s string) {
+	m.Called(s)
+}
+
+func (m *MockDB) SetSQLGroupBy(s string) {
 	m.Called(s)
 }
 

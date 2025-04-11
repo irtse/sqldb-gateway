@@ -7,35 +7,70 @@ import (
 )
 
 func (db *Database) DeleteQueryWithRestriction(name string, restrictions map[string]interface{}, isOr bool) error {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	return db.Query(db.BuildDeleteQueryWithRestriction(name, restrictions, isOr))
 }
 
 func (db *Database) SelectQueryWithRestriction(name string, restrictions interface{}, isOr bool) ([]map[string]interface{}, error) {
-	COUNTREQUEST++
-	return db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
+	res, err := db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
+	if err != nil {
+		fmt.Println("ERR ", db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
+	}
+	return res, err
 }
 
 func (db *Database) SimpleMathQuery(algo string, name string, restrictions interface{}, isOr bool) ([]map[string]interface{}, error) {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	return db.QueryAssociativeArray(db.BuildSimpleMathQueryWithRestriction(algo, name, restrictions, isOr))
 }
 
 func (db *Database) MathQuery(algo string, name string, naming ...string) ([]map[string]interface{}, error) {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	return db.QueryAssociativeArray(db.BuildMathQuery(algo, name, naming...))
 }
 
 func (db *Database) SchemaQuery(name string) ([]map[string]interface{}, error) {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	return db.QueryAssociativeArray(db.BuildSchemaQuery(name))
 }
 
 func (db *Database) ListTableQuery() ([]map[string]interface{}, error) {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	return db.QueryAssociativeArray(db.BuildListTableQuery())
 }
 
 func (db *Database) CreateTableQuery(name string) error {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	return db.Query(db.BuildCreateTableQuery(name))
 }
 
 func (db *Database) UpdateQuery(name string, record map[string]interface{}, restriction map[string]interface{}, isOr bool) error {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	q, err := db.BuildUpdateQueryWithRestriction(name, record, restriction, isOr)
 	if err != nil {
 		return err
@@ -44,7 +79,10 @@ func (db *Database) UpdateQuery(name string, record map[string]interface{}, rest
 }
 
 func (db *Database) DeleteQuery(name string, colName string) error {
-	fmt.Println(db.BuildDeleteQuery(name, colName))
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	return db.Query(db.BuildDeleteQuery(name, colName))
 }
 
@@ -52,6 +90,10 @@ func (db *Database) DeleteQuery(name string, colName string) error {
 * Prepare a query for execution.
  */
 func (db *Database) Prepare(query string) (*sql.Stmt, error) {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	if db.Conn == nil {
 		return nil, fmt.Errorf("no connection to database")
 	}
@@ -62,8 +104,9 @@ func (db *Database) Prepare(query string) (*sql.Stmt, error) {
 * QueryRow executes a query that is expected to return at most one row.
  */
 func (db *Database) QueryRow(query string) (int64, error) {
-	if db.Conn == nil {
-		return 0, fmt.Errorf("no connection to database")
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
 	}
 	id := int64(0)
 	err := db.Conn.QueryRow(query).Scan(&id)
@@ -74,8 +117,9 @@ func (db *Database) QueryRow(query string) (int64, error) {
 * Query executes a query that returns multiple rows, typically a SELECT.
  */
 func (db *Database) Query(query string) error {
-	if db.Conn == nil {
-		return fmt.Errorf("no connection to database")
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
 	}
 	rows, err := db.Conn.Query(query)
 	if err != nil {
@@ -88,8 +132,9 @@ func (db *Database) Query(query string) error {
 * QueryAssociativeArray executes a query that returns multiple rows and returns the result as an array of associative arrays.
  */
 func (db *Database) QueryAssociativeArray(query string) ([]map[string]interface{}, error) {
-	if db.Conn == nil || strings.Contains(query, "<nil>") {
-		return nil, fmt.Errorf("invalid query or no connection")
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
 	}
 	rows, err := db.Conn.Query(query)
 	if err != nil {

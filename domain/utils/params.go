@@ -6,21 +6,54 @@ import (
 	"sync"
 )
 
-var ParamsMutex = &sync.Mutex{}
+type Params struct {
+	Values map[string]string
+	Mutex  *sync.RWMutex
+}
 
-type Params map[string]string
+func NewParams(vals map[string]string) Params {
+	return Params{
+		Values: vals,
+		Mutex:  &sync.RWMutex{},
+	}
+}
 
 func (p Params) GetAsArgs(key string) []string {
-	if arg, ok := p[key]; ok {
+	p.Mutex.RLock()
+	defer p.Mutex.RUnlock()
+	if arg, ok := p.Values[key]; ok {
 		return []string{arg}
 	}
 	return []string{}
 }
 
+func (p Params) Set(key string, value string) {
+	p.Mutex.Lock()
+	defer p.Mutex.Unlock()
+	p.Values[key] = value
+}
+
+func (p Params) Get(key string) (string, bool) {
+	p.Mutex.RLock()
+	defer p.Mutex.RUnlock()
+	k, ok := p.Values[key]
+
+	return k, ok
+}
+
+func (p Params) SimpleDelete(key string) {
+	p.Mutex.Lock()
+	defer p.Mutex.Unlock()
+	delete(p.Values, key)
+}
+
 func (p Params) GetOrder(condition func(string) bool, order []string) []string {
+	p.Mutex.RLock()
+	defer p.Mutex.RUnlock()
+
 	direction := []string{}
-	if orderBy, ok := p[RootOrderParam]; ok {
-		if dir, ok2 := p[RootDirParam]; ok2 {
+	if orderBy, ok := p.Values[RootOrderParam]; ok {
+		if dir, ok2 := p.Values[RootDirParam]; ok2 {
 			direction = strings.Split(ToString(dir), ",")
 		}
 		order = strings.Split(ToString(orderBy), ",")
@@ -30,17 +63,26 @@ func (p Params) GetOrder(condition func(string) bool, order []string) []string {
 	})
 }
 
-func (p Params) Copy() map[string]string {
+func (p Params) Copy() Params {
+	p.Mutex.RLock()
+	defer p.Mutex.RUnlock()
+
 	to := map[string]string{}
-	for k, v := range p {
+	for k, v := range p.Values {
 		to[k] = v
 	}
-	return to
+	return Params{
+		Values: to,
+		Mutex:  &sync.RWMutex{},
+	}
 }
 
 func (p Params) GetLimit(limited string) string {
-	if limit, ok := p[RootLimit]; ok {
-		if offset, ok2 := p[RootOffset]; ok2 {
+	p.Mutex.RLock()
+	defer p.Mutex.RUnlock()
+
+	if limit, ok := p.Values[RootLimit]; ok {
+		if offset, ok2 := p.Values[RootOffset]; ok2 {
 			return connector.FormatLimit(limit, offset)
 		}
 		return connector.FormatLimit(limit, "")
@@ -49,100 +91,131 @@ func (p Params) GetLimit(limited string) string {
 }
 
 func (p Params) RootShallow() Params {
-	p[RootShallow] = "enable"
+	p.Mutex.Lock()
+	defer p.Mutex.Unlock()
+
+	p.Values[RootShallow] = "enable"
 	return p
 }
 
 func (p Params) RootRaw() Params {
-	p[RootRawView] = "enable"
+	p.Mutex.Lock()
+	defer p.Mutex.Unlock()
+
+	p.Values[RootRawView] = "enable"
 	return p
 }
 
 func (p Params) Enrich(param map[string]interface{}) Params {
+	p.Mutex.Lock()
+	defer p.Mutex.Unlock()
+
 	for k, v := range param {
-		p[k] = ToString(v)
+		p.Values[k] = ToString(v)
 	}
 	return p
 }
 
 func (p Params) Add(k string, val interface{}, condition func(string) bool) {
+	p.Mutex.Lock()
+	defer p.Mutex.Unlock()
+
 	if val == nil || val == "" || !condition(k) {
 		return
 	}
-	p[k] = ToString(val)
+	p.Values[k] = ToString(val)
 }
 
 func (p Params) AddMap(vals map[string]interface{}, condition func(string) bool) {
+	p.Mutex.Lock()
+	defer p.Mutex.Unlock()
+
 	for k, val := range vals {
 		p.Add(k, val, condition)
 	}
 }
 
 func (p Params) UpdateParamsWithFilters(view, dir string) {
+	p.Mutex.Lock()
+	defer p.Mutex.Unlock()
 	if view != "" {
-		p[RootColumnsParam] = view
+		p.Values[RootColumnsParam] = view
 	}
 	if dir != "" {
-		p[RootDirParam] = dir
+		p.Values[RootDirParam] = dir
 	}
 }
 
 func (p Params) EnrichCondition(flat map[string]string, condition func(string) bool) Params {
+	p.Mutex.Lock()
+	defer p.Mutex.Unlock()
+
 	for k, v := range flat {
 		if condition(k) {
 			if k == SpecialSubIDParam {
 				k = SpecialIDParam
 			}
-			p[k] = v
+			p.Values[k] = v
 		}
 	}
 	return p
 }
 
 func (p Params) Anonymized() map[string]interface{} {
+	p.Mutex.RLock()
+	defer p.Mutex.RUnlock()
+
 	newM := map[string]interface{}{}
-	for k, v := range p {
+	for k, v := range p.Values {
 		newM[k] = v
 	}
 	return newM
 }
 
 func (p Params) Delete(condition func(string) bool) Params {
+	p.Mutex.Lock()
+	defer p.Mutex.Unlock()
+
 	toDelete := []string{}
-	for k := range p {
+	for k := range p.Values {
 		if condition(k) {
 			toDelete = append(toDelete, k)
 		}
 	}
 	for _, k := range toDelete {
-		delete(p, k)
+		delete(p.Values, k)
 	}
 	return p
 }
 
 func AllParams(table string) Params {
-	return Params{RootTableParam: table, RootRowsParam: ReservedParam}
+	return Params{
+		Values: map[string]string{
+			RootTableParam: table, RootRowsParam: ReservedParam,
+		},
+		Mutex: &sync.RWMutex{},
+	}
 }
 
 func GetTableTargetParameters(tableName interface{}) Params {
 	if tableName == nil {
 		return Params{}
 	}
-	return Params{RootTableParam: ToString(tableName)}
+	return Params{Values: map[string]string{RootTableParam: ToString(tableName)}, Mutex: &sync.RWMutex{}}
 }
 
 func GetColumnTargetParameters(tableName interface{}, col interface{}) Params {
 	if col == nil || ToString(col) == "" {
 		col = ReservedParam
 	}
-	return Params{RootTableParam: ToString(tableName), RootColumnsParam: ToString(col)}
+	return Params{Values: map[string]string{RootTableParam: ToString(tableName), RootColumnsParam: ToString(col)}, Mutex: &sync.RWMutex{}}
 }
 
 func GetRowTargetParameters(tableName interface{}, row interface{}) Params {
 	if row == nil || ToString(row) == "" {
 		row = ReservedParam
 	}
-	return Params{RootTableParam: ToString(tableName), RootRowsParam: ToString(row)}
+	return Params{Values: map[string]string{RootTableParam: ToString(tableName), RootRowsParam: ToString(row)}, Mutex: &sync.RWMutex{}}
 }
 
 const ReservedParam = "all" // IMPORTANT IS THE DEFAULT PARAMS FOR ROWS & COLUMNS PARAMS
@@ -160,11 +233,16 @@ const RootExport = "export"
 const RootFilename = "filename"
 const RootShallow = "shallow"
 const RootSuperCall = "super"
+const RootDestIDParam = "dest_id"
 const RootDestTableIDParam = "dbdest_table_id"
 const RootCommandRow = "command_row"
 const RootCommandCols = "command_columns"
 const RootLimit = "limit"
 const RootOffset = "offset"
+const RootScope = "scope"
+const Rootfoldered = "foldered"
+
+const RootSchemaID = "dbschema_id"
 
 var RootParamsDesc = map[string]string{
 	RootRowsParam:    "needed on a rows level request (value=all for post/put method or a get/delete all)",
@@ -177,10 +255,10 @@ var RootParamsDesc = map[string]string{
 	RootFilter:       "set filter identifier to activate a specific restrictive filter in db",
 	RootViewFilter:   "set view filter identifier to activate a specific view filter in db",
 }
-var HiddenParams = []string{RootDestTableIDParam}
+var HiddenParams = []string{}
 var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset,
 	RootShallow, RootRawView, RootExport, RootFilename, RootFilterNewState, RootFilterLine, RootFilter, RootViewFilter,
-	RootSuperCall, RootCommandRow, SpecialIDParam}
+	RootSuperCall, RootCommandRow, SpecialIDParam, Rootfoldered, RootScope, RootDestIDParam}
 
 const SpecialIDParam = "id"
 const SpecialSubIDParam = "subid"

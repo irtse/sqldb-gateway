@@ -5,6 +5,7 @@ import (
 	"os"
 	domain "sqldb-ws/domain"
 	"sqldb-ws/domain/schema"
+	"sqldb-ws/domain/task"
 	_ "sqldb-ws/routers"
 
 	beego "github.com/beego/beego/v2/server/web"
@@ -37,6 +38,7 @@ func main() {
 	}
 	fmt.Printf("%s\n", "Service in "+os.Getenv("AUTH_MODE")+" mode")
 	schema.Load(domain.Domain(true, os.Getenv("SUPERADMIN_NAME"), nil))
+	task.Load(domain.Domain(true, os.Getenv("SUPERADMIN_NAME"), nil))
 	fmt.Printf("%s\n", "Running server...")
 	beego.Run()
 }

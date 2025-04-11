@@ -9,6 +9,10 @@ import (
 )
 
 func (db *Database) BuildDeleteQueryWithRestriction(name string, restrictions map[string]interface{}, isOr bool) string {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	query := fmt.Sprintf("DELETE FROM %s", name)
 	if t := FormatSQLRestrictionWhereByMap("", restrictions, isOr); t != "" {
 		query += " WHERE " + t
@@ -19,6 +23,10 @@ func (db *Database) BuildDeleteQueryWithRestriction(name string, restrictions ma
 
 func (db *Database) BuildSimpleMathQueryWithRestriction(algo string, name string,
 	restrictions interface{}, isOr bool, restr ...string) string {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	col := "*" // default to all columns
 	query := "SELECT " + strings.ToUpper(algo) + "(" + col + ") as result FROM " + name
 	kind := reflect.TypeOf(restrictions).Kind()
@@ -26,7 +34,7 @@ func (db *Database) BuildSimpleMathQueryWithRestriction(algo string, name string
 		if t := FormatSQLRestrictionWhereByMap("", restrictions.(map[string]interface{}), isOr); t != "" {
 			query += " WHERE " + t
 		}
-	} else if kind == reflect.Array && len(restrictions.([]interface{})) > 0 {
+	} else if (kind == reflect.Array || kind == reflect.Slice) && len(restrictions.([]interface{})) > 0 {
 		if t := FormatSQLRestrictionByList("", restrictions.([]interface{}), isOr); t != "" {
 			query += " WHERE " + t
 		}
@@ -37,6 +45,10 @@ func (db *Database) BuildSimpleMathQueryWithRestriction(algo string, name string
 }
 
 func (db *Database) BuildSelectQueryWithRestriction(name string, restrictions interface{}, isOr bool, view ...string) string {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	viewStr := "*"
 	if db.SQLView != "" {
 		viewStr = db.SQLView
@@ -46,22 +58,43 @@ func (db *Database) BuildSelectQueryWithRestriction(name string, restrictions in
 	}
 	query := fmt.Sprintf("SELECT %s FROM %s", viewStr, name)
 	kind := reflect.TypeOf(restrictions).Kind()
+	if (kind == reflect.Map && len(restrictions.(map[string]interface{})) > 0) || ((kind == reflect.Array || kind == reflect.Slice) && len(restrictions.([]interface{})) > 0) || db.SQLRestriction != "" {
+		query += " WHERE "
+	}
+	isAnd := false
 	if kind == reflect.Map && len(restrictions.(map[string]interface{})) > 0 {
 		if t := FormatSQLRestrictionWhereByMap("", restrictions.(map[string]interface{}), isOr); t != "" {
-			query += " WHERE " + t
+			query += t
+			isAnd = true
 		}
-	} else if kind == reflect.Array && len(restrictions.([]interface{})) > 0 {
+	}
+	if (kind == reflect.Array || kind == reflect.Slice) && len(restrictions.([]interface{})) > 0 {
 		if t := FormatSQLRestrictionByList("", restrictions.([]interface{}), isOr); t != "" {
-			query += " WHERE " + t
+			if isAnd {
+				query += " AND "
+			}
+			query += t
+			isAnd = true
 		}
-	} else if db.SQLRestriction != "" {
-		query += " WHERE " + db.SQLRestriction
+	}
+	if db.SQLRestriction != "" {
+		if isAnd {
+			query += " AND "
+		}
+		query += db.SQLRestriction
+	}
+	if len(query) > 5 && (query[len(query)-4:len(query)-1] == "AND" || query[len(query)-4:len(query)-1] == "AND ") {
+		query = query[0 : len(query)-4]
 	}
 	query = db.applyOrderAndLimit(query)
 	return query
 }
 
 func (db *Database) BuildMathQuery(algo string, name string, naming ...string) string {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	resName := "result"
 	if len(naming) > 0 {
 		resName = naming[0]
@@ -89,6 +122,10 @@ func (db *Database) BuildMathQuery(algo string, name string, naming ...string) s
 }
 
 func (db *Database) BuildDeleteQuery(tableName string, colName string) string {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	if colName == "" { // if no column name is specified then delete in rows
 		return "DELETE FROM " + tableName + " WHERE " + db.SQLRestriction
 	}
@@ -118,6 +155,10 @@ func (db *Database) BuildSchemaQuery(name string) string {
 }
 
 func (db *Database) BuildListTableQuery() string {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	if !slices.Contains(drivers, db.Driver) {
 		log.Error().Msg("Invalid DB driver!")
 		return ""
@@ -133,10 +174,14 @@ func (db *Database) BuildListTableQuery() string {
 }
 
 func (db *Database) BuildCreateTableQuery(name string) string {
-	return fmt.Sprintf("CREATE TABLE %s (id SERIAL PRIMARY KEY, active BOOLEAN DEFAULT TRUE)", name)
+	return fmt.Sprintf("CREATE TABLE %s (id SERIAL PRIMARY KEY, active BOOLEAN DEFAULT TRUE, is_draft BOOLEAN DEFAULT FALSE)", name)
 }
 
 func (db *Database) BuildCreateQueries(tableName string, values string, cols string, typ string) []string {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	queries := []string{}
 	if typ != "" {
 		if typ == "" || typ == "<nil>" || cols == "" || cols == "<nil>" || cols == "id" {
@@ -166,6 +211,10 @@ func (db *Database) BuildCreateQueries(tableName string, values string, cols str
 }
 
 func (db *Database) ApplyQueryFilters(restr string, order string, limit string, views string, additionnalRestriction ...string) {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	if restr != "" {
 		if len(db.SQLRestriction) > 0 {
 			db.SQLRestriction = db.SQLRestriction + " AND " + restr
@@ -198,16 +247,20 @@ func (db *Database) ApplyQueryFilters(restr string, order string, limit string, 
 
 func (db *Database) BuildUpdateQuery(col string, value interface{}, set string,
 	cols []string, colValues []string, verify func(string) (string, bool)) (string, []string, []string) {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	if col == "id" && fmt.Sprintf("%v", value) != "0" && fmt.Sprintf("%v", value) != "" {
 		db.SQLRestriction = "id=" + fmt.Sprintf("%v", value) + " "
 	}
 	if typ, ok := verify(col); ok && !slices.Contains([]string{"NULL", ""}, FormatForSQL(strings.Split(typ, ":")[0], value)) {
 		if value == "" || reflect.TypeOf(value).Kind().String() == "string" {
-			set += col + "=" + Quote(fmt.Sprintf("%v", value)) + ","
+			set += " " + col + "=" + Quote(fmt.Sprintf("%v", value)) + ","
 			cols = append(cols, col)
-			colValues = append(cols, Quote(fmt.Sprintf("%v", value)))
+			colValues = append(colValues, Quote(fmt.Sprintf("%v", value)))
 		} else {
-			set += col + "=" + FormatForSQL(strings.Split(typ, ":")[0], value) + ","
+			set += " " + col + "=" + FormatForSQL(strings.Split(typ, ":")[0], value) + ","
 			cols = append(cols, col)
 			colValues = append(colValues, FormatForSQL(strings.Split(typ, ":")[0], value))
 		}
@@ -217,11 +270,15 @@ func (db *Database) BuildUpdateQuery(col string, value interface{}, set string,
 }
 
 func (db *Database) BuildUpdateQueryWithRestriction(tableName string, record map[string]interface{}, restrictions map[string]interface{}, isOr bool) (string, error) {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	set := ""
 	for key, element := range record {
 		set, _, _ = db.BuildUpdateQuery(key, element, set, []string{}, []string{}, func(s string) (string, bool) { return "", true })
-		set = RemoveLastChar(set)
 	}
+	set = RemoveLastChar(set)
 	if set == "" {
 		return "", errors.New("no value to update")
 	}
@@ -233,11 +290,15 @@ func (db *Database) BuildUpdateQueryWithRestriction(tableName string, record map
 }
 
 func (db *Database) BuildUpdateRowQuery(tableName string, record map[string]interface{}, verify func(string) (string, bool)) (string, error) {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	set := ""
 	for key, element := range record {
 		set, _, _ = db.BuildUpdateQuery(key, element, set, []string{}, []string{}, verify)
-		set = RemoveLastChar(set)
 	}
+	set = RemoveLastChar(set)
 	if set == "" {
 		return "", errors.New("no value to update")
 	}
@@ -250,6 +311,10 @@ func (db *Database) BuildUpdateRowQuery(tableName string, record map[string]inte
 }
 
 func (db *Database) BuildUpdateColumnQueries(tableName string, record map[string]interface{}, verify func(string) (string, bool)) ([]string, error) {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	queries := []string{}
 	typ := fmt.Sprintf("%v", record["type"])
 	name := fmt.Sprintf("%v", record["name"])
@@ -271,8 +336,15 @@ func (db *Database) BuildUpdateColumnQueries(tableName string, record map[string
 }
 
 func (db *Database) applyOrderAndLimit(query string) string {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	if db.SQLOrder != "" {
 		query += " ORDER BY " + db.SQLOrder
+	}
+	if db.SQLGroupBy != "" {
+		query += " GROUP BY " + db.SQLLimit
 	}
 	if db.SQLLimit != "" {
 		query += " " + db.SQLLimit

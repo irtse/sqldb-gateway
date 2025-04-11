@@ -7,6 +7,7 @@ import (
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
+	"sync"
 	"time"
 
 	"github.com/schollz/progressbar/v3"
@@ -91,9 +92,12 @@ func CreateRootTable(domainInstance utils.DomainITF, record utils.Record) bool {
 func CreateWorkflowView(domainInstance utils.DomainITF, schema sm.SchemaModel, bar *progressbar.ProgressBar) {
 	bar.AddDetail("Creating Integration Workflow for Schema " + schema.Name)
 	params := utils.Params{
-		utils.RootTableParam: ds.DBView.Name,
-		utils.RootRowsParam:  utils.ReservedParam,
-		utils.RootRawView:    "enable",
+		Values: map[string]string{
+			utils.RootTableParam: ds.DBView.Name,
+			utils.RootRowsParam:  utils.ReservedParam,
+			utils.RootRawView:    "enable",
+		},
+		Mutex: &sync.RWMutex{},
 	}
 	newWorkflow := utils.Record{
 		sm.NAMEKEY:       "workflow",
@@ -113,9 +117,15 @@ func CreateRootView(domainInstance utils.DomainITF, bar *progressbar.ProgressBar
 	for _, view := range ds.DBRootViews {
 		bar.AddDetail("Creating Root View " + utils.ToString(utils.ToMap(view)[sm.NAMEKEY]))
 		params := utils.AllParams(ds.DBView.Name).RootRaw()
+		r, err := domainInstance.CreateSuperCall(params, view)
+		if err != nil || len(r) == 0 {
+			bar.Add(1)
+			continue
+		}
+		realView := r[0]
 		sch, err := GetSchema(utils.ToString(view["foreign_table"]))
 		if err == nil {
-			view[ds.SchemaDBField] = sch.ID
+			realView[ds.SchemaDBField] = sch.ID
 			delete(view, "foreign_table")
 			if filter, ok := view["filter"]; ok {
 				delete(view, "filter")
@@ -144,12 +154,14 @@ func CreateRootView(domainInstance utils.DomainITF, bar *progressbar.ProgressBar
 						}
 						domainInstance.CreateSuperCall(utils.AllParams(ds.DBFilterField.Name), f)
 					}
-					view[ds.FilterDBField] = res[0][utils.SpecialIDParam]
+					realView[ds.FilterDBField] = res[0][utils.SpecialIDParam]
 				}
 			}
 		}
-
-		domainInstance.CreateSuperCall(params, view)
+		delete(realView, "name")
+		domainInstance.UpdateSuperCall(utils.AllParams(ds.DBView.Name).Enrich(map[string]interface{}{
+			"id": realView["id"],
+		}).RootRaw(), realView)
 		bar.Add(1)
 	}
 }

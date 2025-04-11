@@ -27,7 +27,7 @@ func (s *WorkflowService) TransformToGenericView(results utils.Results, tableNam
 			}
 		}
 	}
-	return view_convertor.NewViewConvertor(s.Domain).TransformToView(res, tableName, true)
+	return view_convertor.NewViewConvertor(s.Domain).TransformToView(res, tableName, true, s.Domain.GetParams().Copy())
 }
 
 func (s *WorkflowService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
@@ -35,5 +35,9 @@ func (s *WorkflowService) GenerateQueryFilter(tableName string, innerestr ...str
 }
 
 func (s *WorkflowService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
-	return servutils.CheckAutoLoad(tablename, record, s.Domain)
+	if rec, err, ok := servutils.CheckAutoLoad(tablename, record, s.Domain); ok {
+		return s.AbstractSpecializedService.VerifyDataIntegrity(rec, tablename)
+	} else {
+		return record, err, false
+	}
 }

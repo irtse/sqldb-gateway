@@ -22,7 +22,7 @@ func AddMap(rec map[string]interface{}, add ...map[string]interface{}) map[strin
 func ToListStr(add []interface{}) []string {
 	rec := []string{}
 	for _, res := range add {
-		res = append(rec, ToString(res))
+		rec = append(rec, ToString(res))
 	}
 	return rec
 }
@@ -73,6 +73,13 @@ func (ar *Record) GetString(column string) string {
 	return ToString((*ar)[column])
 }
 
+func GetBool(record map[string]interface{}, column string) bool {
+	if record[column] == nil {
+		return false
+	}
+	return ToString(record[column]) == "true"
+}
+
 func GetString(record map[string]interface{}, column string) string {
 	if record[column] == nil {
 		return ""
@@ -84,6 +91,11 @@ func GetInt(record map[string]interface{}, column string) int64 {
 	str := ToString(record[column])
 	val, _ := strconv.Atoi(str)
 	return int64(val)
+}
+
+func (ar *Record) GetBool(column string) bool {
+	str := ToString((*ar)[column])
+	return str == "true"
 }
 
 func (ar *Record) GetInt(column string) int64 {

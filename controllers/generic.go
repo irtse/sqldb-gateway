@@ -24,7 +24,7 @@ func (l *MainController) Main() {
 	l.ParamsOverload = utils.AllParams(ds.DBView.Name).RootShallow().Enrich(
 		map[string]interface{}{
 			"indexable": true,
-		})
+		}).Values
 	l.SafeCall(utils.SELECT)
 }
 

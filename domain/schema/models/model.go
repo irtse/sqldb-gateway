@@ -156,6 +156,9 @@ type FieldModel struct { // definition a db table columns
 	ForeignTable string      `json:"-"`           // Special case for foreign key
 	Constraint   string      `json:"constraints"` // Special case for constraint on field
 	Required     bool        `json:"required"`
+	Hidden       bool        `json:"hidden"`
+	Translatable bool        `json:"translatable"`
+	Transform    string      `json:"transform_function"`
 }
 
 func (t FieldModel) Map(m map[string]interface{}) *FieldModel {
@@ -200,22 +203,23 @@ func (v FieldModel) ToRecord() utils.Record {
 }
 
 type ViewModel struct { // lightest struct based on SchemaModel dedicate to view
-	ID          int64             `json:"id"`
-	Name        string            `json:"name"`
-	Label       string            `json:"label"`
-	SchemaID    int64             `json:"schema_id"`
-	SchemaName  string            `json:"schema_name"`
-	Description string            `json:"description"`
-	Path        string            `json:"link_path"`
-	Order       []string          `json:"order"`
-	Schema      utils.Record      `json:"schema"`
-	Items       []ViewItemModel   `json:"items"`
-	Actions     []string          `json:"actions"`
-	ActionPath  string            `json:"action_path"`
-	Readonly    bool              `json:"readonly"`
-	Workflow    *WorkflowModel    `json:"workflow"`
-	IsWrapper   bool              `json:"is_wrapper"`
-	Shortcuts   map[string]string `json:"shortcuts"`
+	ID          int64                    `json:"id"`
+	Name        string                   `json:"name"`
+	Label       string                   `json:"label"`
+	SchemaID    int64                    `json:"schema_id"`
+	SchemaName  string                   `json:"schema_name"`
+	Description string                   `json:"description"`
+	Path        string                   `json:"link_path"`
+	Order       []string                 `json:"order"`
+	Schema      utils.Record             `json:"schema"`
+	Items       []ViewItemModel          `json:"items"`
+	Actions     []string                 `json:"actions"`
+	ActionPath  string                   `json:"action_path"`
+	Readonly    bool                     `json:"readonly"`
+	Workflow    *WorkflowModel           `json:"workflow"`
+	IsWrapper   bool                     `json:"is_wrapper"`
+	Shortcuts   map[string]string        `json:"shortcuts"`
+	Consents    []map[string]interface{} `json:"consents"`
 }
 
 func (v ViewModel) ToRecord() utils.Record {
@@ -237,6 +241,16 @@ type ViewItemModel struct {
 	HistoryPath   string                   `json:"history_path"`
 	Workflow      *WorkflowModel           `json:"workflow"`
 	Readonly      bool                     `json:"readonly"`
+	Sharing       SharingModel             `json:"sharing"`
+	Draft         bool                     `json:"is_draft"`
+	Synthesis     string                   `json:"synthesis_path"`
+}
+
+type SharingModel struct {
+	Body           map[string]interface{} `json:"body"`
+	SharedWithPath string                 `json:"shared_with_path"`
+	Path           string                 `json:"share_path"`
+	ShallowPath    map[string]string      `json:"shallow_path"`
 }
 
 type ViewFieldModel struct { // lightest struct based on FieldModel dedicate to view
@@ -253,6 +267,7 @@ type ViewFieldModel struct { // lightest struct based on FieldModel dedicate to 
 	Actions      []string               `json:"actions"`
 	DataSchemaID int64                  `json:"data_schema_id"`
 	DataSchema   map[string]interface{} `json:"data_schema"`
+	Active       bool                   `json:"active"`
 }
 
 type WorkflowModel struct { // lightest struct based on SchemaModel dedicate to view

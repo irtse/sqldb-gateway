@@ -37,6 +37,17 @@ func ToList(who interface{}) []interface{} {
 	return []interface{}{}
 }
 
+func ToFloat64(who interface{}) float64 {
+	if who == nil {
+		return 0
+	}
+	i, err := strconv.ParseFloat(fmt.Sprintf("%v", who), 64)
+	if err != nil {
+		return 0
+	}
+	return float64(i)
+}
+
 func ToInt64(who interface{}) int64 {
 	if who == nil {
 		return 0

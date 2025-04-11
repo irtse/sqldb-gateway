@@ -77,7 +77,7 @@ func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(st
 				continue
 			}
 			typ, link, err := getTypeAndLink(keyVal[0])
-			if err == nil && keyVal[0] != "id" {
+			if err != nil && keyVal[0] != "id" {
 				continue
 			}
 			if len(strings.Trim(orRestr, " ")) > 0 {
@@ -169,6 +169,12 @@ func FormatSQLRestrictionByList(SQLrestriction string, restrictions []interface{
 
 func FormatSQLRestrictionWhereByMap(SQLrestriction string, restrictions map[string]interface{}, isOr bool) string {
 	for k, r := range restrictions {
+		k2 := k
+		karr := strings.Split(k, "_")
+		latest := karr[len(karr)-1]
+		if _, err := strconv.Atoi(latest); err == nil {
+			k2 = strings.ReplaceAll(k, "_"+latest, "")
+		}
 		if len(SQLrestriction) > 0 {
 			if isOr {
 				SQLrestriction += " OR "
@@ -177,21 +183,39 @@ func FormatSQLRestrictionWhereByMap(SQLrestriction string, restrictions map[stri
 			}
 		}
 		if r == nil {
-			SQLrestriction += k + " IS NULL"
+			if strings.Contains(k2, "!") {
+				k2 = strings.ReplaceAll(k2, "!", "")
+				SQLrestriction += k2 + " IS NOT NULL"
+			} else {
+				SQLrestriction += k2 + " IS NULL"
+			}
 		} else {
+			not := strings.Contains(k2, "!")
+			k2 = strings.ReplaceAll(k2, "!", "")
 			divided := strings.Split(fmt.Sprintf("%v", r), " ")
 			if len(divided) > 1 && slices.Contains([]string{"SELECT", "INSERT", "UPDATE", "DELETE"}, strings.ToUpper(divided[0])) {
-				SQLrestriction += k + " IN (" + fmt.Sprintf("%v", r) + ")"
+				SQLrestriction += k2 + " IN (" + fmt.Sprintf("%v", r) + ")"
 			} else if len(divided) > 1 && slices.Contains([]string{"!SELECT", "!INSERT", "!UPDATE", "!DELETE"}, strings.ToUpper(divided[0])) {
 				r = strings.ReplaceAll(fmt.Sprintf("%v", r), "!SELECT", "SELECT")
 				r = strings.ReplaceAll(fmt.Sprintf("%v", r), "!INSERT", "INSERT")
 				r = strings.ReplaceAll(fmt.Sprintf("%v", r), "!UPDATE", "UPDATE")
 				r = strings.ReplaceAll(fmt.Sprintf("%v", r), "!DELETE", "DELETE")
-				SQLrestriction += k + " NOT IN (" + fmt.Sprintf("%v", r) + ")"
+				SQLrestriction += k2 + " NOT IN (" + fmt.Sprintf("%v", r) + ")"
 			} else if reflect.TypeOf(r).Kind() == reflect.Slice {
-				SQLrestriction += k + " IN (" + strings.Join(r.([]string), ",") + ")"
+				if not {
+					SQLrestriction += k2 + " NOT IN (" + strings.Join(r.([]string), ",") + ")"
+				} else {
+					SQLrestriction += k2 + " IN (" + strings.Join(r.([]string), ",") + ")"
+				}
+			} else if strings.Contains(fmt.Sprintf("%v", r), "SELECT") {
+				SQLrestriction += k2 + " IN (" + fmt.Sprintf("%v", r) + ")"
 			} else {
-				SQLrestriction += k + "=" + fmt.Sprintf("%v", r)
+				if not {
+					SQLrestriction += k2 + "!=" + fmt.Sprintf("%v", r)
+				} else {
+					SQLrestriction += k2 + "=" + fmt.Sprintf("%v", r)
+				}
+
 			}
 		}
 	}

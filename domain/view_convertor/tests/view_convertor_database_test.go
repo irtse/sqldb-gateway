@@ -23,6 +23,11 @@ func (m *MockDomain) GetDb() *MockDB {
 	return args.Get(0).(*MockDB)
 }
 
+func (m *MockDomain) GetUserID() string {
+	args := m.Called()
+	return args.String(0)
+}
+
 func (m *MockDomain) GetUser() string {
 	args := m.Called()
 	return args.String(0)
@@ -67,7 +72,7 @@ func TestGetShortcuts(t *testing.T) {
 		Return([]map[string]interface{}{{"name": "shortcut1", "id": "123"}}, nil)
 
 	vc := view_convertor.NewViewConvertor(mockDomain)
-	shortcuts := vc.GetShortcuts()
+	shortcuts := vc.GetShortcuts("123", []string{"get"})
 
 	assert.Equal(t, "#123", shortcuts["shortcut1"])
 }
@@ -82,7 +87,9 @@ func TestFetchRecord(t *testing.T) {
 		Return([]map[string]interface{}{{"id": "123", "name": "Test"}}, nil)
 
 	vc := view_convertor.NewViewConvertor(mockDomain)
-	record := vc.FetchRecord("test_table", "123")
+	record := vc.FetchRecord("test_table", map[string]interface{}{
+		utils.SpecialIDParam: "123",
+	})
 
 	assert.NotNil(t, record)
 	assert.Equal(t, "Test", record[0]["name"])
@@ -98,7 +105,9 @@ func TestFetchRecord_Error(t *testing.T) {
 		Return(nil, errors.New("DB error"))
 
 	vc := view_convertor.NewViewConvertor(mockDomain)
-	record := vc.FetchRecord("test_table", "123")
+	record := vc.FetchRecord("test_table", map[string]interface{}{
+		utils.SpecialIDParam: "123",
+	})
 
 	assert.Nil(t, record)
 }
@@ -158,7 +167,7 @@ func TestProcessPermissions(t *testing.T) {
 	field := sm.ViewFieldModel{}
 	actions := []string{}
 
-	vc.ProcessPermissions(&field, sm.FieldModel{}, "test_table", &actions, sm.SchemaModel{})
+	field, actions = vc.ProcessPermissions(field, sm.FieldModel{}, "test_table", actions, sm.SchemaModel{})
 
 	assert.Contains(t, actions, "create")
 }
@@ -175,7 +184,7 @@ func TestCheckAndAddImportAction(t *testing.T) {
 	vc := view_convertor.NewViewConvertor(mockDomain)
 	actions := []string{}
 
-	vc.CheckAndAddImportAction(&actions, sm.SchemaModel{})
+	actions = vc.CheckAndAddImportAction(actions, sm.SchemaModel{})
 
 	assert.Contains(t, actions, "import")
 }
@@ -189,7 +198,7 @@ func TestHandleRecursivePermissions(t *testing.T) {
 	field := sm.ViewFieldModel{}
 	scheme := sm.FieldModel{Type: "many", Name: "linked_table"}
 
-	vc.HandleRecursivePermissions(&field, scheme, utils.SELECT)
+	field = vc.HandleRecursivePermissions(field, scheme, utils.SELECT)
 
 	assert.Equal(t, "link", field.Type)
 	assert.Contains(t, field.Actions, "select")

@@ -23,11 +23,11 @@ type DashboardService struct {
 
 // mainly should deserialize the data from the database
 // into a format that can be used by the front-end to display the data
-func (s *DashboardService) ShouldVerify() bool                                                      { return true }
 func (s *DashboardService) Entity() utils.SpecializedServiceInfo                                    { return ds.DBDashboard }
 func (s *DashboardService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {}
 func (s *DashboardService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
-	s.SpecializedCreateRow(record, ds.DBFilter.Name)
+	s.Write(record, ds.DBFilter.Name)
+	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
 }
 
 func (s *DashboardService) CreateDashboardMathOperation(elementID string, record map[string]interface{}) error {
@@ -49,6 +49,11 @@ func (s *DashboardService) CreateDashboardElement(dashboardID string, record map
 }
 
 func (s *DashboardService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
+	s.Write(record, tableName)
+	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
+}
+
+func (s *DashboardService) Write(record map[string]interface{}, tableName string) {
 	for _, element := range s.Elements {
 		err := s.CreateDashboardElement(utils.ToString(record[utils.SpecialIDParam]), element)
 		if fields, ok := record["fields"]; ok && err == nil {
@@ -58,9 +63,6 @@ func (s *DashboardService) SpecializedCreateRow(record map[string]interface{}, t
 					break
 				}
 			}
-		}
-		if err != nil {
-			fmt.Println(err)
 		}
 	}
 }
@@ -101,7 +103,7 @@ func (s *DashboardService) VerifyDataIntegrity(record map[string]interface{}, ta
 	}
 
 	s.ProcessSelection(record)
-	return record, nil, true
+	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
 
 func (s *DashboardService) ProcessName(record map[string]interface{}) {
@@ -137,10 +139,10 @@ func (d *DashboardService) HandleDelete(record map[string]interface{}) {
 		// delete the operator element
 		if element[utils.SpecialIDParam] != nil && element[utils.SpecialIDParam] != "" {
 			params := utils.AllParams(ds.DBDashboardElement.Name)
-			params[ds.DashboardElementDBField] = utils.ToString(element[utils.SpecialIDParam])
+			params.Set(ds.DashboardElementDBField, utils.ToString(element[utils.SpecialIDParam]))
 			d.Domain.DeleteSuperCall(params)
 			params = utils.AllParams(ds.DBDashboardElement.Name)
-			params[ds.DashboardDBField] = utils.ToString(record[utils.SpecialIDParam])
+			params.Set(ds.DashboardDBField, utils.ToString(record[utils.SpecialIDParam]))
 			d.Domain.DeleteSuperCall(params)
 		}
 	}

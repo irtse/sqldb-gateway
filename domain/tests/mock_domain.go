@@ -19,8 +19,11 @@ type MockDomain struct {
 func NewMockDomain() *MockDomain {
 	return &MockDomain{
 		records: make(map[string][]map[string]interface{}),
-		params:  make(utils.Params),
+		params:  utils.NewParams(map[string]string{}),
 	}
+}
+
+func (m *MockDomain) SetOwn(own bool) {
 }
 
 func (m *MockDomain) SuperCall(params utils.Params, record utils.Record, method utils.Method, isOwn bool, args ...interface{}) (utils.Results, error) {
@@ -53,6 +56,10 @@ func (m *MockDomain) GetMethod() utils.Method {
 
 func (m *MockDomain) GetTable() string {
 	return "mock_table"
+}
+
+func (m *MockDomain) GetUserID() string {
+	return "1"
 }
 
 func (m *MockDomain) GetUser() string {

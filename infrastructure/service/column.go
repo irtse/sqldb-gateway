@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"sqldb-ws/infrastructure/connector"
 	"strings"
 )
 
@@ -10,6 +11,18 @@ import (
 type TableColumnService struct {
 	Views string
 	InfraService
+}
+
+func NewTableColumnService(database connector.DB, admin bool, user string, name string, specializedService InfraSpecializedServiceItf, views string) *TableColumnService {
+	col := &TableColumnService{
+		Views:        views,
+		InfraService: InfraService{DB: database, NoLog: false, SpecializedService: specializedService},
+	}
+	col.Fill(name, admin, user)
+	if col.SpecializedService == nil {
+		col.SpecializedService = &InfraSpecializedService{}
+	}
+	return col
 }
 
 func (t *TableColumnService) Template(restriction ...string) (interface{}, error) {

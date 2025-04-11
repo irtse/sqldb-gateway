@@ -13,20 +13,11 @@ func (d *FilterService) GetEntityFilterQuery(field string) string {
 	return d.Domain.GetDb().BuildSelectQueryWithRestriction(
 		ds.DBEntityUser.Name,
 		map[string]interface{}{
-			ds.UserDBField: d.GetUserFilterQuery(ds.UserDBField),
+			ds.UserDBField: d.Domain.GetUserID(),
 		}, true, field)
 }
 
-func (d *FilterService) GetUserFilterQuery(field string) string {
-	return d.Domain.GetDb().BuildSelectQueryWithRestriction(
-		ds.DBUser.Name,
-		map[string]interface{}{
-			"name":  connector.Quote(d.Domain.GetUser()),
-			"email": connector.Quote(d.Domain.GetUser()),
-		}, true, field)
-}
-
-func (d *FilterService) CountNewDataAccess(tableName string, filter []string) ([]string, int64) {
+func (d *FilterService) CountNewDataAccess(tableName string, filter []interface{}) ([]string, int64) {
 	newFilter := []interface{}{
 		connector.FormatSQLRestrictionWhereByMap("",
 			map[string]interface{}{
@@ -34,9 +25,9 @@ func (d *FilterService) CountNewDataAccess(tableName string, filter []string) ([
 					ds.DBDataAccess.Name, map[string]interface{}{
 						ds.SchemaDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(
 							ds.DBSchema.Name, map[string]interface{}{
-								"name": tableName,
+								"name": connector.Quote(tableName),
 							}, false, "id"),
-						ds.UserDBField: d.GetUserFilterQuery("id"),
+						ds.UserDBField: d.Domain.GetUserID(),
 					}, true, ds.DestTableDBField),
 			}, false)}
 	for _, v := range filter {
@@ -84,11 +75,9 @@ func (s *FilterService) GetFilterIDs(filterID string, viewfilterID string, schem
 		ds.RootID(ds.DBSchema.Name): schemaID,
 	})
 	filtersID := map[string]string{utils.RootFilter: filterID, utils.RootViewFilter: viewfilterID}
-	utils.ParamsMutex.Lock()
-	defer utils.ParamsMutex.Unlock()
 	for _, v := range filtersID {
-		if p, ok := s.Domain.GetParams()[v]; ok && p != "" {
-			params[ds.FilterDBField] = p
+		if p, ok := s.Domain.GetParams().Get(v); ok && p != "" {
+			params.Set(ds.FilterDBField, p)
 			restriction := map[string]interface{}{
 				ds.SchemaDBField: schemaID,
 				ds.FilterDBField: p,

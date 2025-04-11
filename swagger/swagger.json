@@ -219,6 +219,24 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of foldered",
+      "in": "query",
+      "name": "foldered",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of scope",
+      "in": "query",
+      "name": "scope",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of dest_id",
+      "in": "query",
+      "name": "dest_id",
+      "type": "string"
+     },
+     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -351,6 +369,24 @@
       "type": "string"
      },
      {
+      "description": "(Optionnal) Value of foldered",
+      "in": "query",
+      "name": "foldered",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of scope",
+      "in": "query",
+      "name": "scope",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of dest_id",
+      "in": "query",
+      "name": "dest_id",
+      "type": "string"
+     },
+     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -480,6 +516,24 @@
       "description": "(Optionnal) Value of id",
       "in": "query",
       "name": "id",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of foldered",
+      "in": "query",
+      "name": "foldered",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of scope",
+      "in": "query",
+      "name": "scope",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of dest_id",
+      "in": "query",
+      "name": "dest_id",
       "type": "string"
      },
      {
@@ -621,6 +675,24 @@
       "description": "(Optionnal) Value of id",
       "in": "query",
       "name": "id",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of foldered",
+      "in": "query",
+      "name": "foldered",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of scope",
+      "in": "query",
+      "name": "scope",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of dest_id",
+      "in": "query",
+      "name": "dest_id",
       "type": "string"
      },
      {
@@ -771,6 +843,24 @@
       "description": "(Optionnal) Value of id",
       "in": "query",
       "name": "id",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of foldered",
+      "in": "query",
+      "name": "foldered",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of scope",
+      "in": "query",
+      "name": "scope",
+      "type": "string"
+     },
+     {
+      "description": "(Optionnal) Value of dest_id",
+      "in": "query",
+      "name": "dest_id",
       "type": "string"
      },
      {

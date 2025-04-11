@@ -25,6 +25,7 @@ type DomainITF interface {
 	GetDb() *conn.Database
 	GetMethod() Method
 	GetTable() string
+	GetUserID() string
 	GetUser() string
 	GetEmpty() bool
 	GetParams() Params
@@ -33,6 +34,7 @@ type DomainITF interface {
 	HandleRecordAttributes(record Record)
 
 	// Main accessor defined by DomainITF interface
+	SetOwn(own bool)
 	IsOwn(checkPerm bool, force bool, method Method) bool
 	IsSuperCall() bool
 	IsSuperAdmin() bool

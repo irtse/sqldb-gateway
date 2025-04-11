@@ -3,6 +3,7 @@ package view_convertor
 import (
 	"fmt"
 	"slices"
+	"sqldb-ws/domain/filter"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
@@ -13,7 +14,6 @@ func (d *ViewConvertor) EnrichWithWorkFlowView(record utils.Record, tableName st
 	if !isWorkflow {
 		return nil
 	}
-
 	workflow := sm.WorkflowModel{Position: "0", Current: "0", Steps: make(map[string][]sm.WorkflowStepModel)}
 	id, requestID, nexts := "", "", []string{}
 
@@ -21,8 +21,10 @@ func (d *ViewConvertor) EnrichWithWorkFlowView(record utils.Record, tableName st
 	case ds.DBWorkflow.Name:
 		id = record.GetString(utils.SpecialIDParam)
 	case ds.DBRequest.Name:
-		if t := d.FetchRecord(ds.DBRequest.Name, record.GetString(utils.SpecialIDParam)); len(t) > 0 {
-			id = utils.ToString(t[0][ds.RootID(ds.DBWorkflow.Name)])
+		if t := d.FetchRecord(ds.DBRequest.Name, map[string]interface{}{
+			ds.WorkflowDBField: record.GetInt(ds.WorkflowDBField),
+		}); len(t) > 0 {
+			id = utils.ToString(t[0][ds.WorkflowDBField])
 			requestID = utils.ToString(t[0][utils.SpecialIDParam])
 			workflow = d.InitializeWorkflow(t[0])
 		} else {
@@ -54,28 +56,29 @@ func (d *ViewConvertor) InitializeWorkflow(record map[string]interface{}) sm.Wor
 
 func (d *ViewConvertor) handleTaskWorkflow(record utils.Record) (sm.WorkflowModel, string, string, []string) {
 	var workflow sm.WorkflowModel
-	taskRecord := d.FetchRecord(ds.DBTask.Name, record.GetString(utils.SpecialIDParam))
-	if len(taskRecord) == 0 {
-		return workflow, "", "", nil
-	}
-
-	reqRecord := d.FetchRecord(ds.DBRequest.Name, utils.ToString(taskRecord[0][ds.RootID(ds.DBRequest.Name)]))
+	reqRecord := d.FetchRecord(ds.DBRequest.Name,
+		map[string]interface{}{
+			ds.WorkflowDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(
+				ds.WorkflowSchemaDBField, map[string]interface{}{
+					utils.SpecialIDParam: record.GetInt(ds.WorkflowSchemaDBField),
+				}, true, ds.WorkflowDBField),
+		})
 	if len(reqRecord) > 0 {
 		workflow = d.InitializeWorkflow(reqRecord[0])
 	}
 
-	if taskRecord[0][ds.RootID(ds.DBWorkflowSchema.Name)] != nil {
-		nexts := d.ParseNextSteps(taskRecord[0])
-		requestID := record.GetString(ds.RootID(ds.DBRequest.Name))
-		workflow.CurrentDismiss = record["state"] == "dismiss"
-		workflow.CurrentClose = record["state"] == "completed" || record["state"] == "dismiss" || record["state"] == "refused" || record["state"] == "canceled"
+	nexts := d.ParseNextSteps(record)
+	requestID := record.GetString(ds.RootID(ds.DBRequest.Name))
+	workflow.CurrentDismiss = record["state"] == "dismiss"
+	workflow.CurrentClose = record["state"] == "completed" || record["state"] == "dismiss" || record["state"] == "refused" || record["state"] == "canceled"
 
-		schemaRecord := d.FetchRecord(ds.DBWorkflowSchema.Name, utils.ToString(taskRecord[0][ds.RootID(ds.DBWorkflowSchema.Name)]))
-		if len(schemaRecord) > 0 {
-			workflow.Current = utils.GetString(schemaRecord[0], "index")
-			workflow.CurrentHub = utils.Compare(schemaRecord[0]["hub"], true)
-			return workflow, utils.ToString(schemaRecord[0][ds.RootID(ds.DBWorkflow.Name)]), requestID, nexts
-		}
+	schemaRecord := d.FetchRecord(ds.DBWorkflowSchema.Name, map[string]interface{}{
+		utils.SpecialIDParam: record.GetInt(ds.WorkflowSchemaDBField),
+	})
+	if len(schemaRecord) > 0 {
+		workflow.Current = utils.GetString(schemaRecord[0], "index")
+		workflow.CurrentHub = utils.Compare(schemaRecord[0]["hub"], true)
+		return workflow, utils.ToString(schemaRecord[0][ds.RootID(ds.DBWorkflow.Name)]), requestID, nexts
 	}
 	return workflow, "", "", nil
 }
@@ -87,13 +90,33 @@ func (d *ViewConvertor) ParseNextSteps(record map[string]interface{}) []string {
 	return strings.Split(utils.ToString(record["nexts"]), ",")
 }
 
-func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id, requestID string, nexts []string) *sm.WorkflowModel {
-	steps := d.FetchRecord(ds.DBWorkflowSchema.Name, id)
+func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id string, requestID string, nexts []string) *sm.WorkflowModel {
+	// get Hierarchical
+
+	steps := d.FetchRecord(ds.DBWorkflowSchema.Name, map[string]interface{}{
+		ds.WorkflowDBField: id,
+	})
 	if len(steps) == 0 {
 		return workflow
 	}
 
 	workflow.Steps = make(map[string][]sm.WorkflowStepModel)
+	filter := filter.NewFilterService(d.Domain)
+	if hierarchical, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
+		ds.UserDBField:   d.Domain.GetUserID(),
+		ds.EntityDBField: filter.GetEntityFilterQuery("id"),
+	}, false); err == nil && len(hierarchical) > 0 {
+		workflow.Steps["0"] = []sm.WorkflowStepModel{}
+		/*for _, hierarch := range hierarchical {
+			h := sm.WorkflowStepModel{
+				Name:      "Hierarchical Validation",
+				Optionnal: false,
+				IsSet:     true,
+			}
+			workflow.Steps["0"] = append(workflow.Steps["0"], )
+		}*/
+	}
+
 	for _, step := range steps {
 		index := utils.ToString(step["index"])
 		newStep := sm.WorkflowStepModel{
@@ -118,7 +141,9 @@ func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id, re
 }
 
 func (d *ViewConvertor) populateTaskDetails(newStep *sm.WorkflowStepModel, step map[string]interface{}) {
-	tasks := d.FetchRecord(ds.DBTask.Name, utils.ToString(step[utils.SpecialIDParam]))
+	tasks := d.FetchRecord(ds.DBTask.Name, map[string]interface{}{
+		ds.WorkflowSchemaDBField: utils.GetInt(step, utils.SpecialIDParam),
+	})
 	if len(tasks) > 0 {
 		newStep.IsClose = utils.Compare(tasks[0]["is_close"], true)
 		newStep.IsCurrent = utils.Compare(tasks[0]["state"], "pending")

@@ -53,12 +53,10 @@ func TestGetUserFilterQuery(t *testing.T) {
 	mockDomain.On("GetDb").Return(mockDB)
 	mockDomain.On("GetUser").Return("test_user")
 
-	service := filter.FilterService{Domain: mockDomain}
-
 	expectedQuery := "SELECT * FROM users WHERE name = 'test_user' AND email = 'test_user'"
 	mockDB.On("BuildSelectQueryWithRestriction", ds.DBUser.Name, mock.Anything, true, "id").Return(expectedQuery)
 
-	query := service.GetUserFilterQuery("id")
+	query := mockDomain.GetUserID()
 
 	assert.Equal(t, expectedQuery, query)
 }
@@ -78,7 +76,7 @@ func TestCountNewDataAccess_Success(t *testing.T) {
 		{"result": 2},
 	}, nil)
 
-	ids, count := service.CountNewDataAccess("test_table", []string{})
+	ids, count := service.CountNewDataAccess("test_table", []interface{}{})
 
 	assert.Equal(t, []string{"123", "456"}, ids)
 	assert.Equal(t, int64(2), count)
@@ -96,7 +94,7 @@ func TestCountNewDataAccess_EmptyResult(t *testing.T) {
 		{"result": nil},
 	}, nil)
 
-	ids, count := service.CountNewDataAccess("test_table", []string{})
+	ids, count := service.CountNewDataAccess("test_table", []interface{}{})
 
 	assert.Empty(t, ids)
 	assert.Equal(t, int64(0), count)

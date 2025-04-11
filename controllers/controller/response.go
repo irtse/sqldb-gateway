@@ -13,7 +13,7 @@ func (t *AbstractController) Respond(params map[string]string, asLabel map[strin
 	if _, ok := params[utils.RootExport]; ok {
 		params[utils.RootRawView] = "disable"
 	}
-	response, err := domain.Call(params, t.Body(true), method, args...)
+	response, err := domain.Call(utils.NewParams(params), t.Body(true), method, args...)
 	if format, ok := params[utils.RootExport]; ok {
 		var cols, cmd, cmdCols string = "", "", ""
 		if pp, ok := params[utils.RootColumnsParam]; ok {

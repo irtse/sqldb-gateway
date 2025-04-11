@@ -23,7 +23,7 @@ func TestTransformToView_EmptyResults(t *testing.T) {
 	mockDomain := new(tests.MockDomain)
 	vc := view_convertor.NewViewConvertor(mockDomain)
 	results := utils.Results{}
-	transformed := vc.TransformToView(results, "test_table", false)
+	transformed := vc.TransformToView(results, "test_table", false, utils.NewParams(map[string]string{}))
 	assert.Empty(t, transformed)
 }
 
@@ -35,7 +35,7 @@ func TestTransformToView_InvalidSchema(t *testing.T) {
 
 	vc := view_convertor.NewViewConvertor(mockDomain)
 	results := utils.Results{{"id": 1, "name": "test"}}
-	transformed := vc.TransformToView(results, "invalid_table", false)
+	transformed := vc.TransformToView(results, "invalid_table", false, utils.NewParams(map[string]string{}))
 
 	assert.Equal(t, results, transformed)
 }
@@ -45,7 +45,7 @@ func TestTransformShallowedView_EmptyName(t *testing.T) {
 	mockDomain := new(tests.MockDomain)
 	vc := view_convertor.NewViewConvertor(mockDomain)
 	results := utils.Results{{"id": 1, "name": ""}}
-	transformed := vc.TransformToView(results, "test_table", false)
+	transformed := vc.TransformToView(results, "test_table", false, utils.NewParams(map[string]string{}))
 
 	assert.Equal(t, results, transformed)
 }
@@ -55,7 +55,7 @@ func TestTransformShallowedView_ValidRecord(t *testing.T) {
 	mockDomain := new(tests.MockDomain)
 	vc := view_convertor.NewViewConvertor(mockDomain)
 	results := utils.Results{{"id": 1, "name": "Test"}}
-	transformed := vc.TransformToView(results, "test_table", false)
+	transformed := vc.TransformToView(results, "test_table", false, utils.NewParams(map[string]string{}))
 
 	assert.NotEmpty(t, transformed)
 }
@@ -67,7 +67,7 @@ func TestConvertRecordToView(t *testing.T) {
 	channel := make(chan sm.ViewItemModel, 1)
 
 	record := utils.Record{"id": "1", "name": "Test"}
-	vc.ConvertRecordToView(0, channel, record, "test_table", nil, false, false)
+	vc.ConvertRecordToView(0, channel, record, "test_table", nil, false, false, utils.NewParams(map[string]string{}), []string{})
 
 	result := <-channel
 	assert.NotEmpty(t, result.Values)
@@ -79,7 +79,7 @@ func TestIsReadonly(t *testing.T) {
 	vc := view_convertor.NewViewConvertor(mockDomain)
 	record := utils.Record{"state": "completed"}
 
-	readonly := vc.IsReadonly("test_table", record)
+	readonly := vc.IsReadonly("test_table", record, []string{})
 	assert.True(t, readonly)
 }
 
@@ -126,7 +126,7 @@ func TestApplyCommandRow(t *testing.T) {
 	record := utils.Record{"alias": "value"}
 	vals := make(map[string]interface{})
 
-	vc.ApplyCommandRow(record, vals)
+	vc.ApplyCommandRow(record, vals, utils.NewParams(map[string]string{}))
 	assert.Equal(t, "value", vals["alias"])
 }
 
@@ -151,7 +151,7 @@ func TestTransformToView_ErrorHandling(t *testing.T) {
 
 	vc := view_convertor.NewViewConvertor(mockDomain)
 	results := utils.Results{{"id": "1", "name": "Test"}}
-	transformed := vc.TransformToView(results, "error_table", false)
+	transformed := vc.TransformToView(results, "error_table", false, utils.NewParams(map[string]string{}))
 
 	assert.Equal(t, results, transformed)
 }

@@ -74,7 +74,6 @@ func (service *InfraService) DBError(res []map[string]interface{}, err error) ([
 }
 
 type InfraSpecializedServiceItf interface {
-	ShouldVerify() bool
 	GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string)
 	SpecializedCreateRow(record map[string]interface{}, tableName string)
 	SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{})
@@ -83,10 +82,6 @@ type InfraSpecializedServiceItf interface {
 }
 
 type InfraSpecializedService struct{}
-
-func (s *InfraSpecializedService) ShouldVerify() bool {
-	return true
-}
 
 func (s *InfraSpecializedService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
 	return "", "", "", ""
@@ -103,5 +98,4 @@ func (s *InfraSpecializedService) SpecializedUpdateRow(results []map[string]inte
 	// EMPTY AND PROUD TO BE
 }
 func (s *InfraSpecializedService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
-	// EMPTY AND PROUD TO BE
 }

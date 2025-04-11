@@ -22,13 +22,17 @@ type FilterService struct {
 	UpdateFields bool
 }
 
-func (s *FilterService) ShouldVerify() bool                                                      { return true }
-func (s *FilterService) Entity() utils.SpecializedServiceInfo                                    { return ds.DBFilter }
-func (s *FilterService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {}
+func (s *FilterService) Entity() utils.SpecializedServiceInfo { return ds.DBFilter }
 func (s *FilterService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
-	s.SpecializedCreateRow(record, ds.DBFilter.Name)
+	s.Write(record, ds.DBFilter.Name)
+	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
 }
 func (s *FilterService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
+	s.Write(record, tableName)
+	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
+}
+
+func (s *FilterService) Write(record utils.Record, tableName string) {
 	for _, field := range s.Fields {
 		if _, ok := record[ds.SchemaDBField]; !ok {
 			continue
@@ -51,7 +55,7 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 		id := rec.GetString(utils.SpecialIDParam)
 		selected[id] = rec["is_selected"] == nil || utils.Compare(rec["is_selected"], true)
 	}
-	for _, rec := range view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true) { // transform to generic view
+	for _, rec := range view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy()) { // transform to generic view
 		if rec == nil {
 			continue
 		}
@@ -130,7 +134,7 @@ func (s *FilterService) VerifyDataIntegrity(record map[string]interface{}, table
 	}
 
 	s.ProcessSelection(record)
-	return record, nil, true
+	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
 
 func (s *FilterService) ProcessLink(record map[string]interface{}) error {
@@ -168,7 +172,7 @@ func (s *FilterService) ProcessFields(record map[string]interface{}, fieldType s
 
 func (s *FilterService) HandleUpdate(record map[string]interface{}) {
 	params := utils.AllParams(ds.DBFilterField.Name)
-	params[ds.FilterDBField] = utils.ToString(record[utils.SpecialIDParam])
+	params.Set(ds.FilterDBField, utils.ToString(record[utils.SpecialIDParam]))
 	s.Domain.DeleteSuperCall(params)
 }
 
@@ -190,14 +194,12 @@ func (s *FilterService) HandleCreate(record map[string]interface{}) {
 }
 
 func (s *FilterService) HandleUserFilterNaming(record map[string]interface{}, schema sm.SchemaModel, name *string) {
-	if user, ok := servutils.GetUserRecord(s.Domain); ok {
-		record[ds.UserDBField] = user[utils.SpecialIDParam]
-		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
-			ds.UserDBField:   utils.GetString(user, utils.SpecialIDParam),
-			ds.SchemaDBField: schema.ID,
-		}, false); err == nil {
-			*name += fmt.Sprintf("filter n°%d", len(res)+1)
-		}
+	record[ds.UserDBField] = s.Domain.GetUserID()
+	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
+		ds.UserDBField:   s.Domain.GetUserID(),
+		ds.SchemaDBField: schema.ID,
+	}, false); err == nil {
+		*name += fmt.Sprintf("%s filter n°%d", schema.Label, len(res)+1)
 	}
 }
 
@@ -206,13 +208,13 @@ func (s *FilterService) HandleEntityFilterNaming(record map[string]interface{}, 
 		ds.EntityDBField: utils.GetString(record, ds.EntityDBField),
 		ds.SchemaDBField: schema.ID,
 	}, false); err == nil {
-		*name += fmt.Sprintf("filter n°%d", len(res)+1)
+		*name += fmt.Sprintf("%s filter n°%d", schema.Label, len(res)+1)
 	}
 }
 
 func (s *FilterService) HandleDelete(record map[string]interface{}) {
 	params := utils.AllParams(ds.DBFilterField.Name)
-	params[ds.FilterDBField] = utils.ToString(record[utils.SpecialIDParam])
+	params.Set(ds.FilterDBField, utils.ToString(record[utils.SpecialIDParam]))
 	s.Domain.DeleteSuperCall(params)
 }
 

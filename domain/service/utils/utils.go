@@ -1,13 +1,16 @@
 package utils
 
 import (
+	"errors"
 	"sqldb-ws/domain/filter"
+	"sqldb-ws/domain/schema"
 	sch "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
+	"sqldb-ws/domain/triggers"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/domain/view_convertor"
-	"sqldb-ws/infrastructure/connector"
 	"sqldb-ws/infrastructure/service"
+	"strings"
 )
 
 type AbstractSpecializedService struct {
@@ -15,8 +18,48 @@ type AbstractSpecializedService struct {
 	Domain utils.DomainITF
 }
 
-func (s *AbstractSpecializedService) SpecializedCreateColumn(record map[string]interface{}, tableName string) map[string]interface{} {
-	return record
+func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]interface{}, tablename string) {
+	sch, err := schema.GetSchema(tablename)
+	if err == nil {
+		triggers.NewTrigger(s.Domain).Trigger(sch, record, utils.CREATE)
+	}
+}
+
+func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]interface{}, record map[string]interface{}) {
+	sch, err := schema.GetSchema(s.Domain.GetTable())
+	if err == nil {
+		for _, record := range res {
+			triggers.NewTrigger(s.Domain).Trigger(sch, record, utils.UPDATE)
+		}
+	}
+}
+
+func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
+	if sch, err := schema.GetSchema(tablename); err != nil {
+		return record, errors.New("no schema found"), false
+	} else {
+		for k, v := range record {
+			if f, err := sch.GetField(k); err == nil && f.Transform != "" {
+				if f.Transform == "lowercase" {
+					record[k] = strings.ToLower(utils.ToString(v))
+				} else if f.Transform == "uppercase" {
+					record[k] = strings.ToUpper(utils.ToString(v))
+				}
+			}
+		}
+		if _, ok := record["is_draft"]; !ok || !utils.GetBool(record, "is_draft") {
+			if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBConsentResponse.Name, map[string]interface{}{
+				ds.ConsentDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
+					ds.SchemaDBField: sch.ID,
+					"optionnal":      false,
+				}, false),
+				"is_consenting": false,
+			}, false); err == nil && len(res) > 0 {
+				return record, errors.New("should consent"), false
+			}
+		}
+	}
+	return record, nil, true
 }
 
 func (s *AbstractSpecializedService) SetDomain(d utils.DomainITF) { s.Domain = d }
@@ -24,31 +67,29 @@ func (s *AbstractSpecializedService) SetDomain(d utils.DomainITF) { s.Domain = d
 type SpecializedService struct{ AbstractSpecializedService }
 
 func (s *SpecializedService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
-	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true)
+	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 }
 func (s *SpecializedService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }
 
-func CheckAutoLoad(tablename string, record utils.Record, domain utils.DomainITF) (utils.Record, error, bool) {
-	if domain.GetMethod() != utils.DELETE {
-		if rec, err := sch.ValidateBySchema(record, tablename,
-			domain.GetMethod(), domain.VerifyAuth); err != nil {
-			return rec, err, false
+func (s *SpecializedService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {
+	for _, r := range results {
+		if schema, err := sch.GetSchema(tableName); err == nil {
+			for _, db := range []string{ds.DBRequest.Name, ds.DBTask.Name, ds.DBNotification.Name, ds.DBDataAccess.Name, ds.DBShare.Name} {
+				s.Domain.GetDb().DeleteQueryWithRestriction(db, map[string]interface{}{
+					ds.SchemaDBField:    schema.ID,
+					ds.DestTableDBField: utils.GetInt(r, utils.SpecialIDParam),
+				}, false)
+			}
 		}
 	}
-	return record, nil, false
 }
 
-func GetUserRecord(domain utils.DomainITF) (utils.Record, bool) {
-	userRecords, _ := domain.GetDb().SelectQueryWithRestriction(
-		ds.DBUser.Name,
-		map[string]interface{}{
-			"name":  connector.Quote(domain.GetUser()),
-			"email": connector.Quote(domain.GetUser()),
-		}, true)
-	if len(userRecords) > 0 {
-		return userRecords[0], true
+func CheckAutoLoad(tablename string, record utils.Record, domain utils.DomainITF) (utils.Record, error, bool) {
+	if domain.GetMethod() != utils.DELETE {
+		rec, err := sch.ValidateBySchema(record, tablename, domain.GetMethod(), domain.VerifyAuth)
+		return rec, err, err == nil
 	}
-	return nil, false
+	return record, nil, false
 }

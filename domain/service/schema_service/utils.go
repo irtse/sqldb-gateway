@@ -8,18 +8,21 @@ import (
 )
 
 func NewView(name string, desc string, category string, schemaDB int64, index int64,
-	indexable bool, empty bool, isList bool, readonly bool, ownView bool) utils.Record {
+	indexable bool, empty bool, isList bool, ownView bool, viewFilterID interface{}, filterID interface{}, shortcut interface{}) utils.Record {
 	return utils.Record{
-		sm.NAMEKEY:       name,
-		ds.SchemaDBField: schemaDB,
-		"description":    desc,
-		"category":       category,
-		"index":          index,
-		"indexable":      indexable,
-		"is_empty":       empty,
-		"is_list":        isList,
-		"readonly":       readonly,
-		"own_view":       ownView,
+		sm.NAMEKEY:                 name,
+		ds.SchemaDBField:           schemaDB,
+		"description":              desc,
+		"category":                 category,
+		"index":                    index,
+		"indexable":                indexable,
+		"is_empty":                 empty,
+		"is_list":                  isList,
+		"readonly":                 false,
+		"own_view":                 ownView,
+		"view_" + ds.FilterDBField: viewFilterID,
+		ds.FilterDBField:           filterID,
+		"shortcut_on_schema":       shortcut,
 	}
 }
 

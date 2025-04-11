@@ -21,7 +21,7 @@ type MockDomainSuper struct {
 func NewMockDomainSuper() *MockDomainSuper {
 	return &MockDomainSuper{
 		records: make(map[string][]map[string]interface{}),
-		params:  make(utils.Params),
+		params:  utils.Params{},
 	}
 }
 

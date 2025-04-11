@@ -23,7 +23,7 @@ func (m *MockDomain) GetMethod() utils.Method {
 
 func (m *MockDomain) GetParams() utils.Params {
 	args := m.Called()
-	return args.Get(0).(map[string]string)
+	return args.Get(0).(utils.Params)
 }
 
 func (m *MockDomain) ValidateBySchema(record utils.Record, tablename string) (utils.Record, error) {

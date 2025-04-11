@@ -14,8 +14,6 @@ import (
 // DONE - UNDER 100 LINES - NOT TESTED
 type SchemaFields struct{ servutils.SpecializedService }
 
-func (s *SchemaFields) ShouldVerify() bool { return true }
-
 func (s *SchemaFields) Entity() utils.SpecializedServiceInfo { return ds.DBSchemaField }
 
 func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
@@ -41,20 +39,22 @@ func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablen
 		})
 	if !slices.Contains(ds.NOAUTOLOADROOTTABLESSTR, tablename) {
 		if rec, err := sch.ValidateBySchema(record, tablename, s.Domain.GetMethod(), s.Domain.VerifyAuth); err != nil {
-			return rec, err, false
+			return s.SpecializedService.VerifyDataIntegrity(rec, tablename)
 		}
 	}
-	return record, nil, true
+	return s.SpecializedService.VerifyDataIntegrity(record, tablename)
 }
 
 func (s *SchemaFields) SpecializedCreateRow(record map[string]interface{}, tableName string) { // THERE
 	s.Write(record, record, false)
+	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
 }
 
 func (s *SchemaFields) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
 	for _, r := range results {
 		s.Write(r, record, true)
 	}
+	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
 }
 
 func (s *SchemaFields) Write(r map[string]interface{}, record map[string]interface{}, isUpdate bool) (*sm.SchemaModel, error) {

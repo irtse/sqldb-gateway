@@ -2,7 +2,6 @@ package schema
 
 import (
 	"errors"
-	"fmt"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
@@ -162,24 +161,14 @@ func ValidateBySchema(data utils.Record, tableName string, method utils.Method,
 		return data, errors.New("no schema corresponding to reference")
 	}
 	newData := utils.Record{}
-	if method == utils.UPDATE {
-		for _, field := range schema.Fields {
-			if v, ok := data[field.Name]; ok {
-				newData[field.Name] = v
-			}
-		}
-		return newData, nil
-	}
 	for _, field := range schema.Fields {
-		if field.Required && field.Default == nil {
-			if _, ok := data[field.Name]; ok || field.Name == utils.SpecialIDParam || !check(tableName, field.Name, field.Level, utils.SELECT) {
-				continue
-			}
-			fmt.Println(field.Name, field.Label, data[field.Name], check(tableName, field.Name, field.Level, utils.SELECT))
-			if field.Label != "" {
-				return data, errors.New("Missing a required field " + field.Label + " (can't see it ? you probably missing permissions)")
-			} else {
-				return data, errors.New("Missing a required field " + field.Name + " (can't see it ? you probably missing permissions)")
+		if field.Required && field.Default == nil && method != utils.UPDATE {
+			if _, ok := data[field.Name]; !(ok || field.Name == utils.SpecialIDParam || !check(tableName, field.Name, field.Level, utils.SELECT)) {
+				if field.Label != "" {
+					return data, errors.New("Missing a required field " + field.Label + " (can't see it ? you probably missing permissions)")
+				} else {
+					return data, errors.New("Missing a required field " + field.Name + " (can't see it ? you probably missing permissions)")
+				}
 			}
 		}
 		if v, ok := data[field.Name]; ok {

@@ -20,20 +20,11 @@ func TestNewPermDomainService(t *testing.T) {
 	assert.False(t, service.Empty)
 }
 
-func TestUserSelectQuery(t *testing.T) {
-	db := &connector.Database{}
-	service := permission.NewPermDomainService(db, "testUser", false, false)
-
-	query := service.UserSelectQuery()
-	assert.Contains(t, query, "SELECT")
-	assert.Contains(t, query, "testUser")
-}
-
 func TestEntitySelectQuery(t *testing.T) {
 	db := &connector.Database{}
 	service := permission.NewPermDomainService(db, "testUser", false, false)
 
-	query := service.EntitySelectQuery()
+	query := service.EntitySelectQuery("testUser")
 	assert.Contains(t, query, "SELECT")
 }
 
@@ -41,7 +32,7 @@ func TestBuildFilterOwnPermsQueryRestriction(t *testing.T) {
 	db := &connector.Database{}
 	service := permission.NewPermDomainService(db, "testUser", false, false)
 
-	restriction := service.BuildFilterOwnPermsQueryRestriction()
+	restriction := service.BuildFilterOwnPermsQueryRestriction("testUser")
 	assert.NotNil(t, restriction)
 }
 
@@ -76,15 +67,15 @@ func TestMapPerm(t *testing.T) {
 
 func TestIsOwnPermission(t *testing.T) {
 	service := permission.NewPermDomainService(nil, "", false, false)
-	assert.False(t, service.IsOwnPermission("some_table", true, utils.SELECT))
+	assert.False(t, service.IsOwnPermission("some_table", true, utils.SELECT, "testUser", false))
 }
 
 func TestPermsCheck_SuperAdmin(t *testing.T) {
 	service := permission.NewPermDomainService(nil, "", true, false)
-	assert.True(t, service.PermsCheck("table", "col", "ALL", utils.SELECT))
+	assert.True(t, service.PermsCheck("table", "col", "ALL", utils.SELECT, "testUser", false))
 }
 
 func TestLocalPermsCheck_NoPerms(t *testing.T) {
 	service := permission.NewPermDomainService(nil, "", false, false)
-	assert.False(t, service.LocalPermsCheck("table", "col", "", utils.UPDATE, ""))
+	assert.False(t, service.LocalPermsCheck("table", "col", "", utils.UPDATE, "", "testUser", false))
 }

@@ -8,7 +8,7 @@ import (
 
 var SchemaDBField = ds.RootID(ds.DBSchema.Name)
 var RequestDBField = ds.RootID(ds.DBRequest.Name)
-var WorkflowDBField = ds.RootID(ds.DBWorkflowSchema.Name)
+var WorkflowSchemaDBField = ds.RootID(ds.DBWorkflowSchema.Name)
 var UserDBField = ds.RootID(ds.DBUser.Name)
 var EntityDBField = ds.RootID(ds.DBEntity.Name)
 var DestTableDBField = ds.RootID("dest_table")
@@ -17,15 +17,15 @@ var FilterDBField = ds.RootID(ds.DBFilter.Name)
 func NewTask(name interface{}, description interface{}, urgency interface{}, priority interface{},
 	workflowDB interface{}, schemaDB interface{}, requestDB interface{}, userDB interface{}, entityDB interface{}) utils.Record {
 	r := utils.Record{
-		"name":          name,
-		"description":   description,
-		"urgency":       urgency,
-		"priority":      priority,
-		WorkflowDBField: workflowDB,
-		SchemaDBField:   schemaDB,
-		RequestDBField:  requestDB,
-		UserDBField:     userDB,
-		EntityDBField:   entityDB,
+		"name":                name,
+		"description":         description,
+		"urgency":             urgency,
+		"priority":            priority,
+		WorkflowSchemaDBField: workflowDB,
+		SchemaDBField:         schemaDB,
+		RequestDBField:        requestDB,
+		UserDBField:           userDB,
+		EntityDBField:         entityDB,
 	}
 	toDelete := []string{}
 	for k, v := range r {

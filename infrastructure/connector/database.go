@@ -1,10 +1,12 @@
 package connector
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
 	"slices"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -28,6 +30,7 @@ var (
 type Database struct {
 	Driver         string
 	Url            string
+	SQLGroupBy     string
 	SQLView        string
 	SQLOrder       string
 	SQLDir         string
@@ -38,46 +41,106 @@ type Database struct {
 }
 
 func (d *Database) GetDriver() string {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
 	return d.Driver
 }
 
 func (d *Database) GetConn() *sql.DB {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
 	return d.Conn
 }
 
 func (d *Database) GetSQLView() string {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
 	return d.SQLView
 }
 
 func (d *Database) GetSQLOrder() string {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
 	return d.SQLOrder
 }
 
+func (d *Database) GetSQLGroupBy() string {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
+	return d.SQLGroupBy
+}
+
 func (d *Database) GetSQLDir() string {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
 	return d.SQLDir
 }
 
 func (d *Database) GetSQLLimit() string {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
 	return d.SQLLimit
 }
 
 func (d *Database) GetSQLRestriction() string {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
 	return d.SQLRestriction
 }
 
 func (d *Database) SetSQLView(s string) {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
 	d.SQLView = s
 }
 
 func (d *Database) SetSQLOrder(s string) {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
 	d.SQLOrder = s
 }
 
+func (d *Database) SetSQLGroupBy(s string) {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
+	d.SQLGroupBy = s
+}
+
 func (d *Database) SetSQLLimit(s string) {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
 	d.SQLLimit = s
 }
 
 func (d *Database) SetSQLRestriction(s string) {
+	if d == nil || d.Conn == nil {
+		d = Open(d)
+		defer d.Close()
+	}
 	d.SQLRestriction = s
 }
 
@@ -107,17 +170,31 @@ func Open(beforeDB *Database) *Database {
 		log.Error().Msgf("Error opening database: %v", err)
 		return nil
 	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		select {
+		case <-ctx.Done():
+			if db != nil {
+				db.Close()
+			}
+		}
+	}()
 	return db
 }
 
 func (db *Database) Close() {
-	if db.Conn != nil {
+	if db != nil && db.Conn != nil {
 		db.Conn.Close()
 		db.Conn = nil
 	}
 }
 
 func (db *Database) ClearQueryFilter() *Database {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
 	db.SQLOrder = ""
 	db.SQLRestriction = ""
 	db.SQLView = ""
@@ -127,6 +204,7 @@ func (db *Database) ClearQueryFilter() *Database {
 type DB interface {
 	GetConn() *sql.DB
 	GetSQLView() string
+	GetSQLGroupBy() string
 	GetSQLOrder() string
 	GetSQLDir() string
 	GetSQLLimit() string
@@ -134,6 +212,7 @@ type DB interface {
 	SetSQLView(s string)
 	SetSQLOrder(s string)
 	SetSQLLimit(s string)
+	SetSQLGroupBy(s string)
 	SetSQLRestriction(s string)
 	Close()
 	ClearQueryFilter() *Database

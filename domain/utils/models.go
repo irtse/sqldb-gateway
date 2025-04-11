@@ -4,6 +4,7 @@ type AbstractDomain struct {
 	TableName  string
 	AutoLoad   bool
 	User       string
+	UserID     string
 	Shallowed  bool
 	SuperAdmin bool
 	RawView    bool
@@ -15,8 +16,14 @@ type AbstractDomain struct {
 	Params     Params
 }
 
-func (d *AbstractDomain) GetMethod() Method   { return d.Method }
-func (d *AbstractDomain) GetEmpty() bool      { return d.Empty }
+func (d *AbstractDomain) SetOwn(own bool) {
+	d.Own = own
+}
+func (d *AbstractDomain) GetMethod() Method { return d.Method }
+func (d *AbstractDomain) GetEmpty() bool    { return d.Empty }
+func (d *AbstractDomain) GetUserID() string {
+	return d.UserID
+}
 func (d *AbstractDomain) GetUser() string     { return d.User }
 func (d *AbstractDomain) IsSuperAdmin() bool  { return d.SuperAdmin }
 func (d *AbstractDomain) IsSuperCall() bool   { return d.Super && d.SuperAdmin }

@@ -56,31 +56,31 @@ func TestGetDb_ReturnsNilInitially(t *testing.T) {
 
 func TestCreateSuperCall_FailsWithoutParams(t *testing.T) {
 	d := domain.Domain(false, "user", nil)
-	_, err := d.CreateSuperCall(nil, nil)
+	_, err := d.CreateSuperCall(utils.NewParams(map[string]string{}), nil)
 	assert.Error(t, err)
 }
 
 func TestUpdateSuperCall_FailsWithoutParams(t *testing.T) {
 	d := domain.Domain(false, "user", nil)
-	_, err := d.UpdateSuperCall(nil, nil)
+	_, err := d.UpdateSuperCall(utils.NewParams(map[string]string{}), nil)
 	assert.Error(t, err)
 }
 
 func TestDeleteSuperCall_FailsWithoutParams(t *testing.T) {
 	d := domain.Domain(false, "user", nil)
-	_, err := d.DeleteSuperCall(nil)
+	_, err := d.DeleteSuperCall(utils.NewParams(map[string]string{}))
 	assert.Error(t, err)
 }
 
 func TestSuperCall_NotAuthorized(t *testing.T) {
 	d := domain.Domain(false, "user", nil)
-	_, err := d.SuperCall(nil, nil, utils.DELETE, false)
+	_, err := d.SuperCall(utils.NewParams(map[string]string{}), nil, utils.DELETE, false)
 	assert.Error(t, err)
 }
 
 func TestCall_NoParams(t *testing.T) {
 	d := domain.Domain(false, "user", nil)
-	_, err := d.Call(nil, nil, utils.SELECT)
+	_, err := d.Call(utils.NewParams(map[string]string{}), nil, utils.SELECT)
 	assert.Error(t, err)
 }
 
@@ -93,7 +93,8 @@ func TestCall_NoTableName(t *testing.T) {
 
 func TestCall_UnauthorizedMethod(t *testing.T) {
 	d := domain.Domain(false, "user", nil)
-	params := utils.Params{utils.RootTableParam: "users"}
+	params := utils.NewParams(map[string]string{})
+	params.Set(utils.RootTableParam, "users")
 	_, err := d.Call(params, nil, utils.DELETE)
 	assert.Error(t, err)
 }
