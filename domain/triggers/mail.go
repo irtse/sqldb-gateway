@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/smtp"
 	"os"
+	"strings"
 	"text/template"
 )
 
@@ -37,7 +38,7 @@ func SendMail(from string, to string, subject string, tpl string, bodyToMap map[
 	// Auth SMTP
 	auth := smtp.PlainAuth("", from, pwd, smtpHost)
 	// Envoi
-	err = smtp.SendMail(smtpHost+":"+smtpPort, auth, from, []string{to}, body.Bytes())
+	err = smtp.SendMail(smtpHost+":"+smtpPort, auth, from, strings.Split(to, ","), body.Bytes())
 	if err != nil {
 		return err
 	}

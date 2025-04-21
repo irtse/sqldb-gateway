@@ -99,7 +99,7 @@ func (t *TriggerService) triggerMail(record utils.Record, fromSchema sm.SchemaMo
 		mail := mails[0]
 		SendMail(
 			utils.GetString(usfrom[0], utils.SpecialIDParam),
-			utils.GetString(usto[0], utils.SpecialIDParam),
+			utils.GetString(usto[0], utils.SpecialIDParam)+","+utils.GetString(usfrom[0], utils.SpecialIDParam), // always keep a copy
 			utils.GetString(mail, "subject"),
 			utils.GetString(mail, "template"),
 			dest[0], // MWAAIIIII ?!!!
