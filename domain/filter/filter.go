@@ -28,7 +28,7 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 	}
 	var SQLview, SQLrestriction, SQLOrder []string = []string{}, []string{}, []string{}
 	var SQLLimit string
-	restr, view, order, dir, state := f.GetFilterForQuery("", "", utils.ToString(schema.ID), domainParams)
+	restr, view, order, dir, state := f.GetFilterForQuery("", "", schema, domainParams)
 	if restr != "" && !f.Domain.IsSuperCall() {
 		SQLrestriction = append(SQLrestriction, restr)
 	}
@@ -55,7 +55,7 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 	if f.Domain.IsSuperCall() {
 		return strings.Join(SQLrestriction, " AND "), strings.Join(SQLview, ","), strings.Join(SQLOrder, ","), SQLLimit
 	}
-	SQLrestriction = f.restrictionByEntityUser(schema, SQLrestriction) // admin can see all on admin view
+	SQLrestriction = f.RestrictionByEntityUser(schema, SQLrestriction, false) // admin can see all on admin view
 	if s, ok := domainParams.Get(utils.RootFilterNewState); ok && s != "" {
 		state = s
 	}
@@ -106,25 +106,26 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 	return restr
 }
 
-func (s *FilterService) restrictionByEntityUser(schema sm.SchemaModel, restr []string) []string {
+func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []string, overrideOwn bool) []string {
 	newRestr := map[string]interface{}{}
-	if !(schema.HasField(ds.UserDBField) || schema.HasField(ds.EntityDBField)) {
-		if !s.Domain.IsOwn(true, false, s.Domain.GetMethod()) {
-			return restr
-		}
-	} else if s.Domain.IsOwn(false, false, s.Domain.GetMethod()) {
+	restrictions := map[string]interface{}{}
+
+	if s.Domain.IsOwn(false, false, s.Domain.GetMethod()) || overrideOwn {
 		ids := s.GetCreatedAccessData(schema.ID)
 		if len(ids) > 0 {
 			newRestr[utils.SpecialIDParam] = ids
 		} else {
 			delete(newRestr, utils.SpecialIDParam)
 			if len(newRestr) > 0 {
-				restr = append(restr, "("+connector.FormatSQLRestrictionWhereByMap("", newRestr, false)+")")
+				if overrideOwn {
+					restrictions = newRestr
+				} else {
+					restr = append(restr, "("+connector.FormatSQLRestrictionWhereByMap("", newRestr, false)+")")
+				}
 			}
 		}
 	}
 	isUser := false
-	restrictions := map[string]interface{}{}
 	isUser = schema.HasField(ds.UserDBField) || s.Domain.GetTable() == ds.DBUser.Name
 
 	if isUser {
@@ -179,10 +180,10 @@ func (d *FilterService) viewbyFields(schema sm.SchemaModel, domainParams utils.P
 	return SQLview
 }
 
-func (s *FilterService) GetFilterForQuery(filterID string, viewfilterID string, schemaID string, domainParams utils.Params) (string, string, string, string, string) {
-	ids := s.GetFilterIDs(filterID, viewfilterID, schemaID)
-	view, order, dir := s.ProcessViewAndOrder(ids[utils.RootViewFilter], schemaID, domainParams)
-	filter := s.ProcessFilterRestriction(ids[utils.RootFilter], schemaID)
+func (s *FilterService) GetFilterForQuery(filterID string, viewfilterID string, schema sm.SchemaModel, domainParams utils.Params) (string, string, string, string, string) {
+	ids := s.GetFilterIDs(filterID, viewfilterID, schema.ID)
+	view, order, dir := s.ProcessViewAndOrder(ids[utils.RootViewFilter], schema.ID, domainParams)
+	filter := s.ProcessFilterRestriction(ids[utils.RootFilter], schema)
 	state := ""
 	if filterID != "" {
 		if fils, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name,
@@ -195,7 +196,7 @@ func (s *FilterService) GetFilterForQuery(filterID string, viewfilterID string, 
 	return filter, view, order, dir, state
 }
 
-func (s *FilterService) ProcessFilterRestriction(filterID string, schemaID string) string {
+func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.SchemaModel) string {
 	if filterID == "" {
 		return ""
 	}
@@ -208,8 +209,13 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schemaID strin
 	if err == nil && len(fields) > 0 {
 		for _, field := range fields {
 			if f, err := sch.GetFieldByID(utils.GetInt(field, ds.SchemaFieldDBField)); err == nil {
-				filter = append(filter,
-					"("+connector.FormatOperatorSQLRestriction(field["operator"], field["separator"], f.Name, field["value"], f.Type)+")")
+				if utils.GetBool(field, "is_own") {
+					filter = append(filter, s.RestrictionByEntityUser(schema, filter, true)...)
+				} else {
+					filter = append(filter,
+						"("+connector.FormatOperatorSQLRestriction(field["operator"], field["separator"], f.Name, field["value"], f.Type)+")")
+				}
+
 			}
 		}
 	}

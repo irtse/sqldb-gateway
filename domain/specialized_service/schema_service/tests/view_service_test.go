@@ -1,7 +1,7 @@
 package schema_service_tests
 
 import (
-	service "sqldb-ws/domain/service/schema_service"
+	service "sqldb-ws/domain/specialized_service/schema_service"
 	"sqldb-ws/domain/utils"
 	"testing"
 )

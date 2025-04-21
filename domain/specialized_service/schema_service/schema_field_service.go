@@ -6,7 +6,7 @@ import (
 	sch "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
-	servutils "sqldb-ws/domain/service/utils"
+	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
 	"strings"
 )

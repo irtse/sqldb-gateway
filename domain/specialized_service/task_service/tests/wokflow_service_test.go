@@ -3,7 +3,7 @@ package task_service_test
 
 import (
 	ds "sqldb-ws/domain/schema/database_resources"
-	service "sqldb-ws/domain/service/task_service"
+	service "sqldb-ws/domain/specialized_service/task_service"
 	"sqldb-ws/domain/utils"
 	"testing"
 

@@ -7,7 +7,7 @@ import (
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/schema/models"
-	servutils "sqldb-ws/domain/service/utils"
+	servutils "sqldb-ws/domain/specialized_service/utils"
 	utils "sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
 	"strconv"
@@ -214,7 +214,7 @@ func (d *DashboardService) GetFilterRestrictionAndOrder(filt interface{}, elemen
 		return "", "", fmt.Errorf("failed to get schema: %v", err)
 	}
 
-	restriction = f.ProcessFilterRestriction(utils.ToString(filt), utils.ToString(sch.ID))
+	restriction = f.ProcessFilterRestriction(utils.ToString(filt), sch)
 
 	if orderID, exists := element["order_by_"+ds.SchemaDBField]; exists {
 		if i, err := strconv.Atoi(utils.ToString(orderID)); err == nil {

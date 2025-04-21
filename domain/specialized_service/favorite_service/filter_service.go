@@ -7,7 +7,7 @@ import (
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
-	servutils "sqldb-ws/domain/service/utils"
+	servutils "sqldb-ws/domain/specialized_service/utils"
 	utils "sqldb-ws/domain/utils"
 	"sqldb-ws/domain/view_convertor"
 	"sqldb-ws/infrastructure/connector"
@@ -106,11 +106,13 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 func (s *FilterService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
 	if !strings.Contains(strings.Join(innerestr, ","), "dashboard_restricted") {
 		innerestr = append(innerestr, "dashboard_restricted=false") // add dashboard_restricted filter if not present AD
+		innerestr = append(innerestr, "hidden=false")               // add dashboard_restricted filter if not present AD
 	}
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }
 
 func (s *FilterService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
+	record["hidden"] = false
 	s.UpdateFields = false
 	method := s.Domain.GetMethod()
 

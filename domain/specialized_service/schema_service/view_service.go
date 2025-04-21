@@ -6,10 +6,11 @@ import (
 	"slices"
 	"sort"
 	filterserv "sqldb-ws/domain/filter"
+	"sqldb-ws/domain/schema"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
-	servutils "sqldb-ws/domain/service/utils"
+	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/task"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/domain/view_convertor"
@@ -164,11 +165,13 @@ func (s *ViewService) combineDestinations(dest_id []string) string {
 func (s *ViewService) getFilterDetails(record utils.Record) (string, string, string) {
 	filter := utils.GetString(record, ds.FilterDBField)
 	viewFilter := utils.GetString(record, ds.ViewFilterDBField)
-	sqlFilter, view, _, dir, _ := filterserv.NewFilterService(s.Domain).GetFilterForQuery(
-		filter, viewFilter, utils.GetString(record, ds.SchemaDBField), s.Domain.GetParams())
-	return sqlFilter, view, dir
+	if sch, err := schema.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err == nil {
+		sqlFilter, view, _, dir, _ := filterserv.NewFilterService(s.Domain).GetFilterForQuery(
+			filter, viewFilter, sch, s.Domain.GetParams())
+		return sqlFilter, view, dir
+	}
+	return "", "", ""
 }
-
 func (s *ViewService) fetchData(params utils.Params, domainParams utils.Params, sqlFilter string, record utils.Record, rec utils.Record, schema sm.SchemaModel) (utils.Results, utils.Record) {
 	datas := utils.Results{}
 	if !s.Domain.GetEmpty() {

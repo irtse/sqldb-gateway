@@ -7,7 +7,7 @@ import (
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
-	servutils "sqldb-ws/domain/service/utils"
+	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/task"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/domain/view_convertor"
@@ -28,6 +28,7 @@ func (s *TaskService) SpecializedCreateRow(record map[string]interface{}, tableN
 }
 func (s *TaskService) Entity() utils.SpecializedServiceInfo { return ds.DBTask }
 func (s *TaskService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
+	// TODO: here send back my passive task...
 	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 }
 func (s *TaskService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
@@ -58,7 +59,7 @@ func (s *TaskService) VerifyDataIntegrity(record map[string]interface{}, tablena
 func (s *TaskService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {
 	for i, res := range results {
 		task.RemoveTask(res, utils.GetString(res, ds.UserDBField))
-		res["state"] = "completed"
+		res["state"] = "refused"
 		results[i] = SetClosureStatus(res)
 	}
 	s.Write(results, map[string]interface{}{})
@@ -68,6 +69,34 @@ func (s *TaskService) SpecializedUpdateRow(results []map[string]interface{}, rec
 	s.Write(results, record)
 	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
 }
+
+func (s *TaskService) deleteAll(destID string, schID int64) {
+	if sch, err := schserv.GetSchemaByID(schID); err == nil {
+		s.Domain.GetDb().ClearQueryFilter().DeleteQueryWithRestriction(sch.Name, map[string]interface{}{
+			utils.SpecialIDParam: destID,
+		}, false)
+		s.Domain.GetDb().ClearQueryFilter().DeleteQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+			ds.DestTableDBField: destID,
+			ds.SchemaDBField:    schID,
+		}, false)
+		if reqs, err := s.Domain.DeleteSuperCall(utils.AllParams(ds.DBRequest.Name).Enrich(map[string]interface{}{
+			ds.DestTableDBField: destID,
+			ds.SchemaDBField:    schID,
+		}), false); err == nil {
+			for _, req := range reqs {
+				s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), utils.Record{
+					"link_id":        nil,
+					sm.NAMEKEY:       "Request cancelled : " + utils.GetString(req, "name"),
+					"description":    "Request is cancelled : " + utils.GetString(req, "name"),
+					UserDBField:      req[UserDBField],
+					EntityDBField:    req[EntityDBField],
+					DestTableDBField: destID,
+				})
+			}
+		}
+	}
+}
+
 func (s *TaskService) Write(results []map[string]interface{}, record map[string]interface{}) {
 	if _, ok := record["is_draft"]; ok && utils.GetBool(record, "is_draft") {
 		return
@@ -107,13 +136,43 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		current_index := utils.ToFloat64(order)
 		switch res["state"] {
 		case "completed":
-			current_index = math.Floor(current_index + 1)
+			if utils.GetBool(res, "passive") {
+				if p, err := GetPassive(s.Domain, utils.GetString(res, ds.DestTableDBField), utils.GetString(res, ds.SchemaDBField)); err == nil && len(p) > 0 {
+					current_index = -1
+				} else if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.WorkflowSchemaDBField, map[string]interface{}{
+					"index":            1,
+					ds.WorkflowDBField: record[ds.WorkflowDBField],
+				}, false); err == nil {
+					found := false
+					for _, rec := range res {
+						if utils.GetBool(rec, "before_hierarchical_validation") {
+							found = true
+							break
+						}
+					}
+					if found {
+						current_index = 0
+					} else {
+						current_index = 1
+					}
+				}
+			} else {
+				current_index = math.Floor(current_index + 1)
+			}
 		case "refused":
+			if utils.GetBool(res, "passive") {
+				s.deleteAll(utils.GetString(res, ds.DestTableDBField), utils.GetInt(res, ds.SchemaDBField))
+				return
+			}
 			s.Domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBRequest.Name, utils.Record{"state": "refused"},
 				map[string]interface{}{
 					utils.SpecialIDParam: utils.GetInt(res, RequestDBField),
 				}, false)
 		case "dismiss":
+			if utils.GetBool(res, "passive") {
+				s.deleteAll(utils.GetString(res, ds.DestTableDBField), utils.GetInt(res, ds.SchemaDBField))
+				return
+			}
 			if current_index >= 1 {
 				current_index = math.Floor(current_index - 1)
 			} else { // Dismiss will close requests.
@@ -189,10 +248,11 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 					newMetaRequest := utils.Record{
 						ds.WorkflowDBField: scheme["wrapped_"+ds.WorkflowDBField],
 						sm.NAMEKEY:         "Meta request for " + newTask.GetString(sm.NAMEKEY) + " task",
-						"current_index":    1, "is_meta": true,
-						SchemaDBField:    newTask[SchemaDBField],
-						DestTableDBField: newTask[DestTableDBField],
-						UserDBField:      newTask[UserDBField],
+						"current_index":    1,
+						"is_meta":          true,
+						SchemaDBField:      newTask[SchemaDBField],
+						DestTableDBField:   newTask[DestTableDBField],
+						UserDBField:        newTask[UserDBField],
 					}
 					requests, err := s.Domain.Call(utils.AllParams(ds.DBRequest.Name), newMetaRequest, utils.CREATE)
 					if err == nil && len(requests) > 0 {
@@ -226,7 +286,16 @@ func (s *TaskService) GenerateQueryFilter(tableName string, innerestr ...string)
 	if !s.Domain.IsSuperCall() {
 		innerestr = append(innerestr, conn.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
 			"meta_" + RequestDBField: nil,
+			"passive":                false,
 		}, true))
 	}
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
+}
+
+func GetPassive(domain utils.DomainITF, destID string, schemaID string) ([]map[string]interface{}, error) {
+	return domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+		ds.SchemaDBField:    schemaID,
+		ds.DestTableDBField: destID,
+		"passive":           true,
+	}, true)
 }

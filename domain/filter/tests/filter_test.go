@@ -2,6 +2,7 @@ package filter_test
 
 import (
 	"sqldb-ws/domain/filter"
+	"sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/tests"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
@@ -81,7 +82,9 @@ func TestProcessFilterRestriction_ValidFilter(t *testing.T) {
 	domain := tests.NewMockDomain()
 	service := filter.NewFilterService(domain)
 
-	result := service.ProcessFilterRestriction("123", "1")
+	result := service.ProcessFilterRestriction("123", models.SchemaModel{
+		ID: "1",
+	})
 	assert.NotNil(t, result)
 }
 
@@ -89,7 +92,9 @@ func TestProcessFilterRestriction_EmptyFilter(t *testing.T) {
 	domain := tests.NewMockDomain()
 	service := filter.NewFilterService(domain)
 
-	result := service.ProcessFilterRestriction("", "1")
+	result := service.ProcessFilterRestriction("", models.SchemaModel{
+		ID: "1",
+	})
 	assert.Equal(t, "", result)
 }
 
@@ -98,7 +103,9 @@ func TestGetFilterForQuery_ValidData(t *testing.T) {
 	service := filter.NewFilterService(domain)
 	params := utils.Params{}
 
-	filter, view, order, dir, state := service.GetFilterForQuery("123", "", "1", params)
+	filter, view, order, dir, state := service.GetFilterForQuery("123", "", models.SchemaModel{
+		ID: "1",
+	}, params)
 	assert.NotNil(t, filter)
 	assert.NotNil(t, view)
 	assert.NotNil(t, order)

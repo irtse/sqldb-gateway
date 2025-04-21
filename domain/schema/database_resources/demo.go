@@ -200,4 +200,4 @@ var DEMODATASENUM = map[string][]string{
 	"valuation_format":      valFormDatas,
 	"valuation_type":        valTyp,
 }
-var DEMOROOTTABLES = []models.SchemaModel{FormalizedData, Valuation, ValuationType, ValuationFormat, Support, SupportType, ResultType, ResultFamily, RestrictionType, ProtectionType, ProtectionArea, Protection, Project, FormalizedDataStorageType, FormalizedDataProject, ConfidentialityLevel}
+//var DEMOROOTTABLES = []models.SchemaModel{FormalizedData, Valuation, ValuationType, ValuationFormat, Support, SupportType, ResultType, ResultFamily, RestrictionType, ProtectionType, ProtectionArea, Protection, Project, FormalizedDataStorageType, FormalizedDataProject, ConfidentialityLevel}

@@ -3,7 +3,7 @@ package controller_test
 import (
 	"os"
 	"sqldb-ws/controllers/controller"
-	"sqldb-ws/domain"
+	domain "sqldb-ws/domain"
 	"testing"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -37,7 +37,7 @@ func TestMySession_TokenMode(t *testing.T) {
 	token := ctrl.MySession("user123", false, false)
 
 	assert.NotEmpty(t, token, "Token should be generated in token mode")
-	storedToken := domain.GetToken(false, "user123")
+	storedToken, _ := domain.SetToken(false, "user123", "")
 	assert.Equal(t, token, storedToken)
 }
 
@@ -49,7 +49,7 @@ func TestMySession_DeleteToken(t *testing.T) {
 	assert.NotEmpty(t, token)
 	ctrl.MySession("user123", false, true)
 
-	storedToken := domain.GetToken(false, "user123")
+	storedToken, _ := domain.SetToken(false, "user123", "")
 	assert.Empty(t, storedToken, "Token should be removed after delete flag")
 }
 

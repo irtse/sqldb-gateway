@@ -56,12 +56,8 @@ func (t *TriggerService) triggerMail(record utils.Record, fromSchema sm.SchemaMo
 		return
 	}
 
-	rules := t.getTriggerRules(triggerID, fromSchema.ID, toSchemaID)
+	rules := t.getTriggerRules(triggerID, fromSchema, toSchemaID, record)
 	for _, r := range rules {
-		if !t.passesCondition(fromSchema, r, record) {
-			continue
-		}
-
 		mailID := r["value"]
 		if mailID == nil {
 			continue
@@ -106,7 +102,7 @@ func (t *TriggerService) triggerMail(record utils.Record, fromSchema sm.SchemaMo
 			utils.GetString(usto[0], utils.SpecialIDParam),
 			utils.GetString(mail, "subject"),
 			utils.GetString(mail, "template"),
-			dest[0],
+			dest[0], // MWAAIIIII ?!!!
 		)
 	}
 }
@@ -115,12 +111,8 @@ func (t *TriggerService) triggerData(record utils.Record, fromSchema sm.SchemaMo
 	if record[ds.DestTableDBField] == nil {
 		return
 	}
-	rules := t.getTriggerRules(triggerID, fromSchema.ID, toSchemaID)
+	rules := t.getTriggerRules(triggerID, fromSchema, toSchemaID, record)
 	for _, r := range rules {
-		if !t.passesCondition(fromSchema, r, record) {
-			continue
-		}
-
 		if toSchemaID != utils.GetInt(r, "to_"+ds.SchemaDBField) {
 			continue
 		}
@@ -148,28 +140,24 @@ func (t *TriggerService) triggerData(record utils.Record, fromSchema sm.SchemaMo
 	}
 }
 
-func (t *TriggerService) getTriggerRules(triggerID int64, fromSchemaID string, toSchemaID int64) []map[string]interface{} {
+func (t *TriggerService) getTriggerRules(triggerID int64, fromSchema sm.SchemaModel, toSchemaID int64, record utils.Record) []map[string]interface{} {
+	if res, err := t.Domain.GetDb().SelectQueryWithRestriction(ds.DBTriggerCondition.Name, map[string]interface{}{
+		ds.TriggerDBField: triggerID,
+		ds.SchemaDBField:  fromSchema.ID,
+	}, false); err == nil && len(res) > 1 {
+		for _, cond := range res {
+			if f, err := fromSchema.GetFieldByID(utils.GetInt(cond, ds.SchemaFieldDBField)); err != nil || utils.GetString(record, f.Name) != utils.GetString(cond, "value") {
+				return []map[string]interface{}{}
+			}
+		}
+	}
 	rules, err := t.Domain.GetDb().SelectQueryWithRestriction(ds.DBTriggerRule.Name, map[string]interface{}{
 		ds.TriggerDBField:          triggerID,
-		"from_" + ds.SchemaDBField: fromSchemaID,
+		"from_" + ds.SchemaDBField: fromSchema.ID,
 		"to_" + ds.SchemaDBField:   toSchemaID,
 	}, false)
 	if err != nil {
-		return nil
+		return []map[string]interface{}{}
 	}
 	return rules
-}
-
-func (t *TriggerService) passesCondition(fromSchema sm.SchemaModel, rule utils.Record, record utils.Record) bool {
-	ifval, okIfVal := rule["ifvalue"]
-	colID, okCol := rule["from_"+ds.SchemaFieldDBField]
-	if !okIfVal || !okCol {
-		return true
-	}
-
-	field, err := fromSchema.GetFieldByID(utils.ToInt64(colID))
-	if err != nil || record[field.Name] == ifval {
-		return true
-	}
-	return false
 }

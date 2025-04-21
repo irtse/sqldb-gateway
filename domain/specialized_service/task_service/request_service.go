@@ -6,7 +6,7 @@ import (
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
-	servutils "sqldb-ws/domain/service/utils"
+	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/task"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/domain/view_convertor"
@@ -18,6 +18,7 @@ type RequestService struct {
 }
 
 func (s *RequestService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
+	// TODO: here send back my passive task...
 	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 }
 func (s *RequestService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
@@ -33,6 +34,12 @@ func (s *RequestService) GenerateQueryFilter(tableName string, innerestr ...stri
 	}
 	n = append(n, innerestr...)
 	return f.GetQueryFilter(tableName, s.Domain.GetParams().Copy(), n...)
+}
+
+func GetPublishStarter(domain utils.DomainITF) ([]map[string]interface{}, error) {
+	return domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+		"index": -1,
+	}, true)
 }
 
 func GetHierarchical(domain utils.DomainITF) ([]map[string]interface{}, error) {
@@ -51,7 +58,9 @@ func (s *RequestService) VerifyDataIntegrity(record map[string]interface{}, tabl
 			return record, errors.New("missing related data"), false
 		}
 		record[ds.UserDBField] = s.Domain.GetUserID()
-		if hierarchy, err := GetHierarchical(s.Domain); err != nil || len(hierarchy) > 0 {
+		if starter, err := GetPublishStarter(s.Domain); err != nil || len(starter) > 0 {
+			record["current_index"] = -1
+		} else if hierarchy, err := GetHierarchical(s.Domain); err != nil || len(hierarchy) > 0 {
 			record["current_index"] = 0
 		} else {
 			record["current_index"] = 1
@@ -82,6 +91,9 @@ func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, 
 		return
 	}
 	for _, rec := range results {
+		if utils.GetInt(record, "current_index") == -1 {
+			continue
+		}
 		if utils.GetInt(record, "current_index") == 0 || utils.GetInt(record, "current_index") == 1 {
 			s.Write(rec, s.Domain.GetTable())
 			return
@@ -136,6 +148,10 @@ func (s *RequestService) Write(record utils.Record, tableName string) {
 	if _, ok := record["is_draft"]; ok && utils.GetBool(record, "is_draft") {
 		return
 	}
+	if utils.GetInt(record, "current_index") == -1 {
+		s.handleStarterWorkflow(record)
+		return
+	}
 	if utils.GetInt(record, "current_index") == 0 {
 		found := false
 		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.WorkflowSchemaDBField, map[string]interface{}{
@@ -166,6 +182,22 @@ func (s *RequestService) SpecializedCreateRow(record map[string]interface{}, tab
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
 }
 
+func (s *RequestService) handleStarterWorkflow(record map[string]interface{}) {
+	wfs, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+		"index":            -1,
+		ds.WorkflowDBField: record[ds.WorkflowDBField],
+	}, false)
+	if err != nil || len(wfs) == 0 {
+		params := utils.GetRowTargetParameters(ds.DBRequest.Name, utils.GetString(record, utils.SpecialIDParam))
+		s.Domain.DeleteSuperCall(params)
+		return
+	}
+
+	for _, newTask := range wfs {
+		s.prepareAndCreateTask(newTask, record, true)
+	}
+}
+
 func (s *RequestService) handleInitialWorkflow(record map[string]interface{}) {
 	wfs, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 		"index":            1,
@@ -178,11 +210,11 @@ func (s *RequestService) handleInitialWorkflow(record map[string]interface{}) {
 	}
 
 	for _, newTask := range wfs {
-		s.prepareAndCreateTask(newTask, record)
+		s.prepareAndCreateTask(newTask, record, false)
 	}
 }
 
-func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[string]interface{}) {
+func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[string]interface{}, passive bool) {
 	newTask[ds.WorkflowSchemaDBField] = newTask[utils.SpecialIDParam]
 	delete(newTask, utils.SpecialIDParam)
 	newTask[ds.RequestDBField] = record[utils.SpecialIDParam]
@@ -195,12 +227,13 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 			newTask[ds.DestTableDBField] = vals[0][utils.ReservedParam]
 		}
 	}
+	newTask["passive"] = passive
 	s.createTaskAndNotify(newTask, record)
 }
 
 func (s *RequestService) createTaskAndNotify(newTask, record map[string]interface{}) {
 	tasks, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name), newTask)
-	if err != nil || len(tasks) == 0 {
+	if err != nil || len(tasks) == 0 || utils.GetBool(newTask, "passive") {
 		return
 	}
 	task := s.constructNotificationTask(newTask, record)

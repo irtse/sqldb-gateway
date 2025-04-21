@@ -40,6 +40,7 @@ require (
 )
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/lib/pq v1.10.9
 	github.com/matthewhartstonge/argon2 v1.2.0

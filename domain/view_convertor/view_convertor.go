@@ -15,6 +15,7 @@ import (
 	"sqldb-ws/domain/task"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
+	"strconv"
 	"strings"
 )
 
@@ -221,6 +222,7 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 	d.ApplyCommandRow(record, vals, params)
 	d.getFilterByWFSchema(view, schema, record)
 	vals = d.getOrder(view, record, vals)
+	vals = d.getFieldFill(schema, vals)
 	channel <- sm.ViewItemModel{
 		Values:        vals,
 		DataPaths:     datapath,
@@ -236,6 +238,57 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 	}
 }
 
+func (s *ViewConvertor) fromITF(val interface{}, key string, values map[string]interface{}) map[string]interface{} {
+	if slices.Contains([]string{"true", "false"}, utils.ToString(val)) {
+		values[key] = val == "true" // should set type
+	} else if i, err := strconv.Atoi(utils.ToString(val)); err == nil && i >= 0 {
+		values[key] = i // should set type
+	} else {
+		values[key] = utils.ToString(val) // should set type
+	}
+	return values
+}
+func (s *ViewConvertor) getFieldFill(sch sm.SchemaModel, values map[string]interface{}) map[string]interface{} {
+	if !s.Domain.GetEmpty() {
+		return values
+	}
+	for k, _ := range values {
+		if !sch.HasField(k) {
+			continue
+		}
+		f, _ := sch.GetField(k)
+		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFieldAutoFill.Name, map[string]interface{}{
+			ds.FilterFieldDBField: f.ID,
+		}, true); err == nil && len(res) > 0 {
+			r := res[0]
+			if val, ok := r["value"]; ok && val != nil {
+				values = s.fromITF(val, k, values)
+			} else if dest, ok := r["from_"+ds.DestTableDBField]; ok && dest != nil {
+				if schID, err := strconv.Atoi(utils.ToString(r["from_"+ds.SchemaDBField])); err == nil && schID >= 0 {
+					if schFrom, err := schema.GetSchemaByID(utils.ToInt64(r["from_"+ds.SchemaDBField])); err == nil {
+						if ff, err2 := schFrom.GetFieldByID(utils.GetInt(r, "from_"+ds.SchemaFieldDBField)); err2 == nil {
+							if ress, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, map[string]interface{}{
+								utils.SpecialIDParam: dest,
+							}, true); err == nil && len(ress) > 0 {
+								values = s.fromITF(ress[0][ff.Name], k, values)
+							}
+						}
+					}
+				}
+			} else if utils.GetBool(r, "first_own") {
+				if schFrom, err := schema.GetSchemaByID(utils.ToInt64(r["from_"+ds.SchemaDBField])); err == nil {
+					if ff, err2 := schFrom.GetFieldByID(utils.GetInt(r, "from_"+ds.SchemaFieldDBField)); err2 == nil {
+						restr := filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)
+						if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, restr, false); err == nil && len(rr) > 0 {
+							values = s.fromITF(rr[0][ff.Name], k, values)
+						}
+					}
+				}
+			}
+		}
+	}
+	return values
+}
 func (s *ViewConvertor) getOrder(view *sm.ViewModel, record utils.Record, values map[string]interface{}) map[string]interface{} {
 	newOrder := ""
 	if len(task.GetViewTask(utils.GetString(record, ds.SchemaDBField), utils.ToString(record[utils.SpecialIDParam]), s.Domain.GetUserID())) > 0 {

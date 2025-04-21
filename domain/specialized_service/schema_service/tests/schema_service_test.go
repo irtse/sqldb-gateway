@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"sqldb-ws/domain/schema/models"
-	service "sqldb-ws/domain/service/schema_service"
+	service "sqldb-ws/domain/specialized_service/schema_service"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
 

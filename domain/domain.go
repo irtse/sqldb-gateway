@@ -8,7 +8,7 @@ import (
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
-	domain "sqldb-ws/domain/service"
+	domain "sqldb-ws/domain/specialized_service"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
 	conn "sqldb-ws/infrastructure/connector"

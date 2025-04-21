@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	sm "sqldb-ws/domain/schema/models"
-	"sqldb-ws/domain/service/schema_service"
+	"sqldb-ws/domain/specialized_service/schema_service"
 	"sqldb-ws/domain/utils"
 
 	"github.com/stretchr/testify/assert"

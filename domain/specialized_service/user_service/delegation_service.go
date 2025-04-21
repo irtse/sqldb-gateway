@@ -2,8 +2,8 @@ package user_service
 
 import (
 	ds "sqldb-ws/domain/schema/database_resources"
-	task "sqldb-ws/domain/service/task_service"
-	servutils "sqldb-ws/domain/service/utils"
+	task "sqldb-ws/domain/specialized_service/task_service"
+	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/domain/view_convertor"
 )

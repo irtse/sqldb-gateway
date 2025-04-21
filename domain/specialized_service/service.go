@@ -1,11 +1,12 @@
 package service
 
 import (
-	favorite "sqldb-ws/domain/service/favorite_service"
-	schema "sqldb-ws/domain/service/schema_service"
-	task "sqldb-ws/domain/service/task_service"
-	user "sqldb-ws/domain/service/user_service"
-	servutils "sqldb-ws/domain/service/utils"
+	"sqldb-ws/domain/specialized_service/email_service"
+	favorite "sqldb-ws/domain/specialized_service/favorite_service"
+	schema "sqldb-ws/domain/specialized_service/schema_service"
+	task "sqldb-ws/domain/specialized_service/task_service"
+	user "sqldb-ws/domain/specialized_service/user_service"
+	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
 )
 
@@ -22,6 +23,8 @@ var SERVICES = []utils.SpecializedServiceITF{
 	&user.DelegationService{},
 	&user.ShareService{},
 	&user.UserService{},
+	&email_service.EmailResponseService{},
+	&email_service.EmailSendedService{},
 }
 
 // funct to get specialized service depending on table reached

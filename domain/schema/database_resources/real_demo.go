@@ -8,15 +8,18 @@ var CoCFR = models.SchemaModel{
 	Category: "domain",
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "nom", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
+		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: true, Index: 1, Label: "entité en relation"},
 	},
 }
 
-var ProjectFR = models.SchemaModel{
+var ProjectFR = models.SchemaModel{ // todo
 	Name:     "project",
 	Label:    "projet",
-	Category: "domain",
+	Category: "global data",
 	Fields: []models.FieldModel{
-		{Name: "name", Label: "nom", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
+		{Name: "name", Label: "nom", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
+		{Name: "code", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 1},
+		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: true, Index: 2, Label: "entité en relation"},
 	},
 }
 
@@ -26,6 +29,7 @@ var Axis = models.SchemaModel{
 	Category: "domain",
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "nom", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
+		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: true, Index: 1, Label: "entité en relation"},
 	},
 }
 
@@ -187,3 +191,5 @@ var PublicationTypeFR = models.SchemaModel{
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template entry", Index: 3},
 	},
 }
+var DEMOROOTTABLES = []models.SchemaModel{CoCFR, ProjectFR, Axis, PublicationFR, ArticleFR, PublicationTypeFR, OtherPublicationFR,
+	DemoFR, InternshipFR, ThesisFR, HDRFR, PosterFR, PresentationFR, ConferenceFR}

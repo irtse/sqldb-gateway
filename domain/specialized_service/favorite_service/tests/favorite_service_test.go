@@ -2,7 +2,7 @@ package favorite_service
 
 import (
 	ds "sqldb-ws/domain/schema/database_resources"
-	service "sqldb-ws/domain/service/favorite_service"
+	service "sqldb-ws/domain/specialized_service/favorite_service"
 	utils "sqldb-ws/domain/utils"
 	"testing"
 
