@@ -1,8 +1,10 @@
 package email_service
 
 import (
+	"encoding/json"
 	"errors"
 	"sqldb-ws/domain/filter"
+	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	utils "sqldb-ws/domain/utils"
@@ -30,6 +32,58 @@ func (s *EmailResponseService) VerifyDataIntegrity(record map[string]interface{}
 		return record, errors.New("no related found"), false
 	}
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
+}
+
+func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
+	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
+		utils.SpecialIDParam: utils.GetString(record, ds.EmailSendedDBField),
+	}, false); err == nil {
+		for _, r := range res {
+			if r["action_on_response"] == nil || r[ds.SchemaDBField+"_on_response"] == nil || r[ds.DestTableDBField+"_on_response"] == nil {
+				continue
+			}
+			var body utils.Record
+			meth := utils.GetString(r, "action_on_response")
+			method := utils.SELECT
+			switch meth {
+			case "create":
+				method = utils.CREATE
+				if utils.GetBool(r, "got_response") {
+					if r["body_on_true_response"] == nil {
+						continue
+					} else {
+						json.Unmarshal([]byte(utils.GetString(r, "body_on_true_response")), &body)
+					}
+				} else {
+					if r["body_on_false_response"] == nil {
+						continue
+					} else {
+						json.Unmarshal([]byte(utils.GetString(r, "body_on_false_response")), &body)
+					}
+				}
+			case "update":
+				method = utils.UPDATE
+				if utils.GetBool(r, "got_response") {
+					if r["body_on_true_response"] == nil {
+						continue
+					} else {
+						json.Unmarshal([]byte(utils.GetString(r, "body_on_true_response")), &body)
+					}
+				} else {
+					if r["body_on_false_response"] == nil {
+						continue
+					} else {
+						json.Unmarshal([]byte(utils.GetString(r, "body_on_false_response")), &body)
+					}
+				}
+			case "delete":
+				method = utils.DELETE
+			}
+			if sch, err := schema.GetSchemaByID(utils.GetInt(r, ds.SchemaDBField+"_on_response")); err == nil {
+				s.Domain.Call(utils.GetRowTargetParameters(sch.Name, r[ds.DestTableDBField+"_on_response"]), body, method)
+			}
+		}
+	}
 }
 
 func (s *EmailResponseService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {

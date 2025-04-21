@@ -137,6 +137,12 @@ var DBEmailSended = models.SchemaModel{
 		{Name: "code", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Index: 5},
 		{Name: "mapped_with" + RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 4},
 		{Name: "mapped_with" + RootID("dest_table"), Type: models.INTEGER.String(), Required: true, Readonly: true, Label: "template attached", Index: 5},
+
+		{Name: "action_on_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "action on response", Index: 6},
+		{Name: RootID(DBSchema.Name) + "_on_response", Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: false, Readonly: true, Label: "template to modify on response", Index: 7},
+		{Name: RootID("dest_table") + "_on_response", Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "data to modify on response", Index: 8},
+		{Name: "body_on_true_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "body sended on valid response", Index: 9},
+		{Name: "body_on_false_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "body sended on unvalid response", Index: 9},
 	},
 }
 
