@@ -219,9 +219,9 @@
       "type": "string"
      },
      {
-      "description": "(Optionnal) Value of foldered",
+      "description": "(Optionnal) Value of group_by",
       "in": "query",
-      "name": "foldered",
+      "name": "group_by",
       "type": "string"
      },
      {
@@ -369,9 +369,9 @@
       "type": "string"
      },
      {
-      "description": "(Optionnal) Value of foldered",
+      "description": "(Optionnal) Value of group_by",
       "in": "query",
-      "name": "foldered",
+      "name": "group_by",
       "type": "string"
      },
      {
@@ -519,9 +519,9 @@
       "type": "string"
      },
      {
-      "description": "(Optionnal) Value of foldered",
+      "description": "(Optionnal) Value of group_by",
       "in": "query",
-      "name": "foldered",
+      "name": "group_by",
       "type": "string"
      },
      {
@@ -678,9 +678,9 @@
       "type": "string"
      },
      {
-      "description": "(Optionnal) Value of foldered",
+      "description": "(Optionnal) Value of group_by",
       "in": "query",
-      "name": "foldered",
+      "name": "group_by",
       "type": "string"
      },
      {
@@ -846,9 +846,9 @@
       "type": "string"
      },
      {
-      "description": "(Optionnal) Value of foldered",
+      "description": "(Optionnal) Value of group_by",
       "in": "query",
-      "name": "foldered",
+      "name": "group_by",
       "type": "string"
      },
      {

@@ -11,7 +11,7 @@ import (
 
 var COUNTREQUEST = 0
 
-var SpecialTypes = []string{"char", "text", "date", "time", "interval", "var", "blob", "set", "enum", "year", "USER-DEFINED", "link"}
+var SpecialTypes = []string{"char", "text", "date", "time", "interval", "var", "blob", "set", "enum", "year", "USER-DEFINED", "link", "upload", "html"}
 
 func Quote(s string) string { return "'" + s + "'" }
 
@@ -281,6 +281,11 @@ func FormatForSQL(datatype string, value interface{}) string {
 			if value == "CURRENT_TIMESTAMP" {
 				return fmt.Sprint(value)
 			} else {
+				if strings.Contains(strings.ToUpper(datatype), "UPLOAD") {
+					datatype = "varchar"
+				} else if strings.Contains(strings.ToUpper(datatype), "HTML") {
+					datatype = "text"
+				}
 				decodedValue := fmt.Sprint(value)
 				if strings.Contains(strings.ToUpper(datatype), "DATE") || strings.Contains(strings.ToUpper(datatype), "TIME") {
 					if len(decodedValue) > 10 {

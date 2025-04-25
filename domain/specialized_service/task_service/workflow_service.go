@@ -1,13 +1,13 @@
 package task_service
 
 import (
-	"sqldb-ws/domain/filter"
+	"sqldb-ws/domain/domain_service/filter"
+	"sqldb-ws/domain/domain_service/view_convertor"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	utils "sqldb-ws/domain/utils"
-	"sqldb-ws/domain/view_convertor"
 )
 
 // DONE - UNDER 100 LINES - NOT TESTED

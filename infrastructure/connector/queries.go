@@ -19,10 +19,10 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		db = Open(db)
 		defer db.Close()
 	}
-	res, err := db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
-	if err != nil {
-		fmt.Println("ERR ", db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
+	if name == "dbtriggers_rule" {
+		fmt.Println(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
 	}
+	res, err := db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
 	return res, err
 }
 

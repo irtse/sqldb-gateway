@@ -13,7 +13,7 @@ Their declarations is based on our Entity terminology, to help us in coding.
 // DBSchema express a table in the database, it's a template for a table
 var DBSchema = models.SchemaModel{
 	Name:     RootName("schema"),
-	Label:    "template",
+	Label:    "templates",
 	Category: "template",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Level: models.LEVELRESPONSIBLE, Index: 0},
@@ -27,7 +27,7 @@ var DBSchema = models.SchemaModel{
 // DBSchemaField express a column in a table, it's a template for a column
 var DBSchemaField = models.SchemaModel{
 	Name:     RootName("schema_column"),
-	Label:    "template field",
+	Label:    "template fields",
 	Category: "template",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
@@ -46,13 +46,14 @@ var DBSchemaField = models.SchemaModel{
 		{Name: "hidden", Type: models.BOOLEAN.String(), Default: false, Required: false, Index: 13, Label: "is hidden"},
 		{Name: "translatable", Type: models.BOOLEAN.String(), Default: true, Required: false, Index: 14, Label: "is translatable"},
 		{Name: "transform_function", Type: models.ENUMTRANSFORM.String(), Required: false, Index: 15, Label: "transformation function"},
+		{Name: "group_by", Type: models.VARCHAR.String(), Required: false, Index: 16, Label: "group by"},
 	},
 }
 
 // DBPermission express a permission in the database, ex: create, update, delete, read on a table
 var DBPermission = models.SchemaModel{
 	Name:     RootName("permission"),
-	Label:    "permission",
+	Label:    "permissions",
 	Category: "role & permission",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
@@ -66,7 +67,7 @@ var DBPermission = models.SchemaModel{
 // DBRole express a role in the database, ex: admin, user, guest with a set of permissions
 var DBRole = models.SchemaModel{
 	Name:     RootName("role"),
-	Label:    "role",
+	Label:    "roles",
 	Category: "role & permission",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
@@ -77,7 +78,7 @@ var DBRole = models.SchemaModel{
 // DBRolePermission express a role permission attribution in the database
 var DBRolePermission = models.SchemaModel{
 	Name:     RootName("role_permission"),
-	Label:    "permission role attribution",
+	Label:    "permission role attributions",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBRole.Name), Type: models.INTEGER.String(), ForeignTable: DBRole.Name, Required: true, Readonly: true, Index: 0, Label: "role"},
@@ -88,7 +89,7 @@ var DBRolePermission = models.SchemaModel{
 // DBEntity express an entity in the database, ex: user, task, project
 var DBEntity = models.SchemaModel{
 	Name:     RootName("entity"),
-	Label:    "entity",
+	Label:    "entities",
 	Category: "entity",
 	CanOwned: true,
 	Fields: []models.FieldModel{
@@ -101,7 +102,7 @@ var DBEntity = models.SchemaModel{
 // DBUser express a user in the database, with email, password, token, super_admin
 var DBUser = models.SchemaModel{
 	Name:     RootName("user"),
-	Label:    "user",
+	Label:    "users",
 	Category: "user",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
@@ -114,13 +115,19 @@ var DBUser = models.SchemaModel{
 
 var DBEmailTemplate = models.SchemaModel{
 	Name:     RootName("email_template"),
-	Label:    "email template",
+	Label:    "email templates",
 	Category: "email",
 	Fields: []models.FieldModel{
 		{Name: "subject", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 1},
-		{Name: "template", Type: models.BIGINT.String(), Required: true, Index: 2},
+		{Name: "template", Type: models.BIGVARCHAR.String(), Required: true, Index: 2},
 		{Name: "waiting_response", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 3},
 		{Name: "to_map_" + RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 4},
+		{Name: "redirected_on", Type: models.VARCHAR.String(), Required: false, Index: 5},
+
+		{Name: "action_on_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "action on response", Index: 6},
+		{Name: RootID(DBSchema.Name) + "_on_response", Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: false, Readonly: true, Label: "template to modify on response", Index: 7},
+		{Name: "body_on_true_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "body sended on valid response", Index: 8},
+		{Name: "body_on_false_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "body sended on unvalid response", Index: 9},
 	},
 }
 
@@ -129,26 +136,22 @@ var DBEmailSended = models.SchemaModel{
 	Label:    "email sended",
 	Category: "email",
 	Fields: []models.FieldModel{
-		{Name: "from", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
-		{Name: "to", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 1},
-		{Name: "subject", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 2},
-		{Name: "content", Type: models.BIGINT.String(), Required: true, Index: 3},
-		{Name: RootID(DBEmailTemplate.Name), Type: models.INTEGER.String(), ForeignTable: DBEmailTemplate.Name, Required: true, Readonly: true, Label: "email attached", Index: 4},
-		{Name: "code", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Index: 5},
-		{Name: "mapped_with" + RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 4},
-		{Name: "mapped_with" + RootID("dest_table"), Type: models.INTEGER.String(), Required: true, Readonly: true, Label: "template attached", Index: 5},
-
-		{Name: "action_on_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "action on response", Index: 6},
-		{Name: RootID(DBSchema.Name) + "_on_response", Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: false, Readonly: true, Label: "template to modify on response", Index: 7},
-		{Name: RootID("dest_table") + "_on_response", Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "data to modify on response", Index: 8},
-		{Name: "body_on_true_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "body sended on valid response", Index: 9},
-		{Name: "body_on_false_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "body sended on unvalid response", Index: 9},
+		{Name: "from_email", Type: models.VARCHAR.String(), Label: "sent from", Required: true, Readonly: true, Index: 0},
+		{Name: "to_email", Type: models.VARCHAR.String(), Label: "sent to", ForeignTable: DBUser.Name, Required: true, Readonly: false, Index: 1},
+		{Name: "subject", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 2},
+		{Name: "file_attached", Type: models.UPLOAD.String(), Required: false, Readonly: false, Label: "file attached", Index: 3},
+		{Name: "content", Type: models.HTML.String(), Label: "message", Required: false, Index: 4},
+		{Name: RootID(DBEmailTemplate.Name), Type: models.INTEGER.String(), ForeignTable: DBEmailTemplate.Name, Required: true, Readonly: true, Label: "email attached", Index: 5},
+		{Name: "code", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 6},
+		{Name: "mapped_with" + RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 7},
+		{Name: "mapped_with" + RootID("dest_table"), Type: models.INTEGER.String(), Required: true, Readonly: true, Label: "template attached", Index: 8},
+		{Name: RootID("dest_table") + "_on_response", Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "data to modify on response", Index: 9},
 	},
 }
 
 var DBEmailResponse = models.SchemaModel{
 	Name:     RootName("email_response"),
-	Label:    "email response",
+	Label:    "email responses",
 	Category: "email",
 	Fields: []models.FieldModel{
 		{Name: "got_response", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 0},
@@ -158,12 +161,13 @@ var DBEmailResponse = models.SchemaModel{
 }
 
 var DBTrigger = models.SchemaModel{
-	Name:     RootName("trigger"),
-	Label:    "trigger",
+	Name:     RootName("triggers"),
+	Label:    "triggers",
 	Category: "trigger",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 		{Name: "type", Type: models.ENUMTRIGGER.String(), Required: true, Readonly: true, Index: 1},
+		{Name: "mode", Type: models.ENUMMODE.String(), Required: true, Readonly: true, Index: 1},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 3},
 		{Name: "on_write", Type: models.BOOLEAN.String(), Required: true, Readonly: false, Default: false, Label: "on creation", Index: 2},
 		{Name: "on_update", Type: models.BOOLEAN.String(), Required: true, Readonly: false, Default: false, Label: "on update", Index: 3},
@@ -171,8 +175,8 @@ var DBTrigger = models.SchemaModel{
 }
 
 var DBTriggerCondition = models.SchemaModel{
-	Name:     RootName("trigger_condition"),
-	Label:    "trigger condition",
+	Name:     RootName("triggers_condition"),
+	Label:    "triggers conditions",
 	Category: "trigger",
 	Fields: []models.FieldModel{
 		{Name: "value", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 0},
@@ -183,8 +187,8 @@ var DBTriggerCondition = models.SchemaModel{
 }
 
 var DBTriggerRule = models.SchemaModel{
-	Name:     RootName("trigger_rule"),
-	Label:    "trigger rule",
+	Name:     RootName("triggers_rule"),
+	Label:    "triggers rules",
 	Category: "trigger",
 	Fields: []models.FieldModel{
 		{Name: "value", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 0},
@@ -200,7 +204,7 @@ var DBTriggerRule = models.SchemaModel{
 
 var DBFieldAutoFill = models.SchemaModel{
 	Name:     RootName("field_autofill"),
-	Label:    "field autofill",
+	Label:    "auto-fill fields",
 	Category: "schema",
 	Fields: []models.FieldModel{
 		{Name: "value", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 0},
@@ -217,7 +221,7 @@ var DBFieldAutoFill = models.SchemaModel{
 // Note rules : HIERARCHY IS NOT INNER ROLE. HIERARCHY DEFINE MASTER OF AN ENTITY OR A USER. IT'S AN AUTO WATCHER ON USER ASSIGNEE TASK.
 var DBHierarchy = models.SchemaModel{
 	Name:     RootName("hierarchy"),
-	Label:    "hierarchy",
+	Label:    "hierarchies",
 	Category: "user",
 	CanOwned: true,
 	Fields: []models.FieldModel{
@@ -232,7 +236,7 @@ var DBHierarchy = models.SchemaModel{
 // DBEntityAttribution express an entity attribution in the database
 var DBEntityUser = models.SchemaModel{
 	Name:     RootName("entity_user"),
-	Label:    "entity user attribution",
+	Label:    "entity user attributions",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: true, Readonly: true, Index: 0, Label: "user"},
@@ -245,7 +249,7 @@ var DBEntityUser = models.SchemaModel{
 // DBRoleAttribution express a role attribution in the database
 var DBRoleAttribution = models.SchemaModel{
 	Name:     RootName("role_attribution"),
-	Label:    "role attribution",
+	Label:    "role attributions",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Index: 0, Label: "user"},
@@ -259,7 +263,7 @@ var DBRoleAttribution = models.SchemaModel{
 // DBWorkflow express a workflow in the database, a workflow is a set of steps to achieve a request
 var DBWorkflow = models.SchemaModel{
 	Name:     RootName("workflow"),
-	Label:    "workflow",
+	Label:    "workflows",
 	Category: "workflow",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Constraint: "unique", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
@@ -267,13 +271,14 @@ var DBWorkflow = models.SchemaModel{
 		{Name: "is_meta", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 2, Label: "is a meta request"},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template entry", Index: 3},
 		{Name: "steps", Type: "onetomany", ForeignTable: RootName("workflow_schema"), Required: false, Index: 4},
+		{Name: "view_" + RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Label: "filter to apply on step", Index: 5, Hidden: true},
 	},
 }
 
 // DBWorkflowSchema express a workflow schema in the database, a workflow schema is a step in a workflow
 var DBWorkflowSchema = models.SchemaModel{
 	Name:     RootName("workflow_schema"),
-	Label:    "workflow schema attribution",
+	Label:    "workflow schema attributions",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Constraint: "unique", Readonly: true, Index: 0},
@@ -292,6 +297,7 @@ var DBWorkflowSchema = models.SchemaModel{
 		{Name: "custom_progressing_status", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "rename of the pending status", Index: 13},
 		{Name: "view_" + RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Label: "filter to apply on step", Index: 10, Hidden: true},
 		{Name: "readonly_not_assignee", Type: models.BOOLEAN.String(), Required: false, Default: false, Label: "readonly for not assignee", Index: 11, Hidden: true},
+		{Name: "assign_to_creator", Type: models.BOOLEAN.String(), Required: false, Default: false, Label: "assign to creator", Index: 12, Hidden: true},
 	},
 }
 
@@ -300,7 +306,7 @@ var DBWorkflowSchema = models.SchemaModel{
 // DBRequest express a request in the database, a request is a set of tasks to achieve a goal
 var DBRequest = models.SchemaModel{
 	Name:     RootName("request"),
-	Label:    "request",
+	Label:    "requests",
 	Category: "request",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
@@ -319,7 +325,7 @@ var DBRequest = models.SchemaModel{
 // DBWorkflow express a workflow in the database, a workflow is a set of steps to achieve a request
 var DBConsent = models.SchemaModel{
 	Name:     RootName("consent"),
-	Label:    "consent",
+	Label:    "consents",
 	Category: "consent",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Constraint: "unique", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
@@ -330,7 +336,7 @@ var DBConsent = models.SchemaModel{
 
 var DBConsentResponse = models.SchemaModel{
 	Name:     RootName("consent_response"),
-	Label:    "consent response",
+	Label:    "consent responses",
 	Category: "consent",
 	Fields: []models.FieldModel{
 		{Name: "is_consenting", Label: "consentant", Type: models.BOOLEAN.String(), Required: true, Readonly: false, Index: 0},
@@ -341,7 +347,7 @@ var DBConsentResponse = models.SchemaModel{
 // DBTask express a task in the database, a task is an activity to achieve a step in a request
 var DBTask = models.SchemaModel{
 	Name:     RootName("task"),
-	Label:    "activity",
+	Label:    "activities",
 	Category: "request",
 	Fields: []models.FieldModel{
 		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 0},
@@ -367,34 +373,21 @@ var DBTask = models.SchemaModel{
 
 var DBComment = models.SchemaModel{
 	Name:     RootName("comment"),
-	Label:    "commentary",
+	Label:    "commentaries",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "content", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
 		{Name: "index", Type: models.INTEGER.String(), Required: false, Readonly: true, Default: 0, Level: models.LEVELRESPONSIBLE, Index: 1},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Label: "comment by", Level: models.LEVELRESPONSIBLE, Index: 2},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 3},
-	},
-}
-
-var DBCommunicationTemplate = models.SchemaModel{
-	Name:     RootName("communication_template"),
-	Label:    "communication template",
-	Category: "",
-	Fields: []models.FieldModel{
-		{Name: "content", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 0},
-		{Name: "from_" + RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: true, Readonly: false, Label: "from user", Level: models.LEVELRESPONSIBLE, Index: 2},
-		{Name: "to_" + RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: true, Readonly: false, Label: "to user", Level: models.LEVELRESPONSIBLE, Index: 3},
-		{Name: "title", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 4},
-		{Name: "format", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 5},
-		{Name: "plateform", Type: models.ENUMPLATFORM.String(), Required: true, Readonly: false, Index: 6},
+		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 4}, // reference to a table if needed
 	},
 }
 
 // DBFilter express a filter in the database, a filter is a set of conditions to filter a view on a table
 var DBFilter = models.SchemaModel{
 	Name:     RootName("filter"),
-	Label:    "filter",
+	Label:    "filters",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Index: 0},
@@ -412,7 +405,7 @@ var DBFilter = models.SchemaModel{
 // DBFilterField express a filter field in the database, a filter field is a condition to filter a view on a table
 var DBFilterField = models.SchemaModel{
 	Name:     RootName("filter_field"),
-	Label:    "filter field",
+	Label:    "filter fields",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBSchemaField.Name), Type: models.INTEGER.String(), ForeignTable: DBSchemaField.Name, Required: false, Index: 0},
@@ -430,7 +423,7 @@ var DBFilterField = models.SchemaModel{
 // DBDashboardElement express a dashboard in the database, a dashboard is a set of views on a table
 var DBDashboard = models.SchemaModel{
 	Name:     RootName("dashboard"),
-	Label:    "dashboard",
+	Label:    "dashboards",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
@@ -444,7 +437,7 @@ var DBDashboard = models.SchemaModel{
 // DBDashboardElement express a dashboard element in the database, a dashboard element is a view on a table with a filter
 var DBDashboardElement = models.SchemaModel{
 	Name:     RootName("dashboard_element"),
-	Label:    "dashboard element",
+	Label:    "dashboard elements",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
@@ -464,7 +457,7 @@ var DBDashboardElement = models.SchemaModel{
 // DBDashboardMathField express a dashboard math field in the database, a dashboard math field is a math operation on a column
 var DBDashboardLabel = models.SchemaModel{
 	Name:     RootName("dashboard_math_field"),
-	Label:    "dashboard math field",
+	Label:    "dashboard math fields",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: false, Index: 1},
@@ -476,7 +469,7 @@ var DBDashboardLabel = models.SchemaModel{
 // DBDashboardMathField express a dashboard math field in the database, a dashboard math field is a math operation on a column
 var DBDashboardMathField = models.SchemaModel{
 	Name:     RootName("dashboard_math_field"),
-	Label:    "dashboard math field",
+	Label:    "dashboard math fields",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Index: 1},
@@ -489,32 +482,32 @@ var DBDashboardMathField = models.SchemaModel{
 // DBView express a view in the database, a view is a set of fields to display on a table
 var DBView = models.SchemaModel{
 	Name:     RootName("view"),
-	Label:    "view",
+	Label:    "views",
 	Category: "view",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Constraint: "unique", Index: 0},
+		{Name: "label", Type: models.VARCHAR.String(), Index: 0},
 		{Name: "description", Type: models.BIGVARCHAR.String(), Required: false, Index: 1},
 		{Name: "category", Type: models.VARCHAR.String(), Required: false, Index: 2},
 		{Name: "index", Type: models.INTEGER.String(), Required: false, Default: 1, Index: 3},
 		{Name: "indexable", Type: models.BOOLEAN.String(), Required: false, Default: true, Index: 4},
 		{Name: "is_list", Type: models.BOOLEAN.String(), Required: false, Default: true, Index: 5},
-		{Name: "shortcut_on_schema", Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Level: models.LEVELRESPONSIBLE, Required: false, Index: 6},
-		{Name: "is_empty", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 7},
-		{Name: "readonly", Type: models.BOOLEAN.String(), Required: true, Index: 8},
-		{Name: "view_" + RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Index: 9},
-		{Name: RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Index: 10},
-		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Index: 11},
-		{Name: "own_view", Type: models.BOOLEAN.String(), Required: false, Index: 12},
-		{Name: "only_not_empty", Type: models.BOOLEAN.String(), Required: false, Index: 13},
-		{Name: "foldered", Type: models.INTEGER.String(), ForeignTable: DBSchemaField.Name, Required: false, Level: models.LEVELRESPONSIBLE, Index: 14},
-		{Name: "permit_on_action", Type: models.VARCHAR.String(), Level: models.LEVELRESPONSIBLE, Required: false, Index: 15},
+		{Name: "shortcut_on_schema", Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Label: "is a shortcut on data", Required: false, Index: 6},
+		{Name: "shortcut_on_main", Type: models.BOOLEAN.String(), Label: "is a shortcut on home", Required: false, Index: 7},
+		{Name: "is_empty", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 8},
+		{Name: "readonly", Type: models.BOOLEAN.String(), Required: true, Index: 9},
+		{Name: "view_" + RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Index: 10},
+		{Name: RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Index: 11},
+		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Index: 12},
+		{Name: "own_view", Type: models.BOOLEAN.String(), Required: false, Index: 13},
+		{Name: "group_by", Type: models.INTEGER.String(), ForeignTable: DBSchemaField.Name, Required: false, Label: "group by", Index: 14},
 	},
 }
 
 // DBViewAttribution express a view attribution in the database for a user or an entity
 var DBViewAttribution = models.SchemaModel{
 	Name:     RootName("view_attribution"),
-	Label:    "view attribution",
+	Label:    "view attributions",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBView.Name), Type: models.INTEGER.String(), ForeignTable: DBView.Name, Required: true, Index: 0},
@@ -526,7 +519,7 @@ var DBViewAttribution = models.SchemaModel{
 // DBNotification express a notification in the database, a notification is a message to a user or an entity
 var DBNotification = models.SchemaModel{
 	Name:     RootName("notification"),
-	Label:    "notification",
+	Label:    "notifications",
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
@@ -556,7 +549,7 @@ var DBDataAccess = models.SchemaModel{
 var DBDelegation = models.SchemaModel{
 	Name:     RootName("delegation"),
 	Label:    "delegation",
-	Category: "user",
+	Category: "users",
 	CanOwned: true,
 	Fields: []models.FieldModel{
 		{Name: "delegated_" + RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: true, Index: 0, Label: "delegated to user"},
@@ -569,7 +562,7 @@ var DBDelegation = models.SchemaModel{
 
 var DBShare = models.SchemaModel{
 	Name:     RootName("share"),
-	Label:    "share",
+	Label:    "sharings",
 	Category: "user",
 	CanOwned: true,
 	Fields: []models.FieldModel{
@@ -592,12 +585,12 @@ var POSTPERMISSIONEXCEPTION = []string{DBEmailSended.Name, DBRequest.Name, DBCon
 var PUPERMISSIONEXCEPTION = []string{DBTask.Name, DBEmailResponse.Name}
 var PERMISSIONEXCEPTION = []string{DBView.Name, DBTask.Name, DBRequest.Name, DBWorkflow.Name, DBEntity.Name, DBSchema.Name, DBSchemaField.Name} // override permission checkup
 
-var ROOTTABLES = []models.SchemaModel{DBSchemaField, DBUser, DBWorkflow, DBView, DBRequest, DBSchema, DBPermission, DBEntity,
+var ROOTTABLES = []models.SchemaModel{DBSchemaField, DBUser, DBWorkflow, DBView, DBRequest, DBSchema, DBPermission, DBFilter, DBFilterField, DBEntity,
 	DBRole, DBDataAccess, DBNotification, DBEntityUser, DBRoleAttribution, DBShare,
-	DBConsent, DBTask, DBWorkflowSchema, DBRolePermission, DBHierarchy, DBViewAttribution, DBFilter, DBFilterField,
-	DBDashboard, DBDashboardElement, DBDashboardMathField, DBDashboardLabel,
+	DBConsent, DBTask, DBWorkflowSchema, DBRolePermission, DBHierarchy, DBViewAttribution,
+	//DBDashboard, DBDashboardElement, DBDashboardMathField, DBDashboardLabel,
 	DBComment, DBDelegation,
-	DBCommunicationTemplate, DBConsentResponse, DBEmailTemplate,
+	DBConsentResponse, DBEmailTemplate,
 	DBTrigger, DBTriggerRule, DBTriggerCondition,
 	DBFieldAutoFill,
 	DBEmailSended, DBEmailTemplate, DBEmailResponse,

@@ -15,6 +15,7 @@ const (
 	MIN     Method = 7
 	MAX     Method = 8
 	SUM     Method = 9
+	IMPORT  Method = 10
 )
 
 func Found(name string) Method {

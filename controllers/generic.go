@@ -76,3 +76,11 @@ func (t *GenericController) Math() {
 	function := t.Ctx.Input.Params()[":function"]
 	t.SafeCall(utils.Found(function))
 }
+
+// @Title Import
+// @Description import Datas
+// @Param	table			path 	string	true		"Import in columnName"
+// @Success 200 {string} success !
+// @Failure 403 no table
+// @router /:table/import [post]
+func (t *GenericController) Import() { t.SafeCall(utils.IMPORT) }

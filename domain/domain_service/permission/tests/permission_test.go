@@ -1,7 +1,7 @@
 package permission_test
 
 import (
-	"sqldb-ws/domain/permission"
+	"sqldb-ws/domain/domain_service/permission"
 	"sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"

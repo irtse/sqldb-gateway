@@ -4,7 +4,8 @@ import (
 	"errors"
 	"slices"
 
-	permissions "sqldb-ws/domain/permission"
+	"sqldb-ws/domain/domain_service"
+	permissions "sqldb-ws/domain/domain_service/permission"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -15,6 +16,8 @@ import (
 	infrastructure "sqldb-ws/infrastructure/service"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 /*
@@ -42,8 +45,9 @@ func Domain(superAdmin bool, user string, permsService *permissions.PermDomainSe
 	}
 	return &SpecializedDomain{
 		AbstractDomain: utils.AbstractDomain{
-			SuperAdmin: superAdmin, // carry the security level of the "User" or an inner action
-			User:       user,       // current user...
+			DomainRequestID: uuid.New().String(),
+			SuperAdmin:      superAdmin, // carry the security level of the "User" or an inner action
+			User:            user,       // current user...
 		},
 		PermsService: permsService, // carry the permissions service
 	}
@@ -86,6 +90,8 @@ func (d *SpecializedDomain) DeleteSuperCall(params utils.Params, args ...interfa
 func (d *SpecializedDomain) SuperCall(params utils.Params, record utils.Record, method utils.Method, isOwn bool, args ...interface{}) (utils.Results, error) {
 	params.Set(utils.RootRawView, "enable")
 	d2 := Domain(true, d.User, d.PermsService)
+	d2.DomainRequestID = d.DomainRequestID
+	d2.SetAutoload(d.GetAutoload())
 	if isOwn {
 		d2.Own = d.IsOwn(false, false, method)
 	}
@@ -126,7 +132,7 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 				"email": connector.Quote(d.User),
 			}, true); err == nil && len(res) > 0 {
 				d.UserID = utils.GetString(res[0], utils.SpecialIDParam)
-			} else {
+			} else if !d.SuperAdmin {
 				return utils.Results{}, errors.New("not authorized : unknown user attempt to reach api")
 			}
 		}
@@ -142,7 +148,7 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 		if rowName, ok := params.Get(utils.RootRowsParam); ok { // rows override columns
 			return d.GetRowResults(rowName, record, specializedService, args...)
 		}
-		if !d.SuperAdmin || method == utils.DELETE {
+		if !d.SuperAdmin || method == utils.DELETE || method == utils.IMPORT {
 			return utils.Results{}, errors.New(
 				"not authorized to " + method.String() + " " + d.Service.GetName() + " data")
 		}
@@ -167,11 +173,16 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 		record[utils.SpecialIDParam], _ = d.Params.Get(utils.SpecialIDParam)
 	}
 	d.Service = infrastructure.NewTableRowService(d.Db, d.SuperAdmin, d.User, strings.ToLower(d.TableName), specializedService)
-	res, err := d.Invoke(record, d.Method, args...)
-	if p, _ := d.Params.Get(utils.RootRawView); p != "enable" && err == nil && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
-		return specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestIDParam)...), nil
+	if d.Method == utils.IMPORT {
+		path, err := domain_service.NewUploader(d).ApplyUpload(d.File, d.FileHandler)
+		return utils.Results{{"path": path}}, err
+	} else {
+		res, err := d.Invoke(record, d.Method, args...)
+		if p, _ := d.Params.Get(utils.RootRawView); p != "enable" && err == nil && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
+			return specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestIDParam)...), nil
+		}
+		return res, err
 	}
-	return res, err
 }
 
 func (d *SpecializedDomain) Invoke(record utils.Record, method utils.Method, args ...interface{}) (utils.Results, error) {

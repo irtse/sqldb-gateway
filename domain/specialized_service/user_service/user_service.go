@@ -1,11 +1,11 @@
 package user_service
 
 import (
-	"sqldb-ws/domain/filter"
+	"sqldb-ws/domain/domain_service/filter"
+	"sqldb-ws/domain/domain_service/view_convertor"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/domain/view_convertor"
 	"sqldb-ws/infrastructure/connector"
 )
 

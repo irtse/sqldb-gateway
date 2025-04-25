@@ -73,6 +73,9 @@ const (
 	ENUMTIME
 	ENUMCHART
 	ENUMTRIGGER
+	UPLOAD
+	ENUMMODE
+	HTML
 )
 
 func DataTypeToEnum() string {
@@ -109,6 +112,9 @@ func DataTypeList() []string {
 		"ENUM('second', 'minute', 'hour','day', 'week', 'month', 'year')",
 		"ENUM('line', 'pie', 'bar')", // enrich later
 		"ENUM('mail', 'sms', 'teams notification', 'data')",
+		"UPLOAD",
+		"ENUM('manual', 'auto')",
+		"HTML",
 	}
 }
 

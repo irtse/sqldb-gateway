@@ -32,6 +32,7 @@ func Load(domainInstance utils.DomainITF) {
 		progressbar.OptionFullWidth(),
 		progressbar.OptionSetRenderBlankState(true),
 	)
+	domainInstance.SetAutoload(true)
 	LoadCache(utils.ReservedParam, db)
 	InitializeTables(domainInstance, bar)     // Create tables if they don't exist, needed for the next step
 	InitializeRootTables(domainInstance, bar) // Create root tables if they don't exist, needed for the next step

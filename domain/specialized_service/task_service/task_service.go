@@ -3,14 +3,14 @@ package task_service
 import (
 	"errors"
 	"math"
-	"sqldb-ws/domain/filter"
+	"sqldb-ws/domain/domain_service/filter"
+	"sqldb-ws/domain/domain_service/task"
+	"sqldb-ws/domain/domain_service/view_convertor"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	servutils "sqldb-ws/domain/specialized_service/utils"
-	"sqldb-ws/domain/task"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/domain/view_convertor"
 	conn "sqldb-ws/infrastructure/connector"
 	"strings"
 )
@@ -228,9 +228,11 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 					scheme[utils.SpecialIDParam],
 					scheme[SchemaDBField],
 					requests[0][utils.SpecialIDParam],
-					requests[0][UserDBField],
-					requests[0][EntityDBField])
-
+					scheme[UserDBField],
+					scheme[EntityDBField])
+				if utils.GetBool(requests[0], "assign_to_creator") {
+					newTask[ds.UserDBField] = s.Domain.GetUserID()
+				}
 				if scheme[SchemaDBField] == res[SchemaDBField] {
 					newTask[SchemaDBField] = res[SchemaDBField]
 					newTask[DestTableDBField] = res[DestTableDBField]
@@ -252,7 +254,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 						"is_meta":          true,
 						SchemaDBField:      newTask[SchemaDBField],
 						DestTableDBField:   newTask[DestTableDBField],
-						UserDBField:        newTask[UserDBField],
+						UserDBField:        requests[0][UserDBField],
 					}
 					requests, err := s.Domain.Call(utils.AllParams(ds.DBRequest.Name), newMetaRequest, utils.CREATE)
 					if err == nil && len(requests) > 0 {

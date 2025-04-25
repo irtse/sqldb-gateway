@@ -30,6 +30,17 @@ func ToMap(who interface{}) map[string]interface{} {
 	return map[string]interface{}{}
 }
 
+func ToListAnonymized(who []string) []interface{} {
+	i := []interface{}{}
+	if reflect.TypeOf(who).Kind() == reflect.Slice {
+		for _, w := range who {
+			i = append(i, w)
+		}
+		return i
+	}
+	return i
+}
+
 func ToList(who interface{}) []interface{} {
 	if reflect.TypeOf(who).Kind() == reflect.Slice {
 		return who.([]interface{})

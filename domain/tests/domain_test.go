@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	domain "sqldb-ws/domain"
-	permissions "sqldb-ws/domain/permission"
+	permissions "sqldb-ws/domain/domain_service/permission"
 	"sqldb-ws/domain/utils"
 
 	"github.com/stretchr/testify/assert"

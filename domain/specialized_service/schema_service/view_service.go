@@ -5,15 +5,14 @@ import (
 	"runtime"
 	"slices"
 	"sort"
-	filterserv "sqldb-ws/domain/filter"
-	"sqldb-ws/domain/schema"
+	filterserv "sqldb-ws/domain/domain_service/filter"
+	"sqldb-ws/domain/domain_service/task"
+	"sqldb-ws/domain/domain_service/view_convertor"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	servutils "sqldb-ws/domain/specialized_service/utils"
-	"sqldb-ws/domain/task"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/domain/view_convertor"
 	"strings"
 )
 
@@ -77,26 +76,26 @@ func (s *ViewService) TransformToView(record utils.Record, domainParams utils.Pa
 		domainParams.Delete(func(k string) bool {
 			return k == utils.RootRowsParam || k == utils.SpecialIDParam || k == utils.RootTableParam || k == utils.SpecialSubIDParam
 		})
-		if _, ok := record["foldered"]; ok {
-			if field, err := schema.GetFieldByID(record.GetInt("foldered")); err == nil {
-				params.Set(utils.Rootfoldered, field.Name)
+		if _, ok := record["group_by"]; ok {
+			if field, err := schema.GetFieldByID(record.GetInt("group_by")); err == nil {
+				params.Set(utils.RootGroupBy, field.Name)
 			}
 		}
-		if f, ok := domainParams.Get(utils.Rootfoldered); ok {
-			params.Set(utils.Rootfoldered, f)
-			rec["foldered"] = f
+		if f, ok := domainParams.Get(utils.RootGroupBy); ok {
+			params.Set(utils.RootGroupBy, f)
+			rec["group_by"] = f
 		}
 		datas, rec := s.fetchData(params, domainParams, sqlFilter, record, rec, schema)
 		record, rec = s.processData(rec, datas, schema, record, view, params)
 		rec["link_path"] = "/" + utils.MAIN_PREFIX + "/" + fmt.Sprintf(ds.DBView.Name) + "?rows=" + utils.ToString(record[utils.SpecialIDParam])
-		if _, ok := record["foldered"]; ok { // express by each column we are foldered TODO : if not in view add it
-			field, err := schema.GetFieldByID(record.GetInt("foldered"))
+		if _, ok := record["group_by"]; ok { // express by each column we are foldered TODO : if not in view add it
+			field, err := schema.GetFieldByID(record.GetInt("group_by"))
 			if err == nil {
-				rec["foldered"] = field.Name
+				rec["group_by"] = field.Name
 			}
 		}
-		if f, ok := domainParams.Get(utils.Rootfoldered); ok {
-			rec["foldered"] = f
+		if f, ok := domainParams.Get(utils.RootGroupBy); ok {
+			rec["group_by"] = f
 		}
 		channel <- rec
 	}
@@ -120,6 +119,7 @@ func (s *ViewService) getOrder(rec utils.Record, record utils.Record, values map
 	return rec, record, view, values
 }
 
+// this filter a view only with its property
 func (s *ViewService) getFilter(rec utils.Record, record utils.Record, values map[string]interface{}, schema sm.SchemaModel) (utils.Record, utils.Record, map[string]interface{}) {
 	if record[ds.FilterDBField] != nil {
 		if fields, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
@@ -165,7 +165,7 @@ func (s *ViewService) combineDestinations(dest_id []string) string {
 func (s *ViewService) getFilterDetails(record utils.Record) (string, string, string) {
 	filter := utils.GetString(record, ds.FilterDBField)
 	viewFilter := utils.GetString(record, ds.ViewFilterDBField)
-	if sch, err := schema.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err == nil {
+	if sch, err := schserv.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err == nil {
 		sqlFilter, view, _, dir, _ := filterserv.NewFilterService(s.Domain).GetFilterForQuery(
 			filter, viewFilter, sch, s.Domain.GetParams())
 		return sqlFilter, view, dir
@@ -208,8 +208,6 @@ func (s *ViewService) processData(rec utils.Record, datas utils.Results, schema 
 					switch k {
 					case "items":
 						rec, view = s.extractItems(utils.ToList(v), k, rec, record, schema, view)
-					case "shortcuts":
-						rec[k] = s.extractShortcuts(utils.ToMap(v), record)
 					default:
 						if recValue, exists := rec[k]; !exists || recValue == "" {
 							rec[k] = v
@@ -252,14 +250,4 @@ func (s *ViewService) extractItems(value []interface{}, key string, rec utils.Re
 	}
 	rec[key] = value
 	return rec, view
-}
-
-func (s *ViewService) extractShortcuts(value map[string]interface{}, record utils.Record) map[string]interface{} {
-	shorts := map[string]interface{}{}
-	for shortcut, ss := range value {
-		if !strings.Contains(shortcut, record.GetString(sm.NAMEKEY)) {
-			shorts[shortcut] = ss
-		}
-	}
-	return shorts
 }

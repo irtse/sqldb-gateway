@@ -50,7 +50,15 @@ func (t *AbstractController) Call(auth bool, method utils.Method, args ...interf
 	} // then proceed to exec by calling domain
 	d := domain.Domain(superAdmin, user, nil)
 	p, asLabel := t.params()
-	if files, err := t.FormFile(asLabel); err == nil && len(files) > 0 {
+	if method == utils.IMPORT {
+		file, header, err := t.Ctx.Request.FormFile("file")
+		if err != nil {
+			t.Response(utils.Results{}, err, "")
+			return
+		}
+		d.SetFile(file, header)
+		t.Respond(p, asLabel, method, d, args...)
+	} else if files, err := t.FormFile(asLabel); err == nil && len(files) > 0 {
 		resp := utils.Results{}
 		var error error
 		for _, file := range files {

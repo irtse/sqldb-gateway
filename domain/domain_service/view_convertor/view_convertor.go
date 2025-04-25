@@ -7,12 +7,13 @@ import (
 	"runtime/debug"
 	"slices"
 	"sort"
-	"sqldb-ws/domain/filter"
+	"sqldb-ws/domain/domain_service/filter"
+	"sqldb-ws/domain/domain_service/task"
+	"sqldb-ws/domain/domain_service/triggers"
 	"sqldb-ws/domain/schema"
 	scheme "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
-	"sqldb-ws/domain/task"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
 	"strconv"
@@ -56,7 +57,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 
 	view := sm.ViewModel{
 		ID:          id,
-		Name:        schema.Label,
+		Name:        schema.Name,
 		Label:       schema.Label,
 		Description: fmt.Sprintf("%s data", tableName),
 		Schema:      schemes,
@@ -64,13 +65,13 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 		SchemaID:    id,
 		SchemaName:  tableName,
 		ActionPath:  v.BuildPath(tableName, utils.ReservedParam),
-		// Readonly:    readonly,
-		Order:     order,
-		Actions:   addAction,
-		Items:     []sm.ViewItemModel{},
-		Shortcuts: v.GetShortcuts(schema.ID, addAction),
+		Order:       order,
+		Actions:     addAction,
+		Items:       []sm.ViewItemModel{},
+		Shortcuts:   v.GetShortcuts(schema.ID, addAction),
+		Redirection: v.getRedirection(),
+		Triggers:    []sm.ManualTriggerModel{},
 	}
-
 	v.ProcessResultsConcurrently(results, tableName, cols, isWorkflow, &view, params)
 	// if there is only one item in the view, we can set the view readonly to the item readonly
 	if len(view.Items) == 1 {
@@ -117,7 +118,7 @@ func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, tableN
 		}
 	}()
 	createdIds := []string{}
-	sch, err := schema.GetSchema(tableName)
+	sch, err := scheme.GetSchema(tableName)
 	if err == nil {
 		createdIds = filter.NewFilterService(v.Domain).GetCreatedAccessData(sch.ID)
 	}
@@ -127,10 +128,21 @@ func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, tableN
 	for range results {
 		rec := <-channel
 		if !rec.IsEmpty {
+			view.Triggers = append(view.Triggers, v.getTriggers(
+				v.Domain.GetMethod(), sch, utils.GetInt(rec.Values, ds.SchemaDBField), utils.GetInt(rec.Values, ds.DestTableDBField))...)
+			fmt.Println("TRIGGERS", view.Triggers, sch.ID)
 			rec = v.getSharing(sch.ID, rec, v.Domain.GetUserID())
 			view.Items = append(view.Items, rec)
 		}
 	}
+}
+
+func (s *ViewConvertor) getRedirection() string {
+	if triggers.HasRedirection(s.Domain.GetDomainID()) {
+		s, _ := triggers.GetRedirection(s.Domain.GetDomainID())
+		return s
+	}
+	return ""
 }
 
 func (s *ViewConvertor) getSharing(schemaID string, rec sm.ViewItemModel, userID string) sm.ViewItemModel {
@@ -156,22 +168,112 @@ func (s *ViewConvertor) getSharing(schemaID string, rec sm.ViewItemModel, userID
 	return rec
 }
 
+func (s *ViewConvertor) getFieldFill(sch sm.SchemaModel, key string) interface{} {
+	if !sch.HasField(key) {
+		return nil
+	}
+	var value interface{}
+	f, _ := sch.GetField(key)
+	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFieldAutoFill.Name, map[string]interface{}{
+		ds.SchemaFieldDBField: f.ID,
+	}, true); err == nil && len(res) > 0 {
+		r := res[0]
+		if val, ok := r["value"]; ok && val != nil {
+			value = s.fromITF(val)
+		} else if dest, ok := r["from_"+ds.DestTableDBField]; ok && dest != nil {
+			if schID, err := strconv.Atoi(utils.ToString(r["from_"+ds.SchemaDBField])); err == nil && schID >= 0 {
+				if schFrom, err := scheme.GetSchemaByID(utils.ToInt64(r["from_"+ds.SchemaDBField])); err == nil {
+					if ff, err2 := schFrom.GetFieldByID(utils.GetInt(r, "from_"+ds.SchemaFieldDBField)); err2 == nil {
+						if ress, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, map[string]interface{}{
+							utils.SpecialIDParam: dest,
+						}, true); err == nil && len(ress) > 0 {
+							value = s.fromITF(ress[0][ff.Name])
+						}
+					} else {
+						if ress, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, map[string]interface{}{
+							utils.SpecialIDParam: dest,
+						}, true); err == nil && len(ress) > 0 {
+							value = s.fromITF(ress[0][ff.ID])
+						}
+					}
+				}
+			}
+		} else if utils.GetBool(r, "first_own") {
+			if schFrom, err := scheme.GetSchemaByID(utils.ToInt64(r["from_"+ds.SchemaDBField])); err == nil {
+				if ff, err2 := schFrom.GetFieldByID(utils.GetInt(r, "from_"+ds.SchemaFieldDBField)); err2 == nil {
+					restr := filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)
+					if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, utils.ToListAnonymized(restr), false); err == nil && len(rr) > 0 {
+						value = s.fromITF(rr[0][ff.Name])
+					}
+				} else {
+					restr := filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)
+					if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, utils.ToListAnonymized(restr), false); err == nil && len(rr) > 0 {
+						value = s.fromITF(rr[0][utils.SpecialIDParam])
+					}
+				}
+			}
+		}
+	}
+	return value
+}
+
+func (s *ViewConvertor) getFieldsFill(sch sm.SchemaModel, values map[string]interface{}) map[string]interface{} {
+	if !s.Domain.GetEmpty() {
+		return values
+	}
+	for k := range values {
+		values[k] = s.getFieldFill(sch, k)
+	}
+	return values
+}
+
 func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName string, isWorkflow bool) utils.Record {
+	ts := []sm.ManualTriggerModel{}
 	label := record.GetString(sm.NAMEKEY)
 	if record.GetString(sm.LABELKEY) != "" {
 		label = record.GetString(sm.LABELKEY)
 	}
+	otherOrder := []string{}
+	if sch, err := scheme.GetSchema(tableName); err == nil {
+		ts = v.getTriggers(v.Domain.GetMethod(), sch, utils.GetInt(record, ds.SchemaDBField), utils.GetInt(record, ds.DestTableDBField))
+		_, ok := v.Domain.GetParams().Get(utils.RootShallow)
+		if ok {
+			if wf, err := v.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
+				ds.SchemaDBField: sch.ID,
+			}, false); err == nil && len(wf) > 0 {
+				otherOrder = []string{}
+				if res, err := v.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+					ds.FilterDBField: wf[0]["view_"+ds.FilterDBField],
+				}, false); err == nil {
+					for _, r := range res {
+						if f, err := sch.GetFieldByID(utils.GetInt(r, ds.SchemaFieldDBField)); err == nil {
+							otherOrder = append(otherOrder, f.Name)
+						}
+					}
+				}
+			}
+		}
+	}
 	view := sm.ViewModel{
-		ID:       record.GetInt(utils.SpecialIDParam),
-		Name:     record.GetString(sm.NAMEKEY),
-		Label:    label,
-		Workflow: v.EnrichWithWorkFlowView(record, tableName, isWorkflow),
+		ID:          record.GetInt(utils.SpecialIDParam),
+		Name:        record.GetString(sm.NAMEKEY),
+		Label:       label,
+		Workflow:    v.EnrichWithWorkFlowView(record, tableName, isWorkflow),
+		Redirection: v.getRedirection(),
+		Triggers:    ts,
 	}
 	if record[ds.SchemaDBField] != nil {
 		if sch, err := scheme.GetSchemaByID(record.GetInt(ds.SchemaDBField)); err != nil {
 			return nil
 		} else {
 			schema, id, order, _, addAction, _ := v.GetViewFields(sch.Name, false) // FOUND IT
+			o := []string{}
+			for _, ord := range order {
+				if len(otherOrder) == 0 || slices.Contains(otherOrder, ord) {
+					o = append(o, ord)
+				}
+			}
+			fmt.Println("ORDER O", otherOrder, o, order)
 			if _, ok := record["is_draft"]; ok && record.GetBool("is_draft") && !slices.Contains(addAction, "put") && v.Domain.IsOwn(false, false, utils.SELECT) {
 				addAction = append(addAction, "put")
 			}
@@ -183,10 +285,8 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 			view.SchemaName = tableName
 			view.Actions = addAction
 			view.ActionPath = v.BuildPath(sch.Name, utils.ReservedParam)
-			// view.Readonly = readonly
-			view.Order = order
+			view.Order = o
 			view.Consents = v.getConsent(utils.ToString(id))
-
 		}
 
 	}
@@ -198,12 +298,13 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 	createdIds []string) {
 	vals, shallowVals, manyPathVals := make(map[string]interface{}), make(map[string]interface{}), make(map[string]string)
 	manyVals := make(map[string]utils.Results)
-	var datapath, historyPath, synthesisPath string = "", "", ""
+	var datapath, historyPath, commentPath, synthesisPath string = "", "", "", ""
 	schema, err := scheme.GetSchema(tableName)
 	if !isEmpty {
 		if err == nil {
 			synthesisPath = d.getSynthesis(record, schema)
 			historyPath = d.BuildPath(ds.DBDataAccess.Name, utils.ReservedParam, utils.RootOrderParam+"=access_date", utils.RootDirParam+"=asc", utils.RootDestIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
+			commentPath = d.BuildPath(ds.DBComment.Name, utils.ReservedParam, utils.RootOrderParam+"=index", utils.RootDirParam+"=asc", utils.RootDestIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
 		}
 		vals[utils.SpecialIDParam] = record.GetString(utils.SpecialIDParam)
 	}
@@ -222,12 +323,13 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 	d.ApplyCommandRow(record, vals, params)
 	d.getFilterByWFSchema(view, schema, record)
 	vals = d.getOrder(view, record, vals)
-	vals = d.getFieldFill(schema, vals)
+	vals = d.getFieldsFill(schema, vals)
 	channel <- sm.ViewItemModel{
 		Values:        vals,
 		DataPaths:     datapath,
 		ValueShallow:  shallowVals,
 		Sort:          int64(index),
+		CommentsPath:  commentPath,
 		HistoryPath:   historyPath,
 		ValueMany:     manyVals,
 		ValuePathMany: manyPathVals,
@@ -238,57 +340,16 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 	}
 }
 
-func (s *ViewConvertor) fromITF(val interface{}, key string, values map[string]interface{}) map[string]interface{} {
+func (s *ViewConvertor) fromITF(val interface{}) interface{} {
 	if slices.Contains([]string{"true", "false"}, utils.ToString(val)) {
-		values[key] = val == "true" // should set type
+		return val == "true" // should set type
 	} else if i, err := strconv.Atoi(utils.ToString(val)); err == nil && i >= 0 {
-		values[key] = i // should set type
+		return i // should set type
 	} else {
-		values[key] = utils.ToString(val) // should set type
+		return utils.ToString(val) // should set type
 	}
-	return values
 }
-func (s *ViewConvertor) getFieldFill(sch sm.SchemaModel, values map[string]interface{}) map[string]interface{} {
-	if !s.Domain.GetEmpty() {
-		return values
-	}
-	for k, _ := range values {
-		if !sch.HasField(k) {
-			continue
-		}
-		f, _ := sch.GetField(k)
-		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFieldAutoFill.Name, map[string]interface{}{
-			ds.FilterFieldDBField: f.ID,
-		}, true); err == nil && len(res) > 0 {
-			r := res[0]
-			if val, ok := r["value"]; ok && val != nil {
-				values = s.fromITF(val, k, values)
-			} else if dest, ok := r["from_"+ds.DestTableDBField]; ok && dest != nil {
-				if schID, err := strconv.Atoi(utils.ToString(r["from_"+ds.SchemaDBField])); err == nil && schID >= 0 {
-					if schFrom, err := schema.GetSchemaByID(utils.ToInt64(r["from_"+ds.SchemaDBField])); err == nil {
-						if ff, err2 := schFrom.GetFieldByID(utils.GetInt(r, "from_"+ds.SchemaFieldDBField)); err2 == nil {
-							if ress, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, map[string]interface{}{
-								utils.SpecialIDParam: dest,
-							}, true); err == nil && len(ress) > 0 {
-								values = s.fromITF(ress[0][ff.Name], k, values)
-							}
-						}
-					}
-				}
-			} else if utils.GetBool(r, "first_own") {
-				if schFrom, err := schema.GetSchemaByID(utils.ToInt64(r["from_"+ds.SchemaDBField])); err == nil {
-					if ff, err2 := schFrom.GetFieldByID(utils.GetInt(r, "from_"+ds.SchemaFieldDBField)); err2 == nil {
-						restr := filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)
-						if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, restr, false); err == nil && len(rr) > 0 {
-							values = s.fromITF(rr[0][ff.Name], k, values)
-						}
-					}
-				}
-			}
-		}
-	}
-	return values
-}
+
 func (s *ViewConvertor) getOrder(view *sm.ViewModel, record utils.Record, values map[string]interface{}) map[string]interface{} {
 	newOrder := ""
 	if len(task.GetViewTask(utils.GetString(record, ds.SchemaDBField), utils.ToString(record[utils.SpecialIDParam]), s.Domain.GetUserID())) > 0 {
@@ -308,6 +369,7 @@ func (s *ViewConvertor) getOrder(view *sm.ViewModel, record utils.Record, values
 	if newOrder != "" {
 		view.Order = strings.Split(newOrder, ",")
 	}
+	fmt.Println("ORDER", view.Order)
 	return values
 }
 func (s *ViewConvertor) getFilterByWFSchema(view *sm.ViewModel, schema sm.SchemaModel, record utils.Record) {
@@ -331,8 +393,14 @@ func (s *ViewConvertor) getFilterByWFSchema(view *sm.ViewModel, schema sm.Schema
 					}
 					if !ok {
 						if val, ok := view.Schema[f.Name]; ok {
+							newOrder := []string{}
+							for _, o := range view.Order {
+								if o != f.Name {
+									newOrder = append(newOrder, o)
+								}
+							}
+							view.Order = newOrder
 							utils.ToMap(val)["readonly"] = true
-							utils.ToMap(val)["hidden"] = true
 						}
 					}
 				}
@@ -502,6 +570,45 @@ func (d *ViewConvertor) ApplyCommandRow(record utils.Record, vals map[string]int
 	}
 }
 
+func (d *ViewConvertor) getTriggers(method utils.Method, fromSchema sm.SchemaModel, toSchemaID, destID int64) []sm.ManualTriggerModel {
+	mt := []sm.ManualTriggerModel{}
+	triggerService := triggers.NewTrigger(d.Domain)
+	if res, err := triggerService.GetTriggers("manual", method, fromSchema.ID); err == nil {
+		for _, r := range res {
+			typ := utils.GetString(r, "type")
+			switch typ {
+			case "mail":
+				if t, err := d.getMailTriggers(fromSchema, utils.GetString(r, "name"),
+					utils.GetInt(r, utils.SpecialIDParam), toSchemaID, destID); err == nil {
+					mt = append(mt, t...)
+				}
+			}
+		}
+	}
+	return mt
+}
+
+func (d *ViewConvertor) getMailTriggers(fromSchema sm.SchemaModel, triggerName string, triggerID, toSchemaID, destID int64) ([]sm.ManualTriggerModel, error) {
+	if sch, err := schema.GetSchema(ds.DBEmailSended.Name); err != nil {
+		return nil, err
+	} else {
+		triggerService := triggers.NewTrigger(d.Domain)
+		mails := triggerService.TriggerManualMail("manual", utils.Record{}, fromSchema, triggerID, toSchemaID, destID)
+		bodies := []sm.ManualTriggerModel{}
+		for _, m := range mails {
+			bodies = append(bodies, sm.ManualTriggerModel{
+				Name:       triggerName,
+				Type:       "mail",
+				Schema:     sch.ToMapRecord(),
+				Body:       m,
+				ActionPath: d.BuildPath(sch.Name, utils.ReservedParam),
+			})
+		}
+		return bodies, nil
+	}
+
+}
+
 func (d *ViewConvertor) IsReadonly(tableName string, record utils.Record, createdIds []string) bool {
 	if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
 		return false
@@ -515,7 +622,7 @@ func (d *ViewConvertor) IsReadonly(tableName string, record utils.Record, create
 			}
 		}
 	}
-	if sch, err := schema.GetSchema(tableName); err == nil {
+	if sch, err := scheme.GetSchema(tableName); err == nil {
 		users := task.GetReadonlyTask(sch.ID, utils.GetString(record, utils.SpecialIDParam))
 		if users != nil && slices.Contains(*users, d.Domain.GetUserID()) {
 			readonly = true

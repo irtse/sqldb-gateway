@@ -1,11 +1,11 @@
 package user_service
 
 import (
+	"sqldb-ws/domain/domain_service/view_convertor"
 	ds "sqldb-ws/domain/schema/database_resources"
 	task "sqldb-ws/domain/specialized_service/task_service"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/domain/view_convertor"
 )
 
 type DelegationService struct {

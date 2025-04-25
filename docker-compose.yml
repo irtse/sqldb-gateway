@@ -41,6 +41,8 @@ services:
       dockerfile: Dockerfile
     ports: 
       - 8080:8080
+    volumes:
+      - ./files:/mnt/files
     environment:
       SMTP_HOST: ${SMTP_HOST:-mail.irt-saintexupery.com}
       SMTP_PORT: ${SMTP_PORT:-22}

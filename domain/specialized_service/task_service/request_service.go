@@ -2,14 +2,14 @@ package task_service
 
 import (
 	"errors"
-	"sqldb-ws/domain/filter"
+	"sqldb-ws/domain/domain_service/filter"
+	"sqldb-ws/domain/domain_service/task"
+	"sqldb-ws/domain/domain_service/view_convertor"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	servutils "sqldb-ws/domain/specialized_service/utils"
-	"sqldb-ws/domain/task"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/domain/view_convertor"
 	"sqldb-ws/infrastructure/connector"
 )
 
@@ -228,6 +228,9 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 		}
 	}
 	newTask["passive"] = passive
+	if utils.GetBool(newTask, "assign_to_creator") {
+		newTask[ds.UserDBField] = s.Domain.GetUserID()
+	}
 	s.createTaskAndNotify(newTask, record)
 }
 

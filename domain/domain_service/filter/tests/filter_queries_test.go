@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"sqldb-ws/domain/filter"
+	"sqldb-ws/domain/domain_service/filter"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/tests"
 

@@ -63,6 +63,9 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 	if state != "" {
 		SQLrestriction = f.LifeCycleRestriction(tableName, SQLrestriction, state)
 	}
+	if len(SQLview) > 0 {
+		SQLview = append(SQLview, "is_draft")
+	}
 	return strings.Join(SQLrestriction, " AND "), strings.Join(SQLOrder, ","), SQLLimit, strings.Join(SQLview, ",")
 }
 
@@ -79,7 +82,7 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 		}
 		for key, val := range domainParams.Values {
 			typ, foreign, err := schema.GetTypeAndLinkForField(key)
-			if (err != nil && key != utils.SpecialIDParam) || key != utils.SpecialIDParam && tableName == ds.DBView.Name {
+			if err != nil && key != utils.SpecialIDParam {
 				continue
 			}
 			ands := strings.Split(utils.ToString(val), ",")
@@ -109,6 +112,7 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []string, overrideOwn bool) []string {
 	newRestr := map[string]interface{}{}
 	restrictions := map[string]interface{}{}
+	id, ok := s.Domain.GetParams().Get(utils.SpecialIDParam)
 
 	if s.Domain.IsOwn(false, false, s.Domain.GetMethod()) || overrideOwn {
 		ids := s.GetCreatedAccessData(schema.ID)
@@ -124,6 +128,18 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 				}
 			}
 		}
+	} else {
+		if !ok {
+			restrictions["is_draft"] = false
+		} else {
+			if access, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
+				ds.SchemaDBField:    schema.ID,
+				ds.DestTableDBField: id,
+				"write":             true,
+			}, false); err != nil || len(access) == 0 {
+				restrictions["is_draft"] = false
+			}
+		}
 	}
 	isUser := false
 	isUser = schema.HasField(ds.UserDBField) || s.Domain.GetTable() == ds.DBUser.Name
@@ -133,14 +149,22 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 		if s.Domain.GetTable() == ds.DBUser.Name {
 			key = utils.SpecialIDParam
 		}
-		restrictions[key] = s.Domain.GetUserID()
+		if s.Domain.GetUserID() != "" {
+			restrictions[key] = s.Domain.GetUserID()
+		}
 	}
 	if schema.HasField(ds.EntityDBField) || s.Domain.GetTable() == ds.DBEntity.Name {
 		key := ds.EntityDBField
 		if s.Domain.GetTable() == ds.DBEntity.Name {
-			key = utils.SpecialIDParam
+			if !ok {
+				key = utils.SpecialIDParam
+			}
+		} else {
+			q := s.GetEntityFilterQuery("id")
+			if q != "" {
+				restrictions[key] = q
+			}
 		}
-		restrictions[key] = s.GetEntityFilterQuery("id")
 	}
 
 	if len(newRestr) > 0 {
@@ -232,11 +256,11 @@ func (s *FilterService) ProcessViewAndOrder(viewfilterID string, schemaID string
 				fields = append(fields, f)
 			}
 		}
-	} else if schema, err := sch.GetSchemaByID(utils.ToInt64(schemaID)); err == nil {
-		sort.SliceStable(schema.Fields, func(i, j int) bool {
-			return schema.Fields[i].Index <= schema.Fields[j].Index
-		})
 	}
+	// TODO
+	sort.SliceStable(fields, func(i, j int) bool {
+		return fields[i].Index <= fields[j].Index
+	})
 	for _, field := range fields {
 		if field.Name != "id" && (!ok || cols == "" || (strings.Contains(cols, field.Name))) && !field.Hidden {
 			viewFilter = append(viewFilter, field.Name)
@@ -247,7 +271,7 @@ func (s *FilterService) ProcessViewAndOrder(viewfilterID string, schemaID string
 			}
 		}
 	}
-	if p, ok := domainParams.Get(utils.Rootfoldered); ok {
+	if p, ok := domainParams.Get(utils.RootGroupBy); ok {
 		if len(viewFilter) != 0 && !slices.Contains(viewFilter, p) {
 			viewFilter = append(viewFilter, p)
 		}

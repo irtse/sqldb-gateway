@@ -16,10 +16,7 @@ import (
 func (v *ViewConvertor) GetShortcuts(schemaID string, actions []string) map[string]string {
 	shortcuts := map[string]string{}
 	m := map[string]interface{}{
-		"!shortcut_on_schema": v.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBSchema.Name, map[string]interface{}{
-			"name":               connector.Quote(ds.DBSchema.Name),
-			utils.SpecialIDParam: schemaID,
-		}, true, "id"),
+		"shortcut_on_schema": schemaID,
 	}
 	if results, err := v.Domain.GetDb().SelectQueryWithRestriction(ds.DBView.Name, m, false); err == nil {
 		for _, shortcut := range results {
@@ -40,27 +37,18 @@ func (d *ViewConvertor) FetchRecord(tableName string, m map[string]interface{}) 
 func (d *ViewConvertor) NewDataAccess(schemaID int64, destIDs []string, meth utils.Method) {
 	d.Domain.GetDb().ClearQueryFilter()
 	if users, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-		"name": connector.Quote(d.Domain.GetUser()), "email": connector.Quote(d.Domain.GetUser()),
+		"name":  connector.Quote(d.Domain.GetUser()),
+		"email": connector.Quote(d.Domain.GetUser()),
 	}, true); err == nil && len(users) > 0 {
 		for _, destID := range destIDs {
 			id := utils.GetString(users[0], utils.SpecialIDParam)
-			if meth == utils.DELETE {
-				d.Domain.DeleteSuperCall(
-					utils.GetRowTargetParameters(ds.DBDataAccess.Name, utils.ReservedParam).Enrich(
-						map[string]interface{}{
-							ds.DestTableDBField: destID,
-							ds.SchemaDBField:    schemaID,
-							ds.UserDBField:      id,
-						}))
-			} else {
-				d.Domain.CreateSuperCall(utils.AllParams(ds.DBDataAccess.Name),
-					utils.Record{
-						"write":             meth == utils.CREATE,
-						"update":            meth == utils.UPDATE,
-						ds.DestTableDBField: destID,
-						ds.SchemaDBField:    schemaID,
-						ds.UserDBField:      id}, utils.CREATE)
-			}
+			d.Domain.CreateSuperCall(utils.AllParams(ds.DBDataAccess.Name),
+				utils.Record{
+					"write":             meth == utils.CREATE,
+					"update":            meth == utils.UPDATE,
+					ds.DestTableDBField: destID,
+					ds.SchemaDBField:    schemaID,
+					ds.UserDBField:      id})
 		}
 	}
 }
@@ -85,7 +73,6 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 			Actions:    []string{},
 		}
 		cols[scheme.Name] = scheme
-
 		b, _ := json.Marshal(scheme)
 		json.Unmarshal(b, &shallowField)
 
@@ -95,16 +82,21 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 			shallowField.Type = utils.TransformType(scheme.Type)
 		}
 		if scheme.GetLink() > 0 {
-			d.ProcessLinkedSchema(&shallowField, scheme, tableName)
+			d.ProcessLinkedSchema(&shallowField, scheme, tableName, schema)
 		}
+
 		shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName, additionalActions, schema)
+
 		var m map[string]interface{}
 		b, _ = json.Marshal(shallowField)
 		err := json.Unmarshal(b, &m)
+
 		if err == nil {
+			m["autofill"] = d.getFieldFill(schema, scheme.Name)
+			m["translatable"] = scheme.Translatable
+			m["hidden"] = scheme.Hidden
 			schemes[scheme.Name] = m
 		}
-
 		keysOrdered = append(keysOrdered, scheme.Name)
 	}
 
@@ -115,7 +107,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 		!(slices.Contains(additionalActions, "post") && d.Domain.GetEmpty()) && !slices.Contains(additionalActions, "put")
 }
 
-func (d *ViewConvertor) ProcessLinkedSchema(shallowField *sm.ViewFieldModel, scheme sm.FieldModel, tableName string) {
+func (d *ViewConvertor) ProcessLinkedSchema(shallowField *sm.ViewFieldModel, scheme sm.FieldModel, tableName string, s sm.SchemaModel) {
 	schema, _ := sch.GetSchemaByID(scheme.GetLink())
 	if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") {
 		shallowField.Type = "link"
@@ -124,7 +116,7 @@ func (d *ViewConvertor) ProcessLinkedSchema(shallowField *sm.ViewFieldModel, sch
 	}
 
 	shallowField.ActionPath = fmt.Sprintf("/%s/%s?rows=all&%s=enable", utils.MAIN_PREFIX, schema.Name, utils.RootShallow)
-	if schema.HasField(ds.SchemaDBField) && schema.HasField(ds.DestTableDBField) {
+	if s.HasField(ds.SchemaDBField) && s.HasField(ds.DestTableDBField) {
 		shallowField.LinkPath = shallowField.ActionPath
 	}
 	if strings.Contains(scheme.Type, "many") {

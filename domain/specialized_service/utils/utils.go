@@ -2,13 +2,12 @@ package utils
 
 import (
 	"errors"
-	"sqldb-ws/domain/filter"
-	"sqldb-ws/domain/schema"
+	"sqldb-ws/domain/domain_service/filter"
+	"sqldb-ws/domain/domain_service/triggers"
+	"sqldb-ws/domain/domain_service/view_convertor"
 	sch "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
-	"sqldb-ws/domain/triggers"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/domain/view_convertor"
 	"sqldb-ws/infrastructure/service"
 	"strings"
 )
@@ -19,14 +18,14 @@ type AbstractSpecializedService struct {
 }
 
 func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]interface{}, tablename string) {
-	sch, err := schema.GetSchema(tablename)
+	sch, err := sch.GetSchema(tablename)
 	if err == nil {
 		triggers.NewTrigger(s.Domain).Trigger(sch, record, utils.CREATE)
 	}
 }
 
 func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]interface{}, record map[string]interface{}) {
-	sch, err := schema.GetSchema(s.Domain.GetTable())
+	sch, err := sch.GetSchema(s.Domain.GetTable())
 	if err == nil {
 		for _, record := range res {
 			triggers.NewTrigger(s.Domain).Trigger(sch, record, utils.UPDATE)
@@ -35,7 +34,10 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 }
 
 func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
-	if sch, err := schema.GetSchema(tablename); err != nil {
+	if s.Domain.GetAutoload() {
+		return record, nil, true
+	}
+	if sch, err := sch.GetSchema(tablename); err != nil {
 		return record, errors.New("no schema found"), false
 	} else {
 		for k, v := range record {

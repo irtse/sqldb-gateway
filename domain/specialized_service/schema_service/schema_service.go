@@ -91,59 +91,69 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 			if utils.ToString(record["name"])[:2] == "db" {
 				cat = "technical data"
 			}
+			wfs := utils.Record{}
+			// create workflow except for the following schemas
+			if !slices.Contains([]string{
+				ds.DBTask.Name,
+				ds.DBRequest.Name,
+				ds.DBFilter.Name,
+				ds.DBFilterField.Name,
+				ds.DBViewAttribution.Name,
+				ds.DBNotification.Name}, schema.Name) {
+				if w, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBWorkflow.Name),
+					NewWorkflow(
+						"create "+schema.Label,
+						"new "+schema.Label+" workflow",
+						schema.GetID()),
+				); err == nil && len(w) > 0 {
+					wfs = w[0]
+				}
+			}
 			if schema.Category != "" {
 				// EMPTY SUBMIT FORM WITH A FILTER on request
 				if resquestSchema, err := schserv.GetSchema(ds.DBRequest.Name); err == nil {
-					filter := "Submit " + schema.Label + " datas."
+					filter := "Submit " + strings.ReplaceAll(strings.ReplaceAll(schema.Name, "_", ""), "db", "") + " datas."
 					body := map[string]interface{}{
 						ds.SchemaDBField: resquestSchema.ID,
 						"name":           "filter " + filter,
 					}
-					if f, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilter.Name), body); err == nil && len(f) > 0 && schema.HasField(ds.WorkflowDBField) {
+					if f, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilter.Name), body); err == nil && len(f) > 0 {
 						body["name"] = "view " + utils.ToString(body["name"])
 						body["is_view"] = true
 						if vf, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilter.Name), body); err == nil && len(f) > 0 {
-							wf, _ := schema.GetField(ds.WorkflowDBField)
+							wf, _ := resquestSchema.GetField(ds.WorkflowDBField)
 							m := map[string]interface{}{
-								ds.FilterDBField:      f[0][utils.SpecialIDParam],
+								ds.FilterDBField:      vf[0][utils.SpecialIDParam],
 								ds.SchemaFieldDBField: wf.ID,
 							}
-							s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilter.Name), m)
-							m[ds.FilterDBField] = vf[0][utils.SpecialIDParam]
-							s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilter.Name), m)
-							newViewSubmit := NewView(schema.Label, filter, cat, schema.GetID(), index, false, true, false, false,
-								vf[0][utils.SpecialIDParam], f[0][utils.SpecialIDParam], &schema.ID)
-							s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newViewSubmit)
+							s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilterField.Name), m)
+							if wfs[utils.SpecialIDParam] != nil {
+								m[ds.FilterDBField] = f[0][utils.SpecialIDParam]
+								m["value"] = wfs[utils.SpecialIDParam]
+								s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilterField.Name), m)
+								newViewSubmit := NewView("create a "+schema.Label,
+									"create "+schema.Label,
+									filter, "", resquestSchema.GetID(), index, false, true, false, false,
+									vf[0][utils.SpecialIDParam], f[0][utils.SpecialIDParam], record[utils.SpecialIDParam])
+								s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newViewSubmit)
+							}
 						}
 					}
 				}
-				newView := NewView(schema.Label, "View description for "+schema.Label+" datas.",
+				newView := NewView(schema.Label, schema.Label, "View description for "+strings.ReplaceAll(strings.ReplaceAll(schema.Name, "_", ""), "db", "")+" datas.",
 					cat, schema.GetID(), index, true, false, true, false, nil, nil, nil)
+
+				s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)
 				if schema.CanOwned {
 					r := rand.New(rand.NewSource(9999999999))
-					newView = NewView("my "+schema.Label,
+					newView = NewView("my "+schema.Label, "my "+schema.Label,
 						"View description for my "+schema.Label+" datas.",
 						"my data", schema.GetID(), int64(r.Int()), true, false, true, true, nil, nil, nil)
-
+					s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)
 				}
-				s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)
 			}
 		}
-		// create workflow except for the following schemas
-		if !slices.Contains([]string{
-			ds.DBTask.Name,
-			ds.DBRequest.Name,
-			ds.DBFilter.Name,
-			ds.DBFilterField.Name,
-			ds.DBViewAttribution.Name,
-			ds.DBNotification.Name}, schema.Name) {
-			s.Domain.CreateSuperCall(utils.AllParams(ds.DBWorkflow.Name),
-				NewWorkflow(
-					"create "+schema.Label,
-					"new "+schema.Label+" workflow",
-					schema.GetID()),
-			)
-		}
+
 	}
 	UpdatePermissions(utils.Record{}, utils.ToString(record[sm.NAMEKEY]), []string{sm.LEVELOWN, sm.LEVELNORMAL}, s.Domain)
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)

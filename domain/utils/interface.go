@@ -22,6 +22,7 @@ type DomainITF interface {
 	Call(params Params, rec Record, m Method, args ...interface{}) (Results, error)
 
 	// Main accessor defined by DomainITF interface
+	GetDomainID() string
 	GetDb() *conn.Database
 	GetMethod() Method
 	GetTable() string
@@ -29,7 +30,8 @@ type DomainITF interface {
 	GetUser() string
 	GetEmpty() bool
 	GetParams() Params
-
+	GetAutoload() bool
+	SetAutoload(auto bool)
 	// Main accessor defined by DomainITF interface
 	HandleRecordAttributes(record Record)
 

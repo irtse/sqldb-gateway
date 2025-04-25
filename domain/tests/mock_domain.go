@@ -22,6 +22,12 @@ func NewMockDomain() *MockDomain {
 		params:  utils.NewParams(map[string]string{}),
 	}
 }
+func (d *MockDomain) GetDomainID() string {
+	return "1"
+}
+func (d *MockDomain) SetAutoload(auto bool) {
+}
+func (d *MockDomain) GetAutoload() bool { return false }
 
 func (m *MockDomain) SetOwn(own bool) {
 }

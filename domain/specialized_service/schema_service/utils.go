@@ -7,10 +7,11 @@ import (
 	"sqldb-ws/domain/utils"
 )
 
-func NewView(name string, desc string, category string, schemaDB int64, index int64,
+func NewView(name string, label string, desc string, category string, schemaDB int64, index int64,
 	indexable bool, empty bool, isList bool, ownView bool, viewFilterID interface{}, filterID interface{}, shortcut interface{}) utils.Record {
-	return utils.Record{
+	r := utils.Record{
 		sm.NAMEKEY:                 name,
+		"label":                    label,
 		ds.SchemaDBField:           schemaDB,
 		"description":              desc,
 		"category":                 category,
@@ -24,6 +25,10 @@ func NewView(name string, desc string, category string, schemaDB int64, index in
 		ds.FilterDBField:           filterID,
 		"shortcut_on_schema":       shortcut,
 	}
+	if category == "" {
+		r["category"] = nil
+	}
+	return r
 }
 
 func NewViewFromRecord(schema sm.SchemaModel, record utils.Record) utils.Record {
@@ -31,7 +36,7 @@ func NewViewFromRecord(schema sm.SchemaModel, record utils.Record) utils.Record 
 		"id":          record["id"],
 		"new":         []string{},
 		"name":        record["name"],
-		"label":       record["name"],
+		"label":       record["label"],
 		"description": record["description"],
 		"is_empty":    record["is_empty"],
 		"index":       record["index"],

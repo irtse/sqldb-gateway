@@ -121,6 +121,19 @@ func (v SchemaModel) ToRecord() utils.Record {
 	return r
 }
 
+func (v SchemaModel) ToMapRecord() utils.Record {
+	fields := map[string]FieldModel{}
+	for _, field := range v.Fields {
+		if !strings.Contains(field.Type, "many") {
+			fields[field.Name] = field
+		}
+	}
+	var r utils.Record
+	b, _ := json.Marshal(fields)
+	json.Unmarshal(b, &r)
+	return r
+}
+
 func (v SchemaModel) ToSchemaRecord() utils.Record {
 	fields := []FieldModel{}
 	for _, field := range v.Fields {
@@ -157,25 +170,29 @@ type FieldModel struct { // definition a db table columns
 	Constraint   string      `json:"constraints"` // Special case for constraint on field
 	Required     bool        `json:"required"`
 	Hidden       bool        `json:"hidden"`
-	Translatable bool        `json:"translatable"`
+	Translatable bool        `json:"translatable,omitempty"`
 	Transform    string      `json:"transform_function"`
+	GroupBy      string      `json:"group_by"`
 }
 
 func (t FieldModel) Map(m map[string]interface{}) *FieldModel {
 	return &FieldModel{
-		ID:          utils.ToString(m["id"]),
-		Name:        utils.ToString(m["name"]),
-		Label:       utils.ToString(m["label"]),
-		Desc:        utils.ToString(m["description"]),
-		Type:        utils.ToString(m["type"]),
-		Index:       utils.ToInt64(m["index"]),
-		Placeholder: utils.ToString(m["placeholder"]),
-		Default:     m["default_value"],
-		Level:       utils.ToString(m["read_level"]),
-		Readonly:    utils.Compare(m["readonly"], true),
-		Link:        utils.ToString(m["link_id"]),
-		Constraint:  utils.ToString(m["constraints"]),
-		Required:    utils.Compare(m["required"], true),
+		ID:           utils.ToString(m["id"]),
+		Name:         utils.ToString(m["name"]),
+		Label:        utils.ToString(m["label"]),
+		Desc:         utils.ToString(m["description"]),
+		Type:         utils.ToString(m["type"]),
+		Index:        utils.ToInt64(m["index"]),
+		Placeholder:  utils.ToString(m["placeholder"]),
+		Default:      m["default_value"],
+		Level:        utils.ToString(m["read_level"]),
+		Readonly:     utils.Compare(m["readonly"], true),
+		Link:         utils.ToString(m["link_id"]),
+		Constraint:   utils.ToString(m["constraints"]),
+		Required:     utils.Compare(m["required"], true),
+		Translatable: utils.Compare(m["translatable"], true),
+		Hidden:       utils.Compare(m["hidden"], true),
+		Transform:    utils.ToString(m["transform"]),
 	}
 }
 
@@ -202,6 +219,14 @@ func (v FieldModel) ToRecord() utils.Record {
 	return r
 }
 
+type ManualTriggerModel struct {
+	Name       string       `json:"name"`
+	Type       string       `json:"type"`
+	Schema     utils.Record `json:"schema"`
+	Body       utils.Record `json:"body"`
+	ActionPath string       `json:"action_path"`
+}
+
 type ViewModel struct { // lightest struct based on SchemaModel dedicate to view
 	ID          int64                    `json:"id"`
 	Name        string                   `json:"name"`
@@ -220,6 +245,8 @@ type ViewModel struct { // lightest struct based on SchemaModel dedicate to view
 	IsWrapper   bool                     `json:"is_wrapper"`
 	Shortcuts   map[string]string        `json:"shortcuts"`
 	Consents    []map[string]interface{} `json:"consents"`
+	Redirection string                   `json:"redirection,omitempty"`
+	Triggers    []ManualTriggerModel     `json:"triggers,omitempty"`
 }
 
 func (v ViewModel) ToRecord() utils.Record {
@@ -239,6 +266,7 @@ type ViewItemModel struct {
 	ValueShallow  map[string]interface{}   `json:"values_shallow"`
 	ValueMany     map[string]utils.Results `json:"values_many"`
 	HistoryPath   string                   `json:"history_path"`
+	CommentsPath  string                   `json:"comments_path"`
 	Workflow      *WorkflowModel           `json:"workflow"`
 	Readonly      bool                     `json:"readonly"`
 	Sharing       SharingModel             `json:"sharing"`

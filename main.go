@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 	domain "sqldb-ws/domain"
+	"sqldb-ws/domain/domain_service/task"
 	"sqldb-ws/domain/schema"
-	"sqldb-ws/domain/task"
 	_ "sqldb-ws/routers"
 
 	beego "github.com/beego/beego/v2/server/web"

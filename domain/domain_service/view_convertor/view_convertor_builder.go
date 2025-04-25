@@ -3,7 +3,7 @@ package view_convertor
 import (
 	"fmt"
 	"slices"
-	"sqldb-ws/domain/filter"
+	"sqldb-ws/domain/domain_service/filter"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"

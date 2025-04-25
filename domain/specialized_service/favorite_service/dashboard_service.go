@@ -3,7 +3,7 @@ package favorite_service
 import (
 	"errors"
 	"fmt"
-	"sqldb-ws/domain/filter"
+	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/schema/models"

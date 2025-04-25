@@ -1,12 +1,11 @@
 package email_service
 
 import (
+	"sqldb-ws/domain/domain_service/triggers"
+	"sqldb-ws/domain/domain_service/view_convertor"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	utils "sqldb-ws/domain/utils"
-	"sqldb-ws/domain/view_convertor"
-
-	"github.com/google/uuid"
 )
 
 // DONE - ~ 200 LINES - PARTIALLY TESTED
@@ -29,14 +28,13 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 		}
 	}
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
+	triggers.SendMail(utils.GetString(record, "from_email"), utils.GetString(record, "to_email"), record)
 }
 
 func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
-	record["code"] = uuid.New()
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
 
 func (s *EmailSendedService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
-	// TODO add fill mail on empty
 	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 }

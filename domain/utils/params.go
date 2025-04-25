@@ -240,7 +240,7 @@ const RootCommandCols = "command_columns"
 const RootLimit = "limit"
 const RootOffset = "offset"
 const RootScope = "scope"
-const Rootfoldered = "foldered"
+const RootGroupBy = "group_by"
 
 const RootSchemaID = "dbschema_id"
 
@@ -258,7 +258,7 @@ var RootParamsDesc = map[string]string{
 var HiddenParams = []string{}
 var RootParams = []string{RootRowsParam, RootColumnsParam, RootOrderParam, RootDirParam, RootLimit, RootOffset,
 	RootShallow, RootRawView, RootExport, RootFilename, RootFilterNewState, RootFilterLine, RootFilter, RootViewFilter,
-	RootSuperCall, RootCommandRow, SpecialIDParam, Rootfoldered, RootScope, RootDestIDParam}
+	RootSuperCall, RootCommandRow, SpecialIDParam, RootGroupBy, RootScope, RootDestIDParam}
 
 const SpecialIDParam = "id"
 const SpecialSubIDParam = "subid"
