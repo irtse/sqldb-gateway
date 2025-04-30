@@ -256,9 +256,9 @@ func (db *Database) BuildUpdateQuery(col string, value interface{}, set string,
 	}
 	if typ, ok := verify(col); ok && !slices.Contains([]string{"NULL", ""}, FormatForSQL(strings.Split(typ, ":")[0], value)) {
 		if value == "" || reflect.TypeOf(value).Kind().String() == "string" {
-			set += " " + col + "=" + Quote(fmt.Sprintf("%v", value)) + ","
+			set += " " + col + "=" + Quote(strings.ReplaceAll(fmt.Sprintf("%v", value), "'", "''")) + ","
 			cols = append(cols, col)
-			colValues = append(colValues, Quote(fmt.Sprintf("%v", value)))
+			colValues = append(colValues, Quote(strings.ReplaceAll(fmt.Sprintf("%v", value), "'", "''")))
 		} else {
 			set += " " + col + "=" + FormatForSQL(strings.Split(typ, ":")[0], value) + ","
 			cols = append(cols, col)

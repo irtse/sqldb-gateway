@@ -3,6 +3,7 @@ package utils
 import "mime/multipart"
 
 type AbstractDomain struct {
+	Redirections    []string
 	DomainRequestID string
 	TableName       string
 	AutoLoad        bool
@@ -19,6 +20,13 @@ type AbstractDomain struct {
 	Params          Params
 	File            multipart.File
 	FileHandler     *multipart.FileHeader
+}
+
+func (d *AbstractDomain) GetUniqueRedirection() string {
+	if len(d.Redirections) == 1 {
+		return d.Redirections[0]
+	}
+	return ""
 }
 
 func (d *AbstractDomain) GetDomainID() string {

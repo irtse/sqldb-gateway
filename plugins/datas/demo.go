@@ -1,6 +1,9 @@
-package database
+package datas
 
-import "sqldb-ws/domain/schema/models"
+import (
+	ds "sqldb-ws/domain/schema/database_resources"
+	"sqldb-ws/domain/schema/models"
+)
 
 // should set up as json better than a go file...
 
@@ -19,8 +22,8 @@ var FormalizedDataProject = models.SchemaModel{
 	Label:    "formalized data project",
 	Category: "",
 	Fields: []models.FieldModel{
-		{Name: RootID(FormalizedData.Name), Type: models.INTEGER.String(), ForeignTable: FormalizedData.Name, Required: true, Index: 0, Label: "binded formalized data"},
-		{Name: RootID(Project.Name), Type: models.INTEGER.String(), ForeignTable: Project.Name, Required: true, Index: 1, Label: "binded project"},
+		{Name: ds.RootID(FormalizedData.Name), Type: models.INTEGER.String(), ForeignTable: FormalizedData.Name, Required: true, Index: 0, Label: "binded formalized data"},
+		{Name: ds.RootID(Project.Name), Type: models.INTEGER.String(), ForeignTable: Project.Name, Required: true, Index: 1, Label: "binded project"},
 	},
 }
 
@@ -29,8 +32,8 @@ var FormalizedDataStorageType = models.SchemaModel{
 	Label:    "formalized data storage type",
 	Category: "",
 	Fields: []models.FieldModel{
-		{Name: RootID(FormalizedData.Name), Type: models.INTEGER.String(), ForeignTable: FormalizedData.Name, Required: true, Index: 0, Label: "binded formalized data"},
-		{Name: RootID(SupportType.Name), Type: models.INTEGER.String(), ForeignTable: SupportType.Name, Required: true, Index: 1, Label: "binded storage type"},
+		{Name: ds.RootID(FormalizedData.Name), Type: models.INTEGER.String(), ForeignTable: FormalizedData.Name, Required: true, Index: 0, Label: "binded formalized data"},
+		{Name: ds.RootID(SupportType.Name), Type: models.INTEGER.String(), ForeignTable: SupportType.Name, Required: true, Index: 1, Label: "binded storage type"},
 	},
 }
 
@@ -41,7 +44,7 @@ var Project = models.SchemaModel{ // todo
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 		{Name: "code", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 1},
-		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: true, Index: 2, Label: "related entity"},
+		{Name: ds.RootID(ds.DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: true, Index: 2, Label: "related entity"},
 	},
 }
 
@@ -136,8 +139,8 @@ var Valuation = models.SchemaModel{ // TODO
 	Fields: []models.FieldModel{
 		{Name: "name", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
 		{Name: "formalized_data_id", Type: models.INTEGER.String(), ForeignTable: "formalized_data", Required: true, Index: 1, Label: "related formalized data"},
-		{Name: RootID(ValuationType.Name), Type: models.INTEGER.String(), ForeignTable: ValuationType.Name, Required: true, Index: 2, Label: "related valuation type"},
-		{Name: RootID(ValuationFormat.Name), Type: models.INTEGER.String(), ForeignTable: ValuationFormat.Name, Required: true, Index: 3, Label: "related valuation format"},
+		{Name: ds.RootID(ValuationType.Name), Type: models.INTEGER.String(), ForeignTable: ValuationType.Name, Required: true, Index: 2, Label: "related valuation type"},
+		{Name: ds.RootID(ValuationFormat.Name), Type: models.INTEGER.String(), ForeignTable: ValuationFormat.Name, Required: true, Index: 3, Label: "related valuation format"},
 	},
 }
 
@@ -200,4 +203,5 @@ var DEMODATASENUM = map[string][]string{
 	"valuation_format":      valFormDatas,
 	"valuation_type":        valTyp,
 }
+
 //var DEMOROOTTABLES = []models.SchemaModel{FormalizedData, Valuation, ValuationType, ValuationFormat, Support, SupportType, ResultType, ResultFamily, RestrictionType, ProtectionType, ProtectionArea, Protection, Project, FormalizedDataStorageType, FormalizedDataProject, ConfidentialityLevel}

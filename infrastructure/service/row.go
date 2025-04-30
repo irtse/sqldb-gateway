@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	conn "sqldb-ws/infrastructure/connector"
-	"strings"
 )
 
 type TableRowService struct {
@@ -78,27 +77,10 @@ func (t *TableRowService) Create(record map[string]interface{}) ([]map[string]in
 	} else if forceChange {
 		record = r
 	}
-	var columns, values []string = []string{}, []string{}
 	t.EmptyCol.Name = t.Name
 	verify := t.EmptyCol.Verify
-
-	for key, element := range record {
-		_, columns, values = t.DB.BuildUpdateQuery(key, element, "", columns, values, verify)
-	}
-	for _, query := range t.DB.BuildCreateQueries(t.Name, strings.Join(values, ","), strings.Join(columns, ","), "") {
-		if t.DB.GetDriver() == conn.PostgresDriver {
-			if id, err = t.DB.QueryRow(query); err != nil {
-				return t.DBError(nil, err)
-			}
-		} else if t.DB.GetDriver() == conn.MySQLDriver {
-			if stmt, err := t.DB.Prepare(query); err != nil {
-				return t.DBError(nil, err)
-			} else if res, err := stmt.Exec(); err != nil {
-				return t.DBError(nil, err)
-			} else if id, err = res.LastInsertId(); err != nil {
-				return t.DBError(nil, err)
-			}
-		}
+	if _, err := t.DB.CreateQuery(t.Name, record, verify); err != nil {
+		return t.DBError(nil, err)
 	}
 	t.DB.ClearQueryFilter().ApplyQueryFilters(fmt.Sprintf("id=%d", id), "", "", "")
 	r, err := t.DB.SelectQueryWithRestriction(t.Table.Name, map[string]interface{}{}, false)

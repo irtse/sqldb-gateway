@@ -22,6 +22,7 @@ type DomainITF interface {
 	Call(params Params, rec Record, m Method, args ...interface{}) (Results, error)
 
 	// Main accessor defined by DomainITF interface
+	GetUniqueRedirection() string
 	GetDomainID() string
 	GetDb() *conn.Database
 	GetMethod() Method

@@ -34,7 +34,7 @@ func (t *AbstractController) MySession(userId string, superAdmin bool, delete bo
 		tokenService := &Token{} // generate a new token with all needed claims
 		token, err = tokenService.Create(userId, superAdmin)
 		if err != nil {
-			t.Response(utils.Results{}, err, "")
+			t.Response(utils.Results{}, err, "", "")
 			return token
 		} // then update user with its brand new token.
 		domain.SetToken(superAdmin, userId, token)
@@ -81,7 +81,7 @@ func (t *AbstractController) IsAuthorized() (string, bool, error) {
 
 var SESSIONS_KEY = "user_id"
 var ADMIN_KEY = "super_admin"
-var AUTHMODE = []string{"session", "token"}
+var AUTHMODE = []string{"session", "token", "ldap"}
 
 var secret = []byte("weakest-secret")
 

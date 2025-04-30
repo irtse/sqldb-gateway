@@ -44,7 +44,7 @@ func (t *AbstractController) Call(auth bool, method utils.Method, args ...interf
 	var err error
 	if auth { // we will verify authentication and status if auth is expected
 		if user, superAdmin, err = t.IsAuthorized(); err != nil {
-			t.Response(utils.Results{}, err, "")
+			t.Response(utils.Results{}, err, "", "")
 			return
 		}
 	} // then proceed to exec by calling domain
@@ -53,7 +53,7 @@ func (t *AbstractController) Call(auth bool, method utils.Method, args ...interf
 	if method == utils.IMPORT {
 		file, header, err := t.Ctx.Request.FormFile("file")
 		if err != nil {
-			t.Response(utils.Results{}, err, "")
+			t.Response(utils.Results{}, err, "", d.GetUniqueRedirection())
 			return
 		}
 		d.SetFile(file, header)
@@ -69,7 +69,7 @@ func (t *AbstractController) Call(auth bool, method utils.Method, args ...interf
 				resp = append(resp, response...)
 			}
 		}
-		t.Response(resp, error, "") // send back response
+		t.Response(resp, error, "", d.GetUniqueRedirection()) // send back response
 	} else {
 		t.Respond(p, asLabel, method, d, args...)
 	}

@@ -179,10 +179,22 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 	} else {
 		res, err := d.Invoke(record, d.Method, args...)
 		if p, _ := d.Params.Get(utils.RootRawView); p != "enable" && err == nil && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
-			return specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestIDParam)...), nil
+			results := specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestIDParam)...)
+			d.Redirections = d.GetRedirections(results)
+			return results, err
 		}
 		return res, err
 	}
+}
+
+func (d *SpecializedDomain) GetRedirections(results utils.Results) []string {
+	reds := []string{}
+	for _, res := range results {
+		if red, ok := res["redirection"]; ok && red != "" {
+			reds = append(reds, utils.GetString(res, "redirection"))
+		}
+	}
+	return reds
 }
 
 func (d *SpecializedDomain) Invoke(record utils.Record, method utils.Method, args ...interface{}) (utils.Results, error) {

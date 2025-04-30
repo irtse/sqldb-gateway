@@ -1,6 +1,9 @@
-package database
+package datas
 
-import "sqldb-ws/domain/schema/models"
+import (
+	ds "sqldb-ws/domain/schema/database_resources"
+	"sqldb-ws/domain/schema/models"
+)
 
 var CoCFR = models.SchemaModel{
 	Name:     "competence_center",
@@ -9,19 +12,7 @@ var CoCFR = models.SchemaModel{
 	CanOwned: true,
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "nom", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
-		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: true, Index: 1, Label: "entité en relation"},
-	},
-}
-
-var ProjectFR = models.SchemaModel{ // todo
-	Name:     "project",
-	Label:    "projects",
-	CanOwned: true,
-	Category: "global data",
-	Fields: []models.FieldModel{
-		{Name: "name", Label: "nom", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
-		{Name: "code", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 1},
-		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: true, Index: 2, Label: "entité en relation"},
+		{Name: ds.RootID(ds.DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: true, Index: 1, Label: "entité en relation"},
 	},
 }
 
@@ -31,8 +22,28 @@ var Axis = models.SchemaModel{
 	CanOwned: true,
 	Category: "domain",
 	Fields: []models.FieldModel{
-		{Name: "name", Label: "nom", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
-		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: true, Index: 1, Label: "entité en relation"},
+		{Name: "code", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
+		{Name: "name", Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 1},
+		{Name: "domain_code", Label: "code domaine", Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 2},
+		{Name: ds.RootID(ds.DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: true, Index: 3, Label: "entité en relation"},
+	},
+}
+
+var ProjectFR = models.SchemaModel{ // todo
+	Name:     "project",
+	Label:    "projects",
+	CanOwned: true,
+	Category: "global data",
+	Fields: []models.FieldModel{
+		{Name: "code", Label: "code", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
+		{Name: "name", Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 1},
+		{Name: "state", Type: models.VARCHAR.String(), Required: false, Default: models.STATEPENDING, Level: models.LEVELRESPONSIBLE, Index: 2},
+		{Name: "project_task", Label: "lot projet", Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 3},
+		{Name: "start_date", Label: "date de début de projet", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 4},
+		{Name: "end_date", Label: "date de fin de projet", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 5},
+		{Name: ds.RootID(Axis.Name), Label: "axe", Type: models.INTEGER.String(), ForeignTable: Axis.Name, Required: false, Index: 6},
+		{Name: ds.RootID(ds.DBUser.Name), Label: "chef de projet", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 7},
+		{Name: ds.RootID(ds.DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: true, Index: 8, Label: "entité en relation"},
 	},
 }
 
@@ -43,7 +54,7 @@ var PublicationTypeFR = models.SchemaModel{
 	Category: "publications",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Constraint: "unique", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
-		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template entry", Index: 3},
+		{Name: ds.RootID(ds.DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: ds.DBSchema.Name, Required: true, Readonly: true, Label: "template entry", Index: 3},
 	},
 }
 
@@ -66,9 +77,9 @@ var PublicationFR = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: "title", Label: "intitulé de la publication",
 			Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
-		{Name: RootID(PublicationStatusFR.Name), Type: models.INTEGER.String(), ForeignTable: PublicationStatusFR.Name, Required: true, Readonly: false, Label: "status de publication", Index: 1},
-		{Name: "manager_" + RootID(DBUser.Name), Type: models.INTEGER.String(), Required: true,
-			ForeignTable: DBUser.Name, Index: 1, Label: "responsable de la publication"},
+		{Name: ds.RootID(PublicationStatusFR.Name), Type: models.INTEGER.String(), ForeignTable: PublicationStatusFR.Name, Required: true, Readonly: false, Label: "status de publication", Index: 1},
+		{Name: "manager_" + ds.RootID(ds.DBUser.Name), Type: models.INTEGER.String(), Required: true,
+			ForeignTable: ds.DBUser.Name, Index: 1, Label: "responsable de la publication"},
 		{Name: "project_accronym", Type: models.INTEGER.String(), Required: true,
 			Index: 2, Label: "acronyme PROJET", ForeignTable: Project.Name},
 		{Name: "axis", Type: models.INTEGER.String(), Required: true,
@@ -76,12 +87,12 @@ var PublicationFR = models.SchemaModel{
 		{Name: "competence_center", Type: models.INTEGER.String(), Required: true,
 			Index: 4, Label: "centre de compétence", ForeignTable: Axis.Name},
 		{Name: "authors", Type: models.ONETOMANY.String(), Required: true,
-			Index: 5, Label: "auteurs", ForeignTable: DBUser.Name},
+			Index: 5, Label: "auteurs", ForeignTable: ds.DBUser.Name},
 		{Name: "affiliation", Type: models.VARCHAR.String(), Required: true,
 			Index: 6, Label: "affiliation"},
 		{Name: "publication", Type: models.UPLOAD.String(), Required: true,
 			Index: 7, Label: "publication"},
-		{Name: RootID(PublicationTypeFR.Name), Type: models.INTEGER.String(), ForeignTable: PublicationTypeFR.Name, Required: true, Readonly: false, Label: "type de publication", Index: 8},
+		{Name: ds.RootID(PublicationTypeFR.Name), Type: models.INTEGER.String(), ForeignTable: PublicationTypeFR.Name, Required: true, Readonly: false, Label: "type de publication", Index: 8},
 	},
 }
 
@@ -170,10 +181,10 @@ var ThesisFR = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "yes", Required: false, Readonly: false, Index: 0},
 		{Name: "defense_date", Label: "date de soutenance de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 1},
-		{Name: "director_" + RootID(DBUser.Name), Type: models.INTEGER.String(), Required: true, ForeignTable: DBUser.Name, Index: 3, Label: "directeur de thèse"},
-		{Name: "co_supervisor_" + RootID(DBUser.Name), Type: models.INTEGER.String(), Required: true, ForeignTable: DBUser.Name, Index: 4, Label: "co-encadrant de thèse"},
+		{Name: "director_" + ds.RootID(ds.DBUser.Name), Type: models.INTEGER.String(), Required: true, ForeignTable: ds.DBUser.Name, Index: 3, Label: "directeur de thèse"},
+		{Name: "co_supervisor_" + ds.RootID(ds.DBUser.Name), Type: models.INTEGER.String(), Required: true, ForeignTable: ds.DBUser.Name, Index: 4, Label: "co-encadrant de thèse"},
 		{Name: "start_date", Label: "date de début de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 5},
-		{Name: "end_date", Label: "date de end de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 6},
+		{Name: "end_date", Label: "date de fin de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 6},
 		{Name: "comments", Label: "commentaires", Type: models.BIGVARCHAR.String(), Required: false, Readonly: false, Index: 7},
 	},
 }
@@ -185,7 +196,7 @@ var InternshipFR = models.SchemaModel{
 	Category: "publications",
 	Fields: []models.FieldModel{
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "no", Required: false, Readonly: false, Index: 0},
-		{Name: "IRT_manager" + RootID(DBUser.Name), Type: models.INTEGER.String(), Required: true, ForeignTable: DBUser.Name, Index: 1, Label: "responsable IRT du stage"},
+		{Name: "IRT_manager" + ds.RootID(ds.DBUser.Name), Type: models.INTEGER.String(), Required: true, ForeignTable: ds.DBUser.Name, Index: 1, Label: "responsable IRT du stage"},
 		{Name: "start_date", Label: "date de soutenance de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 2},
 		{Name: "end_date", Label: "date de end de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 3},
 		{Name: "comments", Label: "commentaires", Type: models.BIGVARCHAR.String(), Required: false, Readonly: false, Index: 4},
@@ -216,6 +227,3 @@ var OtherPublicationFR = models.SchemaModel{
 		{Name: "comments", Label: "commentaires", Type: models.BIGVARCHAR.String(), Required: false, Readonly: false, Index: 2},
 	},
 }
-
-var DEMOROOTTABLES = []models.SchemaModel{CoCFR, ProjectFR, Axis, PublicationStatusFR, PublicationFR, ArticleFR, PublicationTypeFR, OtherPublicationFR,
-	DemoFR, InternshipFR, ThesisFR, HDRFR, PosterFR, PresentationFR, ConferenceFR}

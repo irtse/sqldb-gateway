@@ -174,7 +174,7 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 	}
 	idParamsOk := len(s.Domain.GetParams().GetAsArgs(utils.SpecialIDParam)) > 0
 	if len(restrictions) > 0 && !(idParamsOk && slices.Contains(ds.PUPERMISSIONEXCEPTION, schema.Name)) {
-		restr = append(restr, connector.FormatSQLRestrictionWhereByMap("", restrictions, true))
+		restr = append(restr, "("+connector.FormatSQLRestrictionWhereByMap("", restrictions, true)+")")
 	}
 	return restr
 }

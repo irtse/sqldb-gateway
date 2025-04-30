@@ -7,6 +7,7 @@ import (
 	"sqldb-ws/domain/domain_service/view_convertor"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
+	"sqldb-ws/domain/specialized_service/task_service"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	utils "sqldb-ws/domain/utils"
 )
@@ -39,10 +40,33 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 		utils.SpecialIDParam: utils.GetString(record, ds.EmailSendedDBField),
 	}, false); err == nil {
 		for _, r := range res {
+			if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
+				ds.EmailTemplateDBField: r[ds.EmailTemplateDBField],
+			}, false); err == nil && len(res) > 0 && utils.GetBool(res[0], "generate_task") {
+
+			}
 			if templs, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
 				utils.SpecialIDParam: utils.GetString(record, ds.EmailSendedDBField),
 			}, false); err == nil {
 				for _, t := range templs {
+					if utils.GetBool(t, "generate_task") {
+						if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+							ds.DestTableDBField: r["mapped_with"+ds.DestTableDBField],
+							ds.SchemaDBField:    r["mapped_with"+ds.SchemaDBField],
+							"is_close":          false,
+							"name":              utils.GetString(r, "code"),
+						}, false); err == nil {
+							for _, rec := range rr {
+								if utils.GetBool(r, "got_response") {
+									rec["state"] = "completed"
+								} else {
+									rec["state"] = "dismiss"
+								}
+								rec = task_service.SetClosureStatus(rec)
+								s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBTask.Name, rec[utils.SpecialIDParam]), rec)
+							}
+						}
+					}
 					if t["action_on_response"] == nil || t[ds.SchemaDBField+"_on_response"] == nil || r[ds.DestTableDBField+"_on_response"] == nil {
 						continue
 					}

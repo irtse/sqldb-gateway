@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"plugin"
 	domain "sqldb-ws/domain"
 	"sqldb-ws/domain/domain_service/task"
 	"sqldb-ws/domain/schema"
 	_ "sqldb-ws/routers"
+	"strings"
 
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/matthewhartstonge/argon2"
@@ -36,10 +38,23 @@ func main() {
 		hash, _ := argon.HashEncoded([]byte(os.Getenv("SUPERADMIN_PASSWORD")))
 		os.Setenv("SUPERADMIN_PASSWORD", string(hash))
 	}
+
 	fmt.Printf("%s\n", "Service in "+os.Getenv("AUTH_MODE")+" mode")
 	schema.Load(domain.Domain(true, os.Getenv("SUPERADMIN_NAME"), nil))
 	task.Load(domain.Domain(true, os.Getenv("SUPERADMIN_NAME"), nil))
 	fmt.Printf("%s\n", "Running server...")
+	if os.Getenv("PLUGINS") != "" {
+		for _, plug := range strings.Split(os.Getenv("PLUGINS"), ",") {
+			if p, err := plugin.Open("./plugins/" + plug + "/plugin.so"); err == nil {
+				if sym, err := p.Lookup("Run"); err == nil {
+					launchFunc := sym.(func())
+					go launchFunc()
+				}
+			} else {
+				fmt.Println(err)
+			}
+		}
+	}
 	beego.Run()
 }
 

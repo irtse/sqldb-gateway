@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"os"
 	"sqldb-ws/controllers/controller"
 	"sqldb-ws/domain"
 	"sqldb-ws/domain/utils"
@@ -27,30 +28,35 @@ func (l *AuthController) Login() {
 	if log, ok := body["login"]; ok { // search for login in body
 		response, err := domain.IsLogged(false, utils.ToString(log), "")
 		if err != nil {
-			l.Response(response, err, "")
+			l.Response(response, err, "", "")
 			return
 		}
 		if len(response) == 0 {
-			l.Response(response, errors.New("AUTH : username/email invalid"), "")
+			l.Response(response, errors.New("AUTH : username/email invalid"), "", "")
 			return
 		}
+		valid := false
 		// if no problem check if logger is authorized to work on API and properly registered
-		pass, ok := body["password"] // then compare password founded in base and ... whatever... you know what's about
-		pwd, ok1 := response[0]["password"]
-		if ok && ok1 {
-			if ok, err := argon2.VerifyEncoded([]byte(utils.ToString(pass)),
-				[]byte(utils.ToString(pwd))); ok && err == nil {
-				// when password matching
-				token := l.MySession(utils.ToString(log), utils.Compare(response[0]["super_admin"], true), false) // update session variables
-				response[0]["token"] = token
-				l.Response(response, nil, "")
-				return
+		if os.Getenv("AUTH_MODE") == "ldap" {
+			valid = controller.CheckLdap(utils.GetString(response[0], "name"), utils.GetString(body, "password"))
+		} else {
+			pass, ok := body["password"] // then compare password founded in base and ... whatever... you know what's about
+			pwd, ok1 := response[0]["password"]
+			if ok && ok1 {
+				valid, _ = argon2.VerifyEncoded([]byte(utils.ToString(pass)), []byte(utils.ToString(pwd)))
 			}
 		}
-		l.Response(utils.Results{}, errors.New("AUTH : password invalid"), "") // API response
+		if valid {
+			// when password matching
+			token := l.MySession(utils.ToString(log), utils.Compare(response[0]["super_admin"], true), false) // update session variables
+			response[0]["token"] = token
+			l.Response(response, nil, "", "")
+			return
+		}
+		l.Response(utils.Results{}, errors.New("AUTH : password invalid"), "", "") // API response
 		return
 	}
-	l.Response(utils.Results{}, errors.New("AUTH : can't find login data"), "")
+	l.Response(utils.Results{}, errors.New("AUTH : can't find login data"), "", "")
 }
 
 // @Title Logout
@@ -63,10 +69,10 @@ func (l *AuthController) Login() {
 func (l *AuthController) Logout() {
 	login, superAdmin, err := l.IsAuthorized() // check if already connected
 	if err != nil {
-		l.Response(nil, err, "")
+		l.Response(nil, err, "", "")
 	}
 	l.MySession(login, superAdmin, true) // update session variables
-	l.Response(utils.Results{utils.Record{"name": login}}, nil, "")
+	l.Response(utils.Results{utils.Record{"name": login}}, nil, "", "")
 }
 
 // @Title Refresh
@@ -79,9 +85,9 @@ func (l *AuthController) Logout() {
 func (l *AuthController) Refresh() {
 	login, superAdmin, err := l.IsAuthorized() // check if already connected
 	if err != nil {
-		l.Response(nil, err, "")
+		l.Response(nil, err, "", "")
 	}
 	token := l.MySession(login, superAdmin, false) // update session variables
 	response, err := domain.IsLogged(true, login, token)
-	l.Response(response, err, "")
+	l.Response(response, err, "", "")
 }

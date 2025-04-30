@@ -3,10 +3,12 @@ package schema
 import (
 	"fmt"
 	"os"
+	"plugin"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,8 +19,21 @@ func Load(domainInstance utils.DomainITF) {
 	db := connector.Open(nil)
 	defer db.Close()
 	progressbar.OptionSetMaxDetailRow(1)
+	demoTable := []sm.SchemaModel{}
+	if os.Getenv("PLUGINS") != "" {
+		for _, plug := range strings.Split(os.Getenv("PLUGINS"), ",") {
+			if p, err := plugin.Open("./plugins/autoload_" + plug + "/plugin.so"); err == nil {
+				if sym, err := p.Lookup("Autoload"); err == nil {
+					launchFunc := sym.(func() []sm.SchemaModel)
+					demoTable = append(demoTable, launchFunc()...)
+				}
+			} else {
+				fmt.Println(err)
+			}
+		}
+	}
 	bar := progressbar.NewOptions64(
-		int64(len(ds.NOAUTOLOADROOTTABLES)+len(ds.ROOTTABLES)+len(ds.DEMOROOTTABLES)+len(ds.DBRootViews)+2),
+		int64(len(ds.NOAUTOLOADROOTTABLES)+len(ds.ROOTTABLES)+len(demoTable)+len(ds.DBRootViews)+1),
 		progressbar.OptionSetDescription("Setup root DB"),
 		progressbar.OptionSetWriter(os.Stderr),
 		progressbar.OptionSetWidth(10),
@@ -34,11 +49,10 @@ func Load(domainInstance utils.DomainITF) {
 	)
 	domainInstance.SetAutoload(true)
 	LoadCache(utils.ReservedParam, db)
-	InitializeTables(domainInstance, bar)     // Create tables if they don't exist, needed for the next step
-	InitializeRootTables(domainInstance, bar) // Create root tables if they don't exist, needed for the next step
+	InitializeTables(domainInstance, bar)                // Create tables if they don't exist, needed for the next step
+	InitializeRootTables(domainInstance, demoTable, bar) // Create root tables if they don't exist, needed for the next step
 	CreateSuperAdmin(domainInstance, bar)
 	CreateRootView(domainInstance, bar)
-	CreateEnums(domainInstance, bar)
 }
 
 func InitializeTables(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
@@ -51,9 +65,9 @@ func InitializeTables(domainInstance utils.DomainITF, bar *progressbar.ProgressB
 	}
 }
 
-func InitializeRootTables(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
+func InitializeRootTables(domainInstance utils.DomainITF, demoTable []sm.SchemaModel, bar *progressbar.ProgressBar) {
 	var wfNew, viewNew bool
-	rootTables := append(ds.ROOTTABLES, ds.DEMOROOTTABLES...)
+	rootTables := append(ds.ROOTTABLES, demoTable...)
 	for _, table := range rootTables {
 		if _, err := GetSchema(table.Name); err != nil {
 			bar.AddDetail("Creating Schema " + table.Name)
@@ -186,16 +200,6 @@ func CreateSuperAdmin(domainInstance utils.DomainITF, bar *progressbar.ProgressB
 		"super_admin": true,
 		"password":    os.Getenv("SUPERADMIN_PASSWORD"),
 	})
-	bar.Add(1)
-}
-
-func CreateEnums(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
-	bar.AddDetail("Create Demo Enums")
-	for k, enum := range ds.DEMODATASENUM {
-		for _, v := range enum {
-			domainInstance.CreateSuperCall(utils.AllParams(k), utils.Record{sm.NAMEKEY: v})
-		}
-	}
 	bar.AddDetail("")
 	bar.Add(1)
 }

@@ -28,11 +28,11 @@ func (t *AbstractController) Respond(params map[string]string, asLabel map[strin
 		t.download(domain, cols, cmdCols, cmd, format, params[utils.RootFilename], asLabel, response, err)
 		return
 	}
-	t.Response(response, err, "") // send back response
+	t.Response(response, err, "", domain.GetUniqueRedirection()) // send back response
 }
 
 // response rules every http response
-func (t *AbstractController) Response(resp utils.Results, err error, format string) {
+func (t *AbstractController) Response(resp utils.Results, err error, format string, redirection string) {
 	t.Ctx.Output.SetStatus(http.StatusOK) // defaulting on absolute success
 	if err != nil {                       // Check nature of error if there is one
 		//if strings.Contains(err.Error(), "AUTH") { t.Ctx.Output.SetStatus(http.StatusUnauthorized) }
@@ -54,6 +54,10 @@ func (t *AbstractController) Response(resp utils.Results, err error, format stri
 			t.Data[JSON] = resp
 		}
 	}
+	if redirection != "" {
+		t.Ctx.Output.SetStatus(302)
+		t.Ctx.Output.Header("Location", redirection)
+	}
 	t.ServeJSON() // then serve response by beego
 }
 
@@ -66,7 +70,7 @@ func (t *AbstractController) download(d utils.DomainITF, col string, colsCmd str
 	} else if format == "json" {
 		t.json(d, lastLine, mapping, cols, results)
 	} else {
-		t.Response(results, error, format)
+		t.Response(results, error, format, d.GetUniqueRedirection())
 	}
 }
 
@@ -88,7 +92,7 @@ func (t *AbstractController) json(d utils.DomainITF, colsFunc map[string]string,
 			}
 		}
 	}
-	t.Response(results, nil, "json")
+	t.Response(results, nil, "json", d.GetUniqueRedirection())
 }
 
 func (t *AbstractController) csv(d utils.DomainITF, colsFunc map[string]string, mapping map[string]string, cols []string, results utils.Results) [][]string {

@@ -130,7 +130,6 @@ func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, tableN
 		if !rec.IsEmpty {
 			view.Triggers = append(view.Triggers, v.getTriggers(
 				v.Domain.GetMethod(), sch, utils.GetInt(rec.Values, ds.SchemaDBField), utils.GetInt(rec.Values, ds.DestTableDBField))...)
-			fmt.Println("TRIGGERS", view.Triggers, sch.ID)
 			rec = v.getSharing(sch.ID, rec, v.Domain.GetUserID())
 			view.Items = append(view.Items, rec)
 		}
@@ -273,7 +272,6 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 					o = append(o, ord)
 				}
 			}
-			fmt.Println("ORDER O", otherOrder, o, order)
 			if _, ok := record["is_draft"]; ok && record.GetBool("is_draft") && !slices.Contains(addAction, "put") && v.Domain.IsOwn(false, false, utils.SELECT) {
 				addAction = append(addAction, "put")
 			}
@@ -369,7 +367,6 @@ func (s *ViewConvertor) getOrder(view *sm.ViewModel, record utils.Record, values
 	if newOrder != "" {
 		view.Order = strings.Split(newOrder, ",")
 	}
-	fmt.Println("ORDER", view.Order)
 	return values
 }
 func (s *ViewConvertor) getFilterByWFSchema(view *sm.ViewModel, schema sm.SchemaModel, record utils.Record) {

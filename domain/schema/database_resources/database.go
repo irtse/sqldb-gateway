@@ -110,6 +110,7 @@ var DBUser = models.SchemaModel{
 		{Name: "password", Type: models.TEXT.String(), Required: false, Default: "", Level: models.LEVELRESPONSIBLE, Index: 2},
 		{Name: "token", Type: models.TEXT.String(), Required: false, Default: "", Level: models.LEVELRESPONSIBLE, Index: 3},
 		{Name: "super_admin", Type: models.BOOLEAN.String(), Required: false, Default: false, Level: models.LEVELRESPONSIBLE, Index: 4},
+		{Name: "code", Type: models.VARCHAR.String(), Required: false, Readonly: true, Level: models.LEVELRESPONSIBLE, Index: 5},
 	},
 }
 
@@ -123,11 +124,12 @@ var DBEmailTemplate = models.SchemaModel{
 		{Name: "waiting_response", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 3},
 		{Name: "to_map_" + RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 4},
 		{Name: "redirected_on", Type: models.VARCHAR.String(), Required: false, Index: 5},
+		{Name: "generate_task", Type: models.BOOLEAN.String(), Required: false, Index: 6},
 
-		{Name: "action_on_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "action on response", Index: 6},
-		{Name: RootID(DBSchema.Name) + "_on_response", Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: false, Readonly: true, Label: "template to modify on response", Index: 7},
-		{Name: "body_on_true_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "body sended on valid response", Index: 8},
-		{Name: "body_on_false_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "body sended on unvalid response", Index: 9},
+		{Name: "action_on_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "action on response", Index: 7},
+		{Name: RootID(DBSchema.Name) + "_on_response", Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: false, Readonly: true, Label: "template to modify on response", Index: 8},
+		{Name: "body_on_true_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "body sended on valid response", Index: 9},
+		{Name: "body_on_false_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "body sended on unvalid response", Index: 10},
 	},
 }
 

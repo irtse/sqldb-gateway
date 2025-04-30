@@ -65,8 +65,8 @@ func (s *RequestService) VerifyDataIntegrity(record map[string]interface{}, tabl
 		} else {
 			record["current_index"] = 1
 		}
-		if wf, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
-			utils.SpecialIDParam: record[ds.WorkflowDBField],
+		if wf, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+			ds.WorkflowDBField: record[ds.WorkflowDBField],
 		}, false); err != nil || len(wf) == 0 {
 			return record, errors.New("workflow not found"), false
 		} else {

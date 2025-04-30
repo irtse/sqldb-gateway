@@ -22,6 +22,9 @@ func NewMockDomain() *MockDomain {
 		params:  utils.NewParams(map[string]string{}),
 	}
 }
+func (d *MockDomain) GetUniqueRedirection() string {
+	return ""
+}
 func (d *MockDomain) GetDomainID() string {
 	return "1"
 }

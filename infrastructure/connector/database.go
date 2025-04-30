@@ -233,6 +233,7 @@ type DB interface {
 	BuildDropTableQueries(name string) []string
 	BuildSchemaQuery(name string) string
 	BuildListTableQuery() string
+	CreateQuery(name string, record map[string]interface{}, verify func(string) (string, bool)) (int64, error)
 	BuildCreateTableQuery(name string) string
 	BuildCreateQueries(tableName string, values string, cols string, typ string) []string
 	ApplyQueryFilters(restr string, order string, limit string, views string, additionnalRestriction ...string)

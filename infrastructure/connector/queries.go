@@ -2,6 +2,7 @@ package connector
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -19,9 +20,7 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		db = Open(db)
 		defer db.Close()
 	}
-	if name == "dbtriggers_rule" {
-		fmt.Println(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
-	}
+
 	res, err := db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
 	return res, err
 }
@@ -56,6 +55,32 @@ func (db *Database) ListTableQuery() ([]map[string]interface{}, error) {
 		defer db.Close()
 	}
 	return db.QueryAssociativeArray(db.BuildListTableQuery())
+}
+
+func (db *Database) CreateQuery(name string, record map[string]interface{}, verify func(string) (string, bool)) (int64, error) {
+	if db == nil || db.Conn == nil {
+		db = Open(db)
+		defer db.Close()
+	}
+	var columns, values []string = []string{}, []string{}
+
+	for key, element := range record {
+		_, columns, values = db.BuildUpdateQuery(key, element, "", columns, values, verify)
+	}
+	for _, query := range db.BuildCreateQueries(name, strings.Join(values, ","), strings.Join(columns, ","), "") {
+		if db.GetDriver() == PostgresDriver {
+			return db.QueryRow(query)
+		} else if db.GetDriver() == MySQLDriver {
+			if stmt, err := db.Prepare(query); err != nil {
+				return 0, err
+			} else if res, err := stmt.Exec(); err != nil {
+				return 0, err
+			} else if id, err := res.LastInsertId(); err != nil {
+				return id, err
+			}
+		}
+	}
+	return 0, errors.New("no queries")
 }
 
 func (db *Database) CreateTableQuery(name string) error {

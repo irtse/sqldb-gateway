@@ -44,12 +44,16 @@ services:
     volumes:
       - ./files:/mnt/files
     environment:
+      LDAP_ADDR: ${LDAP_ADDR:-ldap://irt00v001.irt-aese.local:389}
+      LDAP_USR: ${LDAP_USR:-CN=read only,OU=Utilisateurs,OU=YZ - Technique,OU=AD - IRT-AESE,DC=IRT-AESE,DC=local}
+      LDAP_OU: ${LDAP_USR:-OU=AD - IRT-AESE,DC=IRT-AESE,DC=local}
+      LDAP_PWD: ${LDAP_PWD:-IRT@2015}
       SMTP_HOST: ${SMTP_HOST:-mail.irt-saintexupery.com}
       SMTP_PORT: ${SMTP_PORT:-22}
       SUPERADMIN_NAME: ${SUPERADMIN_NAME:-root}
       SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-morgane.roques@irt-saintexupery.com}
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-admin}
-      AUTH_MODE: ${AUTH_MODE:-token}
+      AUTH_MODE: ${AUTH_MODE:-ldap}
       DBDRIVER : ${DBDRIVER:-postgres}
       DBHOST : ${DBHOST:-sqldb-ws-pg}
       DBPORT : ${DBPORT:-5432}

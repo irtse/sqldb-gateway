@@ -5,7 +5,7 @@ import (
 	"sqldb-ws/domain/domain_service/view_convertor"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
-	utils "sqldb-ws/domain/utils"
+	"sqldb-ws/domain/utils"
 )
 
 // DONE - ~ 200 LINES - PARTIALLY TESTED
@@ -17,14 +17,32 @@ func (s *EmailSendedService) Entity() utils.SpecializedServiceInfo { return ds.D
 
 func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
 	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
-		utils.SpecialIDParam: utils.GetString(record, ds.EmailTemplateDBField),
-	}, false); err == nil && len(res) > 0 {
-		tmpl := res[0]
-		if utils.GetBool(tmpl, "waiting_response") {
-			// create a email response
-			s.Domain.CreateSuperCall(utils.AllParams(ds.DBEmailResponse.Name), utils.Record{
-				ds.EmailSendedDBField: utils.GetString(record, utils.SpecialIDParam),
-			})
+		utils.SpecialIDParam: record[ds.EmailTemplateDBField],
+	}, false); err == nil && len(res) > 0 && utils.GetBool(res[0], "generate_task") {
+		i := int64(-1)
+		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+			ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
+			ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
+		}, false); err == nil && len(res) > 0 && utils.GetBool(res[0], "generate_task") {
+			i = utils.GetInt(res[0], utils.SpecialIDParam)
+		} else {
+			if id, err := s.Domain.GetDb().CreateQuery(ds.DBRequest.Name, map[string]interface{}{
+				"name":              "generate from trigger mail",
+				"is_close":          true,
+				"current_index":     0,
+				ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
+				ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
+			}, func(s string) (string, bool) { return "", true }); err == nil && len(res) > 0 {
+				i = id
+			}
+		}
+		if i >= 0 {
+			s.Domain.GetDb().CreateQuery(ds.DBTask.Name, map[string]interface{}{
+				ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
+				ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
+				ds.RequestDBField:   i,
+				"name":              utils.GetString(record, "code"),
+			}, func(s string) (string, bool) { return "", true })
 		}
 	}
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
