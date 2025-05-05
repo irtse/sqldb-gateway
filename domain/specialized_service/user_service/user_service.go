@@ -7,12 +7,18 @@ import (
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
+	"strings"
 )
 
 type UserService struct {
 	servutils.AbstractSpecializedService
 }
 
+func (s *UserService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
+	record["name"] = strings.ToLower(utils.GetString(record, "name"))
+	record["email"] = strings.ToLower(utils.GetString(record, "email"))
+	return record, nil, true
+}
 func (s *UserService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
 }

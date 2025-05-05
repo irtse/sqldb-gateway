@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	conn "sqldb-ws/infrastructure/connector"
+	"strings"
 )
 
 type TableRowService struct {
@@ -79,7 +80,7 @@ func (t *TableRowService) Create(record map[string]interface{}) ([]map[string]in
 	}
 	t.EmptyCol.Name = t.Name
 	verify := t.EmptyCol.Verify
-	if _, err := t.DB.CreateQuery(t.Name, record, verify); err != nil {
+	if id, err = t.DB.CreateQuery(t.Name, record, verify); err != nil {
 		return t.DBError(nil, err)
 	}
 	t.DB.ClearQueryFilter().ApplyQueryFilters(fmt.Sprintf("id=%d", id), "", "", "")
@@ -96,9 +97,14 @@ func (t *TableRowService) Update(record map[string]interface{}, restriction ...s
 	if record, err = t.setupFilter(record, true, true, restriction...); err != nil {
 		return nil, err
 	}
+	if strings.Contains(t.DB.GetSQLRestriction(), "id=null") {
+		t.DB.ClearQueryFilter()
+		return t.Create(record)
+	}
 	t.EmptyCol.Name = t.Name
 	if query, err := t.DB.BuildUpdateRowQuery(t.Table.Name, record, t.EmptyCol.Verify); err == nil {
 		if err := t.DB.Query(query); err != nil {
+
 			return t.DBError(nil, err)
 		}
 	} else {

@@ -7,6 +7,7 @@ import (
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
 	"strconv"
+	"strings"
 )
 
 func SetToken(superAdmin bool, user string, token interface{}) (utils.Results, error) {
@@ -16,8 +17,24 @@ func SetToken(superAdmin bool, user string, token interface{}) (utils.Results, e
 
 func IsLogged(superAdmin bool, user string, token string) (utils.Results, error) {
 	domain := Domain(superAdmin, user, nil)
-	params := utils.AllParams(ds.DBNotification.Name).RootRaw()
-	notifs, err := domain.SuperCall(params.RootRaw(), utils.Record{}, utils.SELECT, false)
+
+	response, err := domain.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
+		"name":  connector.Quote(strings.ToLower(user)),
+		"email": connector.Quote(strings.ToLower(user)),
+	}, true)
+	if err != nil || len(response) == 0 {
+		return nil, err
+	}
+	resp := response[0]
+	notifs, err := domain.GetDb().SelectQueryWithRestriction(ds.DBNotification.Name,
+		map[string]interface{}{
+			ds.UserDBField: resp[utils.SpecialIDParam],
+			ds.EntityDBField: domain.GetDb().BuildSelectQueryWithRestriction(
+				ds.DBEntityUser.Name,
+				map[string]interface{}{
+					ds.UserDBField: resp[utils.SpecialIDParam],
+				}, true, "id"),
+		}, false)
 	if err != nil {
 		return nil, err
 	}
@@ -32,22 +49,14 @@ func IsLogged(superAdmin bool, user string, token string) (utils.Results, error)
 			continue
 		}
 		nn := utils.Record{
-			utils.SpecialIDParam: notif.GetString(utils.SpecialIDParam),
-			sm.NAMEKEY:           notif.GetString(sm.NAMEKEY),
-			"description":        notif.GetString("description"),
-			"link_path":          "/" + utils.MAIN_PREFIX + "/" + ds.DBNotification.Name + "?" + utils.RootRowsParam + "=" + notif.GetString("id"),
+			utils.SpecialIDParam: utils.GetString(notif, utils.SpecialIDParam),
+			sm.NAMEKEY:           utils.GetString(notif, sm.NAMEKEY),
+			"description":        utils.GetString(notif, "description"),
+			"link_path":          "/" + utils.MAIN_PREFIX + "/" + ds.DBNotification.Name + "?" + utils.RootRowsParam + "=" + utils.GetString(notif, "id"),
 			"data_ref":           "@" + utils.ToString(sch.ID) + ":" + utils.ToString(notif[utils.RootDestTableIDParam]),
 		}
 		n = append(n, nn)
 	}
-	response, err := domain.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-		"name":  connector.Quote(user),
-		"email": connector.Quote(user),
-	}, true)
-	if err != nil || len(response) == 0 {
-		return nil, err
-	}
-	resp := response[0]
 	resp["notifications"] = n
 	resp["token"] = token
 	return utils.Results{resp}, nil

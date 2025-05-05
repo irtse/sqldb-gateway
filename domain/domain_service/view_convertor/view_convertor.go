@@ -54,7 +54,14 @@ func (v *ViewConvertor) TransformToView(results utils.Results, tableName string,
 
 func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.SchemaModel, tableName string, isWorkflow bool, params utils.Params) utils.Results {
 	schemes, id, order, cols, addAction, _ := v.GetViewFields(tableName, false)
-
+	commentBody := map[string]interface{}{}
+	if len(results) == 1 {
+		commentBody = map[string]interface{}{
+			ds.UserDBField:      utils.ToInt64(v.Domain.GetUserID()),
+			ds.SchemaDBField:    utils.ToInt64(schema.ID),
+			ds.DestTableDBField: utils.GetInt(results[0], utils.SpecialIDParam),
+		}
+	}
 	view := sm.ViewModel{
 		ID:          id,
 		Name:        schema.Name,
@@ -67,6 +74,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 		ActionPath:  v.BuildPath(tableName, utils.ReservedParam),
 		Order:       order,
 		Actions:     addAction,
+		CommentBody: commentBody,
 		Items:       []sm.ViewItemModel{},
 		Shortcuts:   v.GetShortcuts(schema.ID, addAction),
 		Redirection: v.getRedirection(),
@@ -160,7 +168,8 @@ func (s *ViewConvertor) getSharing(schemaID string, rec sm.ViewItemModel, userID
 			ds.SchemaDBField, schemaID, ds.DestTableDBField, id),
 		Body: m,
 		ShallowPath: map[string]string{
-			"shared_" + ds.UserDBField: fmt.Sprintf("/%s/%s?%s=%s&%s=enable&%s=enable", utils.MAIN_PREFIX, ds.DBUser.Name, utils.RootRowsParam, utils.ReservedParam, utils.RootShallow, utils.RootScope),
+			"shared_" + ds.UserDBField: fmt.Sprintf("/%s/%s?%s=%s&%s=enable&%s=enable", utils.MAIN_PREFIX, ds.DBUser.Name,
+				utils.RootRowsParam, utils.ReservedParam, utils.RootShallow, utils.RootScope),
 		},
 		Path: fmt.Sprintf("/%s/%s?%s=%s&%s=enable", utils.MAIN_PREFIX, ds.DBShare.Name, utils.RootRowsParam, utils.ReservedParam, utils.RootShallow),
 	}
@@ -200,14 +209,22 @@ func (s *ViewConvertor) getFieldFill(sch sm.SchemaModel, key string) interface{}
 		} else if utils.GetBool(r, "first_own") {
 			if schFrom, err := scheme.GetSchemaByID(utils.ToInt64(r["from_"+ds.SchemaDBField])); err == nil {
 				if ff, err2 := schFrom.GetFieldByID(utils.GetInt(r, "from_"+ds.SchemaFieldDBField)); err2 == nil {
-					restr := filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)
-					if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, utils.ToListAnonymized(restr), false); err == nil && len(rr) > 0 {
-						value = s.fromITF(rr[0][ff.Name])
+					if schFrom.Name == ds.DBUser.Name && ff.Name == utils.SpecialIDParam {
+						value = s.Domain.GetUserID()
+					} else {
+						restr := filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)
+						if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, utils.ToListAnonymized(restr), false); err == nil && len(rr) > 0 {
+							value = s.fromITF(rr[0][ff.Name])
+						}
 					}
 				} else {
-					restr := filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)
-					if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, utils.ToListAnonymized(restr), false); err == nil && len(rr) > 0 {
-						value = s.fromITF(rr[0][utils.SpecialIDParam])
+					if schFrom.Name == ds.DBUser.Name {
+						value = s.Domain.GetUserID()
+					} else {
+						restr := filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)
+						if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, utils.ToListAnonymized(restr), false); err == nil && len(rr) > 0 {
+							value = s.fromITF(rr[0][utils.SpecialIDParam])
+						}
 					}
 				}
 			}
@@ -301,8 +318,8 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 	if !isEmpty {
 		if err == nil {
 			synthesisPath = d.getSynthesis(record, schema)
-			historyPath = d.BuildPath(ds.DBDataAccess.Name, utils.ReservedParam, utils.RootOrderParam+"=access_date", utils.RootDirParam+"=asc", utils.RootDestIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
-			commentPath = d.BuildPath(ds.DBComment.Name, utils.ReservedParam, utils.RootOrderParam+"=index", utils.RootDirParam+"=asc", utils.RootDestIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
+			historyPath = d.BuildPath(ds.DBDataAccess.Name, utils.ReservedParam, utils.RootOrderParam+"=access_date", utils.RootDirParam+"=asc", utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
+			commentPath = d.BuildPath(ds.DBComment.Name, utils.ReservedParam, utils.RootOrderParam+"=index", utils.RootDirParam+"=desc", utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
 		}
 		vals[utils.SpecialIDParam] = record.GetString(utils.SpecialIDParam)
 	}

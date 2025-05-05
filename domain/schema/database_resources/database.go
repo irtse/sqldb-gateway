@@ -20,7 +20,8 @@ var DBSchema = models.SchemaModel{
 		{Name: models.LABELKEY, Type: models.BIGVARCHAR.String(), Required: true, Readonly: true, Index: 1},
 		{Name: "category", Type: models.BIGVARCHAR.String(), Required: false, Default: "general", Readonly: true, Index: 2},
 		{Name: "fields", Type: "onetomany", ForeignTable: RootName("schema_column"), Required: false, Index: 3},
-		{Name: "can_owned", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 4},
+		{Name: "can_owned", Label: "can own per user", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 4},
+		{Name: "is_enum", Label: "is an enumerate", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 5},
 	},
 }
 
@@ -68,6 +69,7 @@ var DBPermission = models.SchemaModel{
 var DBRole = models.SchemaModel{
 	Name:     RootName("role"),
 	Label:    "roles",
+	IsEnum:   true,
 	Category: "role & permission",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
@@ -92,6 +94,7 @@ var DBEntity = models.SchemaModel{
 	Label:    "entities",
 	Category: "entity",
 	CanOwned: true,
+	IsEnum:   true,
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
 		{Name: "description", Type: models.TEXT.String(), Required: false, Index: 1},
@@ -329,6 +332,7 @@ var DBConsent = models.SchemaModel{
 	Name:     RootName("consent"),
 	Label:    "consents",
 	Category: "consent",
+	IsEnum:   true,
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Constraint: "unique", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
 		{Name: "optionnal", Type: models.BOOLEAN.String(), Required: true, Default: false, Index: 1},
@@ -340,6 +344,7 @@ var DBConsentResponse = models.SchemaModel{
 	Name:     RootName("consent_response"),
 	Label:    "consent responses",
 	Category: "consent",
+	IsEnum:   true,
 	Fields: []models.FieldModel{
 		{Name: "is_consenting", Label: "consentant", Type: models.BOOLEAN.String(), Required: true, Readonly: false, Index: 0},
 		{Name: RootID(DBConsent.Name), Type: models.INTEGER.String(), ForeignTable: DBConsent.Name, Required: true, Readonly: true, Label: "consent template attached", Index: 2, Hidden: true},
@@ -379,7 +384,6 @@ var DBComment = models.SchemaModel{
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: "content", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
-		{Name: "index", Type: models.INTEGER.String(), Required: false, Readonly: true, Default: 0, Level: models.LEVELRESPONSIBLE, Index: 1},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Label: "comment by", Level: models.LEVELRESPONSIBLE, Index: 2},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 3},
 		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 4}, // reference to a table if needed

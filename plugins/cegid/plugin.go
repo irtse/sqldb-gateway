@@ -53,15 +53,17 @@ func ImportProjectAxis() {
 				"code": connector.Quote(utils.GetString(record, "code")),
 			}, false); err == nil && len(res) > 0 {
 				record[utils.SpecialIDParam] = res[0][utils.SpecialIDParam]
-				d.UpdateSuperCall(utils.GetRowTargetParameters(models.Axis.Name, res[0][utils.SpecialIDParam]), record)
+				d.GetDb().UpdateQuery(models.Axis.Name, record, map[string]interface{}{
+					utils.SpecialIDParam: res[0][utils.SpecialIDParam],
+				}, false)
 				continue
 			}
-			res, err := d.CreateSuperCall(utils.AllParams(ds.DBEntity.Name), map[string]interface{}{
+			res, err := d.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
 				"name": record["name"],
-			})
-			if err == nil && len(res) > 0 {
-				record[ds.EntityDBField] = res[0][utils.SpecialIDParam]
-				d.CreateSuperCall(utils.AllParams(models.Axis.Name), record)
+			}, func(s string) (string, bool) { return "", true })
+			if err == nil {
+				record[ds.EntityDBField] = res
+				d.GetDb().CreateQuery(models.Axis.Name, record, func(s string) (string, bool) { return "", true })
 			}
 		}
 	}
@@ -119,16 +121,17 @@ func ImportProjectAxis() {
 				"code": connector.Quote(utils.GetString(record, "code")),
 			}, false); err == nil && len(res) > 0 {
 				record[utils.SpecialIDParam] = res[0][utils.SpecialIDParam]
-				d.UpdateSuperCall(utils.GetRowTargetParameters(models.Project.Name, res[0][utils.SpecialIDParam]), record)
+				d.GetDb().UpdateQuery(models.Project.Name, record, map[string]interface{}{
+					utils.SpecialIDParam: res[0][utils.SpecialIDParam],
+				}, false)
 				continue
 			}
-			res, err := d.CreateSuperCall(utils.AllParams(ds.DBEntity.Name),
-				map[string]interface{}{
-					"name": record["name"],
-				})
-			if err == nil && len(res) > 0 {
-				record[ds.EntityDBField] = res[0][utils.SpecialIDParam]
-				d.CreateSuperCall(utils.AllParams(models.Project.Name), record)
+			res, err := d.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
+				"name": record["name"],
+			}, func(s string) (string, bool) { return "", true })
+			if err == nil {
+				record[ds.EntityDBField] = res
+				d.GetDb().CreateQuery(models.Project.Name, record, func(s string) (string, bool) { return "", true })
 			}
 		}
 	}
@@ -156,6 +159,8 @@ func ImportUserHierachy() {
 					record[realLabel] = false
 				} else if strings.ToLower(data[i]) == "oui" {
 					record[realLabel] = true
+				} else if realLabel == "name" {
+					record[realLabel] = strings.ToLower(data[i])
 				} else {
 					record[realLabel] = data[i]
 				}
@@ -165,15 +170,18 @@ func ImportUserHierachy() {
 		if len(record) > 0 && !slices.Contains(inside, utils.GetString(record, "name")) {
 			inside = append(inside, utils.GetString(record, "name"))
 			if utils.GetBool(record, "active") {
+
 				if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-					"email": record["email"],
+					"name": connector.Quote(utils.GetString(record, "name")),
 				}, false); err == nil && len(res) > 0 {
 					record[utils.SpecialIDParam] = res[0][utils.SpecialIDParam]
-					d.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBUser.Name, res[0][utils.SpecialIDParam]), record)
+					d.GetDb().UpdateQuery(ds.DBUser.Name, record, map[string]interface{}{
+						utils.SpecialIDParam: res[0][utils.SpecialIDParam],
+					}, false)
 					return
 				}
 			}
-			d.CreateSuperCall(utils.AllParams(ds.DBUser.Name), record)
+			d.GetDb().CreateQuery(ds.DBUser.Name, record, func(s string) (string, bool) { return "", true })
 		}
 	}
 	for _, data := range datas {
@@ -199,10 +207,10 @@ func ImportUserHierachy() {
 			d.DeleteSuperCall(utils.AllParams(ds.DBHierarchy.Name), map[string]interface{}{
 				ds.UserDBField: userID,
 			})
-			d.CreateSuperCall(utils.AllParams(ds.DBHierarchy.Name), map[string]interface{}{
+			d.GetDb().CreateQuery(ds.DBHierarchy.Name, map[string]interface{}{
 				"parent_" + ds.UserDBField: hierarchyID,
 				ds.UserDBField:             userID,
-			})
+			}, func(s string) (string, bool) { return "", true })
 		}
 	}
 }

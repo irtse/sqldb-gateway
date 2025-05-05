@@ -114,9 +114,8 @@ func (d *ViewConvertor) ProcessLinkedSchema(shallowField *sm.ViewFieldModel, sch
 	} else {
 		shallowField.Type = utils.TransformType(scheme.Type)
 	}
-
 	shallowField.ActionPath = fmt.Sprintf("/%s/%s?rows=all&%s=enable", utils.MAIN_PREFIX, schema.Name, utils.RootShallow)
-	if s.HasField(ds.SchemaDBField) && s.HasField(ds.DestTableDBField) {
+	if (s.HasField(ds.SchemaDBField) && s.HasField(ds.DestTableDBField)) || schema.HasField(ds.SchemaDBField) {
 		shallowField.LinkPath = shallowField.ActionPath
 	}
 	if strings.Contains(scheme.Type, "many") {

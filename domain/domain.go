@@ -126,7 +126,7 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 		specializedService.SetDomain(d)
 		d.Db = conn.Open(d.Db)
 		defer d.Db.Close()
-		if d.GetUserID() == "" {
+		if d.GetUserID() == "" && !d.AutoLoad {
 			if res, err := d.Db.SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 				"name":  connector.Quote(d.User),
 				"email": connector.Quote(d.User),

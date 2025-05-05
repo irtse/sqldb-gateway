@@ -10,6 +10,7 @@ var CoCFR = models.SchemaModel{
 	Label:    "competence centers",
 	Category: "domain",
 	CanOwned: true,
+	IsEnum:   true,
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "nom", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
 		{Name: ds.RootID(ds.DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: true, Index: 1, Label: "entité en relation"},
@@ -18,13 +19,13 @@ var CoCFR = models.SchemaModel{
 
 var Axis = models.SchemaModel{
 	Name:     "axis",
-	Label:    "axes",
+	Label:    "IRT axes",
 	CanOwned: true,
 	Category: "domain",
 	Fields: []models.FieldModel{
-		{Name: "code", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
-		{Name: "name", Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 1},
-		{Name: "domain_code", Label: "code domaine", Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 2},
+		{Name: "code", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Translatable: false, Readonly: false, Index: 0},
+		{Name: "name", Type: models.VARCHAR.String(), Required: false, Translatable: false, Readonly: true, Index: 1},
+		{Name: "domain_code", Label: "code domaine", Type: models.VARCHAR.String(), Translatable: false, Required: false, Readonly: true, Index: 2},
 		{Name: ds.RootID(ds.DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: true, Index: 3, Label: "entité en relation"},
 	},
 }
@@ -35,8 +36,8 @@ var ProjectFR = models.SchemaModel{ // todo
 	CanOwned: true,
 	Category: "global data",
 	Fields: []models.FieldModel{
-		{Name: "code", Label: "code", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
-		{Name: "name", Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 1},
+		{Name: "code", Label: "code", Type: models.VARCHAR.String(), Constraint: "unique", Translatable: false, Required: true, Readonly: true, Index: 0},
+		{Name: "name", Type: models.VARCHAR.String(), Required: false, Translatable: false, Readonly: true, Index: 1},
 		{Name: "state", Type: models.VARCHAR.String(), Required: false, Default: models.STATEPENDING, Level: models.LEVELRESPONSIBLE, Index: 2},
 		{Name: "project_task", Label: "lot projet", Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 3},
 		{Name: "start_date", Label: "date de début de projet", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 4},
@@ -51,9 +52,10 @@ var PublicationTypeFR = models.SchemaModel{
 	Name:     "publication_type",
 	Label:    "type of publications",
 	CanOwned: true,
+	IsEnum:   true,
 	Category: "publications",
 	Fields: []models.FieldModel{
-		{Name: models.NAMEKEY, Constraint: "unique", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
+		{Name: models.NAMEKEY, Constraint: "unique", Type: models.VARCHAR.String(), Translatable: false, Required: true, Readonly: true, Index: 0},
 		{Name: ds.RootID(ds.DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: ds.DBSchema.Name, Required: true, Readonly: true, Label: "template entry", Index: 3},
 	},
 }
@@ -64,6 +66,7 @@ var PublicationStatusFR = models.SchemaModel{
 	Name:     "publication_status",
 	Label:    "publication status",
 	Category: "domain",
+	IsEnum:   true,
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "nom", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
 	},

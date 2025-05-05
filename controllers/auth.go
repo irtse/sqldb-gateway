@@ -37,7 +37,7 @@ func (l *AuthController) Login() {
 		}
 		valid := false
 		// if no problem check if logger is authorized to work on API and properly registered
-		if os.Getenv("AUTH_MODE") == "ldap" {
+		if os.Getenv("AUTH_MODE") == "ldap" && utils.GetString(response[0], "name") != "root" {
 			valid = controller.CheckLdap(utils.GetString(response[0], "name"), utils.GetString(body, "password"))
 		} else {
 			pass, ok := body["password"] // then compare password founded in base and ... whatever... you know what's about

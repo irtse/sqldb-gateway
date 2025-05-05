@@ -83,8 +83,8 @@ func (db *Database) BuildSelectQueryWithRestriction(name string, restrictions in
 		}
 		query += db.SQLRestriction
 	}
-	if len(query) > 5 && (query[len(query)-4:len(query)-1] == "AND" || query[len(query)-4:len(query)-1] == "AND ") {
-		query = query[0 : len(query)-4]
+	if len(query) > 5 && (query[len(query)-5:len(query)-1] == " AND") {
+		query = query[0 : len(query)-5]
 	}
 	query = db.applyOrderAndLimit(query)
 	return query
@@ -254,7 +254,7 @@ func (db *Database) BuildUpdateQuery(col string, value interface{}, set string,
 	if col == "id" && fmt.Sprintf("%v", value) != "0" && fmt.Sprintf("%v", value) != "" {
 		db.SQLRestriction = "id=" + fmt.Sprintf("%v", value) + " "
 	}
-	if typ, ok := verify(col); ok && !slices.Contains([]string{"NULL", ""}, FormatForSQL(strings.Split(typ, ":")[0], value)) {
+	if typ, ok := verify(col); ok && !slices.Contains([]string{"NULL", "null", "'null'", ""}, FormatForSQL(strings.Split(typ, ":")[0], value)) {
 		if value == "" || reflect.TypeOf(value).Kind().String() == "string" {
 			set += " " + col + "=" + Quote(strings.ReplaceAll(fmt.Sprintf("%v", value), "'", "''")) + ","
 			cols = append(cols, col)

@@ -38,11 +38,11 @@ func (s *FilterService) Write(record utils.Record, tableName string) {
 			continue
 		}
 		if schema, err := schserv.GetSchemaByID(utils.ToInt64(record[ds.SchemaDBField])); err == nil && field["name"] != nil {
-			delete(field, "name")
 			field[ds.FilterDBField] = record[utils.SpecialIDParam]
 			f, err := schema.GetField(utils.ToString(field["name"]))
+			delete(field, "name")
 			if err == nil {
-				field[ds.SchemaDBField] = f.ID
+				field[ds.SchemaFieldDBField] = f.ID
 			}
 			s.Domain.Call(utils.AllParams(ds.DBFilterField.Name), field, utils.CREATE)
 		}
@@ -69,9 +69,9 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 			sort.SliceStable(fields, func(i, j int) bool {
 				return utils.ToInt64(fields[i]["index"]) <= utils.ToInt64(fields[j]["index"])
 			})
-			rec["filter_fields"] = []sm.FilterModel{} // add fields to filter
+			filterFields := []sm.FilterModel{} // add fields to filter
 			for _, field := range fields {
-				if ff, err := schema.GetFieldByID(utils.GetInt(field, ds.SchemaDBField)); err == nil {
+				if ff, err := schema.GetFieldByID(utils.GetInt(field, ds.SchemaFieldDBField)); err == nil {
 					model := sm.FilterModel{
 						ID:        utils.GetInt(rec, utils.SpecialIDParam),
 						Name:      ff.Name,
@@ -86,9 +86,10 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 					if width, err := strconv.ParseFloat(utils.ToString(field["width"]), 64); err == nil {
 						model.Width = width
 					}
-					rec["filter_fields"] = append(rec["filter_fields"].([]sm.FilterModel), model)
+					filterFields = append(filterFields, model)
 				}
 			}
+			rec["filter_fields"] = filterFields
 			if rec["elder"] == nil { // get elder filter
 				if fils, _ := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name,
 					map[string]interface{}{"id": rec[utils.SpecialIDParam]}, false); len(fils) > 0 {
@@ -196,9 +197,6 @@ func (s *FilterService) HandleCreate(record map[string]interface{}) {
 }
 
 func (s *FilterService) HandleUserFilterNaming(record map[string]interface{}, schema sm.SchemaModel, name *string) {
-	if *name == "" || *name == "view " {
-		return
-	}
 	record[ds.UserDBField] = s.Domain.GetUserID()
 	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
 		ds.UserDBField:   s.Domain.GetUserID(),

@@ -4,12 +4,33 @@
 package main
 
 import (
+	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	models "sqldb-ws/plugins/datas"
 )
 
 func Autoload() []sm.SchemaModel {
-	return []sm.SchemaModel{models.CoCFR, models.ProjectFR, models.Axis,
-		models.PublicationStatusFR, models.PublicationFR, models.ArticleFR, models.PublicationTypeFR, models.OtherPublicationFR,
-		models.DemoFR, models.InternshipFR, models.ThesisFR, models.HDRFR, models.PosterFR, models.PresentationFR, models.ConferenceFR}
+	ds.PERMISSIONEXCEPTION = append(ds.PERMISSIONEXCEPTION, []string{
+		models.CoCFR.Name, models.ProjectFR.Name, models.Axis.Name,
+		models.PublicationStatusFR.Name, models.PublicationFR.Name, models.ArticleFR.Name,
+		models.PublicationTypeFR.Name, models.OtherPublicationFR.Name,
+		models.DemoFR.Name, models.InternshipFR.Name, models.ThesisFR.Name, models.HDRFR.Name,
+		models.PosterFR.Name, models.PresentationFR.Name, models.ConferenceFR.Name,
+	}...)
+	ds.POSTPERMISSIONEXCEPTION = append(ds.POSTPERMISSIONEXCEPTION, []string{
+		models.OtherPublicationFR.Name,
+		models.ArticleFR.Name,
+		models.PublicationFR.Name,
+		models.DemoFR.Name,
+		models.InternshipFR.Name,
+		models.ThesisFR.Name,
+		models.HDRFR.Name,
+		models.PosterFR.Name,
+		models.PresentationFR.Name,
+		models.ConferenceFR.Name,
+	}...)
+	return []sm.SchemaModel{models.CoCFR, models.ProjectFR, models.Axis, models.PublicationTypeFR,
+		models.PublicationStatusFR, models.PublicationFR, models.ArticleFR,
+		models.OtherPublicationFR, models.DemoFR, models.InternshipFR, models.ThesisFR, models.HDRFR,
+		models.PosterFR, models.PresentationFR, models.ConferenceFR}
 }

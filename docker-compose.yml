@@ -51,7 +51,7 @@ services:
       SMTP_HOST: ${SMTP_HOST:-mail.irt-saintexupery.com}
       SMTP_PORT: ${SMTP_PORT:-22}
       SUPERADMIN_NAME: ${SUPERADMIN_NAME:-root}
-      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-morgane.roques@irt-saintexupery.com}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-pro.morgane.roques@gmail.com}
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-admin}
       AUTH_MODE: ${AUTH_MODE:-ldap}
       DBDRIVER : ${DBDRIVER:-postgres}

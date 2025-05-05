@@ -68,6 +68,7 @@ func (db *Database) CreateQuery(name string, record map[string]interface{}, veri
 		_, columns, values = db.BuildUpdateQuery(key, element, "", columns, values, verify)
 	}
 	for _, query := range db.BuildCreateQueries(name, strings.Join(values, ","), strings.Join(columns, ","), "") {
+
 		if db.GetDriver() == PostgresDriver {
 			return db.QueryRow(query)
 		} else if db.GetDriver() == MySQLDriver {

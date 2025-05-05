@@ -61,8 +61,9 @@ func main() {
 var DEFAULTCONF = map[string]string{
 	"SUPERADMIN_NAME":     "root",
 	"SUPERADMIN_PASSWORD": "admin",
-	"SUPERADMIN_EMAIL":    "morgane.roques@irt-saintexupery.com",
-	"AUTH_MODE":           "token",
+	"PLUGINS":             "cegid",
+	"SUPERADMIN_EMAIL":    "pro.morgane.roques@gmail.com",
+	"AUTH_MODE":           "ldap",
 	"DBDRIVER":            "postgres",
 	"DBHOST":              "127.0.0.1",
 	"DBPORT":              "5432",
@@ -72,3 +73,5 @@ var DEFAULTCONF = map[string]string{
 	"DBSSL":               "disable",
 	"log":                 "disable",
 }
+
+// irt-aese.local

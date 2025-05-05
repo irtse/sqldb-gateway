@@ -11,12 +11,14 @@ import (
 var SchemaRegistry = map[string]SchemaModel{}
 
 type SchemaModel struct { // lightest definition a db table
-	ID       string       `json:"id"`
-	Name     string       `json:"name"`
-	Label    string       `json:"label"`
-	Category string       `json:"category"`
-	CanOwned bool         `json:"can_owned"` // Special case for ownership, it's schema that can be owned by any user (like a request)
-	Fields   []FieldModel `json:"fields,omitempty"`
+	ID          string       `json:"id"`
+	Name        string       `json:"name"`
+	Label       string       `json:"label"`
+	IsEnum      bool         `json:"is_enum"`
+	Category    string       `json:"category"`
+	CanOwned    bool         `json:"can_owned"`
+	Description string       `json:"description"` // Special case for ownership, it's schema that can be owned by any user (like a request)
+	Fields      []FieldModel `json:"fields,omitempty"`
 }
 
 func (t SchemaModel) Map(m map[string]interface{}) *SchemaModel {
@@ -245,6 +247,7 @@ type ViewModel struct { // lightest struct based on SchemaModel dedicate to view
 	IsWrapper   bool                     `json:"is_wrapper"`
 	Shortcuts   map[string]string        `json:"shortcuts"`
 	Consents    []map[string]interface{} `json:"consents"`
+	CommentBody map[string]interface{}   `json:"comment_body"`
 	Redirection string                   `json:"redirection,omitempty"`
 	Triggers    []ManualTriggerModel     `json:"triggers,omitempty"`
 }
