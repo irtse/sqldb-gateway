@@ -92,11 +92,11 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 		}
 		restr = append(alterRestr, restr...)
 		if schema.HasField(ds.SchemaDBField) && !d.Domain.IsSuperAdmin() {
-			except := []string{ds.DBRequest.Name, ds.DBTask.Name}
+			except := []string{ds.DBRequest.Name, ds.DBTask.Name, ds.DBDelegation.Name}
 			enum := []string{}
 			for _, s := range sm.SchemaRegistry {
 				notOK := !d.Domain.IsSuperAdmin() && ds.IsRootDB(s.Name) && !slices.Contains(except, s.Name)
-				notOK2 := !s.HasField("name") || !d.Domain.VerifyAuth(s.Name, "", sm.LEVELNORMAL, utils.SELECT)
+				notOK2 := !d.Domain.VerifyAuth(s.Name, "", sm.LEVELNORMAL, utils.SELECT)
 				if !notOK && !notOK2 {
 					enum = append(enum, utils.ToString(s.ID))
 				}

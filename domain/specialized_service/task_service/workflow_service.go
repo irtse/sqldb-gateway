@@ -27,7 +27,26 @@ func (s *WorkflowService) TransformToGenericView(results utils.Results, tableNam
 			}
 		}
 	}
-	return view_convertor.NewViewConvertor(s.Domain).TransformToView(res, tableName, true, s.Domain.GetParams().Copy())
+	rr := view_convertor.NewViewConvertor(s.Domain).TransformToView(res, tableName, true, s.Domain.GetParams().Copy())
+	if _, ok := s.Domain.GetParams().Get(utils.SpecialIDParam); ok && len(results) == 1 && len(rr) == 1 {
+		schema := rr[0]["schema"].(map[string]interface{})
+		newSchema := map[string]interface{}{}
+		r := results[0]
+		if i, ok := r["view_"+ds.FilterDBField]; ok {
+			if fields, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBSchemaField.Name,
+				map[string]interface{}{
+					utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBFilterField.Name,
+						map[string]interface{}{
+							ds.FilterDBField: i,
+						}, false, ds.SchemaFieldDBField)}, false); err == nil {
+				for _, f := range fields {
+					newSchema[utils.GetString(f, "name")] = schema[utils.GetString(f, "name")]
+				}
+			}
+			rr[0]["schema"] = newSchema
+		}
+	}
+	return rr
 }
 
 func (s *WorkflowService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {

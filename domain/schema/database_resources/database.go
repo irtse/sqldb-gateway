@@ -123,7 +123,8 @@ var DBEmailTemplate = models.SchemaModel{
 	Category: "email",
 	Fields: []models.FieldModel{
 		{Name: "subject", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 1},
-		{Name: "template", Type: models.BIGVARCHAR.String(), Required: true, Index: 2},
+		{Name: "template", Type: models.TEXT.String(), Required: true, Index: 2},
+		{Name: "signature", Type: models.TEXT.String(), Required: true, Index: 2},
 		{Name: "waiting_response", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 3},
 		{Name: "to_map_" + RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 4},
 		{Name: "redirected_on", Type: models.VARCHAR.String(), Required: false, Index: 5},
@@ -437,6 +438,7 @@ var DBDashboard = models.SchemaModel{
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Index: 2},
 		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Index: 3},
 		{Name: "is_selected", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 4},
+		{Name: "url", Type: models.VARCHAR.String(), Required: false, Default: false, Index: 5},
 	},
 }
 
@@ -587,14 +589,15 @@ var DBShare = models.SchemaModel{
 var OWNPERMISSIONEXCEPTION = []string{DBFilter.Name, DBFilterField.Name, DBNotification.Name, DBDelegation.Name,
 	DBDashboard.Name, DBDashboardElement.Name, DBDashboardMathField.Name, DBShare.Name}
 var AllPERMISSIONEXCEPTION = []string{DBNotification.Name, DBViewAttribution.Name, DBUser.Name}
-var POSTPERMISSIONEXCEPTION = []string{DBEmailSended.Name, DBRequest.Name, DBConsentResponse.Name}
+var POSTPERMISSIONEXCEPTION = []string{DBEmailSended.Name, DBRequest.Name, DBConsentResponse.Name, DBDelegation.Name}
 var PUPERMISSIONEXCEPTION = []string{DBTask.Name, DBEmailResponse.Name}
-var PERMISSIONEXCEPTION = []string{DBView.Name, DBTask.Name, DBRequest.Name, DBWorkflow.Name, DBEntity.Name, DBSchema.Name, DBSchemaField.Name} // override permission checkup
+var PERMISSIONEXCEPTION = []string{DBDashboard.Name, DBView.Name, DBTask.Name, DBDelegation.Name, DBRequest.Name, DBWorkflow.Name,
+	DBEntity.Name, DBSchema.Name, DBSchemaField.Name, DBComment.Name} // override permission checkup
 
 var ROOTTABLES = []models.SchemaModel{DBSchemaField, DBUser, DBWorkflow, DBView, DBRequest, DBSchema, DBPermission, DBFilter, DBFilterField, DBEntity,
 	DBRole, DBDataAccess, DBNotification, DBEntityUser, DBRoleAttribution, DBShare,
 	DBConsent, DBTask, DBWorkflowSchema, DBRolePermission, DBHierarchy, DBViewAttribution,
-	//DBDashboard, DBDashboardElement, DBDashboardMathField, DBDashboardLabel,
+	DBDashboard, // DBDashboardElement, DBDashboardMathField, DBDashboardLabel,
 	DBComment, DBDelegation,
 	DBConsentResponse, DBEmailTemplate,
 	DBTrigger, DBTriggerRule, DBTriggerCondition,

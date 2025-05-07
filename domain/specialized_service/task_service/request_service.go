@@ -68,7 +68,7 @@ func (s *RequestService) VerifyDataIntegrity(record map[string]interface{}, tabl
 		if wf, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 			ds.WorkflowDBField: record[ds.WorkflowDBField],
 		}, false); err != nil || len(wf) == 0 {
-			return record, errors.New("workflow not found"), false
+			return record, nil, true
 		} else {
 			record["name"] = wf[0][sm.NAMEKEY]
 			record[ds.SchemaDBField] = wf[0][ds.SchemaDBField]

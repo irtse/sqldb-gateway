@@ -131,13 +131,16 @@ func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, tableN
 		createdIds = filter.NewFilterService(v.Domain).GetCreatedAccessData(sch.ID)
 	}
 	for index, record := range results {
+		view.Triggers = append(view.Triggers, v.getTriggers(
+			record, v.Domain.GetMethod(), sch,
+			utils.GetInt(record, ds.SchemaDBField),
+			utils.GetInt(record, ds.DestTableDBField))...,
+		)
 		go v.ConvertRecordToView(index, view, channel, record, tableName, cols, v.Domain.GetEmpty(), isWorkflow, params, createdIds)
 	}
 	for range results {
 		rec := <-channel
 		if !rec.IsEmpty {
-			view.Triggers = append(view.Triggers, v.getTriggers(
-				v.Domain.GetMethod(), sch, utils.GetInt(rec.Values, ds.SchemaDBField), utils.GetInt(rec.Values, ds.DestTableDBField))...)
 			rec = v.getSharing(sch.ID, rec, v.Domain.GetUserID())
 			view.Items = append(view.Items, rec)
 		}
@@ -251,7 +254,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 	}
 	otherOrder := []string{}
 	if sch, err := scheme.GetSchema(tableName); err == nil {
-		ts = v.getTriggers(v.Domain.GetMethod(), sch, utils.GetInt(record, ds.SchemaDBField), utils.GetInt(record, ds.DestTableDBField))
+		ts = v.getTriggers(record, v.Domain.GetMethod(), sch, utils.GetInt(record, ds.SchemaDBField), utils.GetInt(record, ds.DestTableDBField))
 		_, ok := v.Domain.GetParams().Get(utils.RootShallow)
 		if ok {
 			if wf, err := v.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
@@ -270,6 +273,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 			}
 		}
 	}
+
 	view := sm.ViewModel{
 		ID:          record.GetInt(utils.SpecialIDParam),
 		Name:        record.GetString(sm.NAMEKEY),
@@ -278,7 +282,8 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 		Redirection: v.getRedirection(),
 		Triggers:    ts,
 	}
-	if record[ds.SchemaDBField] != nil {
+
+	if _, ok := v.Domain.GetParams().Get(utils.SpecialIDParam); ok && record[ds.SchemaDBField] != nil {
 		if sch, err := scheme.GetSchemaByID(record.GetInt(ds.SchemaDBField)); err != nil {
 			return nil
 		} else {
@@ -305,6 +310,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 		}
 
 	}
+
 	return view.ToRecord()
 }
 
@@ -319,7 +325,7 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 		if err == nil {
 			synthesisPath = d.getSynthesis(record, schema)
 			historyPath = d.BuildPath(ds.DBDataAccess.Name, utils.ReservedParam, utils.RootOrderParam+"=access_date", utils.RootDirParam+"=asc", utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
-			commentPath = d.BuildPath(ds.DBComment.Name, utils.ReservedParam, utils.RootOrderParam+"=index", utils.RootDirParam+"=desc", utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
+			commentPath = d.BuildPath(ds.DBComment.Name, utils.ReservedParam, utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
 		}
 		vals[utils.SpecialIDParam] = record.GetString(utils.SpecialIDParam)
 	}
@@ -584,7 +590,10 @@ func (d *ViewConvertor) ApplyCommandRow(record utils.Record, vals map[string]int
 	}
 }
 
-func (d *ViewConvertor) getTriggers(method utils.Method, fromSchema sm.SchemaModel, toSchemaID, destID int64) []sm.ManualTriggerModel {
+func (d *ViewConvertor) getTriggers(record utils.Record, method utils.Method, fromSchema sm.SchemaModel, toSchemaID, destID int64) []sm.ManualTriggerModel {
+	if _, ok := d.Domain.GetParams().Get(utils.SpecialIDParam); method == utils.DELETE || !ok {
+		return []sm.ManualTriggerModel{}
+	}
 	mt := []sm.ManualTriggerModel{}
 	triggerService := triggers.NewTrigger(d.Domain)
 	if res, err := triggerService.GetTriggers("manual", method, fromSchema.ID); err == nil {
@@ -592,7 +601,7 @@ func (d *ViewConvertor) getTriggers(method utils.Method, fromSchema sm.SchemaMod
 			typ := utils.GetString(r, "type")
 			switch typ {
 			case "mail":
-				if t, err := d.getMailTriggers(fromSchema, utils.GetString(r, "name"),
+				if t, err := d.getMailTriggers(record, fromSchema, utils.GetString(r, "name"),
 					utils.GetInt(r, utils.SpecialIDParam), toSchemaID, destID); err == nil {
 					mt = append(mt, t...)
 				}
@@ -602,12 +611,12 @@ func (d *ViewConvertor) getTriggers(method utils.Method, fromSchema sm.SchemaMod
 	return mt
 }
 
-func (d *ViewConvertor) getMailTriggers(fromSchema sm.SchemaModel, triggerName string, triggerID, toSchemaID, destID int64) ([]sm.ManualTriggerModel, error) {
+func (d *ViewConvertor) getMailTriggers(record utils.Record, fromSchema sm.SchemaModel, triggerName string, triggerID, toSchemaID, destID int64) ([]sm.ManualTriggerModel, error) {
 	if sch, err := schema.GetSchema(ds.DBEmailSended.Name); err != nil {
 		return nil, err
 	} else {
 		triggerService := triggers.NewTrigger(d.Domain)
-		mails := triggerService.TriggerManualMail("manual", utils.Record{}, fromSchema, triggerID, toSchemaID, destID)
+		mails := triggerService.TriggerManualMail("manual", record, fromSchema, triggerID, toSchemaID, destID)
 		bodies := []sm.ManualTriggerModel{}
 		for _, m := range mails {
 			bodies = append(bodies, sm.ManualTriggerModel{

@@ -20,6 +20,12 @@ func (v *ViewConvertor) GetShortcuts(schemaID string, actions []string) map[stri
 	}
 	if results, err := v.Domain.GetDb().SelectQueryWithRestriction(ds.DBView.Name, m, false); err == nil {
 		for _, shortcut := range results {
+			if utils.GetBool(shortcut, "is_empty") {
+				scheme, err := sch.GetSchemaByID(utils.ToInt64(schemaID))
+				if err != nil || !v.Domain.VerifyAuth(scheme.Name, "", "", utils.CREATE) {
+					continue
+				}
+			}
 			shortcuts[utils.GetString(shortcut, sm.NAMEKEY)] = "#" + utils.GetString(shortcut, utils.SpecialIDParam)
 		}
 	}
@@ -84,9 +90,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 		if scheme.GetLink() > 0 {
 			d.ProcessLinkedSchema(&shallowField, scheme, tableName, schema)
 		}
-
 		shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName, additionalActions, schema)
-
 		var m map[string]interface{}
 		b, _ = json.Marshal(shallowField)
 		err := json.Unmarshal(b, &m)

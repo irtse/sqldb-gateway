@@ -8,7 +8,6 @@ import (
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
-	"strconv"
 	"strings"
 )
 
@@ -157,24 +156,25 @@ func (t *TriggerService) GetTriggerRules(triggerID int64, fromSchema sm.SchemaMo
 
 func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fromSchema sm.SchemaModel, triggerID, toSchemaID, destID int64) []utils.Record {
 	mailings := []utils.Record{}
-
+	var err error
+	var toSchema sm.SchemaModel
 	dest := []map[string]interface{}{}
-	if toSchemaID < 0 && destID < 0 {
-		i, err := strconv.Atoi(fromSchema.ID)
-		if err != nil {
-			return []utils.Record{}
+	if toSchemaID < 0 || destID < 0 {
+		toSchema = fromSchema
+		dest = []map[string]interface{}{record}
+		toSchemaID = utils.ToInt64(fromSchema.ID)
+		destID = utils.ToInt64(record[utils.SpecialIDParam])
+	} else {
+		toSchema, err = schema.GetSchemaByID(toSchemaID)
+		if err == nil {
+			if d, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(toSchema.Name, map[string]interface{}{
+				utils.SpecialIDParam: destID,
+			}, false); err == nil {
+				dest = d
+			}
 		}
-		toSchemaID = int64(i)
-		destID = utils.GetInt(record, utils.SpecialIDParam)
 	}
-	toSchema, err := schema.GetSchemaByID(toSchemaID)
-	if err == nil {
-		if d, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(toSchema.Name, map[string]interface{}{
-			utils.SpecialIDParam: destID,
-		}, false); err == nil {
-			dest = d
-		}
-	}
+
 	var toUsers []map[string]interface{}
 	if len(dest) > 0 {
 		if toUsers = t.handleOverrideEmailTo(record, dest[0]); len(toUsers) == 0 {
@@ -231,7 +231,7 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 		if fromSchema.ID == utils.GetString(mail, ds.SchemaDBField+"_on_response") {
 			destOnResponse = utils.GetInt(record, utils.SpecialIDParam)
 		}
-
+		signature := utils.GetString(mail, "signature")
 		if len(toUsers) == 0 {
 			if len(dest) > 0 {
 				if m, err := ForgeMail(
@@ -239,13 +239,14 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 					utils.Record{}, // always keep a copy
 					utils.GetString(mail, "subject"),
 					utils.GetString(mail, "template"),
-					dest[0],
+					t.getLinkLabel(toSchema, dest[0]),
 					t.Domain,
 					utils.GetInt(mail, utils.SpecialIDParam),
 					toSchemaID,
 					destID,
 					destOnResponse,
 					t.getFileAttached(toSchema, record),
+					signature,
 				); err == nil {
 					mailings = append(mailings, m)
 				}
@@ -262,6 +263,7 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 					destID,
 					destOnResponse,
 					"",
+					signature,
 				); err == nil {
 					mailings = append(mailings, m)
 				}
@@ -277,13 +279,14 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 					to, // always keep a copy
 					utils.GetString(mail, "subject"),
 					utils.GetString(mail, "template"),
-					dest[0],
+					t.getLinkLabel(toSchema, dest[0]),
 					t.Domain,
 					utils.GetInt(mail, utils.SpecialIDParam),
 					toSchemaID,
 					destID,
 					destOnResponse,
 					t.getFileAttached(toSchema, record),
+					signature,
 				); err == nil {
 					mailings = append(mailings, m)
 				}
@@ -300,6 +303,7 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 					-1,
 					destOnResponse,
 					"",
+					signature,
 				); err == nil {
 					mailings = append(mailings, m)
 				}
@@ -316,4 +320,24 @@ func (t *TriggerService) getFileAttached(toSchema sm.SchemaModel, record utils.R
 		}
 	}
 	return ""
+}
+
+func (t *TriggerService) getLinkLabel(toSchema sm.SchemaModel, record utils.Record) utils.Record {
+	for _, field := range toSchema.Fields {
+		if linkScheme, err := sm.GetSchemaByID(field.GetLink()); err == nil {
+			// there is a link... soooo do something
+			if res, err := t.Domain.GetDb().SelectQueryWithRestriction(linkScheme.Name, map[string]interface{}{
+				utils.SpecialIDParam: record[field.Name],
+			}, false); err == nil && len(res) > 0 {
+				item := res[0]
+				if utils.GetString(item, "label") != "" {
+					record[field.Name] = utils.GetString(item, "label")
+				}
+				if utils.GetString(item, "name") != "" {
+					record[field.Name] = utils.GetString(item, "name")
+				}
+			}
+		}
+	}
+	return record
 }

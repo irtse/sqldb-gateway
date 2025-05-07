@@ -58,6 +58,7 @@ func ImportProjectAxis() {
 				}, false)
 				continue
 			}
+			// TODO Axe : entity binded to user
 			res, err := d.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
 				"name": record["name"],
 			}, func(s string) (string, bool) { return "", true })
@@ -73,8 +74,9 @@ func ImportProjectAxis() {
 		"Abrégé Projet":     "name",
 		"Etat Ligne Projet": "state",
 	}
-	inside = []string{}
 	for _, data := range datas {
+		axisName := ""
+		respPrj := int64(-1)
 		record := map[string]interface{}{}
 		for i, header := range headers {
 			if realLabel, ok := mapped[header]; ok && realLabel != "" && data[i] != "" {
@@ -85,6 +87,9 @@ func ImportProjectAxis() {
 				} else {
 					record[realLabel] = data[i]
 				}
+			}
+			if strings.ToLower(header) == "libellé axe" && data[i] != "" {
+				axisName = data[i]
 			}
 			if strings.ToLower(header) == "date fin de projet" && data[i] != "" {
 				s := strings.Split(data[i], "/")
@@ -111,12 +116,23 @@ func ImportProjectAxis() {
 				if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 					"email": connector.Quote(data[i]),
 				}, false); err == nil && len(res) > 0 {
+					// TODO Missing add to user entity of project
+					respPrj = utils.ToInt64(res[0][utils.SpecialIDParam])
 					record[ds.UserDBField] = res[0][utils.SpecialIDParam]
 				}
 			}
 		}
-		if len(record) > 0 && !slices.Contains(inside, utils.GetString(record, "name")) {
-			inside = append(inside, utils.GetString(record, "name"))
+		if len(record) > 0 {
+			// depend to
+			var parentID *int64
+			if axisName != "" {
+				if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBEntity.Name, map[string]interface{}{
+					"name": axisName,
+				}, false); err == nil && len(res) > 0 {
+					i := utils.GetInt(res[0], utils.SpecialIDParam)
+					parentID = &i
+				}
+			}
 			if res, err := d.GetDb().SelectQueryWithRestriction(models.Project.Name, map[string]interface{}{
 				"code": connector.Quote(utils.GetString(record, "code")),
 			}, false); err == nil && len(res) > 0 {
@@ -124,14 +140,45 @@ func ImportProjectAxis() {
 				d.GetDb().UpdateQuery(models.Project.Name, record, map[string]interface{}{
 					utils.SpecialIDParam: res[0][utils.SpecialIDParam],
 				}, false)
+				m := map[string]interface{}{
+					ds.UserDBField: respPrj,
+					ds.EntityDBField: d.GetDb().BuildSelectQueryWithRestriction(
+						ds.DBEntity.Name, map[string]interface{}{
+							"name": res[0]["name"],
+						}, false, "id"),
+				}
+				d.GetDb().DeleteQueryWithRestriction(ds.DBEntityUser.Name, m, false)
+				m2 := map[string]interface{}{
+					ds.UserDBField: respPrj,
+					ds.EntityDBField: d.GetDb().BuildSelectQueryWithRestriction(
+						ds.DBEntity.Name, map[string]interface{}{
+							"name": "CDP",
+						}, false, "id"),
+				}
+				d.GetDb().DeleteQueryWithRestriction(ds.DBEntityUser.Name, m2, false)
+				if respPrj >= 0 { // add a CDP to a project
+					d.GetDb().CreateQuery(ds.DBEntityUser.Name, m, func(s string) (string, bool) { return "", true })
+					d.GetDb().CreateQuery(ds.DBEntityUser.Name, m2, func(s string) (string, bool) { return "", true })
+				}
 				continue
 			}
-			res, err := d.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
-				"name": record["name"],
-			}, func(s string) (string, bool) { return "", true })
-			if err == nil {
-				record[ds.EntityDBField] = res
-				d.GetDb().CreateQuery(models.Project.Name, record, func(s string) (string, bool) { return "", true })
+			if parentID != nil {
+				res, err := d.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
+					"name":      record["name"],
+					"parent_id": parentID,
+				}, func(s string) (string, bool) { return "", true })
+				if err == nil {
+					record[ds.EntityDBField] = res
+					d.GetDb().CreateQuery(models.Project.Name, record, func(s string) (string, bool) { return "", true })
+				}
+			} else {
+				res, err := d.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
+					"name": record["name"],
+				}, func(s string) (string, bool) { return "", true })
+				if err == nil {
+					record[ds.EntityDBField] = res
+					d.GetDb().CreateQuery(models.Project.Name, record, func(s string) (string, bool) { return "", true })
+				}
 			}
 		}
 	}
@@ -149,8 +196,13 @@ func ImportUserHierachy() {
 	if filepath == "" {
 		filepath = "./user_test.csv"
 	}
+	cocName := ""
 	headers, datas := importFile(filepath)
 	inside := []string{}
+	insideCoc := []string{}
+	d.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
+		"name": "CDP",
+	}, func(s string) (string, bool) { return "", true })
 	for _, data := range datas {
 		record := map[string]interface{}{}
 		for i, header := range headers {
@@ -164,24 +216,54 @@ func ImportUserHierachy() {
 				} else {
 					record[realLabel] = data[i]
 				}
-
-			}
-		}
-		if len(record) > 0 && !slices.Contains(inside, utils.GetString(record, "name")) {
-			inside = append(inside, utils.GetString(record, "name"))
-			if utils.GetBool(record, "active") {
-
-				if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-					"name": connector.Quote(utils.GetString(record, "name")),
-				}, false); err == nil && len(res) > 0 {
-					record[utils.SpecialIDParam] = res[0][utils.SpecialIDParam]
-					d.GetDb().UpdateQuery(ds.DBUser.Name, record, map[string]interface{}{
-						utils.SpecialIDParam: res[0][utils.SpecialIDParam],
-					}, false)
-					return
+			} else {
+				if strings.ToLower(header) == "compétence" && data[i] != "" {
+					cocName = data[i]
+					if !slices.Contains(insideCoc, cocName) {
+						insideCoc = append(insideCoc, cocName)
+						res, err := d.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
+							"name": cocName,
+						}, func(s string) (string, bool) { return "", true })
+						if err == nil {
+							d.GetDb().CreateQuery(models.CoCFR.Name, map[string]interface{}{
+								"name":           cocName,
+								ds.EntityDBField: res,
+							}, func(s string) (string, bool) { return "", true })
+						}
+					}
 				}
 			}
-			d.GetDb().CreateQuery(ds.DBUser.Name, record, func(s string) (string, bool) { return "", true })
+
+		}
+		if len(record) > 0 {
+			if !slices.Contains(inside, utils.GetString(record, "name")) {
+				inside = append(inside, utils.GetString(record, "name"))
+				if utils.GetBool(record, "active") {
+					if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
+						"name": connector.Quote(utils.GetString(record, "name")),
+					}, false); err == nil && len(res) > 0 {
+						record[utils.SpecialIDParam] = res[0][utils.SpecialIDParam]
+						d.GetDb().UpdateQuery(ds.DBUser.Name, record, map[string]interface{}{
+							utils.SpecialIDParam: res[0][utils.SpecialIDParam],
+						}, false)
+						return
+					}
+					d.GetDb().CreateQuery(ds.DBUser.Name, record, func(s string) (string, bool) { return "", true })
+				}
+			}
+			m := map[string]interface{}{
+				ds.UserDBField: d.GetDb().BuildSelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
+					"name": record["name"],
+				}, false, "id"),
+				ds.EntityDBField: d.GetDb().BuildSelectQueryWithRestriction(
+					ds.DBEntity.Name, map[string]interface{}{
+						"name": cocName,
+					}, false, "id"),
+			}
+			d.GetDb().DeleteQueryWithRestriction(ds.DBEntityUser.Name, m, false)
+			if cocName != "" { // add a CDP to a project
+				d.GetDb().CreateQuery(ds.DBEntityUser.Name, m, func(s string) (string, bool) { return "", true })
+			}
 		}
 	}
 	for _, data := range datas {
@@ -205,7 +287,8 @@ func ImportUserHierachy() {
 		}
 		if userID != "" && hierarchyID != "" {
 			d.DeleteSuperCall(utils.AllParams(ds.DBHierarchy.Name), map[string]interface{}{
-				ds.UserDBField: userID,
+				ds.UserDBField:             userID,
+				"parent_" + ds.UserDBField: hierarchyID,
 			})
 			d.GetDb().CreateQuery(ds.DBHierarchy.Name, map[string]interface{}{
 				"parent_" + ds.UserDBField: hierarchyID,

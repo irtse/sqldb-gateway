@@ -4,10 +4,10 @@ import (
 	"errors"
 	"testing"
 
+	"sqldb-ws/domain/domain_service/view_convertor"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/tests"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/domain/view_convertor"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -152,7 +152,7 @@ func TestProcessLinkedSchema(t *testing.T) {
 	field := sm.ViewFieldModel{}
 	scheme := sm.FieldModel{Type: "many-to-many"}
 
-	vc.ProcessLinkedSchema(&field, scheme, "test_table")
+	vc.ProcessLinkedSchema(&field, scheme, "test_table", sm.SchemaModel{Name: "many-to-many"})
 
 	assert.Equal(t, "link", field.Type)
 }

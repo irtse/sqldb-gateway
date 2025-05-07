@@ -20,7 +20,6 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		db = Open(db)
 		defer db.Close()
 	}
-
 	res, err := db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
 	return res, err
 }

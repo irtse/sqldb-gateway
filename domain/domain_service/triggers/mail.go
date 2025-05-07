@@ -21,13 +21,13 @@ type EmailData struct {
 
 func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	bodyToMap map[string]interface{}, domain utils.DomainITF, tplID int64,
-	bodySchema int64, destID int64, destOnResponse int64, fileAttached string) (utils.Record, error) {
+	bodySchema int64, destID int64, destOnResponse int64, fileAttached string, signature string) (utils.Record, error) {
 	var content bytes.Buffer
 
 	code := uuid.New().String()
 	bodyToMap["code"] = code
 	// SHOULD MAP AND APPLY CODE
-	tmpl, err := template.New("email").Parse(tpl)
+	tmpl, err := template.New("email").Parse(tpl + "<br>" + signature)
 	if err != nil {
 		return utils.Record{}, err
 	}
@@ -55,7 +55,7 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	return m, nil
 }
 
-func SendMail(from string, to string, mail utils.Record) error {
+func SendMail(from string, to string, mail utils.Record, id string, isValidButton bool) error {
 	var body bytes.Buffer
 	boundary := "MY-MIME-BOUNDARY"
 	// En-têtes MIME
@@ -67,9 +67,128 @@ func SendMail(from string, to string, mail utils.Record) error {
 	body.WriteString("\r\n--" + boundary + "\r\n")
 
 	// Partie texte
-	body.WriteString("Content-Type: text/plain; charset=\"utf-8\"\r\n")
+	body.WriteString("Content-Type: text/html; charset=\"utf-8\"\r\n")
 	body.WriteString("Content-Transfer-Encoding: 7bit\r\n\r\n")
+	body.WriteString("<html>")
+	body.WriteString("<body>")
+	if isValidButton {
+		body.Write([]byte(`
+			<head>
+				<meta charset="UTF-8">
+				<style>
+					.buttons {
+					display: flex;
+					width: 380px;
+					gap: 10px;
+					--b: 5px;   /* the border thickness */
+					--h: 1.8em; /* the height */
+					}
+
+					.buttons button {
+					--_c: #88C100;
+					flex: calc(1.25 + var(--_s,0));
+					min-width: 0;
+					font-size: 40px;
+					font-weight: bold;
+					height: var(--h);
+					cursor: pointer;
+					color: var(--_c);
+					border: var(--b) solid var(--_c);
+					background: 
+						conic-gradient(at calc(100% - 1.3*var(--b)) 0,var(--_c) 209deg, #0000 211deg) 
+						border-box;
+					clip-path: polygon(0 0,100% 0,calc(100% - 0.577*var(--h)) 100%,0 100%);
+					padding: 0 calc(0.288*var(--h)) 0 0;
+					margin: 0 calc(-0.288*var(--h)) 0 0;
+					box-sizing: border-box;
+					transition: flex .4s;
+					}
+
+					.buttons button + button {
+					--_c: #FF003C;
+					flex: calc(.75 + var(--_s,0));
+					background: 
+						conic-gradient(from -90deg at calc(1.3*var(--b)) 100%,var(--_c) 119deg, #0000 121deg) 
+						border-box;
+					clip-path: polygon(calc(0.577*var(--h)) 0,100% 0,100% 100%,0 100%);
+					margin: 0 0 0 calc(-0.288*var(--h));
+					padding: 0 0 0 calc(0.288*var(--h));
+					}
+
+					.buttons button:focus-visible {
+					outline-offset: calc(-2*var(--b));
+					outline: calc(var(--b)/2) solid #000;
+					background: none;
+					clip-path: none;
+					margin: 0;
+					padding: 0;
+					}
+
+					.buttons button:focus-visible + button {
+					background: none;
+					clip-path: none;
+					margin: 0;
+					padding: 0;
+					}
+
+					.buttons button:has(+ button:focus-visible) {
+					background: none;
+					clip-path: none;
+					margin: 0;
+					padding: 0;
+					}
+
+					button:hover,
+					button:active:not(:focus-visible) {
+					--_s: .75;
+					}
+
+					button:active {
+					box-shadow: inset 0 0 0 100vmax var(--_c);
+					color: #fff;
+					}
+
+					body {
+					display: grid;
+					place-content: center;
+					margin: 0;
+					height: 100vh;
+					font-family: system-ui, sans-serif;
+					}
+				</style>
+				</head>
+			`))
+	}
 	body.Write([]byte(utils.GetString(mail, "content")))
+	body.WriteString("</html>")
+	body.WriteString("</body>")
+
+	if isValidButton {
+		host := os.Getenv("HOST")
+		if host == "" {
+			host = "http://capitalisation.irt-aese.local"
+		}
+		body.Write([]byte(fmt.Sprintf(`
+			<br>
+			<br>
+			<div class="buttons">
+				<form action="%s/v1/generic/dbemail_response?rows=all" method="POST">
+      				<input type="hidden" name="%s" value="%s">
+					<input type="hidden" name="got_response" value="true">
+					<button type="submit">VALID</button>
+				</form>
+				<form action="%s/v1/generic/dbemail_response?rows=all" method="POST">
+					<input type="hidden" name="action" value="confirm">
+					<input type="hidden" name="%s" value="%s">
+					<input type="hidden" name="got_response" value="false">
+					<button type="submit">REFUSED</button>
+				</form>
+			</div>
+			<br>
+			<br>
+		`, host, ds.EmailSendedDBField, id, host, ds.EmailSendedDBField, id)))
+	}
+
 	body.WriteString("\r\n--" + boundary + "\r\n")
 
 	smtpHost := os.Getenv("SMTP_HOST")
@@ -94,7 +213,6 @@ func SendMail(from string, to string, mail utils.Record) error {
 				}
 				body.WriteString(fileBase64[i:end] + "\r\n")
 			}
-
 			body.WriteString("--" + boundary + "--")
 		}
 	}
@@ -107,6 +225,7 @@ func SendMail(from string, to string, mail utils.Record) error {
 			to,
 		}, body.Bytes())
 	if err != nil {
+		fmt.Println("EMAIL NOT SEND", err)
 		return err
 	}
 	fmt.Println("EMAIL SEND")

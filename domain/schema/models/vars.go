@@ -66,7 +66,7 @@ const (
 	ENUMMATHFUNC
 	ONETOMANY
 	MANYTOMANY
-	LINK // is a link to the outside
+	URL // is a link to the outside
 	ENUMPLATFORM
 	ENUMTRANSFORM
 	ENUMBOOLEAN
@@ -105,7 +105,7 @@ func DataTypeList() []string {
 		"ENUM('" + COUNT + "', '" + AVG + "', '" + MIN + "', '" + MAX + "', '" + SUM + "')",
 		"ONETOMANY",
 		"MANYTOMANY",
-		"LINK",
+		"URL",
 		"ENUM('email', 'sms', 'teams')",
 		"ENUM('lowercase', 'uppercase')",
 		"ENUM('yes', 'no', 'i don't know')",

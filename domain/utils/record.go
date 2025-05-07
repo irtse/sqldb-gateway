@@ -89,6 +89,9 @@ func GetString(record map[string]interface{}, column string) string {
 
 func GetInt(record map[string]interface{}, column string) int64 {
 	str := ToString(record[column])
+	if str == "" {
+		return -1
+	}
 	val, _ := strconv.Atoi(str)
 	return int64(val)
 }
@@ -100,6 +103,9 @@ func (ar *Record) GetBool(column string) bool {
 
 func (ar *Record) GetInt(column string) int64 {
 	str := ToString((*ar)[column])
+	if str == "" {
+		return -1
+	}
 	val, _ := strconv.Atoi(str)
 	return int64(val)
 }

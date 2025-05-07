@@ -264,11 +264,13 @@ func (p *PermDomainService) checkUpdateCreatePermissions(tableName, destID strin
 		}
 	}
 	res, err := p.db.SimpleMathQuery("COUNT", ds.DBTask.Name, map[string]interface{}{
+		utils.SpecialIDParam: p.db.BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+			ds.UserDBField:   myUserID,
+			ds.EntityDBField: p.EntitySelectQuery(myUserID),
+		}, true),
 		ds.SchemaDBField:           sch.ID,
 		utils.RootDestTableIDParam: destID,
-		ds.UserDBField:             myUserID,
-		ds.EntityDBField:           p.EntitySelectQuery(myUserID),
 		"is_close":                 false,
-	}, true)
+	}, false)
 	return err == nil && len(res) > 0 && res[0]["result"] != nil && utils.ToInt64(res[0]["result"]) > 0
 }

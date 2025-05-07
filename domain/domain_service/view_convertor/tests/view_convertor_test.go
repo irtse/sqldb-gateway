@@ -1,10 +1,10 @@
 package view_convertor_test
 
 import (
+	"sqldb-ws/domain/domain_service/view_convertor"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/tests"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/domain/view_convertor"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

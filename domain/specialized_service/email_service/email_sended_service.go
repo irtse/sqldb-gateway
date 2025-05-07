@@ -16,9 +16,14 @@ type EmailSendedService struct {
 func (s *EmailSendedService) Entity() utils.SpecializedServiceInfo { return ds.DBEmailSended }
 
 func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
-	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
+	isValid := false
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
 		utils.SpecialIDParam: record[ds.EmailTemplateDBField],
 	}, false); err == nil && len(res) > 0 && utils.GetBool(res[0], "generate_task") {
+		if utils.GetBool(res[0], "waiting_response") {
+			// should enrich with a binary response yes or no.
+			isValid = true
+		}
 		i := int64(-1)
 		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 			ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
@@ -46,10 +51,12 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 		}
 	}
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
-	triggers.SendMail(utils.GetString(record, "from_email"), utils.GetString(record, "to_email"), record)
+
+	triggers.SendMail(utils.GetString(record, "from_email"), utils.GetString(record, "to_email"), record, utils.GetString(record, "id"), isValid)
 }
 
 func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
+	record["got_response"] = record["got_response"] == "true"
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
 
