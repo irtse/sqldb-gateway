@@ -13,7 +13,7 @@ services:
       - ./files:/mnt/files
     labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.datacsqldbenter.entrypoints=web"
+        - "traefik.http.routers.sqldb.entrypoints=web"
         - "traefik.http.routers.sqldb.rule=PathPrefix(`/sqldb`)"
         - "traefik.http.services.sqldb.loadbalancer.server.port=8080"
     environment:
