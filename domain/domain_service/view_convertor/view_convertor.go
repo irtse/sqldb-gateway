@@ -301,6 +301,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 			view.IsWrapper = tableName == ds.DBTask.Name || tableName == ds.DBRequest.Name
 			view.Path = v.BuildPath(sch.Name, utils.ReservedParam)
 			view.Schema = schema
+
 			view.SchemaID = id
 			view.SchemaName = tableName
 			view.Actions = addAction
@@ -308,9 +309,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 			view.Order = o
 			view.Consents = v.getConsent(utils.ToString(id))
 		}
-
 	}
-
 	return view.ToRecord()
 }
 

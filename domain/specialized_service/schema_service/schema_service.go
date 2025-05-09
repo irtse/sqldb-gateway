@@ -56,6 +56,7 @@ func (s *SchemaService) SpecializedDeleteRow(results []map[string]interface{}, t
 }
 
 func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
+
 	schema := sm.SchemaModel{}.Deserialize(record)
 	res, err := s.Domain.CreateSuperCall(utils.GetTableTargetParameters(record[sm.NAMEKEY]), record)
 	if err != nil || len(res) == 0 {
@@ -64,6 +65,12 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 	schema, err = schserv.SetSchema(record)
 	if err != nil {
 		return
+	}
+	if MissingField[utils.GetString(record, "name")] != nil {
+		l := MissingField[utils.GetString(record, "name")]
+		for _, r := range l {
+			s.Domain.CreateSuperCall(utils.AllParams(ds.DBSchemaField.Name), r)
+		}
 	}
 	for _, field := range s.Fields {
 		f := utils.ToMap(field)
@@ -147,6 +154,7 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 						"my data", schema.GetID(), int64(r.Int()), true, false, true, true, nil, nil, nil)
 					s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)
 				}
+
 			}
 		}
 

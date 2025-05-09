@@ -76,6 +76,7 @@ const (
 	UPLOAD
 	ENUMMODE
 	HTML
+	LINKADD
 )
 
 func DataTypeToEnum() string {
@@ -115,6 +116,7 @@ func DataTypeList() []string {
 		"UPLOAD",
 		"ENUM('manual', 'auto')",
 		"HTML",
+		"LINK_ADD",
 	}
 }
 

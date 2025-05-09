@@ -122,12 +122,7 @@ func (d *ViewConvertor) ProcessLinkedSchema(shallowField *sm.ViewFieldModel, sch
 	if (s.HasField(ds.SchemaDBField) && s.HasField(ds.DestTableDBField)) || schema.HasField(ds.SchemaDBField) {
 		shallowField.LinkPath = shallowField.ActionPath
 	}
-	if strings.Contains(scheme.Type, "manytomany") {
-		if schem, err := sch.GetSchemaByID(scheme.GetLink()); err == nil {
-			shallowField.LinkPath = fmt.Sprintf("/%s/%s?rows=all&%s=enable", utils.MAIN_PREFIX, schem.Name, utils.RootShallow)
-		}
-	}
-	if strings.Contains(scheme.Type, "onetomany") {
+	if strings.Contains(scheme.Type, "many") {
 		for _, field := range schema.Fields {
 			if strings.Contains(field.Name, "_id") && !strings.Contains(field.Name, tableName) && field.GetLink() > 0 {
 				schField, _ := sch.GetSchemaByID(field.GetLink())

@@ -11,7 +11,7 @@ import (
 
 var COUNTREQUEST = 0
 
-var SpecialTypes = []string{"char", "text", "date", "time", "interval", "var", "blob", "set", "enum", "year", "USER-DEFINED", "url", "upload", "html"}
+var SpecialTypes = []string{"char", "text", "date", "time", "interval", "var", "blob", "set", "enum", "year", "USER-DEFINED", "url", "upload", "html", "link_add"}
 
 func Quote(s string) string { return "'" + s + "'" }
 

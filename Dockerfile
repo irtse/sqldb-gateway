@@ -2,13 +2,19 @@ FROM golang:alpine as builder
  
 WORKDIR /app
  
-COPY . .
- 
-RUN apk add git
- 
-RUN go get github.com/beego/bee/v2 && go install github.com/beego/bee/v2@master
+COPY . . 
 
-RUN timeout 15 bee run -gendoc=true -downdoc=true -runmode=dev || :
+RUN go run main.go
+
+RUN cd plugins/cegid
+RUN go build -buildmode=plugin -o plugin.so plugin.go
+
+RUN cd ../autoload_cegid
+RUN go build -buildmode=plugin -o plugin.so plugin.go
+
+RUN cd ../..
+
+RUN go run main.go
  
 RUN sed -i 's/http:\/\/127.0.0.1:8080\/swagger\/swagger.json/swagger.json/g' swagger/index.html
 

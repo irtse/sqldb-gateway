@@ -11,13 +11,14 @@ import (
 	"strings"
 )
 
+var MissingField = map[string][]utils.Record{}
+
 // DONE - UNDER 100 LINES - NOT TESTED
 type SchemaFields struct{ servutils.SpecializedService }
 
 func (s *SchemaFields) Entity() utils.SpecializedServiceInfo { return ds.DBSchemaField }
 
 func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
-	fmt.Println("TTT", record["name"])
 	if s.Domain.GetMethod() == utils.DELETE { // delete root schema field
 		if s.Domain.IsSuperAdmin() {
 			return record, nil, false
@@ -40,11 +41,15 @@ func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablen
 		})
 	if !slices.Contains(ds.NOAUTOLOADROOTTABLESSTR, tablename) {
 		if rec, err := sch.ValidateBySchema(record, tablename, s.Domain.GetMethod(), s.Domain.VerifyAuth); err != nil {
+			if utils.CREATE == s.Domain.GetMethod() {
+				if MissingField[tablename] == nil {
+					MissingField[tablename] = []utils.Record{}
+				}
+				MissingField[tablename] = append(MissingField[tablename], record)
+			}
 			return s.SpecializedService.VerifyDataIntegrity(rec, tablename)
 		}
 	}
-	fmt.Println(record["name"])
-	fmt.Println(s.SpecializedService.VerifyDataIntegrity(record, tablename))
 	return s.SpecializedService.VerifyDataIntegrity(record, tablename)
 }
 
@@ -72,6 +77,8 @@ func (s *SchemaFields) Write(r map[string]interface{}, record map[string]interfa
 		record[sm.TYPEKEY] = "varchar"
 	} else if utils.ToString(typ) == "html" {
 		record[sm.TYPEKEY] = "text"
+	} else if utils.ToString(typ) == "link_add" {
+		record[sm.TYPEKEY] = "integer"
 	}
 	readLevels := []string{sm.LEVELNORMAL}
 	if level, ok := record["read_level"]; ok && level != "" && level != sm.LEVELOWN && slices.Contains(sm.READLEVELACCESS, utils.ToString(level)) {
