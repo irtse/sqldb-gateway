@@ -72,7 +72,7 @@ var publicationFields = []models.FieldModel{
 		Index: 3, Label: "axe", ForeignTable: Axis.Name},
 	{Name: "competence_center", Type: models.INTEGER.String(), Required: true,
 		Index: 4, Label: "centre de compétence", ForeignTable: CoCFR.Name},
-	{Name: "authors", Type: models.ONETOMANY.String(), Required: true,
+	{Name: "authors", Type: models.MANYTOMANY.String(), Required: true,
 		Index: 5, Label: "auteurs", ForeignTable: ds.DBUser.Name},
 	{Name: "affiliation", Type: models.VARCHAR.String(), Required: true,
 		Index: 6, Label: "affiliation"},

@@ -29,11 +29,7 @@ func (s *SchemaService) VerifyDataIntegrity(record map[string]interface{}, table
 	}
 	s.Fields = []interface{}{}
 	if fields, ok := record["fields"]; ok && fields != nil {
-		for _, field := range utils.ToList(fields) {
-			if !strings.Contains(utils.ToString(utils.ToMap(field)[sm.TYPEKEY]), "many") {
-				s.Fields = append(s.Fields, field)
-			}
-		}
+		s.Fields = utils.ToList(fields)
 		delete(record, "fields")
 	}
 	return s.SpecializedService.VerifyDataIntegrity(record, tablename)

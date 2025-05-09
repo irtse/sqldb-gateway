@@ -17,6 +17,7 @@ type SchemaFields struct{ servutils.SpecializedService }
 func (s *SchemaFields) Entity() utils.SpecializedServiceInfo { return ds.DBSchemaField }
 
 func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
+	fmt.Println("TTT", record["name"])
 	if s.Domain.GetMethod() == utils.DELETE { // delete root schema field
 		if s.Domain.IsSuperAdmin() {
 			return record, nil, false
@@ -42,6 +43,8 @@ func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablen
 			return s.SpecializedService.VerifyDataIntegrity(rec, tablename)
 		}
 	}
+	fmt.Println(record["name"])
+	fmt.Println(s.SpecializedService.VerifyDataIntegrity(record, tablename))
 	return s.SpecializedService.VerifyDataIntegrity(record, tablename)
 }
 
@@ -63,6 +66,7 @@ func (s *SchemaFields) Write(r map[string]interface{}, record map[string]interfa
 		return nil, err
 	}
 	if typ, ok := record[sm.TYPEKEY]; !ok || strings.Contains(utils.ToString(typ), "many") || schema.HasField(utils.ToString(record[sm.NAMEKEY])) {
+		fmt.Println("field already exists", typ, record[sm.NAMEKEY])
 		return nil, fmt.Errorf("field already exists")
 	} else if utils.ToString(typ) == "url" || utils.ToString(typ) == "upload" {
 		record[sm.TYPEKEY] = "varchar"

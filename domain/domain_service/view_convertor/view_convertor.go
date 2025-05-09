@@ -525,6 +525,7 @@ func (d *ViewConvertor) HandleLinkField(record utils.Record, field sm.FieldModel
 		return
 	}
 	link := scheme.GetTablename(utils.ToString(field.Link))
+
 	if strings.Contains(field.Type, "many") {
 		d.HandleManyField(record, field, tableName, link, manyVals, manyPathVals)
 		return
