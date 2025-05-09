@@ -40,11 +40,6 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 		utils.SpecialIDParam: utils.GetString(record, ds.EmailSendedDBField),
 	}, false); err == nil {
 		for _, r := range res {
-			if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
-				ds.EmailTemplateDBField: r[ds.EmailTemplateDBField],
-			}, false); err == nil && len(res) > 0 && utils.GetBool(res[0], "generate_task") {
-
-			}
 			if templs, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
 				utils.SpecialIDParam: utils.GetString(record, ds.EmailSendedDBField),
 			}, false); err == nil {
@@ -60,7 +55,7 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 								if utils.GetBool(r, "got_response") {
 									rec["state"] = "completed"
 								} else {
-									rec["state"] = "dismiss"
+									rec["state"] = "refused"
 								}
 								rec = task_service.SetClosureStatus(rec)
 								s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBTask.Name, rec[utils.SpecialIDParam]), rec)
