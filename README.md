@@ -54,9 +54,9 @@ SQLDB-WS SWAGGER : [localhost:8080/swagger](http://localhost:8080/swagger)
 
 Super Admin SQLDB-WS
 username : root
-password : 2,21Gigowatts
+password : admin
 
 {
   "login": "root",
-  "password": "2,21Gigowatts"
+  "password": "admin"
 }
