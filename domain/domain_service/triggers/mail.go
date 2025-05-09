@@ -172,21 +172,20 @@ func SendMail(from string, to string, mail utils.Record, id string, isValidButto
 			<br>
 			<br>
 			<div class="buttons">
-				<form action="%s/v1/generic/dbemail_response?rows=all" method="POST">
-      				<input type="hidden" name="%s" value="%s">
+				<form action="%s/v1/response/%s" method="POST">
 					<input type="hidden" name="got_response" value="true">
-					<button type="submit">VALID</button>
+					<button type="submit">%s</button>
 				</form>
-				<form action="%s/v1/generic/dbemail_response?rows=all" method="POST">
+				<form action="%s/v1/response/%s" method="POST">
 					<input type="hidden" name="action" value="confirm">
-					<input type="hidden" name="%s" value="%s">
 					<input type="hidden" name="got_response" value="false">
-					<button type="submit">REFUSED</button>
+					<button type="submit">%s</button>
 				</form>
 			</div>
 			<br>
 			<br>
-		`, host, ds.EmailSendedDBField, id, host, ds.EmailSendedDBField, id)))
+		`, host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("valid")),
+			host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("refused")))))
 	}
 
 	body.WriteString("\r\n--" + boundary + "\r\n")

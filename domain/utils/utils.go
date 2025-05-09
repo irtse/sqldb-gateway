@@ -1,7 +1,12 @@
 package utils
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -79,4 +84,32 @@ func ToString(who interface{}) string {
 
 func Compare(who interface{}, what interface{}) bool {
 	return who != nil && fmt.Sprintf("%v", who) == fmt.Sprintf("%v", what)
+}
+
+func Translate(str string) string {
+	url := "https://libretranslate.com/translate"
+	target := os.Getenv("LANG")
+	if target == "" {
+		target = "fr"
+	}
+
+	data := map[string]string{
+		"q":      str,
+		"source": "en",
+		"target": target,
+		"format": "text",
+	}
+	jsonData, _ := json.Marshal(data)
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	if body, err := io.ReadAll(resp.Body); err == nil {
+		var result map[string]interface{}
+		json.Unmarshal(body, &result)
+		return GetString(result, "translatedText")
+	}
+	return str
 }
