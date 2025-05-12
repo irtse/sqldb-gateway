@@ -7,6 +7,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    networks:
+      - sqldb
     ports: 
       - 8080:8080
     volumes:
@@ -35,3 +37,6 @@ services:
       DBNAME: ${DBNAME:-test}
       DBSSL: ${DBSSL:-disable}
       HOST: ${HOST:-http://capitalisation.irt-aese.local}
+networks:
+  sqldb:
+    external: true
