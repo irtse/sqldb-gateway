@@ -1,6 +1,7 @@
 package schema_service
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	sch "sqldb-ws/domain/schema"
@@ -45,7 +46,9 @@ func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablen
 				if MissingField[tablename] == nil {
 					MissingField[tablename] = []utils.Record{}
 				}
+				fmt.Println(tablename, record)
 				MissingField[tablename] = append(MissingField[tablename], record)
+				return nil, errors.New("later implementation"), false
 			}
 			return s.SpecializedService.VerifyDataIntegrity(rec, tablename)
 		}
