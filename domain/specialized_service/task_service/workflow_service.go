@@ -1,6 +1,7 @@
 package task_service
 
 import (
+	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/view_convertor"
 	"sqldb-ws/domain/schema"
@@ -18,6 +19,7 @@ type WorkflowService struct {
 func (s *WorkflowService) Entity() utils.SpecializedServiceInfo { return ds.DBWorkflow }
 
 func (s *WorkflowService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
+	fmt.Println("TH1", len(results))
 	res := utils.Results{}
 	for _, rec := range results { // filter by allowed schemas
 		schema, err := schema.GetSchemaByID(utils.ToInt64(rec[SchemaDBField]))
@@ -27,6 +29,7 @@ func (s *WorkflowService) TransformToGenericView(results utils.Results, tableNam
 			}
 		}
 	}
+	fmt.Println("TH2", len(res))
 	rr := view_convertor.NewViewConvertor(s.Domain).TransformToView(res, tableName, true, s.Domain.GetParams().Copy())
 	if _, ok := s.Domain.GetParams().Get(utils.SpecialIDParam); ok && len(results) == 1 && len(rr) == 1 {
 		r := results[0]
@@ -46,11 +49,15 @@ func (s *WorkflowService) TransformToGenericView(results utils.Results, tableNam
 			rr[0]["schema"] = newSchema
 		}
 	}
+	fmt.Println("TH3", rr)
 	return rr
 }
 
 func (s *WorkflowService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
-	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
+	fmt.Println("TH4", tableName)
+	s1, s2, s3, s4 := filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
+	fmt.Println("TH5", s1, s2, s3, s4)
+	return s1, s2, s3, s4
 }
 
 func (s *WorkflowService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
