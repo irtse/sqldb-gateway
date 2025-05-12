@@ -22,7 +22,7 @@ services:
       LDAP_OU: ${LDAP_USR:-OU=AD - IRT-AESE,DC=IRT-AESE,DC=local}
       LDAP_PWD: ${LDAP_PWD:-IRT@2015}
       SMTP_HOST: ${SMTP_HOST:-mail.irt-saintexupery.com}
-      SMTP_PORT: ${SMTP_PORT:-22}
+      SMTP_PORT: ${SMTP_PORT:-25}
       SUPERADMIN_NAME: ${SUPERADMIN_NAME:-root}
       SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-pro.morgane.roques@gmail.com}
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-admin}
