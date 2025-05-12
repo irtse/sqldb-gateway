@@ -69,7 +69,11 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 	if MissingField[utils.GetString(record, "name")] != nil {
 		l := MissingField[utils.GetString(record, "name")]
 		for _, r := range l {
-			s.Domain.CreateSuperCall(utils.AllParams(ds.DBSchemaField.Name), r)
+			if ft, err := schserv.GetSchema(utils.GetString(r, "foreign_table")); err == nil {
+				r["link_id"] = utils.ToInt64(ft.ID)
+				delete(r, "foreign_table")
+				s.Domain.CreateSuperCall(utils.AllParams(ds.DBSchemaField.Name), r)
+			}
 		}
 	}
 	for _, field := range s.Fields {

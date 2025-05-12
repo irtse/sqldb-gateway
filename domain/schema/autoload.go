@@ -73,6 +73,11 @@ func InitializeRootTables(domainInstance utils.DomainITF, demoTable []sm.SchemaM
 			bar.AddDetail("Creating Schema " + table.Name)
 			r := table.ToRecord()
 			for _, field := range table.Fields {
+				for _, f := range utils.ToList(r["fields"]) {
+					if utils.ToString(utils.ToMap(f)["name"]) == field.Name {
+						utils.ToMap(f)["foreign_table"] = field.ForeignTable
+					}
+				}
 				if schema, err := GetSchema(field.ForeignTable); err == nil {
 					for _, f := range utils.ToList(r["fields"]) {
 						if utils.ToString(utils.ToMap(f)["name"]) == field.Name {
