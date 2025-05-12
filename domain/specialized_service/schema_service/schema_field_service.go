@@ -40,16 +40,18 @@ func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablen
 			}
 			return strings.Replace(utils.ToString(i), "_", " ", -1)
 		})
+	if strings.Contains(utils.GetString(record, "type"), "many") {
+		if utils.CREATE == s.Domain.GetMethod() {
+			if MissingField[tablename] == nil {
+				MissingField[tablename] = []utils.Record{}
+			}
+			MissingField[tablename] = append(MissingField[tablename], record)
+			return nil, errors.New("later implementation"), false
+		}
+	}
 	if !slices.Contains(ds.NOAUTOLOADROOTTABLESSTR, tablename) {
 		if rec, err := sch.ValidateBySchema(record, tablename, s.Domain.GetMethod(), s.Domain.VerifyAuth); err != nil {
-			if utils.CREATE == s.Domain.GetMethod() {
-				if MissingField[tablename] == nil {
-					MissingField[tablename] = []utils.Record{}
-				}
-				fmt.Println(tablename, record)
-				MissingField[tablename] = append(MissingField[tablename], record)
-				return nil, errors.New("later implementation"), false
-			}
+
 			return s.SpecializedService.VerifyDataIntegrity(rec, tablename)
 		}
 	}
