@@ -230,26 +230,27 @@ type ManualTriggerModel struct {
 }
 
 type ViewModel struct { // lightest struct based on SchemaModel dedicate to view
-	ID          int64                    `json:"id"`
-	Name        string                   `json:"name"`
-	Label       string                   `json:"label"`
-	SchemaID    int64                    `json:"schema_id"`
-	SchemaName  string                   `json:"schema_name"`
-	Description string                   `json:"description"`
-	Path        string                   `json:"link_path"`
-	Order       []string                 `json:"order"`
-	Schema      utils.Record             `json:"schema"`
-	Items       []ViewItemModel          `json:"items"`
-	Actions     []string                 `json:"actions"`
-	ActionPath  string                   `json:"action_path"`
-	Readonly    bool                     `json:"readonly"`
-	Workflow    *WorkflowModel           `json:"workflow"`
-	IsWrapper   bool                     `json:"is_wrapper"`
-	Shortcuts   map[string]string        `json:"shortcuts"`
-	Consents    []map[string]interface{} `json:"consents"`
-	CommentBody map[string]interface{}   `json:"comment_body"`
-	Redirection string                   `json:"redirection,omitempty"`
-	Triggers    []ManualTriggerModel     `json:"triggers,omitempty"`
+	ID           int64                    `json:"id"`
+	Name         string                   `json:"name"`
+	Label        string                   `json:"label"`
+	SchemaID     int64                    `json:"schema_id"`
+	SchemaName   string                   `json:"schema_name"`
+	Description  string                   `json:"description"`
+	Path         string                   `json:"link_path"`
+	Order        []string                 `json:"order"`
+	Schema       utils.Record             `json:"schema"`
+	Items        []ViewItemModel          `json:"items"`
+	Actions      []string                 `json:"actions"`
+	ActionPath   string                   `json:"action_path"`
+	Readonly     bool                     `json:"readonly"`
+	Workflow     *WorkflowModel           `json:"workflow"`
+	IsWrapper    bool                     `json:"is_wrapper"`
+	Shortcuts    map[string]string        `json:"shortcuts"`
+	Consents     []map[string]interface{} `json:"consents"`
+	CommentBody  map[string]interface{}   `json:"comment_body"`
+	Translatable bool                     `json:"translatable,omitempty"`
+	Redirection  string                   `json:"redirection,omitempty"`
+	Triggers     []ManualTriggerModel     `json:"triggers,omitempty"`
 }
 
 func (v ViewModel) ToRecord() utils.Record {

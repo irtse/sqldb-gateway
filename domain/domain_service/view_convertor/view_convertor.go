@@ -253,7 +253,13 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 		label = record.GetString(sm.LABELKEY)
 	}
 	otherOrder := []string{}
+	translatable := true
 	if sch, err := scheme.GetSchema(tableName); err == nil {
+		if f, err := sch.GetField("label"); err == nil {
+			translatable = f.Translatable
+		} else if f, err := sch.GetField("name"); err == nil {
+			translatable = f.Translatable
+		}
 		ts = v.getTriggers(record, v.Domain.GetMethod(), sch, utils.GetInt(record, ds.SchemaDBField), utils.GetInt(record, ds.DestTableDBField))
 		_, ok := v.Domain.GetParams().Get(utils.RootShallow)
 		if ok {
@@ -275,12 +281,13 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 	}
 
 	view := sm.ViewModel{
-		ID:          record.GetInt(utils.SpecialIDParam),
-		Name:        record.GetString(sm.NAMEKEY),
-		Label:       label,
-		Workflow:    v.EnrichWithWorkFlowView(record, tableName, isWorkflow),
-		Redirection: v.getRedirection(),
-		Triggers:    ts,
+		ID:           record.GetInt(utils.SpecialIDParam),
+		Name:         record.GetString(sm.NAMEKEY),
+		Label:        label,
+		Workflow:     v.EnrichWithWorkFlowView(record, tableName, isWorkflow),
+		Redirection:  v.getRedirection(),
+		Translatable: translatable,
+		Triggers:     ts,
 	}
 
 	if _, ok := v.Domain.GetParams().Get(utils.SpecialIDParam); ok && record[ds.SchemaDBField] != nil {
