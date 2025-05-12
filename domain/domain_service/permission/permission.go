@@ -2,6 +2,7 @@ package permission
 
 import (
 	"encoding/json"
+	"fmt"
 	"slices"
 	"sqldb-ws/domain/schema"
 	schserv "sqldb-ws/domain/schema"
@@ -146,9 +147,12 @@ func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, le
 	if p.IsSuperAdmin || p.exception(tableName, level == "" || level == "<nil>" || level == sm.LEVELNORMAL, method, isOwn) {
 		return true
 	}
+
 	// Build permissions if empty
 	if len(p.Perms) == 0 {
+		fmt.Println("BUILD")
 		p.PermsBuilder(myUserID)
+		fmt.Println("BUILD MEH")
 	}
 	// Retrieve permissions
 	p.mutexPerms.Lock()
@@ -160,6 +164,7 @@ func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, le
 		return false
 	}
 	if method == utils.SELECT && !p.hasReadAccess(level, perms.Read) {
+		fmt.Println("SELECT", destID, tableName)
 		return p.getShare(schema, destID, "read_access", true)
 	}
 	// Handle UPDATE and CREATE permissions
