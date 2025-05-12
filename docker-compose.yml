@@ -16,7 +16,7 @@ services:
     labels:
         - "traefik.enable=true"
         - "traefik.http.routers.sqldb.entrypoints=web"
-        - "traefik.http.routers.sqldb.rule=PathPrefix(`/sqldb`)"
+        - "traefik.http.routers.sqldb.rule=PathPrefix(`/`)"
         - "traefik.http.services.sqldb.loadbalancer.server.port=8080"
     environment:
       LDAP_ADDR: ${LDAP_ADDR:-ldap://irt00v001.irt-aese.local:389}
@@ -36,7 +36,7 @@ services:
       DBPWD : ${DBPWD:-test}
       DBNAME: ${DBNAME:-test}
       DBSSL: ${DBSSL:-disable}
-      HOST: ${HOST:-http://capitalisation.irt-aese.local}
+      HOST: ${HOST:-http://capitalisation.irt-aese.local/sqldb}
 networks:
   sqldb:
     external: true
