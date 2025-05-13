@@ -251,6 +251,7 @@ type ViewModel struct { // lightest struct based on SchemaModel dedicate to view
 	Translatable bool                     `json:"translatable,omitempty"`
 	Redirection  string                   `json:"redirection,omitempty"`
 	Triggers     []ManualTriggerModel     `json:"triggers,omitempty"`
+	Max          int64                    `json:"max"`
 }
 
 func (v ViewModel) ToRecord() utils.Record {

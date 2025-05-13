@@ -101,6 +101,10 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 
 func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName string, isWorkflow bool) utils.Results {
 	res := utils.Results{}
+	max := int64(0)
+	if sch, err := scheme.GetSchema(tableName); err == nil {
+		_, max = filter.NewFilterService(v.Domain).CountNewDataAccess(sch.Name, []interface{}{})
+	}
 	for _, record := range results {
 		if _, ok := record["is_draft"]; ok && record.GetBool("is_draft") && !v.Domain.IsOwn(false, false, utils.SELECT) {
 			continue
@@ -109,7 +113,7 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 			res = append(res, record)
 			continue
 		}
-		res = append(res, v.createShallowedViewItem(record, tableName, isWorkflow))
+		res = append(res, v.createShallowedViewItem(record, tableName, isWorkflow, max))
 	}
 	return res
 }
@@ -246,7 +250,7 @@ func (s *ViewConvertor) getFieldsFill(sch sm.SchemaModel, values map[string]inte
 	return values
 }
 
-func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName string, isWorkflow bool) utils.Record {
+func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName string, isWorkflow bool, max int64) utils.Record {
 	ts := []sm.ManualTriggerModel{}
 	label := record.GetString(sm.NAMEKEY)
 	if record.GetString(sm.LABELKEY) != "" {
@@ -279,7 +283,6 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 			}
 		}
 	}
-
 	view := sm.ViewModel{
 		ID:           record.GetInt(utils.SpecialIDParam),
 		Name:         record.GetString(sm.NAMEKEY),
@@ -288,6 +291,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 		Redirection:  v.getRedirection(),
 		Translatable: translatable,
 		Triggers:     ts,
+		Max:          max,
 	}
 
 	if _, ok := v.Domain.GetParams().Get(utils.SpecialIDParam); ok && record[ds.SchemaDBField] != nil {

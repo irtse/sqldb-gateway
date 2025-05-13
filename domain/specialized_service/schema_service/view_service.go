@@ -181,7 +181,8 @@ func (s *ViewService) fetchData(params utils.Params, domainParams utils.Params, 
 			params.SimpleDelete("offset")
 			filterService := filterserv.NewFilterService(s.Domain)
 			restriction, _, _, _ := filterService.GetQueryFilter(schema.Name, params, sqlFilter)
-			rec["new"], rec["max"] = filterService.CountNewDataAccess(schema.Name, []interface{}{restriction})
+			// rec["new"], rec["max"] = filterService.CountNewDataAccess(schema.Name, []interface{}{restriction})
+			_, rec["max"] = filterService.CountNewDataAccess(schema.Name, []interface{}{restriction})
 			s.Domain.GetDb().ClearQueryFilter()
 		}
 		for _, data := range d {

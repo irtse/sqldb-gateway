@@ -30,7 +30,7 @@ func (s *WorkflowService) TransformToGenericView(results utils.Results, tableNam
 	rr := view_convertor.NewViewConvertor(s.Domain).TransformToView(res, tableName, true, s.Domain.GetParams().Copy())
 	if _, ok := s.Domain.GetParams().Get(utils.SpecialIDParam); ok && len(results) == 1 && len(rr) == 1 {
 		r := results[0]
-		if i, ok := r[ds.FilterDBField]; ok {
+		if i, ok := r["view_"+ds.FilterDBField]; ok {
 			schema := rr[0]["schema"].(map[string]interface{})
 			newSchema := map[string]interface{}{}
 			if fields, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBSchemaField.Name,
