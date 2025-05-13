@@ -87,9 +87,9 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 		} else {
 			shallowField.Type = utils.TransformType(scheme.Type)
 		}
-		if scheme.GetLink() > 0 {
+		/*if scheme.GetLink() > 0 {
 			d.ProcessLinkedSchema(&shallowField, scheme, tableName, schema)
-		}
+		}*/
 		shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName, additionalActions, schema)
 		var m map[string]interface{}
 		b, _ = json.Marshal(shallowField)
