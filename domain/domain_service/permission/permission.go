@@ -22,24 +22,22 @@ type Perms struct {
 }
 
 type PermDomainService struct {
-	mutexPerms        sync.RWMutex
-	AlreadyCheckPerms map[string]map[utils.Method]bool
-	Perms             map[string]map[string]Perms
-	IsSuperAdmin      bool
-	Empty             bool
-	User              string
-	db                *conn.Database
+	mutexPerms   sync.RWMutex
+	Perms        map[string]map[string]Perms
+	IsSuperAdmin bool
+	Empty        bool
+	User         string
+	db           *conn.Database
 }
 
 func NewPermDomainService(db *conn.Database, user string, isSuperAdmin bool, empty bool) *PermDomainService {
 	return &PermDomainService{
-		mutexPerms:        sync.RWMutex{},
-		AlreadyCheckPerms: map[string]map[utils.Method]bool{},
-		Perms:             map[string]map[string]Perms{},
-		IsSuperAdmin:      isSuperAdmin,
-		Empty:             empty,
-		db:                db,
-		User:              user,
+		mutexPerms:   sync.RWMutex{},
+		Perms:        map[string]map[string]Perms{},
+		IsSuperAdmin: isSuperAdmin,
+		Empty:        empty,
+		db:           db,
+		User:         user,
 	}
 }
 
@@ -163,11 +161,6 @@ func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, le
 		return false
 	}
 	accesGranted := true
-	if already, ok := p.AlreadyCheckPerms[tableName+":"+colName]; ok {
-		if granted, ok := already[method]; ok {
-			return granted
-		}
-	}
 	if method == utils.SELECT && !p.hasReadAccess(level, perms.Read) {
 		accesGranted = p.getShare(schema, destID, "read_access", true)
 	}
@@ -183,10 +176,6 @@ func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, le
 	if method == utils.DELETE && !perms.Delete {
 		accesGranted = p.getShare(schema, destID, "delete_access", true)
 	}
-	if p.AlreadyCheckPerms[tableName+":"+colName] == nil {
-		p.AlreadyCheckPerms[tableName+":"+colName] = map[utils.Method]bool{}
-	}
-	p.AlreadyCheckPerms[tableName+":"+colName][method] = accesGranted
 	// Handle DELETE permissions
 	return accesGranted
 }
