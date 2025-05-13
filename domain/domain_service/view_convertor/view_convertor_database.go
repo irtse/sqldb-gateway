@@ -72,7 +72,6 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 	}
 	for _, scheme := range schema.Fields {
 		if !d.Domain.IsSuperAdmin() && !d.Domain.VerifyAuth(tableName, scheme.Name, scheme.Level, utils.SELECT) {
-			fmt.Println(scheme.Name)
 			continue
 		}
 		shallowField := sm.ViewFieldModel{

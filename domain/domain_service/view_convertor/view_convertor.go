@@ -30,7 +30,6 @@ func NewViewConvertor(domain utils.DomainITF) *ViewConvertor {
 }
 
 func (v *ViewConvertor) TransformToView(results utils.Results, tableName string, isWorkflow bool, params utils.Params) utils.Results {
-	fmt.Println(len(results))
 	schema, err := scheme.GetSchema(tableName)
 	if err != nil {
 		if results == nil {
