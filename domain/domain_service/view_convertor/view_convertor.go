@@ -607,6 +607,7 @@ func (d *ViewConvertor) getTriggers(record utils.Record, method utils.Method, fr
 	}
 	mt := []sm.ManualTriggerModel{}
 	triggerService := triggers.NewTrigger(d.Domain)
+	fmt.Println(fromSchema.Name, method, "manual")
 	if res, err := triggerService.GetTriggers("manual", method, fromSchema.ID); err == nil {
 		fmt.Println(len(res), err)
 		for _, r := range res {
