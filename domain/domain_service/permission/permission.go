@@ -3,6 +3,7 @@ package permission
 import (
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 	"slices"
 	"sqldb-ws/domain/schema"
 	schserv "sqldb-ws/domain/schema"
@@ -54,6 +55,8 @@ func (p *PermDomainService) PermsBuilder(userID string) {
 	for _, record := range datas {
 		p.ProcessPermissionRecord(record)
 	}
+	fmt.Println("PERMSBUILDER")
+	debug.PrintStack()
 }
 
 func (p *PermDomainService) BuildFilterOwnPermsQueryRestriction(userID string) map[string]interface{} {
@@ -150,9 +153,7 @@ func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, le
 
 	// Build permissions if empty
 	if len(p.Perms) == 0 {
-		fmt.Println("BUILD")
 		p.PermsBuilder(myUserID)
-		fmt.Println("BUILD MEH")
 	}
 	// Retrieve permissions
 	p.mutexPerms.Lock()
@@ -163,8 +164,8 @@ func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, le
 	if err != nil {
 		return false
 	}
+	fmt.Println("SELECT", destID, tableName)
 	if method == utils.SELECT && !p.hasReadAccess(level, perms.Read) {
-		fmt.Println("SELECT", destID, tableName)
 		return p.getShare(schema, destID, "read_access", true)
 	}
 	// Handle UPDATE and CREATE permissions
