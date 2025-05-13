@@ -87,9 +87,9 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 		} else {
 			shallowField.Type = utils.TransformType(scheme.Type)
 		}
-		/*if scheme.GetLink() > 0 {
+		if scheme.GetLink() > 0 {
 			d.ProcessLinkedSchema(&shallowField, scheme, tableName, schema)
-		}*/
+		}
 		shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName, additionalActions, schema)
 		var m map[string]interface{}
 		b, _ = json.Marshal(shallowField)
@@ -176,13 +176,13 @@ func (d *ViewConvertor) CheckAndAddImportAction(additionalActions []string, sche
 func (d *ViewConvertor) HandleRecursivePermissions(shallowField sm.ViewFieldModel, scheme sm.FieldModel, meth utils.Method) sm.ViewFieldModel {
 	schema, _ := sch.GetSchemaByID(scheme.GetLink())
 	if d.Domain.VerifyAuth(schema.Name, "", "", meth) {
-		if s, ok := d.SchemaSeen[schema.Name]; !ok {
+		/*if s, ok := d.SchemaSeen[schema.Name]; !ok {
 			sch, _, _, _, _, _ := d.GetViewFields(schema.Name, true)
 			d.SchemaSeen[schema.Name] = sch
 			shallowField.DataSchema = sch
 		} else {
 			shallowField.DataSchema = s
-		}
+		}*/
 		if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") {
 			shallowField.Type = "link"
 		} else {
