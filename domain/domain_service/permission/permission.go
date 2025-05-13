@@ -3,7 +3,6 @@ package permission
 import (
 	"encoding/json"
 	"fmt"
-	"runtime/debug"
 	"slices"
 	"sqldb-ws/domain/schema"
 	schserv "sqldb-ws/domain/schema"
@@ -24,12 +23,13 @@ type Perms struct {
 }
 
 type PermDomainService struct {
-	mutexPerms   sync.RWMutex
-	Perms        map[string]map[string]Perms
-	IsSuperAdmin bool
-	Empty        bool
-	User         string
-	db           *conn.Database
+	mutexPerms        sync.RWMutex
+	AlreadyCheckPerms map[string]map[utils.Method]bool
+	Perms             map[string]map[string]Perms
+	IsSuperAdmin      bool
+	Empty             bool
+	User              string
+	db                *conn.Database
 }
 
 func NewPermDomainService(db *conn.Database, user string, isSuperAdmin bool, empty bool) *PermDomainService {
@@ -162,26 +162,35 @@ func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, le
 	if err != nil {
 		return false
 	}
-	fmt.Println("SELECT", destID, tableName)
-	debug.PrintStack()
+	accesGranted := true
+	if already, ok := p.AlreadyCheckPerms[tableName+":"+colName]; ok {
+		if granted, ok := already[method]; ok {
+			fmt.Println("ALREADY GRANTED", granted)
+
+			return granted
+		}
+	}
 	if method == utils.SELECT && !p.hasReadAccess(level, perms.Read) {
-		return p.getShare(schema, destID, "read_access", true)
+		accesGranted = p.getShare(schema, destID, "read_access", true)
 	}
 	// Handle UPDATE and CREATE permissions
 	if method == utils.CREATE && !perms.Create {
-		return p.getShare(schema, destID, "create_access", true)
+		accesGranted = p.getShare(schema, destID, "create_access", true)
 	}
 	if method == utils.UPDATE && !perms.Update {
 		if !p.checkUpdateCreatePermissions(tableName, destID, myUserID) {
-			return p.getShare(schema, destID, "update_access", true)
+			accesGranted = p.getShare(schema, destID, "update_access", true)
 		}
-		return true
 	}
 	if method == utils.DELETE && !perms.Delete {
-		return p.getShare(schema, destID, "delete_access", true)
+		accesGranted = p.getShare(schema, destID, "delete_access", true)
 	}
+	if p.AlreadyCheckPerms[tableName+":"+colName] == nil {
+		p.AlreadyCheckPerms[tableName+":"+colName] = map[utils.Method]bool{}
+	}
+	p.AlreadyCheckPerms[tableName+":"+colName][method] = accesGranted
 	// Handle DELETE permissions
-	return true
+	return accesGranted
 }
 
 func (p *PermDomainService) getShare(schema sm.SchemaModel, destID string, key string, val bool) bool {
