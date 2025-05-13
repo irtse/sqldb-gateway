@@ -34,12 +34,13 @@ type PermDomainService struct {
 
 func NewPermDomainService(db *conn.Database, user string, isSuperAdmin bool, empty bool) *PermDomainService {
 	return &PermDomainService{
-		mutexPerms:   sync.RWMutex{},
-		Perms:        map[string]map[string]Perms{},
-		IsSuperAdmin: isSuperAdmin,
-		Empty:        empty,
-		db:           db,
-		User:         user,
+		mutexPerms:        sync.RWMutex{},
+		Perms:             map[string]map[string]Perms{},
+		AlreadyCheckPerms: map[string]map[utils.Method]bool{},
+		IsSuperAdmin:      isSuperAdmin,
+		Empty:             empty,
+		db:                db,
+		User:              user,
 	}
 }
 
