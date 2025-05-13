@@ -142,22 +142,24 @@ func ImportProjectAxis() {
 				}, false)
 				m := map[string]interface{}{
 					ds.UserDBField: respPrj,
-					ds.EntityDBField: d.GetDb().BuildSelectQueryWithRestriction(
-						ds.DBEntity.Name, map[string]interface{}{
-							"name": res[0]["name"],
-						}, false, "id"),
 				}
-				d.GetDb().DeleteQueryWithRestriction(ds.DBEntityUser.Name, m, false)
 				m2 := map[string]interface{}{
 					ds.UserDBField: respPrj,
-					ds.EntityDBField: d.GetDb().BuildSelectQueryWithRestriction(
-						ds.DBEntity.Name, map[string]interface{}{
-							"name": "CDP",
-						}, false, "id"),
 				}
-				d.GetDb().DeleteQueryWithRestriction(ds.DBEntityUser.Name, m2, false)
 				if respPrj >= 0 { // add a CDP to a project
+					if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBEntity.Name, map[string]interface{}{
+						"name": connector.Quote(utils.ToString(res[0]["name"])),
+					}, false); err == nil && len(res) > 0 {
+						m[ds.EntityDBField] = res[0][utils.SpecialIDParam]
+					}
+					d.GetDb().DeleteQueryWithRestriction(ds.DBEntityUser.Name, m, false)
 					d.GetDb().CreateQuery(ds.DBEntityUser.Name, m, func(s string) (string, bool) { return "", true })
+					if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBEntity.Name, map[string]interface{}{
+						"name": "'CDP'",
+					}, false); err == nil && len(res) > 0 {
+						m2[ds.EntityDBField] = res[0][utils.SpecialIDParam]
+					}
+					d.GetDb().DeleteQueryWithRestriction(ds.DBEntityUser.Name, m2, false)
 					d.GetDb().CreateQuery(ds.DBEntityUser.Name, m2, func(s string) (string, bool) { return "", true })
 				}
 				continue
@@ -253,16 +255,27 @@ func ImportUserHierachy() {
 			}
 			m := map[string]interface{}{
 				ds.UserDBField: d.GetDb().BuildSelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-					"name": record["name"],
+					"name": connector.Quote(utils.ToString(record["name"])),
 				}, false, "id"),
 				ds.EntityDBField: d.GetDb().BuildSelectQueryWithRestriction(
 					ds.DBEntity.Name, map[string]interface{}{
 						"name": cocName,
 					}, false, "id"),
 			}
-			d.GetDb().DeleteQueryWithRestriction(ds.DBEntityUser.Name, m, false)
 			if cocName != "" { // add a CDP to a project
-				d.GetDb().CreateQuery(ds.DBEntityUser.Name, m, func(s string) (string, bool) { return "", true })
+				if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
+					"name": connector.Quote(utils.ToString(record["name"])),
+				}, false); err == nil && len(res) > 0 {
+					m[ds.UserDBField] = res[0][utils.SpecialIDParam]
+				}
+				if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBEntity.Name, map[string]interface{}{
+					"name": connector.Quote(cocName),
+				}, false); err == nil && len(res) > 0 {
+					d.GetDb().DeleteQueryWithRestriction(ds.DBEntityUser.Name, m, false)
+
+					m[ds.EntityDBField] = res[0][utils.SpecialIDParam]
+					d.GetDb().CreateQuery(ds.DBEntityUser.Name, m, func(s string) (string, bool) { return "", true })
+				}
 			}
 		}
 	}

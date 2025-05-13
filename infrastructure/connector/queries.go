@@ -20,6 +20,9 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		db = Open(db)
 		defer db.Close()
 	}
+	if name == "competence_center" {
+		fmt.Println(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
+	}
 	res, err := db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
 	return res, err
 }
@@ -69,6 +72,9 @@ func (db *Database) CreateQuery(name string, record map[string]interface{}, veri
 	for _, query := range db.BuildCreateQueries(name, strings.Join(values, ","), strings.Join(columns, ","), "") {
 
 		if db.GetDriver() == PostgresDriver {
+			if name == "dbentity_user" {
+				fmt.Println(query)
+			}
 			return db.QueryRow(query)
 		} else if db.GetDriver() == MySQLDriver {
 			if stmt, err := db.Prepare(query); err != nil {

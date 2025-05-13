@@ -7,6 +7,7 @@ import (
 	"sqldb-ws/domain/utils"
 	conn "sqldb-ws/infrastructure/connector"
 	"strconv"
+	"strings"
 )
 
 func GetTablename(supposedTableName string) string {
@@ -163,6 +164,9 @@ func ValidateBySchema(data utils.Record, tableName string, method utils.Method,
 	newData := utils.Record{}
 	for _, field := range schema.Fields {
 		if field.Required && field.Default == nil && method != utils.UPDATE {
+			if strings.Contains(field.Type, "many") || strings.Contains(field.Type, "upload") {
+				continue
+			}
 			if _, ok := data[field.Name]; !(ok || field.Name == utils.SpecialIDParam || !check(tableName, field.Name, field.Level, utils.SELECT)) {
 				if field.Label != "" {
 					return data, errors.New("Missing a required field " + field.Label + " (can't see it ? you probably missing permissions)")
