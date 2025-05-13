@@ -55,8 +55,6 @@ func (p *PermDomainService) PermsBuilder(userID string) {
 	for _, record := range datas {
 		p.ProcessPermissionRecord(record)
 	}
-	fmt.Println("PERMSBUILDER")
-	debug.PrintStack()
 }
 
 func (p *PermDomainService) BuildFilterOwnPermsQueryRestriction(userID string) map[string]interface{} {
@@ -165,6 +163,7 @@ func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, le
 		return false
 	}
 	fmt.Println("SELECT", destID, tableName)
+	debug.PrintStack()
 	if method == utils.SELECT && !p.hasReadAccess(level, perms.Read) {
 		return p.getShare(schema, destID, "read_access", true)
 	}
