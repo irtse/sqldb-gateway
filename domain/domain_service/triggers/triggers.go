@@ -339,5 +339,6 @@ func (t *TriggerService) getLinkLabel(toSchema sm.SchemaModel, record utils.Reco
 			}
 		}
 	}
+	fmt.Println("record", record)
 	return record
 }
