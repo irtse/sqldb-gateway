@@ -602,7 +602,7 @@ func (d *ViewConvertor) ApplyCommandRow(record utils.Record, vals map[string]int
 }
 
 func (d *ViewConvertor) getTriggers(record utils.Record, method utils.Method, fromSchema sm.SchemaModel, toSchemaID, destID int64) []sm.ManualTriggerModel {
-	if _, ok := d.Domain.GetParams().Get(utils.SpecialIDParam); method == utils.DELETE || !ok {
+	if _, ok := d.Domain.GetParams().Get(utils.SpecialIDParam); method == utils.DELETE || (!ok && method == utils.SELECT) {
 		return []sm.ManualTriggerModel{}
 	}
 	mt := []sm.ManualTriggerModel{}
