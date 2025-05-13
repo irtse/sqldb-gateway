@@ -30,6 +30,7 @@ func NewViewConvertor(domain utils.DomainITF) *ViewConvertor {
 }
 
 func (v *ViewConvertor) TransformToView(results utils.Results, tableName string, isWorkflow bool, params utils.Params) utils.Results {
+	fmt.Println(len(results))
 	schema, err := scheme.GetSchema(tableName)
 	if err != nil {
 		if results == nil {
@@ -607,7 +608,6 @@ func (d *ViewConvertor) getTriggers(record utils.Record, method utils.Method, fr
 	}
 	mt := []sm.ManualTriggerModel{}
 	triggerService := triggers.NewTrigger(d.Domain)
-	fmt.Println(fromSchema.Name, method, "manual")
 	if res, err := triggerService.GetTriggers("manual", method, fromSchema.ID); err == nil {
 		for _, r := range res {
 			typ := utils.GetString(r, "type")

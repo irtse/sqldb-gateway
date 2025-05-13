@@ -148,7 +148,7 @@ func (s *ViewService) addFavorizeInfo(record utils.Record, rec utils.Record) uti
 	rec["favorize_path"] = fmt.Sprintf("/%s/%s?%s=%s",
 		utils.MAIN_PREFIX, ds.DBViewAttribution.Name, utils.RootRowsParam, utils.ReservedParam)
 
-	attributions, _ := s.Domain.GetDb().SelectQueryWithRestriction(
+	attributions, _ := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(
 		ds.DBViewAttribution.Name,
 		map[string]interface{}{
 			ds.UserDBField: s.Domain.GetUserID(),

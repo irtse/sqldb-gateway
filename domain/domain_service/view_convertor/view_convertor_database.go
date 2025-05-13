@@ -72,6 +72,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 	}
 	for _, scheme := range schema.Fields {
 		if !d.Domain.IsSuperAdmin() && !d.Domain.VerifyAuth(tableName, scheme.Name, scheme.Level, utils.SELECT) {
+			fmt.Println(scheme.Name)
 			continue
 		}
 		shallowField := sm.ViewFieldModel{
@@ -176,13 +177,16 @@ func (d *ViewConvertor) CheckAndAddImportAction(additionalActions []string, sche
 func (d *ViewConvertor) HandleRecursivePermissions(shallowField sm.ViewFieldModel, scheme sm.FieldModel, meth utils.Method) sm.ViewFieldModel {
 	schema, _ := sch.GetSchemaByID(scheme.GetLink())
 	if d.Domain.VerifyAuth(schema.Name, "", "", meth) {
-		/*if s, ok := d.SchemaSeen[schema.Name]; !ok {
-			sch, _, _, _, _, _ := d.GetViewFields(schema.Name, true)
-			d.SchemaSeen[schema.Name] = sch
-			shallowField.DataSchema = sch
-		} else {
-			shallowField.DataSchema = s
-		}*/
+		if strings.Contains(scheme.Type, "onetomany") {
+			if s, ok := d.SchemaSeen[schema.Name]; !ok {
+				sch, _, _, _, _, _ := d.GetViewFields(schema.Name, true)
+				d.SchemaSeen[schema.Name] = sch
+				shallowField.DataSchema = sch
+			} else {
+				shallowField.DataSchema = s
+			}
+		}
+
 		if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") {
 			shallowField.Type = "link"
 		} else {

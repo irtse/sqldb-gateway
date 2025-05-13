@@ -5,7 +5,6 @@ import (
 	"sqldb-ws/domain/domain_service/view_convertor"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
-	sm "sqldb-ws/domain/schema/models"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	utils "sqldb-ws/domain/utils"
 )
@@ -22,15 +21,13 @@ func (s *WorkflowService) TransformToGenericView(results utils.Results, tableNam
 	for _, rec := range results { // filter by allowed schemas
 		schema, err := schema.GetSchemaByID(utils.ToInt64(rec[SchemaDBField]))
 		if err == nil && s.Domain.VerifyAuth(schema.Name, "", "", utils.CREATE) {
-			if !(!schema.HasField(sm.NAMEKEY) && !s.Domain.IsSuperAdmin()) {
-				res = append(res, rec)
-			}
+			res = append(res, rec)
 		}
 	}
 	rr := view_convertor.NewViewConvertor(s.Domain).TransformToView(res, tableName, true, s.Domain.GetParams().Copy())
 	if _, ok := s.Domain.GetParams().Get(utils.SpecialIDParam); ok && len(results) == 1 && len(rr) == 1 {
 		r := results[0]
-		if i, ok := r["view_"+ds.FilterDBField]; ok {
+		if i, ok := r["view_"+ds.FilterDBField]; ok && i != nil {
 			schema := rr[0]["schema"].(map[string]interface{})
 			newSchema := map[string]interface{}{}
 			if fields, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBSchemaField.Name,
