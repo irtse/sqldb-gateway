@@ -2,7 +2,6 @@ package permission
 
 import (
 	"encoding/json"
-	"fmt"
 	"slices"
 	"sqldb-ws/domain/schema"
 	schserv "sqldb-ws/domain/schema"
@@ -34,13 +33,12 @@ type PermDomainService struct {
 
 func NewPermDomainService(db *conn.Database, user string, isSuperAdmin bool, empty bool) *PermDomainService {
 	return &PermDomainService{
-		mutexPerms:        sync.RWMutex{},
-		Perms:             map[string]map[string]Perms{},
-		AlreadyCheckPerms: map[string]map[utils.Method]bool{},
-		IsSuperAdmin:      isSuperAdmin,
-		Empty:             empty,
-		db:                db,
-		User:              user,
+		mutexPerms:   sync.RWMutex{},
+		Perms:        map[string]map[string]Perms{},
+		IsSuperAdmin: isSuperAdmin,
+		Empty:        empty,
+		db:           db,
+		User:         user,
 	}
 }
 
@@ -166,8 +164,6 @@ func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, le
 	accesGranted := true
 	if already, ok := p.AlreadyCheckPerms[tableName+":"+colName]; ok {
 		if granted, ok := already[method]; ok {
-			fmt.Println("ALREADY GRANTED", granted)
-
 			return granted
 		}
 	}

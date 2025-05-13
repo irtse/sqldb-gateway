@@ -77,7 +77,6 @@ func (s *SchemaFields) Write(r map[string]interface{}, record map[string]interfa
 		return nil, err
 	}
 	if typ, ok := record[sm.TYPEKEY]; !ok || strings.Contains(utils.ToString(typ), "many") || schema.HasField(utils.ToString(record[sm.NAMEKEY])) {
-		fmt.Println("field already exists", typ, record[sm.NAMEKEY])
 		return nil, fmt.Errorf("field already exists")
 	} else if utils.ToString(typ) == "url" || utils.ToString(typ) == "upload" {
 		record[sm.TYPEKEY] = "varchar"
