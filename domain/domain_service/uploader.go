@@ -31,7 +31,7 @@ func (u *Uploader) ApplyUpload(file multipart.File, handler *multipart.FileHeade
 	} else if id, ok := u.Domain.GetParams().Get(utils.SpecialIDParam); ok {
 		if path, err := u.upload(file, handler); err == nil {
 			if sch, err := schema.GetSchema(schema.GetTablename(tableName)); err == nil && sch.HasField(columnName) {
-				if f, _ := sch.GetField(columnName); f.Type != "upload" {
+				if f, _ := sch.GetField(columnName); strings.Contains(f.Type, "upload") {
 					return "", errors.New("must be a field of upload type")
 				}
 				if err := u.Domain.GetDb().UpdateQuery(sch.Name, map[string]interface{}{

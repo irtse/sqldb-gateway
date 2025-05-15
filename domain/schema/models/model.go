@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sqldb-ws/domain/utils"
 	"strconv"
 	"strings"
@@ -126,9 +127,8 @@ func (v SchemaModel) ToRecord() utils.Record {
 func (v SchemaModel) ToMapRecord() utils.Record {
 	fields := map[string]FieldModel{}
 	for _, field := range v.Fields {
-		if !strings.Contains(field.Type, "many") {
-			fields[field.Name] = field
-		}
+		fmt.Println(field.Name)
+		fields[field.Name] = field
 	}
 	var r utils.Record
 	b, _ := json.Marshal(fields)

@@ -22,6 +22,7 @@ func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]inte
 	if err == nil {
 		triggers.NewTrigger(s.Domain).Trigger(sch, record, utils.CREATE)
 	}
+
 }
 
 func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]interface{}, record map[string]interface{}) {
@@ -40,6 +41,13 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 	if sch, err := sch.GetSchema(tablename); err != nil {
 		return record, errors.New("no schema found"), false
 	} else {
+		if e, ok := record[ds.EntityDBField]; ok && e == nil && sch.HasField(ds.EntityDBField) {
+			if res, err := s.Domain.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
+				"name": record["name"],
+			}, func(s string) (string, bool) { return "", true }); err == nil {
+				record[ds.EntityDBField] = res
+			}
+		}
 		for k, v := range record {
 			if f, err := sch.GetField(k); err == nil && f.Transform != "" {
 				if f.Transform == "lowercase" {
@@ -54,7 +62,7 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 				ds.ConsentDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
 					ds.SchemaDBField: sch.ID,
 					"optionnal":      false,
-				}, false),
+				}, false, "id"),
 				"is_consenting": false,
 			}, false); err == nil && len(res) > 0 {
 				return record, errors.New("should consent"), false

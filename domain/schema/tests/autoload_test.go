@@ -28,7 +28,7 @@ func TestInitializeTables(t *testing.T) {
 func TestInitializeRootTables(t *testing.T) {
 	mockDomain := tests.NewMockDomain()
 	bar := &progressbar.ProgressBar{}
-	schema.InitializeRootTables(mockDomain, bar)
+	schema.InitializeRootTables(mockDomain, []sm.SchemaModel{}, bar)
 }
 
 func TestCreateRootTable(t *testing.T) {
@@ -66,12 +66,6 @@ func TestCreateSuperAdmin(t *testing.T) {
 	os.Setenv("SUPERADMIN_EMAIL", "admin@example.com")
 	os.Setenv("SUPERADMIN_PASSWORD", "password")
 	schema.CreateSuperAdmin(mockDomain, bar)
-}
-
-func TestCreateEnums(t *testing.T) {
-	mockDomain := tests.NewMockDomain()
-	bar := &progressbar.ProgressBar{}
-	schema.CreateEnums(mockDomain, bar)
 }
 
 func TestLoadCache(t *testing.T) {

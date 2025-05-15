@@ -127,7 +127,7 @@ func ImportProjectAxis() {
 			var parentID *int64
 			if axisName != "" {
 				if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBEntity.Name, map[string]interface{}{
-					"name": axisName,
+					"name": connector.Quote(axisName),
 				}, false); err == nil && len(res) > 0 {
 					i := utils.GetInt(res[0], utils.SpecialIDParam)
 					parentID = &i

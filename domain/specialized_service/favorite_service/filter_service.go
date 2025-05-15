@@ -197,6 +197,9 @@ func (s *FilterService) HandleCreate(record map[string]interface{}) {
 }
 
 func (s *FilterService) HandleUserFilterNaming(record map[string]interface{}, schema sm.SchemaModel, name *string) {
+	if s.Domain.GetAutoload() {
+		return
+	}
 	record[ds.UserDBField] = s.Domain.GetUserID()
 	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
 		ds.UserDBField:   s.Domain.GetUserID(),

@@ -90,7 +90,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 		if scheme.GetLink() > 0 {
 			d.ProcessLinkedSchema(&shallowField, scheme, tableName, schema)
 		}
-		shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName, additionalActions, schema)
+		shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName, additionalActions, schema, noRecursive)
 		var m map[string]interface{}
 		b, _ = json.Marshal(shallowField)
 		err := json.Unmarshal(b, &m)
@@ -133,7 +133,7 @@ func (d *ViewConvertor) ProcessLinkedSchema(shallowField *sm.ViewFieldModel, sch
 }
 
 func (d *ViewConvertor) ProcessPermissions(shallowField sm.ViewFieldModel, scheme sm.FieldModel,
-	tableName string, additionalActions []string, schema sm.SchemaModel) (sm.ViewFieldModel, []string) {
+	tableName string, additionalActions []string, schema sm.SchemaModel, noRecursive bool) (sm.ViewFieldModel, []string) {
 	for _, meth := range []utils.Method{utils.SELECT, utils.CREATE, utils.UPDATE, utils.DELETE} {
 		if d.Domain.VerifyAuth(tableName, "", "", meth) && (((meth == utils.SELECT || meth == utils.CREATE) && d.Domain.GetEmpty()) || !d.Domain.GetEmpty()) {
 			if !slices.Contains(additionalActions, meth.Method()) {
@@ -143,7 +143,7 @@ func (d *ViewConvertor) ProcessPermissions(shallowField sm.ViewFieldModel, schem
 				additionalActions = d.CheckAndAddImportAction(additionalActions, schema)
 			}
 		}
-		if scheme.GetLink() > 0 {
+		if scheme.GetLink() > 0 && !noRecursive {
 			shallowField = d.HandleRecursivePermissions(shallowField, scheme, meth)
 		}
 
@@ -176,7 +176,7 @@ func (d *ViewConvertor) CheckAndAddImportAction(additionalActions []string, sche
 func (d *ViewConvertor) HandleRecursivePermissions(shallowField sm.ViewFieldModel, scheme sm.FieldModel, meth utils.Method) sm.ViewFieldModel {
 	schema, _ := sch.GetSchemaByID(scheme.GetLink())
 	if d.Domain.VerifyAuth(schema.Name, "", "", meth) {
-		if strings.Contains(scheme.Type, "onetomany") {
+		if strings.Contains(scheme.Type, "many") {
 			if s, ok := d.SchemaSeen[schema.Name]; !ok {
 				sch, _, _, _, _, _ := d.GetViewFields(schema.Name, true)
 				d.SchemaSeen[schema.Name] = sch

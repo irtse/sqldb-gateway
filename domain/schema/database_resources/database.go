@@ -16,12 +16,12 @@ var DBSchema = models.SchemaModel{
 	Label:    "templates",
 	Category: "template",
 	Fields: []models.FieldModel{
-		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Level: models.LEVELRESPONSIBLE, Index: 0},
+		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Translatable: false, Level: models.LEVELRESPONSIBLE, Index: 0},
 		{Name: models.LABELKEY, Type: models.BIGVARCHAR.String(), Required: true, Readonly: true, Index: 1},
 		{Name: "category", Type: models.BIGVARCHAR.String(), Required: false, Default: "general", Readonly: true, Index: 2},
 		{Name: "fields", Type: "onetomany", ForeignTable: RootName("schema_column"), Required: false, Index: 3},
-		{Name: "can_owned", Label: "can own per user", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 4},
-		{Name: "is_enum", Label: "is an enumerate", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 5},
+		{Name: "can_owned", Label: "can be owned by a user", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 4},
+		{Name: "is_enum", Label: "is a name list", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 5},
 	},
 }
 
@@ -142,16 +142,27 @@ var DBEmailSended = models.SchemaModel{
 	Label:    "email sended",
 	Category: "email",
 	Fields: []models.FieldModel{
-		{Name: "from_email", Type: models.VARCHAR.String(), Label: "sent from", Required: true, Readonly: true, Index: 0},
-		{Name: "to_email", Type: models.VARCHAR.String(), Label: "sent to", ForeignTable: DBUser.Name, Required: true, Readonly: false, Index: 1},
+		{Name: "to_email", Type: models.MANYTOMANYADD.String(), Label: "sent to", ForeignTable: RootName("email_sended_user"), Required: true, Readonly: true, Index: 0},
+		{Name: "from_email", Type: models.INTEGER.String(), Label: "sent from", ForeignTable: DBUser.Name, Required: true, Readonly: false, Index: 1},
 		{Name: "subject", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 2},
-		{Name: "file_attached", Type: models.UPLOAD.String(), Required: false, Readonly: false, Label: "file attached", Index: 3},
+		{Name: "file_attached", Type: models.UPLOAD_MULTIPLE.String(), Required: false, Readonly: false, Label: "file attached", Index: 3},
 		{Name: "content", Type: models.HTML.String(), Label: "message", Required: false, Index: 4},
 		{Name: RootID(DBEmailTemplate.Name), Type: models.INTEGER.String(), ForeignTable: DBEmailTemplate.Name, Required: true, Readonly: true, Label: "email attached", Index: 5},
 		{Name: "code", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 6},
 		{Name: "mapped_with" + RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 7},
 		{Name: "mapped_with" + RootID("dest_table"), Type: models.INTEGER.String(), Required: true, Readonly: true, Label: "template attached", Index: 8},
 		{Name: RootID("dest_table") + "_on_response", Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "data to modify on response", Index: 9},
+	},
+}
+
+var DBEmailSendedUser = models.SchemaModel{
+	Name:     RootName("email_sended_user"),
+	Label:    "email sended to user",
+	Category: "email",
+	Fields: []models.FieldModel{
+		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 0},
+		{Name: RootID(DBEmailSended.Name), Type: models.INTEGER.String(), ForeignTable: DBEmailSended.Name, Required: true, Readonly: true, Index: 1},
+		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: false, Index: 2},
 	},
 }
 
@@ -590,10 +601,14 @@ var DBShare = models.SchemaModel{
 var OWNPERMISSIONEXCEPTION = []string{DBNotification.Name, DBDelegation.Name,
 	DBDashboard.Name, DBDashboardElement.Name, DBDashboardMathField.Name, DBShare.Name}
 var AllPERMISSIONEXCEPTION = []string{DBNotification.Name, DBViewAttribution.Name, DBUser.Name, DBFilter.Name, DBFilterField.Name}
-var POSTPERMISSIONEXCEPTION = []string{DBEmailSended.Name, DBRequest.Name, DBConsentResponse.Name, DBDelegation.Name}
+var POSTPERMISSIONEXCEPTION = []string{DBEmailSended.Name, DBEmailSendedUser.Name, DBRequest.Name, DBConsentResponse.Name, DBDelegation.Name}
 var PUPERMISSIONEXCEPTION = []string{DBTask.Name, DBEmailResponse.Name}
-var PERMISSIONEXCEPTION = []string{DBDashboard.Name, DBView.Name, DBTask.Name, DBDelegation.Name, DBRequest.Name, DBWorkflow.Name,
-	DBEntity.Name, DBSchema.Name, DBSchemaField.Name, DBComment.Name} // override permission checkup
+var PERMISSIONEXCEPTION = []string{
+	DBDashboard.Name, DBView.Name, DBTask.Name,
+	DBDelegation.Name, DBRequest.Name, DBWorkflow.Name,
+	DBEntity.Name, DBSchema.Name,
+	DBSchemaField.Name, DBComment.Name,
+} // override permission checkup
 
 var ROOTTABLES = []models.SchemaModel{DBSchemaField, DBUser, DBWorkflow, DBView, DBRequest, DBSchema, DBPermission, DBFilter, DBFilterField, DBEntity,
 	DBRole, DBDataAccess, DBNotification, DBEntityUser, DBRoleAttribution, DBShare,
@@ -603,7 +618,7 @@ var ROOTTABLES = []models.SchemaModel{DBSchemaField, DBUser, DBWorkflow, DBView,
 	DBConsentResponse, DBEmailTemplate,
 	DBTrigger, DBTriggerRule, DBTriggerCondition,
 	DBFieldAutoFill,
-	DBEmailSended, DBEmailTemplate, DBEmailResponse,
+	DBEmailSended, DBEmailTemplate, DBEmailResponse, DBEmailSendedUser,
 }
 
 var NOAUTOLOADROOTTABLES = []models.SchemaModel{DBSchema, DBSchemaField, DBPermission, DBView, DBWorkflow}

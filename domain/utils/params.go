@@ -224,8 +224,8 @@ const RootRowsParam = "rows"
 const RootColumnsParam = "columns"
 const RootOrderParam = "orderby"
 const RootDirParam = "dir"
-const RootFilterNewState = "filter_new" // all - new - old
-const RootFilterLine = "filter_line"    // + == "and" | == "or" ~ == "like" : == "=" > == ">" < == "<"
+const RootFilterNewState = "filter_status" // all - new - old
+const RootFilterLine = "filter_line"       // + == "and" | == "or" ~ == "like" : == "=" > == ">" < == "<"
 const RootFilter = "filter"
 const RootViewFilter = "view_filter"
 const RootRawView = "rawview"

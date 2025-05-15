@@ -8,6 +8,7 @@ import (
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
+	"sqldb-ws/infrastructure/connector"
 	conn "sqldb-ws/infrastructure/connector"
 	"strings"
 	"sync"
@@ -186,8 +187,8 @@ func (p *PermDomainService) getShare(schema sm.SchemaModel, destID string, key s
 	}
 	res, err := p.db.SelectQueryWithRestriction(ds.DBShare.Name, map[string]interface{}{
 		ds.UserDBField: p.db.BuildSelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-			"name":  p.User,
-			"email": p.User,
+			"name":  connector.Quote(p.User),
+			"email": connector.Quote(p.User),
 		}, true, "id"),
 		ds.SchemaDBField:    schema.ID,
 		ds.DestTableDBField: destID,

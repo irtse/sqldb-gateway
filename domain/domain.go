@@ -178,8 +178,12 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 		return utils.Results{{"path": path}}, err
 	} else {
 		if p, _ := d.Params.Get(utils.RootShallow); p == "enable" {
-			d.Params.Set(utils.RootLimit, "20")
-			d.Params.Set(utils.RootOffset, "0")
+			if _, ok := d.Params.Get(utils.RootLimit); !ok {
+				d.Params.Set(utils.RootLimit, "20")
+			}
+			if _, ok := d.Params.Get(utils.RootOffset); !ok {
+				d.Params.Set(utils.RootOffset, "0")
+			}
 		}
 		res, err := d.Invoke(record, d.Method, args...)
 		if p, _ := d.Params.Get(utils.RootRawView); p != "enable" && err == nil && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {

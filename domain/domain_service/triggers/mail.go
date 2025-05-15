@@ -34,9 +34,10 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	if err := tmpl.Execute(&content, bodyToMap); err != nil {
 		return utils.Record{}, err
 	}
+
 	m := utils.Record{
-		"from_email":            utils.GetString(from, "email"),
-		"to_email":              utils.GetString(to, "email"),
+		"from_email":            utils.GetString(from, "id"),
+		"to_email":              utils.GetString(to, "id"), // SHOULD BE ID
 		"subject":               subject,
 		"content":               content.String(),
 		"file_attached":         "",
@@ -55,7 +56,7 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	return m, nil
 }
 
-func SendMail(from string, to string, mail utils.Record, id string, isValidButton bool) error {
+func SendMail(from string, to string, mail utils.Record, isValidButton bool) error {
 	var body bytes.Buffer
 	boundary := "MY-MIME-BOUNDARY"
 	// En-têtes MIME

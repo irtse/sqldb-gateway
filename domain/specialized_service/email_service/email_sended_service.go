@@ -1,7 +1,6 @@
 package email_service
 
 import (
-	"sqldb-ws/domain/domain_service/triggers"
 	"sqldb-ws/domain/domain_service/view_convertor"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
@@ -11,19 +10,15 @@ import (
 // DONE - ~ 200 LINES - PARTIALLY TESTED
 type EmailSendedService struct {
 	servutils.AbstractSpecializedService
+	To string
 }
 
 func (s *EmailSendedService) Entity() utils.SpecializedServiceInfo { return ds.DBEmailSended }
 
 func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
-	isValid := false
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
 		utils.SpecialIDParam: record[ds.EmailTemplateDBField],
 	}, false); err == nil && len(res) > 0 && utils.GetBool(res[0], "generate_task") {
-		if utils.GetBool(res[0], "waiting_response") {
-			// should enrich with a binary response yes or no.
-			isValid = true
-		}
 		i := int64(-1)
 		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 			ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
@@ -51,12 +46,26 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 		}
 	}
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
-
-	triggers.SendMail(utils.GetString(record, "from_email"), utils.GetString(record, "to_email"), record, utils.GetString(record, "id"), isValid)
+	if s.To != "" {
+		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
+			utils.SpecialIDParam: s.To,
+		}, false); err == nil && len(res) > 0 {
+			s.Domain.GetDb().CreateQuery(ds.DBEmailSendedUser.Name, map[string]interface{}{
+				"name":                utils.GetString(res[0], "email"),
+				ds.UserDBField:        s.To,
+				ds.EmailSendedDBField: record[utils.SpecialIDParam],
+			}, func(s string) (string, bool) { return "", true })
+		}
+	}
 }
 
 func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
-	record["got_response"] = record["got_response"] == "true"
+	if to := utils.GetString(record, "to_email"); to != "" {
+		s.To = to
+		delete(record, "to_email")
+	} /*else {
+		return record, errors.New("no user to send mail"), false
+	}*/
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
 

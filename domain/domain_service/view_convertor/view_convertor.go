@@ -135,11 +135,13 @@ func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, tableN
 		createdIds = filter.NewFilterService(v.Domain).GetCreatedAccessData(sch.ID)
 	}
 	for index, record := range results {
+		fmt.Println(record)
 		view.Triggers = append(view.Triggers, v.getTriggers(
-			record, v.Domain.GetMethod(), sch,
+			record.Copy(), v.Domain.GetMethod(), sch,
 			utils.GetInt(record, ds.SchemaDBField),
 			utils.GetInt(record, ds.DestTableDBField))...,
 		)
+		fmt.Println("2", record)
 		go v.ConvertRecordToView(index, view, channel, record, tableName, cols, v.Domain.GetEmpty(), isWorkflow, params, createdIds)
 	}
 	for range results {
@@ -267,11 +269,11 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 		ts = v.getTriggers(record, v.Domain.GetMethod(), sch, utils.GetInt(record, ds.SchemaDBField), utils.GetInt(record, ds.DestTableDBField))
 		_, ok := v.Domain.GetParams().Get(utils.RootShallow)
 		if ok {
-			if wf, err := v.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
+			if wf, err := v.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
 				ds.SchemaDBField: sch.ID,
 			}, false); err == nil && len(wf) > 0 {
 				otherOrder = []string{}
-				if res, err := v.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+				if res, err := v.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
 					ds.FilterDBField: wf[0]["view_"+ds.FilterDBField],
 				}, false); err == nil {
 					for _, r := range res {
@@ -327,6 +329,8 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, channel chan sm.ViewItemModel,
 	record utils.Record, tableName string, cols map[string]sm.FieldModel, isEmpty bool, isWorkflow bool, params utils.Params,
 	createdIds []string) {
+	fmt.Println(record)
+
 	vals, shallowVals, manyPathVals := make(map[string]interface{}), make(map[string]interface{}), make(map[string]string)
 	manyVals := make(map[string]utils.Results)
 	var datapath, historyPath, commentPath, synthesisPath string = "", "", "", ""
@@ -339,6 +343,7 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 		}
 		vals[utils.SpecialIDParam] = record.GetString(utils.SpecialIDParam)
 	}
+	fmt.Println("1", record)
 	for _, field := range cols {
 		if d, ok := d.HandleDBSchemaField(record, field, tableName, shallowVals); ok && d != "" {
 			datapath = d
@@ -351,6 +356,7 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 			vals[field.Name] = v
 		}
 	}
+
 	d.ApplyCommandRow(record, vals, params)
 	d.getFilterByWFSchema(view, schema, record)
 	vals = d.getOrder(view, record, vals)
@@ -407,10 +413,10 @@ func (s *ViewConvertor) getFilterByWFSchema(view *sm.ViewModel, schema sm.Schema
 	if tasks != nil {
 		for _, task := range *tasks {
 			if fields, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
-				ds.FilterDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.WorkflowSchemaDBField, map[string]interface{}{
-					utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+				ds.FilterDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+					ds.WorkflowDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 						utils.SpecialIDParam: task.TaskID,
-					}, false, ds.WorkflowSchemaDBField),
+					}, false, ds.WorkflowDBField),
 				}, false, ds.FilterDBField),
 			}, false); err == nil && len(fields) > 0 {
 				for _, f := range schema.Fields {
@@ -576,8 +582,12 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 }
 
 func (d *ViewConvertor) HandleOneField(record utils.Record, field sm.FieldModel, link string, shallowVals map[string]interface{}) {
+	v := record.GetString(utils.SpecialIDParam)
+	if field.GetLink() >= 0 {
+		v = utils.ToString(field.GetLink())
+	}
 	if r, err := d.Domain.GetDb().SelectQueryWithRestriction(link, map[string]interface{}{
-		utils.SpecialIDParam: record.GetString(field.Name),
+		utils.SpecialIDParam: v,
 	}, false); err == nil && len(r) > 0 {
 		ref := fmt.Sprintf("@%v:%v", field.Link, r[0][utils.SpecialIDParam])
 		shallowVals[field.Name] = utils.Record{
@@ -629,11 +639,27 @@ func (d *ViewConvertor) getMailTriggers(record utils.Record, fromSchema sm.Schem
 		triggerService := triggers.NewTrigger(d.Domain)
 		mails := triggerService.TriggerManualMail("manual", record, fromSchema, triggerID, toSchemaID, destID)
 		bodies := []sm.ManualTriggerModel{}
+		s := sch.ToMapRecord()
+		for _, f := range sch.Fields {
+			print(f.GetLink())
+			if f.GetLink() > 0 {
+				if sch2, err := schema.GetSchemaByID(f.GetLink()); err == nil {
+					s[f.Name].(map[string]interface{})["action_path"] = d.BuildPath(sch2.Name, utils.ReservedParam, utils.RootShallow+"=enable")
+					for _, f2 := range sch2.Fields {
+						if f2.GetLink() > 0 && strings.Contains(f2.Name, "_id") && !strings.Contains(f2.Name, sch2.Name) {
+							if sch3, err := schema.GetSchemaByID(f2.GetLink()); err == nil {
+								s[f.Name].(map[string]interface{})["values_path"] = d.BuildPath(sch3.Name, utils.ReservedParam, utils.RootShallow+"=enable")
+							}
+						}
+					}
+				}
+			}
+		}
 		for _, m := range mails {
 			bodies = append(bodies, sm.ManualTriggerModel{
 				Name:       triggerName,
 				Type:       "mail",
-				Schema:     sch.ToMapRecord(),
+				Schema:     s,
 				Body:       m,
 				ActionPath: d.BuildPath(sch.Name, utils.ReservedParam),
 			})

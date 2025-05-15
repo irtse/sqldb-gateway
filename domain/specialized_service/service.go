@@ -25,6 +25,7 @@ var SERVICES = []utils.SpecializedServiceITF{
 	&user.UserService{},
 	&email_service.EmailResponseService{},
 	&email_service.EmailSendedService{},
+	&email_service.EmailSendedUserService{},
 }
 
 // funct to get specialized service depending on table reached

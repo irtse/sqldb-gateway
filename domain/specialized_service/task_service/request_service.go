@@ -46,7 +46,7 @@ func GetHierarchical(domain utils.DomainITF) ([]map[string]interface{}, error) {
 	f := filter.NewFilterService(domain)
 	return domain.GetDb().SelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
 		ds.UserDBField:   domain.GetUserID(),
-		ds.EntityDBField: f.GetEntityFilterQuery("id"),
+		ds.EntityDBField: f.GetEntityFilterQuery(),
 	}, true)
 }
 

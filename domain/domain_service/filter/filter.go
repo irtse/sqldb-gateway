@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"net/url"
 	"slices"
 	"sort"
@@ -132,7 +133,7 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 		if !ok {
 			restrictions["is_draft"] = false
 		} else {
-			if access, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
+			if access, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
 				ds.SchemaDBField:    schema.ID,
 				ds.DestTableDBField: id,
 				"write":             true,
@@ -150,7 +151,14 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 			key = utils.SpecialIDParam
 		}
 		if s.Domain.GetUserID() != "" {
-			restrictions[key] = s.Domain.GetUserID()
+			if scope, ok := s.Domain.GetParams().Get(utils.RootScope); ok && scope == "enable" {
+				fmt.Println("THERE")
+				restrictions[key] = s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
+					"parent_" + ds.UserDBField: s.Domain.GetUserID(),
+				}, true, ds.UserDBField)
+			} else {
+				restrictions[key] = s.Domain.GetUserID()
+			}
 		}
 	}
 	if schema.HasField(ds.EntityDBField) || s.Domain.GetTable() == ds.DBEntity.Name {
@@ -159,11 +167,9 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 			if !ok {
 				key = utils.SpecialIDParam
 			}
-		} else {
-			q := s.GetEntityFilterQuery("id")
-			if q != "" {
-				restrictions[key] = q
-			}
+		}
+		if s.Domain.GetUserID() != "" {
+			restrictions[key] = s.GetEntityFilterQuery()
 		}
 	}
 
@@ -288,7 +294,7 @@ func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []
 		return SQLrestriction
 	}
 	var operator string
-	news, _ := d.CountNewDataAccess(tableName, utils.ToList(SQLrestriction))
+	news, _ := d.CountNewDataAccess(tableName, utils.ToListAnonymized(SQLrestriction))
 	if state == "new" {
 		operator = "IN"
 		if len(news) == 0 {

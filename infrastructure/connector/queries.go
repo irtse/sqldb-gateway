@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"strings"
 )
 
@@ -21,6 +22,10 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		defer db.Close()
 	}
 	res, err := db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
+	if err != nil {
+		debug.PrintStack()
+		fmt.Println(db.BuildSelectQueryWithRestriction(name, restrictions, isOr), err)
+	}
 	return res, err
 }
 

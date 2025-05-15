@@ -22,6 +22,7 @@ func (s *EmailResponseService) Entity() utils.SpecializedServiceInfo { return ds
 
 func (s *EmailResponseService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
 	// check waiting for response
+	record["got_response"] = record["got_response"] == "true" || record["got_response"] == true
 	if s.Code == "" {
 		return record, errors.New("no code found"), false
 	}

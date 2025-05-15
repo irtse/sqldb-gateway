@@ -9,12 +9,12 @@ import (
 )
 
 // DONE - ~ 100 LINES - NOT TESTED
-func (d *FilterService) GetEntityFilterQuery(field string) string {
+func (d *FilterService) GetEntityFilterQuery() string {
 	return d.Domain.GetDb().BuildSelectQueryWithRestriction(
 		ds.DBEntityUser.Name,
 		map[string]interface{}{
 			ds.UserDBField: d.Domain.GetUserID(),
-		}, true, field)
+		}, true, ds.EntityDBField)
 }
 
 func (d *FilterService) CountNewDataAccess(tableName string, filter []interface{}) ([]string, int64) {
@@ -30,11 +30,9 @@ func (d *FilterService) CountNewDataAccess(tableName string, filter []interface{
 						ds.UserDBField: d.Domain.GetUserID(),
 					}, true, ds.DestTableDBField),
 			}, false)}
-	for _, v := range filter {
-		newFilter = append(newFilter, v)
-	}
+	newFilter = append(newFilter, filter...)
 	ids := []string{}
-	if res, err := d.Domain.GetDb().SelectQueryWithRestriction(tableName, newFilter, false); err != nil {
+	if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(tableName, newFilter, false); err != nil {
 		return ids, 0
 	} else {
 		for _, rec := range res {
