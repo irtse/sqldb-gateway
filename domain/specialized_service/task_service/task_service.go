@@ -2,6 +2,7 @@ package task_service
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/task"
@@ -107,7 +108,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 			s.Domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, map[string]interface{}{
 				"is_close":                    res["is_close"],
 				"state":                       res["state"],
-				"closing_by" + ds.UserDBField: res[ds.UserDBField],
+				"closing_by" + ds.UserDBField: utils.GetInt(res, ds.UserDBField),
 				"closing_date":                res["closing_date"],
 			}, map[string]interface{}{
 				utils.SpecialIDParam: binded,
@@ -137,9 +138,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		switch res["state"] {
 		case "completed":
 			if utils.GetBool(res, "passive") {
-				if p, err := GetPassive(s.Domain, utils.GetString(res, ds.DestTableDBField), utils.GetString(res, ds.SchemaDBField)); err == nil && len(p) > 0 {
-					current_index = -1
-				} else if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.WorkflowSchemaDBField, map[string]interface{}{
+				if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.WorkflowSchemaDBField, map[string]interface{}{
 					"index":            1,
 					ds.WorkflowDBField: record[ds.WorkflowDBField],
 				}, false); err == nil {
@@ -199,7 +198,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		newRecRequest["current_index"] = current_index
 		for _, scheme := range schemes { // verify before
 			if utils.GetBool(scheme, "before_hierarchical_validation") {
-				newRecRequest["current_index"] = current_index - 0.9
+				newRecRequest["current_index"] = current_index - 0.1
 				break
 			}
 		}
@@ -243,6 +242,9 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 						if err == nil && len(vals) > 0 {
 							newTask[SchemaDBField] = scheme[SchemaDBField]
 							newTask[DestTableDBField] = vals[0][utils.ReservedParam]
+						} else {
+							fmt.Println("Can't create new scheme")
+							return
 						}
 					}
 				}
@@ -256,7 +258,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 						DestTableDBField:   newTask[DestTableDBField],
 						UserDBField:        requests[0][UserDBField],
 					}
-					requests, err := s.Domain.Call(utils.AllParams(ds.DBRequest.Name), newMetaRequest, utils.CREATE)
+					requests, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBRequest.Name), newMetaRequest)
 					if err == nil && len(requests) > 0 {
 						newTask["meta_"+RequestDBField] = requests[0][utils.SpecialIDParam]
 					}
@@ -272,7 +274,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 						s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), utils.Record{"link_id": schema.ID,
 							sm.NAMEKEY:       "Task affected : " + tasks[0].GetString(sm.NAMEKEY),
 							"description":    "Task is affected : " + tasks[0].GetString(sm.NAMEKEY),
-							UserDBField:      tasks[0][UserDBField],
+							UserDBField:      utils.GetInt(tasks[0], UserDBField),
 							EntityDBField:    scheme[EntityDBField],
 							UserDBField:      scheme[UserDBField],
 							DestTableDBField: tasks[0][utils.SpecialIDParam]})
@@ -288,7 +290,6 @@ func (s *TaskService) GenerateQueryFilter(tableName string, innerestr ...string)
 	if !s.Domain.IsSuperCall() {
 		innerestr = append(innerestr, conn.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
 			"meta_" + RequestDBField: nil,
-			"passive":                false,
 		}, true))
 	}
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
@@ -298,6 +299,5 @@ func GetPassive(domain utils.DomainITF, destID string, schemaID string) ([]map[s
 	return domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 		ds.SchemaDBField:    schemaID,
 		ds.DestTableDBField: destID,
-		"passive":           true,
 	}, true)
 }

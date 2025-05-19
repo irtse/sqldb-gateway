@@ -135,13 +135,11 @@ func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, tableN
 		createdIds = filter.NewFilterService(v.Domain).GetCreatedAccessData(sch.ID)
 	}
 	for index, record := range results {
-		fmt.Println(record)
 		view.Triggers = append(view.Triggers, v.getTriggers(
 			record.Copy(), v.Domain.GetMethod(), sch,
 			utils.GetInt(record, ds.SchemaDBField),
 			utils.GetInt(record, ds.DestTableDBField))...,
 		)
-		fmt.Println("2", record)
 		go v.ConvertRecordToView(index, view, channel, record, tableName, cols, v.Domain.GetEmpty(), isWorkflow, params, createdIds)
 	}
 	for range results {
@@ -329,7 +327,6 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, channel chan sm.ViewItemModel,
 	record utils.Record, tableName string, cols map[string]sm.FieldModel, isEmpty bool, isWorkflow bool, params utils.Params,
 	createdIds []string) {
-	fmt.Println(record)
 
 	vals, shallowVals, manyPathVals := make(map[string]interface{}), make(map[string]interface{}), make(map[string]string)
 	manyVals := make(map[string]utils.Results)
@@ -343,7 +340,6 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 		}
 		vals[utils.SpecialIDParam] = record.GetString(utils.SpecialIDParam)
 	}
-	fmt.Println("1", record)
 	for _, field := range cols {
 		if d, ok := d.HandleDBSchemaField(record, field, tableName, shallowVals); ok && d != "" {
 			datapath = d
@@ -500,10 +496,11 @@ func (s *ViewConvertor) getSynthesis(record utils.Record, schema sm.SchemaModel)
 		taskIDs += t.TaskID + ","
 	}
 	if taskIDs != "" { // means there is actually running task effective on these data
-		return fmt.Sprintf("/%s/%s?%s=%s&%s=%v",
+		return fmt.Sprintf("/%s/%s?%s=%s&%s=%s",
 			utils.MAIN_PREFIX, ds.DBTask.Name,
-			utils.RootRowsParam, utils.ReservedParam,
-			utils.SpecialSubIDParam, connector.RemoveLastChar(taskIDs))
+			utils.RootRowsParam, connector.RemoveLastChar(taskIDs),
+			utils.RootColumnsParam, "name,state,dbuser_id,dbentity_id,binded_to_email",
+		)
 	}
 	return ""
 }
@@ -622,7 +619,7 @@ func (d *ViewConvertor) getTriggers(record utils.Record, method utils.Method, fr
 			typ := utils.GetString(r, "type")
 			switch typ {
 			case "mail":
-				if t, err := d.getMailTriggers(record, fromSchema, utils.GetString(r, "name"),
+				if t, err := d.getMailTriggers(record, fromSchema, utils.GetString(r, "description"), utils.GetString(r, "name"),
 					utils.GetInt(r, utils.SpecialIDParam), toSchemaID, destID); err == nil {
 					mt = append(mt, t...)
 				}
@@ -632,7 +629,7 @@ func (d *ViewConvertor) getTriggers(record utils.Record, method utils.Method, fr
 	return mt
 }
 
-func (d *ViewConvertor) getMailTriggers(record utils.Record, fromSchema sm.SchemaModel, triggerName string, triggerID, toSchemaID, destID int64) ([]sm.ManualTriggerModel, error) {
+func (d *ViewConvertor) getMailTriggers(record utils.Record, fromSchema sm.SchemaModel, triggerDesc string, triggerName string, triggerID, toSchemaID, destID int64) ([]sm.ManualTriggerModel, error) {
 	if sch, err := schema.GetSchema(ds.DBEmailSended.Name); err != nil {
 		return nil, err
 	} else {
@@ -641,27 +638,32 @@ func (d *ViewConvertor) getMailTriggers(record utils.Record, fromSchema sm.Schem
 		bodies := []sm.ManualTriggerModel{}
 		s := sch.ToMapRecord()
 		for _, f := range sch.Fields {
-			print(f.GetLink())
 			if f.GetLink() > 0 {
 				if sch2, err := schema.GetSchemaByID(f.GetLink()); err == nil {
 					s[f.Name].(map[string]interface{})["action_path"] = d.BuildPath(sch2.Name, utils.ReservedParam, utils.RootShallow+"=enable")
 					for _, f2 := range sch2.Fields {
 						if f2.GetLink() > 0 && strings.Contains(f2.Name, "_id") && !strings.Contains(f2.Name, sch2.Name) {
 							if sch3, err := schema.GetSchemaByID(f2.GetLink()); err == nil {
+								s[f.Name].(map[string]interface{})["data_schema"] = sch2.ToMapRecord()
 								s[f.Name].(map[string]interface{})["values_path"] = d.BuildPath(sch3.Name, utils.ReservedParam, utils.RootShallow+"=enable")
 							}
 						}
 					}
 				}
 			}
+			if strings.Contains(f.Type, "upload") {
+				s[f.Name].(map[string]interface{})["action_path"] = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, sch.Name, f.Name)
+				s[f.Name].(map[string]interface{})["values_path"] = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, sch.Name, f.Name)
+			}
 		}
 		for _, m := range mails {
 			bodies = append(bodies, sm.ManualTriggerModel{
-				Name:       triggerName,
-				Type:       "mail",
-				Schema:     s,
-				Body:       m,
-				ActionPath: d.BuildPath(sch.Name, utils.ReservedParam),
+				Name:        triggerName,
+				Description: triggerDesc,
+				Type:        "mail",
+				Schema:      s,
+				Body:        m,
+				ActionPath:  d.BuildPath(sch.Name, utils.ReservedParam),
 			})
 		}
 		return bodies, nil

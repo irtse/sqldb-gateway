@@ -74,6 +74,9 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 		if !d.Domain.IsSuperAdmin() && !d.Domain.VerifyAuth(tableName, scheme.Name, scheme.Level, utils.SELECT) {
 			continue
 		}
+		if cols, ok := d.Domain.GetParams().Get(utils.RootColumnsParam); ok && cols != "" && !strings.Contains(cols, scheme.Name) {
+			continue
+		}
 		shallowField := sm.ViewFieldModel{
 			ActionPath: "",
 			Actions:    []string{},
@@ -89,6 +92,10 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 		}
 		if scheme.GetLink() > 0 {
 			d.ProcessLinkedSchema(&shallowField, scheme, tableName, schema)
+		}
+		if strings.Contains(scheme.Type, "upload") {
+			shallowField.ActionPath = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, schema.Name, scheme.Name)
+			shallowField.LinkPath = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, schema.Name, scheme.Name)
 		}
 		shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName, additionalActions, schema, noRecursive)
 		var m map[string]interface{}

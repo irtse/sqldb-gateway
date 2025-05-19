@@ -10,8 +10,6 @@ import (
 	"sqldb-ws/domain/utils"
 	"strings"
 	"text/template"
-
-	"github.com/google/uuid"
 )
 
 type EmailData struct {
@@ -24,8 +22,6 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	bodySchema int64, destID int64, destOnResponse int64, fileAttached string, signature string) (utils.Record, error) {
 	var content bytes.Buffer
 
-	code := uuid.New().String()
-	bodyToMap["code"] = code
 	// SHOULD MAP AND APPLY CODE
 	tmpl, err := template.New("email").Parse(tpl + "<br>" + signature)
 	if err != nil {
@@ -52,7 +48,6 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	if destID > -1 {
 		m["mapped_with"+ds.DestTableDBField] = destID
 	}
-	m["code"] = code
 	return m, nil
 }
 

@@ -3,7 +3,6 @@ package models
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"sqldb-ws/domain/utils"
 	"strconv"
 	"strings"
@@ -127,7 +126,6 @@ func (v SchemaModel) ToRecord() utils.Record {
 func (v SchemaModel) ToMapRecord() utils.Record {
 	fields := map[string]FieldModel{}
 	for _, field := range v.Fields {
-		fmt.Println(field.Name)
 		fields[field.Name] = field
 	}
 	var r utils.Record
@@ -222,11 +220,12 @@ func (v FieldModel) ToRecord() utils.Record {
 }
 
 type ManualTriggerModel struct {
-	Name       string       `json:"name"`
-	Type       string       `json:"type"`
-	Schema     utils.Record `json:"schema"`
-	Body       utils.Record `json:"body"`
-	ActionPath string       `json:"action_path"`
+	Name        string       `json:"name"`
+	Description string       `json:"description"`
+	Type        string       `json:"type"`
+	Schema      utils.Record `json:"schema"`
+	Body        utils.Record `json:"body"`
+	ActionPath  string       `json:"action_path"`
 }
 
 type ViewModel struct { // lightest struct based on SchemaModel dedicate to view

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"net/url"
 	"sqldb-ws/infrastructure/connector"
 	"strings"
 	"sync"
@@ -123,7 +124,8 @@ func (p Params) Add(k string, val interface{}, condition func(string) bool) {
 	if val == nil || val == "" || !condition(k) {
 		return
 	}
-	p.Values[k] = ToString(val)
+	v, _ := url.QueryUnescape(ToString(ToString(val)))
+	p.Values[k] = v
 }
 
 func (p Params) AddMap(vals map[string]interface{}, condition func(string) bool) {

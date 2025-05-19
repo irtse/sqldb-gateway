@@ -1,10 +1,14 @@
 package email_service
 
 import (
+	"fmt"
 	"sqldb-ws/domain/domain_service/view_convertor"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
+	"sqldb-ws/infrastructure/connector"
+
+	"github.com/google/uuid"
 )
 
 // DONE - ~ 200 LINES - PARTIALLY TESTED
@@ -18,31 +22,63 @@ func (s *EmailSendedService) Entity() utils.SpecializedServiceInfo { return ds.D
 func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
 		utils.SpecialIDParam: record[ds.EmailTemplateDBField],
-	}, false); err == nil && len(res) > 0 && utils.GetBool(res[0], "generate_task") {
-		i := int64(-1)
-		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
-			ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
-			ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
-		}, false); err == nil && len(res) > 0 && utils.GetBool(res[0], "generate_task") {
-			i = utils.GetInt(res[0], utils.SpecialIDParam)
-		} else {
-			if id, err := s.Domain.GetDb().CreateQuery(ds.DBRequest.Name, map[string]interface{}{
-				"name":              "generate from trigger mail",
-				"is_close":          true,
-				"current_index":     0,
+	}, false); err == nil && len(res) > 0 {
+		if utils.GetBool(res[0], "generate_task") {
+			i := int64(-1)
+			if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+				"name":              connector.Quote("waiting mails responses"),
+				"current_index":     1,
+				"is_meta":           true,
+				"is_close":          false,
 				ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
 				ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
-			}, func(s string) (string, bool) { return "", true }); err == nil && len(res) > 0 {
-				i = id
+			}, false); err == nil && len(res) > 0 {
+				i = utils.GetInt(res[0], utils.SpecialIDParam)
+			} else {
+				if id, err := s.Domain.GetDb().CreateQuery(ds.DBRequest.Name, map[string]interface{}{
+					"name":              "waiting mails responses",
+					"current_index":     1,
+					"is_meta":           true,
+					ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
+					ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
+				}, func(s string) (string, bool) { return "", true }); err == nil {
+					i = id
+				} else {
+					return
+				}
 			}
-		}
-		if i >= 0 {
-			s.Domain.GetDb().CreateQuery(ds.DBTask.Name, map[string]interface{}{
-				ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
-				ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
-				ds.RequestDBField:   i,
-				"name":              utils.GetString(record, "code"),
-			}, func(s string) (string, bool) { return "", true })
+			if i >= 0 {
+				if t, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+					"is_meta":           false,
+					"is_close":          false,
+					ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
+					ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
+				}, false); err == nil && len(t) > 0 {
+					for _, r := range t {
+						fmt.Println(r)
+						if tt, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+							ds.RequestDBField:           r[utils.SpecialIDParam],
+							"meta_" + ds.RequestDBField: i,
+							"name":                      "waiting mails responses",
+						}, false); err != nil || len(tt) == 0 {
+							s.Domain.GetDb().CreateQuery(ds.DBTask.Name, map[string]interface{}{
+								ds.DestTableDBField:         r[ds.DestTableDBField],
+								"name":                      "waiting mails responses",
+								ds.SchemaDBField:            r[ds.SchemaDBField],
+								ds.RequestDBField:           r[utils.SpecialIDParam],
+								"meta_" + ds.RequestDBField: i,
+							}, func(v string) (string, bool) { return "", true })
+						}
+					}
+				}
+				t, err := s.Domain.GetDb().CreateQuery(ds.DBTask.Name, map[string]interface{}{
+					ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
+					ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
+					ds.RequestDBField:   i,
+					"name":              utils.GetString(record, "code"),
+				}, func(s string) (string, bool) { return "", true })
+				fmt.Println(t, err)
+			}
 		}
 	}
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
@@ -63,9 +99,8 @@ func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, 
 	if to := utils.GetString(record, "to_email"); to != "" {
 		s.To = to
 		delete(record, "to_email")
-	} /*else {
-		return record, errors.New("no user to send mail"), false
-	}*/
+	}
+	record["code"] = uuid.New()
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
 

@@ -2,6 +2,7 @@ package task_service
 
 import (
 	"errors"
+	"math"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/task"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -65,8 +66,8 @@ func (s *RequestService) VerifyDataIntegrity(record map[string]interface{}, tabl
 		} else {
 			record["current_index"] = 1
 		}
-		if wf, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
-			ds.WorkflowDBField: record[ds.WorkflowDBField],
+		if wf, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
+			utils.SpecialIDParam: record[ds.WorkflowDBField],
 		}, false); err != nil || len(wf) == 0 {
 			return record, nil, true
 		} else {
@@ -91,12 +92,30 @@ func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, 
 		return
 	}
 	for _, rec := range results {
-		if utils.GetInt(record, "current_index") == -1 {
-			continue
-		}
-		if utils.GetInt(record, "current_index") == 0 || utils.GetInt(record, "current_index") == 1 {
-			s.Write(rec, s.Domain.GetTable())
-			return
+		mailSchema, err := schserv.GetSchema(ds.DBEmailTemplate.Name)
+		if err == nil {
+			found := false
+			if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTriggerRule.Name, map[string]interface{}{
+				"!value":                 nil,
+				"to_" + ds.SchemaDBField: mailSchema.GetID(),
+			}, false); err == nil && len(res) > 0 {
+				for _, r := range res {
+					if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
+						"generate_task":      true,
+						utils.SpecialIDParam: r["value"],
+					}, false); err == nil && len(res) > 0 {
+						rec["currentIndex"] = math.Floor(utils.GetFloat(record, "current_index")) - 1
+						s.Domain.GetDb().UpdateQuery(ds.DBRequest.Name, rec, map[string]interface{}{
+							utils.SpecialIDParam: rec[utils.SpecialIDParam],
+						}, false)
+						found = true
+						break
+					}
+				}
+			}
+			if found {
+				continue
+			}
 		}
 		p := utils.AllParams(ds.DBNotification.Name)
 		p.Set(ds.UserDBField, utils.ToString(rec[ds.UserDBField]))
@@ -144,10 +163,13 @@ func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, 
 	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
 }
 
+// vérifier qu'il n'existe pas déjà une request méta en cour... si oui... faire une tache méta dans la nouvelle request
+
 func (s *RequestService) Write(record utils.Record, tableName string) {
 	if _, ok := record["is_draft"]; ok && utils.GetBool(record, "is_draft") {
 		return
 	}
+
 	if utils.GetInt(record, "current_index") == -1 {
 		s.handleStarterWorkflow(record)
 		return
@@ -166,7 +188,7 @@ func (s *RequestService) Write(record utils.Record, tableName string) {
 			}
 		}
 		if found {
-			record["current_index"] = 0.1
+			record["current_index"] = 0.9
 			record = HandleHierarchicalVerification(s.Domain, utils.GetInt(record, utils.SpecialIDParam), record)
 		} else {
 			record["current_index"] = 1
@@ -178,6 +200,26 @@ func (s *RequestService) Write(record utils.Record, tableName string) {
 }
 
 func (s *RequestService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
+	mailSchema, err := schserv.GetSchema(ds.DBEmailTemplate.Name)
+	if err == nil {
+		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTriggerRule.Name, map[string]interface{}{
+			"!value":                 nil,
+			"to_" + ds.SchemaDBField: mailSchema.GetID(),
+		}, false); err == nil && len(res) > 0 {
+			for _, r := range res {
+				if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
+					"generate_task":      true,
+					utils.SpecialIDParam: r["value"],
+				}, false); err == nil && len(res) > 0 {
+					record["currentIndex"] = math.Floor(utils.GetFloat(record, "current_index")) - 1
+					s.Domain.GetDb().UpdateQuery(ds.DBRequest.Name, record, map[string]interface{}{
+						utils.SpecialIDParam: record[utils.SpecialIDParam],
+					}, false)
+					return
+				}
+			}
+		}
+	}
 	s.Write(record, tableName)
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
 }
@@ -256,8 +298,8 @@ func (s *RequestService) constructNotificationTask(newTask utils.Record, record 
 	task := map[string]interface{}{
 		sm.NAMEKEY:          "Task affected : " + newTask.GetString(sm.NAMEKEY),
 		"description":       "Task is affected : " + newTask.GetString(sm.NAMEKEY),
-		ds.UserDBField:      newTask.GetString(ds.UserDBField),
-		ds.SchemaDBField:    newTask.GetString(ds.SchemaDBField),
+		ds.UserDBField:      newTask[ds.UserDBField],
+		ds.SchemaDBField:    newTask[ds.SchemaDBField],
 		ds.DestTableDBField: record[ds.DestTableDBField],
 	}
 	if _, ok := newTask["wrapped_"+ds.WorkflowDBField]; ok {
@@ -274,7 +316,7 @@ func (s *RequestService) createMetaRequest(task map[string]interface{}, id inter
 		"is_meta":           true,
 		ds.SchemaDBField:    task[ds.SchemaDBField],
 		ds.DestTableDBField: task[ds.DestTableDBField],
-		ds.UserDBField:      task[ds.UserDBField],
+		ds.UserDBField:      utils.GetInt(task, ds.UserDBField),
 	})
 }
 

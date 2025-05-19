@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"net/url"
 	"slices"
 
 	"sqldb-ws/domain/domain_service"
@@ -166,11 +167,14 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 	d.Params.Add(utils.SpecialIDParam, strings.ToLower(rowName), func(_ string) bool {
 		return strings.ToLower(rowName) != utils.ReservedParam
 	})
+
 	d.Params.SimpleDelete(utils.RootRowsParam)
 	if p, _ := d.Params.Get(utils.SpecialIDParam); p == "" || p == utils.ReservedParam || p == "<nil>" {
 		d.Params.SimpleDelete(utils.SpecialIDParam)
 	} else if record != nil {
 		record[utils.SpecialIDParam], _ = d.Params.Get(utils.SpecialIDParam)
+		record[utils.SpecialIDParam], _ = url.QueryUnescape(utils.ToString(record[utils.SpecialIDParam]))
+		record[utils.SpecialIDParam] = strings.Split(utils.ToString(record[utils.SpecialIDParam]), ",")[0]
 	}
 	d.Service = infrastructure.NewTableRowService(d.Db, d.SuperAdmin, d.User, strings.ToLower(d.TableName), specializedService)
 	if d.Method == utils.IMPORT {

@@ -1,7 +1,6 @@
 package filter
 
 import (
-	"fmt"
 	"net/url"
 	"slices"
 	"sort"
@@ -33,6 +32,7 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 	if restr != "" && !f.Domain.IsSuperCall() {
 		SQLrestriction = append(SQLrestriction, restr)
 	}
+
 	later := []string{}
 	for _, restr := range innerRestriction {
 		if strings.Contains(restr, " IN ") {
@@ -45,6 +45,7 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 			SQLrestriction = r
 		}
 	}
+
 	domainParams.Add(utils.RootColumnsParam, view, func(v string) bool { return !f.Domain.IsSuperCall() })
 	domainParams.Add(utils.RootOrderParam, order, func(v string) bool { return true })
 	domainParams.Add(utils.RootDirParam, dir, func(v string) bool { return true })
@@ -86,10 +87,15 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 			if err != nil && key != utils.SpecialIDParam {
 				continue
 			}
-			ands := strings.Split(utils.ToString(val), ",")
-			for _, and := range ands {
-				alterRestr = append(alterRestr, connector.MakeSqlItem("", typ, foreign, key, and, "="))
+			newSTR := ""
+			ors := strings.Split(utils.ToString(val), ",")
+			for _, or := range ors {
+				if len(newSTR) > 0 {
+					newSTR += " OR "
+				}
+				newSTR += connector.MakeSqlItem("", typ, foreign, key, or, "=")
 			}
+			alterRestr = append(alterRestr, "("+newSTR+")")
 		}
 		restr = append(alterRestr, restr...)
 		if schema.HasField(ds.SchemaDBField) && !d.Domain.IsSuperAdmin() {
@@ -114,6 +120,7 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 	newRestr := map[string]interface{}{}
 	restrictions := map[string]interface{}{}
 	id, ok := s.Domain.GetParams().Get(utils.SpecialIDParam)
+	realID := strings.Split(id, ",")
 
 	if s.Domain.IsOwn(false, false, s.Domain.GetMethod()) || overrideOwn {
 		ids := s.GetCreatedAccessData(schema.ID)
@@ -135,7 +142,7 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 		} else {
 			if access, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
 				ds.SchemaDBField:    schema.ID,
-				ds.DestTableDBField: id,
+				ds.DestTableDBField: realID,
 				"write":             true,
 			}, false); err != nil || len(access) == 0 {
 				restrictions["is_draft"] = false
@@ -152,7 +159,6 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 		}
 		if s.Domain.GetUserID() != "" {
 			if scope, ok := s.Domain.GetParams().Get(utils.RootScope); ok && scope == "enable" {
-				fmt.Println("THERE")
 				restrictions[key] = s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
 					"parent_" + ds.UserDBField: s.Domain.GetUserID(),
 				}, true, ds.UserDBField)

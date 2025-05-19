@@ -19,10 +19,13 @@ func Autoload() []sm.SchemaModel {
 		models.ConferenceAuthorsFR.Name,
 		models.DemoAuthorsFR.Name,
 		models.HDRAuthorsFR.Name,
+		models.PublicationActFR.Name,
 		models.InternshipAuthorsFR.Name,
 		models.PosterAuthorsFR.Name,
 		models.PresentationAuthorsFR.Name,
 		models.ThesisAuthorsFR.Name,
+		models.PublicationActConferenceFR.Name,
+		models.PublicationActArticleFR.Name,
 		models.DemoFR.Name, models.InternshipFR.Name, models.ThesisFR.Name, models.HDRFR.Name,
 		models.PosterFR.Name, models.PresentationFR.Name, models.ConferenceFR.Name,
 	}...)
@@ -36,7 +39,9 @@ func Autoload() []sm.SchemaModel {
 		models.PosterFR.Name,
 		models.PresentationFR.Name,
 		models.ConferenceFR.Name,
-
+		models.PublicationActFR.Name,
+		models.PublicationActConferenceFR.Name,
+		models.PublicationActArticleFR.Name,
 		models.OtherPublicationAuthorsFR.Name,
 		models.ArticleAuthorsFR.Name,
 		models.ConferenceAuthorsFR.Name,
@@ -60,5 +65,8 @@ func Autoload() []sm.SchemaModel {
 		models.PosterAuthorsFR,
 		models.PresentationAuthorsFR,
 		models.ThesisAuthorsFR,
+		models.PublicationActConferenceFR,
+		models.PublicationActArticleFR,
+		models.PublicationActFR,
 	}
 }

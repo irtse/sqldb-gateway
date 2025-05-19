@@ -31,16 +31,33 @@ func (u *Uploader) ApplyUpload(file multipart.File, handler *multipart.FileHeade
 	} else if id, ok := u.Domain.GetParams().Get(utils.SpecialIDParam); ok {
 		if path, err := u.upload(file, handler); err == nil {
 			if sch, err := schema.GetSchema(schema.GetTablename(tableName)); err == nil && sch.HasField(columnName) {
-				if f, _ := sch.GetField(columnName); strings.Contains(f.Type, "upload") {
+				if f, _ := sch.GetField(columnName); !strings.Contains(f.Type, "upload") {
 					return "", errors.New("must be a field of upload type")
 				}
-				if err := u.Domain.GetDb().UpdateQuery(sch.Name, map[string]interface{}{
-					columnName: path,
-				}, map[string]interface{}{
-					utils.SpecialIDParam: id,
-				}, false); err != nil {
-					return "", err
+				if res, err := u.Domain.GetDb().SelectQueryWithRestriction(sch.Name,
+					map[string]interface{}{
+						utils.SpecialIDParam: id,
+					}, false); err == nil && len(res) > 0 {
+					f := utils.GetString(res[0], columnName)
+					paths := []string{}
+					if f != "" {
+						for _, ff := range strings.Split(f, ",") {
+							if strings.Contains(path, ff) {
+								paths = append(paths, path)
+							} else {
+								paths = append(paths, ff)
+							}
+						}
+					}
+					if err := u.Domain.GetDb().UpdateQuery(sch.Name, map[string]interface{}{
+						columnName: strings.Join(paths, ","),
+					}, map[string]interface{}{
+						utils.SpecialIDParam: id,
+					}, false); err != nil {
+						return "", err
+					}
 				}
+
 			}
 			return path, nil
 		}
@@ -80,6 +97,8 @@ func (u *Uploader) upload(file multipart.File, handler *multipart.FileHeader) (s
 	if storage == "" {
 		storage = "/mnt/files"
 	}
+	fmt.Println("START STORAGE ", storage)
+
 	os.MkdirAll(storage, os.ModePerm) // Ensure uploads dir exists
 	// Save the uploaded file
 	fileName := strings.Split(handler.Filename, ".")
@@ -94,5 +113,7 @@ func (u *Uploader) upload(file multipart.File, handler *multipart.FileHeader) (s
 	if err != nil {
 		return path, err
 	}
+	fmt.Println("START STORAGE PATH ", path)
+
 	return path, nil
 }

@@ -59,7 +59,7 @@ func (d *ViewConvertor) handleTaskWorkflow(record utils.Record) (sm.WorkflowMode
 	reqRecord := d.FetchRecord(ds.DBRequest.Name,
 		map[string]interface{}{
 			ds.WorkflowDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(
-				ds.WorkflowSchemaDBField, map[string]interface{}{
+				ds.DBWorkflowSchema.Name, map[string]interface{}{
 					utils.SpecialIDParam: record.GetInt(ds.WorkflowSchemaDBField),
 				}, true, ds.WorkflowDBField),
 		})

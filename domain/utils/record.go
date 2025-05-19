@@ -87,6 +87,15 @@ func GetString(record map[string]interface{}, column string) string {
 	return ToString(record[column])
 }
 
+func GetFloat(record map[string]interface{}, column string) float64 {
+	str := ToString(record[column])
+	if str == "" {
+		return -1
+	}
+	val, _ := strconv.ParseFloat(str, 64)
+	return float64(val)
+}
+
 func GetInt(record map[string]interface{}, column string) int64 {
 	str := ToString(record[column])
 	if str == "" {

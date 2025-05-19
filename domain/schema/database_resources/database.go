@@ -183,6 +183,7 @@ var DBTrigger = models.SchemaModel{
 	Category: "trigger",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
+		{Name: "description", Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 0},
 		{Name: "type", Type: models.ENUMTRIGGER.String(), Required: true, Readonly: true, Index: 1},
 		{Name: "mode", Type: models.ENUMMODE.String(), Required: true, Readonly: true, Index: 1},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 3},
@@ -333,7 +334,7 @@ var DBRequest = models.SchemaModel{
 		{Name: "closing_date", Type: models.TIMESTAMP.String(), Required: false, Readonly: true, Level: models.LEVELRESPONSIBLE, Index: 5},
 		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 6},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 7},
-		{Name: RootID(DBWorkflow.Name), Type: models.INTEGER.String(), ForeignTable: DBWorkflow.Name, Required: true, Label: "request type", Index: 8},
+		{Name: RootID(DBWorkflow.Name), Type: models.INTEGER.String(), ForeignTable: DBWorkflow.Name, Required: false, Label: "request type", Index: 8},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Label: "created by", Index: 9},
 		{Name: "is_meta", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 10, Hidden: true},
 	},
@@ -374,8 +375,8 @@ var DBTask = models.SchemaModel{
 		{Name: "description", Type: models.BIGVARCHAR.String(), Required: false, Index: 11},
 		{Name: "state", Type: models.ENUMSTATE.String(), Required: false, Default: models.STATEPENDING, Index: 2},
 		{Name: "is_close", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 3, Hidden: true},
-		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Label: "assigned to entity", Index: 3},
-		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Readonly: true, Label: "assigned to user", Index: 4},
+		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Label: "assigned to user", Index: 3},
+		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Readonly: true, Label: "assigned to entity", Index: 4},
 		{Name: "urgency", Type: models.ENUMURGENCY.String(), Required: false, Default: models.LEVELNORMAL, Readonly: true, Index: 5},
 		{Name: "priority", Type: models.ENUMURGENCY.String(), Required: false, Default: models.LEVELNORMAL, Readonly: true, Index: 6},
 		{Name: "closing_date", Type: models.TIMESTAMP.String(), Required: false, Readonly: true, Index: 7},
@@ -664,3 +665,4 @@ var ViewAttributionDBField = RootID(DBViewAttribution.Name)
 var TriggerDBField = RootID(DBTrigger.Name)
 var EmailTemplateDBField = RootID(DBEmailTemplate.Name)
 var EmailSendedDBField = RootID(DBEmailSended.Name)
+var TriggerRuleDBField = RootID(DBTriggerRule.Name)
