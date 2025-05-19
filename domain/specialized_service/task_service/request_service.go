@@ -96,7 +96,13 @@ func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, 
 		if err == nil {
 			found := false
 			if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTriggerRule.Name, map[string]interface{}{
-				"!value":                 nil,
+				"!value": nil,
+				ds.TriggerDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTrigger.Name, map[string]interface{}{
+					ds.SchemaDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBSchema.Name, map[string]interface{}{
+						utils.SpecialIDParam: rec[ds.SchemaDBField],
+						"name":               ds.DBRequest.Name,
+					}, true, utils.SpecialIDParam),
+				}, false, utils.SpecialIDParam),
 				"to_" + ds.SchemaDBField: mailSchema.GetID(),
 			}, false); err == nil && len(res) > 0 {
 				for _, r := range res {
