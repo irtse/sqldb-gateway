@@ -137,41 +137,13 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		current_index := utils.ToFloat64(order)
 		switch res["state"] {
 		case "completed":
-			if utils.GetBool(res, "passive") {
-				if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.WorkflowSchemaDBField, map[string]interface{}{
-					"index":            1,
-					ds.WorkflowDBField: record[ds.WorkflowDBField],
-				}, false); err == nil {
-					found := false
-					for _, rec := range res {
-						if utils.GetBool(rec, "before_hierarchical_validation") {
-							found = true
-							break
-						}
-					}
-					if found {
-						current_index = 0
-					} else {
-						current_index = 1
-					}
-				}
-			} else {
-				current_index = math.Floor(current_index + 1)
-			}
+			current_index = math.Floor(current_index + 1)
 		case "refused":
-			if utils.GetBool(res, "passive") {
-				s.deleteAll(utils.GetString(res, ds.DestTableDBField), utils.GetInt(res, ds.SchemaDBField))
-				return
-			}
 			s.Domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBRequest.Name, utils.Record{"state": "refused"},
 				map[string]interface{}{
 					utils.SpecialIDParam: utils.GetInt(res, RequestDBField),
 				}, false)
 		case "dismiss":
-			if utils.GetBool(res, "passive") {
-				s.deleteAll(utils.GetString(res, ds.DestTableDBField), utils.GetInt(res, ds.SchemaDBField))
-				return
-			}
 			if current_index >= 1 {
 				current_index = math.Floor(current_index - 1)
 			} else { // Dismiss will close requests.
@@ -290,16 +262,7 @@ func (s *TaskService) GenerateQueryFilter(tableName string, innerestr ...string)
 	if !s.Domain.IsSuperCall() {
 		innerestr = append(innerestr, conn.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
 			"meta_" + RequestDBField: nil,
-			"passive":                false,
 		}, true))
 	}
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
-}
-
-func GetPassive(domain utils.DomainITF, destID string, schemaID string) ([]map[string]interface{}, error) {
-	return domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-		ds.SchemaDBField:    schemaID,
-		ds.DestTableDBField: destID,
-		"passive":           true,
-	}, true)
 }

@@ -387,7 +387,6 @@ var DBTask = models.SchemaModel{
 		{Name: "nexts", Type: models.BIGVARCHAR.String(), Required: false, Default: "all", Hidden: true, Index: 12},
 		{Name: "meta_" + RootID(DBRequest.Name), Type: models.INTEGER.String(), ForeignTable: DBRequest.Name, Required: false, Hidden: true, Readonly: true, Label: "meta request attached", Index: 13},
 		{Name: "binded_dbtask", Type: models.INTEGER.String(), ForeignTable: "dbtask", Required: false, Readonly: true, Label: "binded task", Hidden: true, Index: 14},
-		{Name: "passive", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 14, Hidden: true},
 	},
 }
 
