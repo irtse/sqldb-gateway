@@ -290,6 +290,7 @@ func (s *TaskService) GenerateQueryFilter(tableName string, innerestr ...string)
 	if !s.Domain.IsSuperCall() {
 		innerestr = append(innerestr, conn.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
 			"meta_" + RequestDBField: nil,
+			"passive":                false,
 		}, true))
 	}
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
@@ -299,5 +300,6 @@ func GetPassive(domain utils.DomainITF, destID string, schemaID string) ([]map[s
 	return domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 		ds.SchemaDBField:    schemaID,
 		ds.DestTableDBField: destID,
+		"passive":           true,
 	}, true)
 }
