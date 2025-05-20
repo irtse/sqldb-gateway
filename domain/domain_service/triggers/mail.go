@@ -40,7 +40,7 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	if err := tmpl.Execute(&content, bodyToMap); err != nil {
 		return utils.Record{}, err
 	}
-
+	fmt.Println("subject", subject)
 	m := utils.Record{
 		"from_email":            utils.GetString(from, "id"),
 		"to_email":              utils.GetString(to, "id"), // SHOULD BE ID
@@ -69,9 +69,10 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	boundary := "mixed-boundary"
 	altboundary := "alt-boundary"
 	// En-têtes MIME
+	fmt.Println(mail)
 	body.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	body.WriteString(fmt.Sprintf("To: %s\r\n", to))
-	body.WriteString("Subject: \"" + utils.GetString(mail, "subject") + "\"\r\n")
+	body.WriteString("Subject: " + utils.GetString(mail, "subject") + "\r\n")
 	body.WriteString("MIME-Version: 1.0\r\n")
 	body.WriteString("Content-Type: multipart/mixed; boundary=\"" + boundary + "\"\r\n")
 	body.WriteString("\r\n--" + boundary + "\r\n")
@@ -173,8 +174,11 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	body.WriteString("<body>")
 
 	body.WriteString(utils.GetString(mail, "content"))
-	body.WriteString("</html>")
 	body.WriteString("</body>")
+	body.WriteString("</html>")
+	code := utils.GetString(mail, "code")
+	valid := strings.ToUpper(utils.Translate("valid"))
+	refused := strings.ToUpper(utils.Translate("refused"))
 	if isValidButton {
 		host := os.Getenv("HOST")
 		if host == "" {
@@ -196,13 +200,11 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			</div>
 			<br>
 			<br>
-		`, host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("valid")),
-			host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("refused"))))
+		`, host, code, valid, host, code, refused))
 	}
 	body.WriteString("\r\n")
-	body.WriteString("\r\n--" + altboundary + "--\r\n")
-	body.WriteString("\r\n")
-	body.WriteString("\r\n--" + boundary + "--\r\n")
+	body.WriteString("--" + altboundary + "--\r\n")
+	body.WriteString("--" + boundary + "--\r\n")
 
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
