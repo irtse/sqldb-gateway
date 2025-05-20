@@ -52,7 +52,7 @@ func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interfac
 			}, false, "from_email",
 		),
 	}, false); err == nil && len(res) > 0 && emailTo != "" {
-		err := triggers.SendMail(utils.GetString(res[0], "email"), emailTo, record, isValid)
+		err := triggers.SendMail(utils.GetString(res[0], "email"), emailTo, res[0], isValid)
 		fmt.Println("SENDING MAIL :", err)
 	} else {
 		fmt.Println("can't email because of a missing <send to> user")

@@ -168,16 +168,14 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 					font-family: system-ui, sans-serif;
 					}
 				</style>
-				</head>
+				</head>\n
 			`)
 	}
-	body.WriteString("<body>")
+	body.WriteString("<body>\n")
 
 	body.WriteString(utils.GetString(mail, "content"))
 
 	code := utils.GetString(mail, "code")
-	valid := strings.ToUpper(utils.Translate("valid"))
-	refused := strings.ToUpper(utils.Translate("refused"))
 	if isValidButton {
 		host := os.Getenv("HOST")
 		if host == "" {
@@ -189,23 +187,22 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			<div class="buttons">
 				<form action="%s/v1/response/%s" method="POST">
 					<input type="hidden" name="got_response" value="true">
-					<button type="submit">%s</button>
+					<button type="submit">✔</button>
 				</form>
 				<form action="%s/v1/response/%s" method="POST">
 					<input type="hidden" name="action" value="confirm">
 					<input type="hidden" name="got_response" value="false">
-					<button type="submit">%s</button>
+					<button type="submit">✘</button>
 				</form>
 			</div>
 			<br>
-			<br>
-		`, host, code, valid, host, code, refused))
+			<br>\n
+		`, host, code, host, code))
 	}
-	body.WriteString("</body>")
-	body.WriteString("</html>")
-	body.WriteString("\r\n")
-	body.WriteString("--" + altboundary + "--\r\n")
-	body.WriteString("--" + boundary + "--\r\n")
+	body.WriteString("</body>\n")
+	body.WriteString("</html>\n")
+	body.WriteString("--" + altboundary + "--\n")
+	body.WriteString("--" + boundary + "--\n")
 
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
