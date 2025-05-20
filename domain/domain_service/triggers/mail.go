@@ -103,14 +103,14 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		body.WriteString(fmt.Sprintf(`
 			<br>
 			<br>
-			<div style="display: flex;justify-content: center;">
+			<div style="display: flex;justify-content: center;align-items: center;">
 				<form action="%s/v1/response/%s" method="POST">
 					<input type="hidden" name="got_response" value="true">
-					<button style="background: #13aa52; border: 1px solid #13aa52;border-radius: 6px;box-shadow: rgba(0, 0, 0, 0.1) 1px 2px 4px; box-sizing: border-box;color: #FFFFFF;cursor: pointer;display: inline-block; font-family: nunito,roboto,proxima-nova,"proxima nova",sans-serif;font-size: 16px;font-weight: 800;line-height: 16px;min-height: 40px; outline: 0;padding: 12px 14px;text-align: center;text-rendering: geometricprecision;text-transform: none;user-select: none;-webkit-user-select: none;touch-action: manipulation;vertical-align: middle;" type="submit">✔</button>
+					<button style="margin: 0px 30px 0px 0px;cursor: pointer;background: #13aa52;border: 1px solid #13aa52;border-radius: 6px;box-shadow: rgba(0, 0, 0, 0.1) 1px 2px 4px; box-sizing: border-box;color: #FFFFFF;cursor: pointer;display: inline-block; font-family: nunito,roboto,proxima-nova,"proxima nova",sans-serif;font-size: 25px;font-weight: 800;line-height: 16px;min-height: 40px; outline: 0;padding: 20px 22px;text-align: center;text-rendering: geometricprecision;text-transform: none;user-select: none;-webkit-user-select: none;touch-action: manipulation;vertical-align: middle;" type="submit">✔</button>
 				</form>
 				<form action="%s/v1/response/%s" method="POST">
 					<input type="hidden" name="got_response" value="false">
-					<button style="background: #FF4742; border: 1px solid #FF4742;border-radius: 6px;box-shadow: rgba(0, 0, 0, 0.1) 1px 2px 4px; box-sizing: border-box;color: #FFFFFF;cursor: pointer;display: inline-block; font-family: nunito,roboto,proxima-nova,"proxima nova",sans-serif;font-size: 16px;font-weight: 800;line-height: 16px;min-height: 40px; outline: 0;padding: 12px 14px;text-align: center;text-rendering: geometricprecision;text-transform: none;user-select: none;-webkit-user-select: none;touch-action: manipulation;vertical-align: middle;" type="submit">✘</button>
+					<button style="cursor: pointer;background: #FF4742;border: 1px solid #FF4742;border-radius: 6px;box-shadow: rgba(0, 0, 0, 0.1) 1px 2px 4px; box-sizing: border-box;color: #FFFFFF;cursor: pointer;display: inline-block; font-family: nunito,roboto,proxima-nova,"proxima nova",sans-serif;font-size: 25px;font-weight: 800;line-height: 16px;min-height: 40px; outline: 0;padding: 20px 22px;text-align: center;text-rendering: geometricprecision;text-transform: none;user-select: none;-webkit-user-select: none;touch-action: manipulation;vertical-align: middle;" type="submit">✘</button>
 				</form>
 			</div>
 			<br>
