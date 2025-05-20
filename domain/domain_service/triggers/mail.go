@@ -166,7 +166,6 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	body.WriteString(utils.GetString(mail, "content"))
 	body.WriteString("</html>")
 	body.WriteString("</body>")
-
 	if isValidButton {
 		host := os.Getenv("HOST")
 		if host == "" {
@@ -219,6 +218,8 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			body.WriteString("--" + boundary + "--")
 		}
 	}
+	fmt.Println(string(body.Bytes()))
+
 	// Charger le template HTML
 	var err error
 	if pwd != "" {
