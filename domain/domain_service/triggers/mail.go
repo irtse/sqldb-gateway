@@ -103,17 +103,22 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		body.WriteString(fmt.Sprintf(`
 			<br>
 			<br>
-			<table border="0" align="center" cellpadding="0" cellspacing="10" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: auto;margin: 0px auto;">
-				<tr>
-				<form action="%s/v1/response/%s" method="POST">
-					<input type="hidden" name="got_response" value="true">
-					<td style="font-family: sans-serif; font-size: 14px; vertical-align: top; background-color: #13aa52; border-radius:5px; text-align: center;" valign="top" bgcolor="#13aa52" align="center"> <a href="" target="" style="display: inline-block; color: #ffffff; background-color: #13aa52; border: solid 1px #13aa52; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #13aa52;cursor: pointer">✔</a> </td>	
-				</form>
-				<form action="%s/v1/response/%s" method="POST">
-					<input type="hidden" name="got_response" value="false">
-					<td style="font-family: sans-serif; font-size: 14px; vertical-align: top; background-color: #FF4742; border-radius:5px; text-align: center;" valign="top" bgcolor="#FF4742" align="center"> <a href="" target="_blank" style="display: inline-block; color: #ffffff; background-color: #FF4742; border: solid 1px #FF4742; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #FF4742;">✘</a> </td>
-				</tr>
-			</table>
+			<div style="display:flex">
+				<table border="0" cellspacing="0" cellpadding="0" style="margin:0 10px 0 0">
+					<tr>
+						<td align="center" style="border-radius: 5px; background-color: #13aa52;">
+							<a rel="noopener" target="_blank" rel="noopener" target="_blank" href="%s/v1/response/%s?got_response=true" target="_blank" style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: #ffffff; font-weight: bold; text-decoration: none;border-radius: 5px; padding: 12px 18px; border: 1px solid #13aa52; display: inline-block;">✔</a>
+						</td>
+					</tr>
+				</table>
+				<table border="0" cellspacing="0" cellpadding="0">
+					<tr>
+						<td align="center" style="border-radius: 5px; background-color: #FF4742;">
+							<a rel="noopener" target="_blank" rel="noopener" target="_blank" href="%s/v1/response/%s?got_response=false" target="_blank" style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: #ffffff; font-weight: bold; text-decoration: none;border-radius: 5px; padding: 12px 18px; border: 1px solid #FF4742; display: inline-block;">✘</a>
+						</td>
+					</tr>
+				</table>
+				</div>
 			<br>
 			<br>
 		`, host, code, host, code))

@@ -20,12 +20,21 @@ type ExternalResponseController struct{ controller.AbstractController }
 // @Param	body		body 	Response	true		"Response"
 // @Success 200 {string} success !
 // @Failure 403 user does not exist
-// @router /:code [post]
+// @router /:code [get]
 func (e *ExternalResponseController) Post() {
 	fmt.Println("EXTERNAL")
 	code := e.Ctx.Input.Params()[":code"]
-	body := e.Body(false)
-
+	p, _ := e.Params()
+	body := map[string]interface{}{}
+	for k, v := range p {
+		if v == "true" {
+			body[k] = true
+		} else if v == "false" {
+			body[k] = false
+		} else {
+			body[k] = v
+		}
+	}
 	d := domain.Domain(true, "", nil)
 	if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
 		"code": code,

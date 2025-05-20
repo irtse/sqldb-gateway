@@ -177,9 +177,9 @@
       "type": "string"
      },
      {
-      "description": "(Optionnal) Value of filter_new",
+      "description": "(Optionnal) Value of filter_status",
       "in": "query",
-      "name": "filter_new",
+      "name": "filter_status",
       "type": "string"
      },
      {
@@ -327,9 +327,9 @@
       "type": "string"
      },
      {
-      "description": "(Optionnal) Value of filter_new",
+      "description": "(Optionnal) Value of filter_status",
       "in": "query",
-      "name": "filter_new",
+      "name": "filter_status",
       "type": "string"
      },
      {
@@ -477,9 +477,9 @@
       "type": "string"
      },
      {
-      "description": "(Optionnal) Value of filter_new",
+      "description": "(Optionnal) Value of filter_status",
       "in": "query",
-      "name": "filter_new",
+      "name": "filter_status",
       "type": "string"
      },
      {
@@ -636,9 +636,9 @@
       "type": "string"
      },
      {
-      "description": "(Optionnal) Value of filter_new",
+      "description": "(Optionnal) Value of filter_status",
       "in": "query",
-      "name": "filter_new",
+      "name": "filter_status",
       "type": "string"
      },
      {
@@ -804,9 +804,9 @@
       "type": "string"
      },
      {
-      "description": "(Optionnal) Value of filter_new",
+      "description": "(Optionnal) Value of filter_status",
       "in": "query",
-      "name": "filter_new",
+      "name": "filter_status",
       "type": "string"
      },
      {

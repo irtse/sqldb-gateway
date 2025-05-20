@@ -132,9 +132,9 @@ paths:
         in: query
         name: filename
         type: string
-      - description: (Optionnal) Value of filter_new
+      - description: (Optionnal) Value of filter_status
         in: query
-        name: filter_new
+        name: filter_status
         type: string
       - description: set a filter command line compose as (key~value(+|))
         in: query
@@ -241,9 +241,9 @@ paths:
         in: query
         name: filename
         type: string
-      - description: (Optionnal) Value of filter_new
+      - description: (Optionnal) Value of filter_status
         in: query
-        name: filter_new
+        name: filter_status
         type: string
       - description: set a filter command line compose as (key~value(+|))
         in: query
@@ -350,9 +350,9 @@ paths:
         in: query
         name: filename
         type: string
-      - description: (Optionnal) Value of filter_new
+      - description: (Optionnal) Value of filter_status
         in: query
-        name: filter_new
+        name: filter_status
         type: string
       - description: set a filter command line compose as (key~value(+|))
         in: query
@@ -465,9 +465,9 @@ paths:
         in: query
         name: filename
         type: string
-      - description: (Optionnal) Value of filter_new
+      - description: (Optionnal) Value of filter_status
         in: query
-        name: filter_new
+        name: filter_status
         type: string
       - description: set a filter command line compose as (key~value(+|))
         in: query
@@ -586,9 +586,9 @@ paths:
         in: query
         name: filename
         type: string
-      - description: (Optionnal) Value of filter_new
+      - description: (Optionnal) Value of filter_status
         in: query
-        name: filter_new
+        name: filter_status
         type: string
       - description: set a filter command line compose as (key~value(+|))
         in: query

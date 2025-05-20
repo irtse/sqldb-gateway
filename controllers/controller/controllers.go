@@ -49,7 +49,7 @@ func (t *AbstractController) Call(auth bool, method utils.Method, args ...interf
 		}
 	} // then proceed to exec by calling domain
 	d := domain.Domain(superAdmin, user, nil)
-	p, asLabel := t.params()
+	p, asLabel := t.Params()
 	if method == utils.IMPORT {
 		file, header, err := t.Ctx.Request.FormFile("file")
 		if err != nil {
@@ -76,7 +76,7 @@ func (t *AbstractController) Call(auth bool, method utils.Method, args ...interf
 }
 
 // params will produce a Params struct compose of url & query parameters
-func (t *AbstractController) params() (map[string]string, map[string]string) {
+func (t *AbstractController) Params() (map[string]string, map[string]string) {
 	paramsAsLabel := map[string]string{}
 	if t.ParamsOverload != nil {
 		return t.ParamsOverload, paramsAsLabel
