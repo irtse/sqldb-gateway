@@ -174,8 +174,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	body.WriteString("<body>")
 
 	body.WriteString(utils.GetString(mail, "content"))
-	body.WriteString("</body>")
-	body.WriteString("</html>")
+
 	code := utils.GetString(mail, "code")
 	valid := strings.ToUpper(utils.Translate("valid"))
 	refused := strings.ToUpper(utils.Translate("refused"))
@@ -202,6 +201,8 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			<br>
 		`, host, code, valid, host, code, refused))
 	}
+	body.WriteString("</body>")
+	body.WriteString("</html>")
 	body.WriteString("\r\n")
 	body.WriteString("--" + altboundary + "--\r\n")
 	body.WriteString("--" + boundary + "--\r\n")
