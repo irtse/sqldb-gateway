@@ -168,10 +168,10 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 					font-family: system-ui, sans-serif;
 					}
 				</style>
-				</head>\n
+				</head>
 			`)
 	}
-	body.WriteString("<body>\n")
+	body.WriteString("<body>")
 
 	body.WriteString(utils.GetString(mail, "content"))
 
@@ -181,7 +181,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		if host == "" {
 			host = "http://capitalisation.irt-aese.local"
 		}
-		body.WriteString(fmt.Sprintf(`
+		body.WriteString(fmt.Sprintf(`\n
 			<br>
 			<br>
 			<div class="buttons">
@@ -199,7 +199,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			<br>\n
 		`, host, code, host, code))
 	}
-	body.WriteString("</body>\n")
+	body.WriteString("</body>")
 	body.WriteString("</html>\n")
 	body.WriteString("--" + altboundary + "--\n")
 	body.WriteString("--" + boundary + "--\n")
