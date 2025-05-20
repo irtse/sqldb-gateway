@@ -99,7 +99,9 @@ func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, 
 		s.To = to
 		delete(record, "to_email")
 	}
-	record["code"] = uuid.New()
+	if record["code"] == nil || record["code"] == "" {
+		record["code"] = uuid.New()
+	}
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
 

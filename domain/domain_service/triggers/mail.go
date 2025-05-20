@@ -10,6 +10,8 @@ import (
 	"sqldb-ws/domain/utils"
 	"strings"
 	"text/template"
+
+	"github.com/google/uuid"
 )
 
 type EmailData struct {
@@ -56,12 +58,16 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	if destID > -1 {
 		m["mapped_with"+ds.DestTableDBField] = destID
 	}
+	if m["code"] == nil || m["code"] == "" {
+		m["code"] = uuid.New()
+	}
 	return m, nil
 }
 
 func SendMail(from string, to string, mail utils.Record, isValidButton bool) error {
 	var body bytes.Buffer
 	boundary := "mixed-boundary"
+	altboundary := "alt-boundary"
 	// En-têtes MIME
 	body.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	body.WriteString(fmt.Sprintf("To: %s\r\n", to))
@@ -69,9 +75,10 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	body.WriteString("MIME-Version: 1.0\r\n")
 	body.WriteString("Content-Type: multipart/mixed; boundary=" + boundary + "\r\n")
 	body.WriteString("\r\n--" + boundary + "\r\n")
+	body.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=%s\r\n", altboundary))
 	body.WriteString("\r\n")
 	// Partie texte
-
+	body.WriteString(fmt.Sprintf("--%s\r\n", altboundary))
 	body.WriteString("Content-Type: text/html; charset=\"utf-8\"\r\n")
 	body.WriteString("Content-Transfer-Encoding: 7bit\r\n\r\n")
 	body.WriteString("<html>")
@@ -164,6 +171,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 				</head>
 			`)
 	}
+
 	body.WriteString(utils.GetString(mail, "content"))
 	body.WriteString("</html>")
 	body.WriteString("</body>")
@@ -191,6 +199,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		`, host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("valid")),
 			host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("refused"))))
 	}
+	body.WriteString(fmt.Sprintf("--%s\r\n", altboundary))
 	body.WriteString("\r\n--" + boundary + "\r\n")
 
 	smtpHost := os.Getenv("SMTP_HOST")
