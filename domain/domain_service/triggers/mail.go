@@ -76,7 +76,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	body.WriteString("<html>")
 	body.WriteString("<body>")
 	if isValidButton {
-		body.Write([]byte(`
+		body.WriteString(`
 			<head>
 				<meta charset="UTF-8">
 				<style>
@@ -161,9 +161,9 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 					}
 				</style>
 				</head>
-			`))
+			`)
 	}
-	body.Write([]byte(utils.GetString(mail, "content")))
+	body.WriteString(utils.GetString(mail, "content"))
 	body.WriteString("</html>")
 	body.WriteString("</body>")
 
@@ -172,7 +172,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		if host == "" {
 			host = "http://capitalisation.irt-aese.local"
 		}
-		body.Write([]byte(fmt.Sprintf(`
+		body.WriteString(fmt.Sprintf(`
 			<br>
 			<br>
 			<div class="buttons">
@@ -189,7 +189,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			<br>
 			<br>
 		`, host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("valid")),
-			host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("refused")))))
+			host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("refused"))))
 	}
 
 	body.WriteString("\r\n--" + boundary + "\r\n")
