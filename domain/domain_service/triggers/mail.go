@@ -70,10 +70,9 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	body.WriteString("MIME-Version: 1.0\r\n")
 	body.WriteString("Content-Type: multipart/mixed; boundary=" + boundary + "\r\n")
 	body.WriteString("\r\n--" + boundary + "\r\n")
-	body.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=%s\r\n", altBoundary))
 	body.WriteString("\r\n")
 	// Partie texte
-	body.WriteString("\r\n--" + altBoundary + "\r\n")
+
 	body.WriteString("Content-Type: text/html; charset=\"utf-8\"\r\n")
 	body.WriteString("Content-Transfer-Encoding: 7bit\r\n\r\n")
 	body.WriteString("<html>")
@@ -193,8 +192,6 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		`, host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("valid")),
 			host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("refused"))))
 	}
-
-	body.WriteString("\r\n--" + altBoundary + "\r\n")
 	body.WriteString("\r\n--" + boundary + "\r\n")
 
 	smtpHost := os.Getenv("SMTP_HOST")
