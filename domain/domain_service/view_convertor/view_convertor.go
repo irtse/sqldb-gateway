@@ -341,11 +341,16 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 		vals[utils.SpecialIDParam] = record.GetString(utils.SpecialIDParam)
 	}
 	for _, field := range cols {
-		if d, ok := d.HandleDBSchemaField(record, field, tableName, shallowVals); ok && d != "" {
+		if d, s, ok := d.HandleDBSchemaField(record, field, tableName, shallowVals); ok && d != "" {
 			datapath = d
+			shallowVals = s
 			continue
+		} else {
+			shallowVals = s
 		}
-		d.HandleLinkField(record, field, tableName, isEmpty, shallowVals, manyVals, manyPathVals)
+		shallowVals, manyVals, manyPathVals = d.HandleLinkField(record, field, tableName, isEmpty, shallowVals, manyVals, manyPathVals)
+		fmt.Println("1", shallowVals)
+
 		if isEmpty {
 			vals[field.Name] = nil
 		} else if v, ok := record[field.Name]; ok {
@@ -505,16 +510,16 @@ func (s *ViewConvertor) getSynthesis(record utils.Record, schema sm.SchemaModel)
 	return ""
 }
 
-func (d *ViewConvertor) HandleDBSchemaField(record utils.Record, field sm.FieldModel, tableName string, shallowVals map[string]interface{}) (string, bool) {
+func (d *ViewConvertor) HandleDBSchemaField(record utils.Record, field sm.FieldModel, tableName string, shallowVals map[string]interface{}) (string, map[string]interface{}, bool) {
 	datapath := ""
 	id, idOk := record[field.Name]
 	dest, destOk := record[ds.DestTableDBField]
 	if !strings.Contains(field.Name, ds.DBSchema.Name) || !idOk || id == nil {
-		return datapath, false
+		return datapath, shallowVals, false
 	}
 	schema, err := scheme.GetSchemaByID(utils.ToInt64(id))
 	if err != nil {
-		return datapath, false
+		return datapath, shallowVals, false
 	}
 	shallowVals[ds.SchemaDBField] = utils.Record{"id": utils.ToString(schema.ID), "name": utils.ToString(schema.Name), "label": utils.ToString(schema.Label)}
 	if destOk && dest != nil {
@@ -529,24 +534,26 @@ func (d *ViewConvertor) HandleDBSchemaField(record utils.Record, field sm.FieldM
 				"data_ref":           "@" + utils.ToString(schema.ID) + ":" + utils.ToString(t[0][utils.SpecialIDParam])}
 		}
 	}
-	return datapath, true
+	return datapath, shallowVals, true
 }
 
 func (d *ViewConvertor) HandleLinkField(record utils.Record, field sm.FieldModel, tableName string, shallow bool,
-	shallowVals map[string]interface{}, manyVals map[string]utils.Results, manyPathVals map[string]string) {
+	shallowVals map[string]interface{}, manyVals map[string]utils.Results, manyPathVals map[string]string) (map[string]interface{}, map[string]utils.Results, map[string]string) {
 	if record.GetString(field.Name) == "" || field.GetLink() <= 0 || shallow {
-		return
+		return shallowVals, manyVals, manyPathVals
 	}
 	link := scheme.GetTablename(utils.ToString(field.Link))
 
 	if strings.Contains(field.Type, "many") {
-		d.HandleManyField(record, field, tableName, link, manyVals, manyPathVals)
-		return
+		manyVals, manyPathVals = d.HandleManyField(record, field, tableName, link, manyVals, manyPathVals)
+		return shallowVals, manyVals, manyPathVals
 	}
-	d.HandleOneField(record, field, link, shallowVals)
+	shallowVals = d.HandleOneField(record, field, link, shallowVals)
+	return shallowVals, manyVals, manyPathVals
 }
 
-func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel, tableName, link string, manyVals map[string]utils.Results, manyPathVals map[string]string) {
+func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel, tableName, link string,
+	manyVals map[string]utils.Results, manyPathVals map[string]string) (map[string]utils.Results, map[string]string) {
 	if !d.Domain.IsShallowed() {
 		l, _ := scheme.GetSchemaByID(field.GetLink())
 		for _, f := range l.Fields {
@@ -576,13 +583,11 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 			}
 		}
 	}
+	return manyVals, manyPathVals
 }
 
-func (d *ViewConvertor) HandleOneField(record utils.Record, field sm.FieldModel, link string, shallowVals map[string]interface{}) {
-	v := record.GetString(utils.SpecialIDParam)
-	if field.GetLink() >= 0 {
-		v = utils.ToString(field.GetLink())
-	}
+func (d *ViewConvertor) HandleOneField(record utils.Record, field sm.FieldModel, link string, shallowVals map[string]interface{}) map[string]interface{} {
+	v := record.GetString(field.Name)
 	if r, err := d.Domain.GetDb().SelectQueryWithRestriction(link, map[string]interface{}{
 		utils.SpecialIDParam: v,
 	}, false); err == nil && len(r) > 0 {
@@ -596,6 +601,7 @@ func (d *ViewConvertor) HandleOneField(record utils.Record, field sm.FieldModel,
 			shallowVals[field.Name].(utils.Record)[sm.LABELKEY] = r[0][sm.LABELKEY]
 		}
 	}
+	return shallowVals
 }
 
 func (d *ViewConvertor) ApplyCommandRow(record utils.Record, vals map[string]interface{}, params utils.Params) {
