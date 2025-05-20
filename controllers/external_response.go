@@ -15,8 +15,8 @@ type ExternalResponseController struct{ controller.AbstractController }
 // LLDAP HERE
 // func (l *AuthController) LoginLDAP() { }
 
-// @Title Post
-// @Description Post an external response
+// @Title get
+// @Description Post get external response
 // @Param	body		body 	Response	true		"Response"
 // @Success 200 {string} success !
 // @Failure 403 user does not exist

@@ -36,7 +36,7 @@ services:
       DBPWD : ${DBPWD:-test}
       DBNAME: ${DBNAME:-test}
       DBSSL: ${DBSSL:-disable}
-      HOST: ${HOST:-http://capitalisation.irt-aese.local/sqldb}
+      HOST: ${HOST:-http://capitalisation.irt-aese.local}
 networks:
   sqldb:
     external: true

@@ -101,8 +101,9 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			host = "http://capitalisation.irt-aese.local"
 		}
 		body.WriteString(fmt.Sprintf(`
+			<div style="display:flex;justify-content:center;align-items: center;">
 			<br>
-				<table width="100%s" border="0" cellspacing="0" cellpadding="0" style="margin:0 10px 0 0">
+				<table border="0" cellspacing="0" cellpadding="0" style="margin:0 10px 0 0">
 					<tr>
 						<td align="center" style="border-radius: 5px; background-color: #13aa52;">
 							<a rel="noopener" target="_blank" rel="noopener" target="_blank" href="%s/v1/response/%s?got_response=true" target="_blank" style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: #ffffff; font-weight: bold; text-decoration: none;border-radius: 5px; padding: 12px 18px; border: 1px solid #13aa52; display: inline-block;">✔</a>
@@ -116,8 +117,9 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 						</td>
 					</tr>
 				</table>
+				</div style="display:flex; ">
 			<br>
-		`, "%", host, code, host, code))
+		`, host, code, host, code))
 	}
 	body.WriteString("</body>")
 	body.WriteString("</html>\n")
