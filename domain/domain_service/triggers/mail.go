@@ -61,7 +61,8 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 
 func SendMail(from string, to string, mail utils.Record, isValidButton bool) error {
 	var body bytes.Buffer
-	boundary := "MY-MIME-BOUNDARY"
+	boundary := "mixed-boundary"
+	altBoundary := "alt-boundary"
 	// En-têtes MIME
 	body.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	body.WriteString(fmt.Sprintf("To: %s\r\n", to))
@@ -69,8 +70,10 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	body.WriteString("MIME-Version: 1.0\r\n")
 	body.WriteString("Content-Type: multipart/mixed; boundary=" + boundary + "\r\n")
 	body.WriteString("\r\n--" + boundary + "\r\n")
-
+	body.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=%s\r\n", altBoundary))
+	body.WriteString("\r\n")
 	// Partie texte
+	body.WriteString("\r\n--" + altBoundary + "\r\n")
 	body.WriteString("Content-Type: text/html; charset=\"utf-8\"\r\n")
 	body.WriteString("Content-Transfer-Encoding: 7bit\r\n\r\n")
 	body.WriteString("<html>")
@@ -191,6 +194,9 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("refused"))))
 	}
 
+	body.WriteString("\r\n--" + altBoundary + "\r\n")
+	body.WriteString("\r\n--" + boundary + "\r\n")
+
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
 	pwd := os.Getenv("SMTP_PASSWORD")
@@ -201,7 +207,6 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 
 		fileData, err := os.ReadFile(file_attached)
 		if err == nil {
-			body.WriteString("\r\n--" + boundary + "\r\n")
 			fileBase64 := base64.StdEncoding.EncodeToString(fileData)
 			body.WriteString("Content-Type: application/octet-stream\r\n")
 			body.WriteString("Content-Transfer-Encoding: base64\r\n")
@@ -214,7 +219,6 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 				}
 				body.WriteString(fileBase64[i:end] + "\r\n")
 			}
-			body.WriteString("--" + boundary + "--")
 		}
 	}
 	fmt.Println(string(body.Bytes()))
