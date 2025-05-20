@@ -7,6 +7,7 @@ import (
 	"sqldb-ws/domain"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/utils"
+	"sqldb-ws/infrastructure/connector"
 )
 
 // Operations about login
@@ -37,7 +38,7 @@ func (e *ExternalResponseController) Post() {
 	}
 	d := domain.Domain(true, "", nil)
 	if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
-		"code": code,
+		"code": connector.Quote(code),
 	}, false); err == nil && len(res) > 0 {
 		emailRelated := res[0]
 		body[ds.EmailSendedDBField] = emailRelated[utils.SpecialIDParam]
