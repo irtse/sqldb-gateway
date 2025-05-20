@@ -104,6 +104,8 @@ func (e *ExternalResponseController) Post() {
 			utils.Translate("We appreciate your feedback and your time."),
 		))
 		return
+	} else {
+		fmt.Println(err, res)
 	}
 	e.Response(utils.Results{}, errors.New("not a valid code response"), "", "")
 }

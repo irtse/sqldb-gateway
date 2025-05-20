@@ -279,9 +279,6 @@ func (s *RequestService) constructNotificationTask(newTask utils.Record, record 
 		ds.SchemaDBField:    newTask[ds.SchemaDBField],
 		ds.DestTableDBField: record[ds.DestTableDBField],
 	}
-	if _, ok := newTask["wrapped_"+ds.WorkflowDBField]; ok {
-		task["is_meta"] = true
-	}
 	return task
 }
 
