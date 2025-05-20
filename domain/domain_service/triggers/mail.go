@@ -62,7 +62,6 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 func SendMail(from string, to string, mail utils.Record, isValidButton bool) error {
 	var body bytes.Buffer
 	boundary := "mixed-boundary"
-	altBoundary := "alt-boundary"
 	// En-têtes MIME
 	body.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	body.WriteString(fmt.Sprintf("To: %s\r\n", to))
