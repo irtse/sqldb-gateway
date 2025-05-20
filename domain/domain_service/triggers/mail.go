@@ -20,13 +20,21 @@ type EmailData struct {
 func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	bodyToMap map[string]interface{}, domain utils.DomainITF, tplID int64,
 	bodySchema int64, destID int64, destOnResponse int64, fileAttached string, signature string) (utils.Record, error) {
+	var subj bytes.Buffer
 	var content bytes.Buffer
 
 	// SHOULD MAP AND APPLY CODE
+	tmplSubj, err := template.New("email").Parse(subject)
+	if err == nil {
+		if err := tmplSubj.Execute(&subj, bodyToMap); err != nil {
+			subject = subj.String()
+		}
+	}
 	tmpl, err := template.New("email").Parse(tpl + "<br>" + signature)
 	if err != nil {
 		return utils.Record{}, err
 	}
+
 	if err := tmpl.Execute(&content, bodyToMap); err != nil {
 		return utils.Record{}, err
 	}

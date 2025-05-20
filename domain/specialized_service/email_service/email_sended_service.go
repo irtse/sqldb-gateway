@@ -55,11 +55,10 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 					ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
 				}, false); err == nil && len(t) > 0 {
 					for _, r := range t {
-						fmt.Println(r)
 						if tt, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 							ds.RequestDBField:           r[utils.SpecialIDParam],
 							"meta_" + ds.RequestDBField: i,
-							"name":                      "waiting mails responses",
+							"name":                      connector.Quote("waiting mails responses"),
 						}, false); err != nil || len(tt) == 0 {
 							s.Domain.GetDb().CreateQuery(ds.DBTask.Name, map[string]interface{}{
 								ds.DestTableDBField:         r[ds.DestTableDBField],
