@@ -62,9 +62,9 @@ var PublicationStatusFR = models.SchemaModel{
 
 var PublicationActConferenceFR = models.SchemaModel{
 	Name:     "publication_act_conference",
+	CanOwned: true,
 	Label:    "publication act conference",
 	Category: "domain",
-	IsEnum:   true,
 	Fields: []models.FieldModel{
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: 0, Label: "téléchargement de la publication finalisée"},
@@ -77,7 +77,7 @@ var PublicationActArticleFR = models.SchemaModel{
 	Name:     "publication_act_article",
 	Label:    "publication act article",
 	Category: "domain",
-	IsEnum:   true,
+	CanOwned: true,
 	Fields: []models.FieldModel{
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: 0, Label: "téléchargement de la publication finalisée"},
@@ -90,7 +90,7 @@ var PublicationActFR = models.SchemaModel{
 	Name:     "publication_act",
 	Label:    "publication act",
 	Category: "domain",
-	IsEnum:   true,
+	CanOwned: true,
 	Fields: []models.FieldModel{
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: 0, Label: "téléchargement de la publication finalisée"},

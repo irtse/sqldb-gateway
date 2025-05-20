@@ -147,7 +147,7 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 						}
 					}
 				}
-				newView := NewView(schema.Label, schema.Label, "View description for "+strings.ReplaceAll(strings.ReplaceAll(schema.Name, "_", ""), "db", "")+" datas.",
+				newView := NewView(schema.Label, schema.Label, "View description for "+strings.ReplaceAll(strings.ReplaceAll(schema.Name, "_", " "), "db", "")+" datas.",
 					cat, schema.GetID(), index, true, false, true, false, nil, nil, nil)
 
 				s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)

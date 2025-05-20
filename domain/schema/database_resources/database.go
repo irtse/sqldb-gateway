@@ -183,7 +183,7 @@ var DBTrigger = models.SchemaModel{
 	Category: "trigger",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: true, Index: 0},
-		{Name: "description", Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 0},
+		{Name: "description", Type: models.TEXT.String(), Required: false, Readonly: true, Index: 0},
 		{Name: "type", Type: models.ENUMTRIGGER.String(), Required: true, Readonly: true, Index: 1},
 		{Name: "mode", Type: models.ENUMMODE.String(), Required: true, Readonly: true, Index: 1},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 3},
