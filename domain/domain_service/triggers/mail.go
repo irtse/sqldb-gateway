@@ -102,7 +102,6 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		}
 		body.WriteString(fmt.Sprintf(`
 			<br>
-			<br>
 				<table width="100%s" border="0" cellspacing="0" cellpadding="0" style="margin:0 10px 0 0">
 					<tr>
 						<td align="center" style="border-radius: 5px; background-color: #13aa52;">
@@ -117,7 +116,6 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 						</td>
 					</tr>
 				</table>
-			<br>
 			<br>
 		`, "%", host, code, host, code))
 	}
