@@ -28,7 +28,7 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	// SHOULD MAP AND APPLY CODE
 	tmplSubj, err := template.New("email").Parse(subject)
 	if err == nil {
-		if err := tmplSubj.Execute(&subj, bodyToMap); err != nil {
+		if err := tmplSubj.Execute(&subj, bodyToMap); err == nil {
 			subject = subj.String()
 		}
 	}
