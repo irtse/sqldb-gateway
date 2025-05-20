@@ -87,91 +87,10 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		body.WriteString(`
 			<head>
 				<meta charset="UTF-8">
-				<style>
-					.buttons {
-					display: flex;
-					width: 380px;
-					gap: 10px;
-					--b: 5px;   /* the border thickness */
-					--h: 1.8em; /* the height */
-					}
-
-					.buttons button {
-					--_c: #88C100;
-					flex: calc(1.25 + var(--_s,0));
-					min-width: 0;
-					font-size: 40px;
-					font-weight: bold;
-					height: var(--h);
-					cursor: pointer;
-					color: var(--_c);
-					border: var(--b) solid var(--_c);
-					background: 
-						conic-gradient(at calc(100% - 1.3*var(--b)) 0,var(--_c) 209deg, #0000 211deg) 
-						border-box;
-					clip-path: polygon(0 0,100% 0,calc(100% - 0.577*var(--h)) 100%,0 100%);
-					padding: 0 calc(0.288*var(--h)) 0 0;
-					margin: 0 calc(-0.288*var(--h)) 0 0;
-					box-sizing: border-box;
-					transition: flex .4s;
-					}
-
-					.buttons button + button {
-					--_c: #FF003C;
-					flex: calc(.75 + var(--_s,0));
-					background: 
-						conic-gradient(from -90deg at calc(1.3*var(--b)) 100%,var(--_c) 119deg, #0000 121deg) 
-						border-box;
-					clip-path: polygon(calc(0.577*var(--h)) 0,100% 0,100% 100%,0 100%);
-					margin: 0 0 0 calc(-0.288*var(--h));
-					padding: 0 0 0 calc(0.288*var(--h));
-					}
-
-					.buttons button:focus-visible {
-					outline-offset: calc(-2*var(--b));
-					outline: calc(var(--b)/2) solid #000;
-					background: none;
-					clip-path: none;
-					margin: 0;
-					padding: 0;
-					}
-
-					.buttons button:focus-visible + button {
-					background: none;
-					clip-path: none;
-					margin: 0;
-					padding: 0;
-					}
-
-					.buttons button:has(+ button:focus-visible) {
-					background: none;
-					clip-path: none;
-					margin: 0;
-					padding: 0;
-					}
-
-					button:hover,
-					button:active:not(:focus-visible) {
-					--_s: .75;
-					}
-
-					button:active {
-					box-shadow: inset 0 0 0 100vmax var(--_c);
-					color: #fff;
-					}
-
-					body {
-					display: grid;
-					place-content: center;
-					margin: 0;
-					height: 100vh;
-					font-family: system-ui, sans-serif;
-					}
-				</style>
-				</head>
+			</head>
 			`)
 	}
-	body.WriteString("<body>")
+	body.WriteString("<body style=\"margin:0; padding:0; font-family:Arial, sans-serif;\">")
 
 	body.WriteString(utils.GetString(mail, "content"))
 
@@ -181,22 +100,21 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		if host == "" {
 			host = "http://capitalisation.irt-aese.local"
 		}
-		body.WriteString(fmt.Sprintf(`\n
+		body.WriteString(fmt.Sprintf(`
 			<br>
 			<br>
-			<div class="buttons">
+			<div class="buttons>
 				<form action="%s/v1/response/%s" method="POST">
 					<input type="hidden" name="got_response" value="true">
-					<button type="submit">✔</button>
+					<button style="background: #13aa52; border: 1px solid #13aa52;border-radius: 6px;box-shadow: rgba(0, 0, 0, 0.1) 1px 2px 4px; box-sizing: border-box;color: #FFFFFF;cursor: pointer;display: inline-block; font-family: nunito,roboto,proxima-nova,"proxima nova",sans-serif;font-size: 16px;font-weight: 800;line-height: 16px;min-height: 40px; outline: 0;padding: 12px 14px;text-align: center;text-rendering: geometricprecision;text-transform: none;user-select: none;-webkit-user-select: none;touch-action: manipulation;vertical-align: middle;" type="submit">✔</button>
 				</form>
 				<form action="%s/v1/response/%s" method="POST">
-					<input type="hidden" name="action" value="confirm">
 					<input type="hidden" name="got_response" value="false">
-					<button type="submit">✘</button>
+					<button style="background: #FF4742; border: 1px solid #FF4742;border-radius: 6px;box-shadow: rgba(0, 0, 0, 0.1) 1px 2px 4px; box-sizing: border-box;color: #FFFFFF;cursor: pointer;display: inline-block; font-family: nunito,roboto,proxima-nova,"proxima nova",sans-serif;font-size: 16px;font-weight: 800;line-height: 16px;min-height: 40px; outline: 0;padding: 12px 14px;text-align: center;text-rendering: geometricprecision;text-transform: none;user-select: none;-webkit-user-select: none;touch-action: manipulation;vertical-align: middle;" type="submit">✘</button>
 				</form>
 			</div>
 			<br>
-			<br>\n
+			<br>
 		`, host, code, host, code))
 	}
 	body.WriteString("</body>")
@@ -228,8 +146,6 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			}
 		}
 	}
-	fmt.Println(string(body.Bytes()))
-
 	// Charger le template HTML
 	var err error
 	if pwd != "" {
