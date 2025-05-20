@@ -103,16 +103,17 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		body.WriteString(fmt.Sprintf(`
 			<br>
 			<br>
-			<div style="display: flex;justify-content: center;align-items: center;">
+			<table border="0" align="center" cellpadding="0" cellspacing="10" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: auto;margin: 0px auto;">
+				<tr>
 				<form action="%s/v1/response/%s" method="POST">
 					<input type="hidden" name="got_response" value="true">
-					<button style="margin: 0px 30px 0px 0px;cursor: pointer;background: #13aa52;border: 1px solid #13aa52;border-radius: 6px;box-shadow: rgba(0, 0, 0, 0.1) 1px 2px 4px; box-sizing: border-box;color: #FFFFFF;cursor: pointer;display: inline-block; font-family: nunito,roboto,proxima-nova,"proxima nova",sans-serif;font-size: 25px;font-weight: 800;line-height: 16px;min-height: 40px; outline: 0;padding: 20px 22px;text-align: center;text-rendering: geometricprecision;text-transform: none;user-select: none;-webkit-user-select: none;touch-action: manipulation;vertical-align: middle;" type="submit">✔</button>
+					<td style="font-family: sans-serif; font-size: 14px; vertical-align: top; background-color: #13aa52; border-radius:5px; text-align: center;" valign="top" bgcolor="#13aa52" align="center"> <a href="" target="" style="display: inline-block; color: #ffffff; background-color: #13aa52; border: solid 1px #13aa52; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #13aa52;cursor: pointer">✔</a> </td>	
 				</form>
 				<form action="%s/v1/response/%s" method="POST">
 					<input type="hidden" name="got_response" value="false">
-					<button style="cursor: pointer;background: #FF4742;border: 1px solid #FF4742;border-radius: 6px;box-shadow: rgba(0, 0, 0, 0.1) 1px 2px 4px; box-sizing: border-box;color: #FFFFFF;cursor: pointer;display: inline-block; font-family: nunito,roboto,proxima-nova,"proxima nova",sans-serif;font-size: 25px;font-weight: 800;line-height: 16px;min-height: 40px; outline: 0;padding: 20px 22px;text-align: center;text-rendering: geometricprecision;text-transform: none;user-select: none;-webkit-user-select: none;touch-action: manipulation;vertical-align: middle;" type="submit">✘</button>
-				</form>
-			</div>
+					<td style="font-family: sans-serif; font-size: 14px; vertical-align: top; background-color: #FF4742; border-radius:5px; text-align: center;" valign="top" bgcolor="#FF4742" align="center"> <a href="" target="_blank" style="display: inline-block; color: #ffffff; background-color: #FF4742; border: solid 1px #FF4742; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #FF4742;">✘</a> </td>
+				</tr>
+			</table>
 			<br>
 			<br>
 		`, host, code, host, code))
@@ -169,3 +170,41 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	fmt.Println("EMAIL SEND")
 	return nil
 }
+/*
+<!-- HTML !-->
+<button class="button-37" role="button">Button 37</button>
+
+/* CSS */
+.button-37 {
+	background-color: #13aa52;
+	border: 1px solid #13aa52;
+	border-radius: 4px;
+	box-shadow: rgba(0, 0, 0, .1) 0 2px 4px 0;
+	box-sizing: border-box;
+	color: #fff;
+	cursor: pointer;
+	font-family: "Akzidenz Grotesk BQ Medium", -apple-system, BlinkMacSystemFont, sans-serif;
+	font-size: 16px;
+	font-weight: 400;
+	outline: none;
+	outline: 0;
+	padding: 10px 25px;
+	text-align: center;
+	transform: translateY(0);
+	transition: transform 150ms, box-shadow 150ms;
+	user-select: none;
+	-webkit-user-select: none;
+	touch-action: manipulation;
+  }
+  
+  .button-37:hover {
+	box-shadow: rgba(0, 0, 0, .15) 0 3px 9px 0;
+	transform: translateY(-2px);
+  }
+  
+  @media (min-width: 768px) {
+	.button-37 {
+	  padding: 10px 30px;
+	}
+  }
+*/
