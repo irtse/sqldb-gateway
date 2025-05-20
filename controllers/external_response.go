@@ -42,7 +42,9 @@ func (e *ExternalResponseController) Post() {
 	}, false); err == nil && len(res) > 0 {
 		emailRelated := res[0]
 		body[ds.EmailSendedDBField] = emailRelated[utils.SpecialIDParam]
-		if _, err := d.CreateSuperCall(utils.AllParams(ds.DBEmailResponse.Name), body); err != nil {
+		if _, err := d.CreateSuperCall(utils.AllParams(ds.DBEmailResponse.Name).Enrich(map[string]interface{}{
+			"code": code,
+		}), body); err != nil {
 			e.Response(utils.Results{}, err, "", "")
 		}
 		e.Ctx.Output.ContentType("html") // Optional, Beego usually handles it
