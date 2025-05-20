@@ -191,8 +191,6 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("refused"))))
 	}
 
-	body.WriteString("\r\n--" + boundary + "\r\n")
-
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
 	pwd := os.Getenv("SMTP_PASSWORD")
@@ -203,6 +201,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 
 		fileData, err := os.ReadFile(file_attached)
 		if err == nil {
+			body.WriteString("\r\n--" + boundary + "\r\n")
 			fileBase64 := base64.StdEncoding.EncodeToString(fileData)
 			body.WriteString("Content-Type: application/octet-stream\r\n")
 			body.WriteString("Content-Transfer-Encoding: base64\r\n")
