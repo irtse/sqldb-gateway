@@ -71,18 +71,17 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	// En-têtes MIME
 	body.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	body.WriteString(fmt.Sprintf("To: %s\r\n", to))
-	body.WriteString("Subject: " + utils.GetString(mail, "subject") + "\r\n")
+	body.WriteString("Subject: \"" + utils.GetString(mail, "subject") + "\"\r\n")
 	body.WriteString("MIME-Version: 1.0\r\n")
-	body.WriteString("Content-Type: multipart/mixed; boundary=" + boundary + "\r\n")
+	body.WriteString("Content-Type: multipart/mixed; boundary=\"" + boundary + "\"\r\n")
 	body.WriteString("\r\n--" + boundary + "\r\n")
-	body.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=%s\r\n", altboundary))
+	body.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", altboundary))
 	body.WriteString("\r\n")
 	// Partie texte
 	body.WriteString(fmt.Sprintf("--%s\r\n", altboundary))
 	body.WriteString("Content-Type: text/html; charset=\"utf-8\"\r\n")
 	body.WriteString("Content-Transfer-Encoding: 7bit\r\n\r\n")
 	body.WriteString("<html>")
-	body.WriteString("<body>")
 	if isValidButton {
 		body.WriteString(`
 			<head>
@@ -171,6 +170,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 				</head>
 			`)
 	}
+	body.WriteString("<body>")
 
 	body.WriteString(utils.GetString(mail, "content"))
 	body.WriteString("</html>")
@@ -199,8 +199,10 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		`, host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("valid")),
 			host, utils.GetString(mail, "code"), strings.ToUpper(utils.Translate("refused"))))
 	}
-	body.WriteString(fmt.Sprintf("--%s\r\n", altboundary))
-	body.WriteString("\r\n--" + boundary + "\r\n")
+	body.WriteString("\r\n")
+	body.WriteString("\r\n--" + altboundary + "--\r\n")
+	body.WriteString("\r\n")
+	body.WriteString("\r\n--" + boundary + "--\r\n")
 
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
