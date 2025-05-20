@@ -22,6 +22,7 @@ type ExternalResponseController struct{ controller.AbstractController }
 // @Failure 403 user does not exist
 // @router /:code [post]
 func (e *ExternalResponseController) Post() {
+	fmt.Println("EXTERNAL")
 	code := e.Ctx.Input.Params()[":code"]
 	body := e.Body(false)
 
