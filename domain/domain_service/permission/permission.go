@@ -167,7 +167,7 @@ func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, le
 	}
 	// Handle UPDATE and CREATE permissions
 	if method == utils.CREATE && !perms.Create {
-		accesGranted = p.getShare(schema, destID, "create_access", true)
+		accesGranted = false
 	}
 	if method == utils.UPDATE && !perms.Update {
 		if !p.checkUpdateCreatePermissions(tableName, destID, myUserID) {
