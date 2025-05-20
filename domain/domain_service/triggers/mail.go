@@ -220,13 +220,21 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		}
 	}
 	// Charger le template HTML
-	auth := smtp.PlainAuth("", from, pwd, smtpHost)
-
-	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from,
-		[]string{
-			from,
-			to,
-		}, body.Bytes())
+	var err error
+	if pwd != "" {
+		auth := smtp.PlainAuth("", from, pwd, smtpHost)
+		err = smtp.SendMail(smtpHost+":"+smtpPort, auth, from,
+			[]string{
+				from,
+				to,
+			}, body.Bytes())
+	} else {
+		err = smtp.SendMail(smtpHost+":"+smtpPort, nil, from,
+			[]string{
+				from,
+				to,
+			}, body.Bytes())
+	}
 	if err != nil {
 		fmt.Println("EMAIL NOT SEND", err)
 		return err

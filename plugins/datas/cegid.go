@@ -115,7 +115,9 @@ var publicationFields = []models.FieldModel{
 	{Name: "publication", Type: models.UPLOAD_STR.String(), Required: true,
 		Index: 6, Label: "téléchargement de la publication"},
 	{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: "no",
-		Index: 6, Label: "le production a-t-elle fait l'objet d'un award ?"},
+		Index: 6, Label: "la production a-t-elle fait l'objet d'un award ?"},
+	{Name: "awarded_by", Type: models.VARCHAR.String(), Required: false,
+		Index: 6, Label: "la production a été primée par"},
 }
 
 var ArticleFR = models.SchemaModel{
