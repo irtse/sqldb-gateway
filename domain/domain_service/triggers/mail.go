@@ -135,6 +135,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			file_attached = "/mnt/files/" + file_attached
 		}
 		fileData, err := os.ReadFile(file_attached)
+		fmt.Println(fileData, err, file_attached)
 		if err == nil {
 			fileBase64 := base64.StdEncoding.EncodeToString(fileData)
 			body.WriteString("Content-Type: application/octet-stream\r\n")
