@@ -170,7 +170,7 @@ func (s *RequestService) Write(record utils.Record, tableName string) {
 
 	if utils.GetInt(record, "current_index") == 0 {
 		found := false
-		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.WorkflowSchemaDBField, map[string]interface{}{
+		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 			"index":            1,
 			ds.WorkflowDBField: record[ds.WorkflowDBField],
 		}, false); err == nil {
