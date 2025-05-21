@@ -2,7 +2,6 @@ package task_service
 
 import (
 	"errors"
-	"math"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/task"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -84,37 +83,6 @@ func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, 
 		return
 	}
 	for _, rec := range results {
-		mailSchema, err := schserv.GetSchema(ds.DBEmailTemplate.Name)
-		if err == nil {
-			found := false
-			if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTriggerRule.Name, map[string]interface{}{
-				"!value": nil,
-				ds.TriggerDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTrigger.Name, map[string]interface{}{
-					ds.SchemaDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBSchema.Name, map[string]interface{}{
-						utils.SpecialIDParam: rec[ds.SchemaDBField],
-						"name":               ds.DBRequest.Name,
-					}, true, utils.SpecialIDParam),
-				}, false, utils.SpecialIDParam),
-				"to_" + ds.SchemaDBField: mailSchema.GetID(),
-			}, false); err == nil && len(res) > 0 {
-				for _, r := range res {
-					if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
-						"generate_task":      true,
-						utils.SpecialIDParam: r["value"],
-					}, false); err == nil && len(res) > 0 {
-						rec["currentIndex"] = math.Floor(utils.GetFloat(record, "current_index")) - 1
-						s.Domain.GetDb().UpdateQuery(ds.DBRequest.Name, rec, map[string]interface{}{
-							utils.SpecialIDParam: rec[utils.SpecialIDParam],
-						}, false)
-						found = true
-						break
-					}
-				}
-			}
-			if found {
-				continue
-			}
-		}
 		p := utils.AllParams(ds.DBNotification.Name)
 		p.Set(ds.UserDBField, utils.ToString(rec[ds.UserDBField]))
 		p.Set(ds.DestTableDBField, utils.ToString(rec[utils.SpecialIDParam]))
@@ -194,26 +162,6 @@ func (s *RequestService) Write(record utils.Record, tableName string) {
 }
 
 func (s *RequestService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
-	mailSchema, err := schserv.GetSchema(ds.DBEmailTemplate.Name)
-	if err == nil {
-		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTriggerRule.Name, map[string]interface{}{
-			"!value":                 nil,
-			"to_" + ds.SchemaDBField: mailSchema.GetID(),
-		}, false); err == nil && len(res) > 0 {
-			for _, r := range res {
-				if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
-					"generate_task":      true,
-					utils.SpecialIDParam: r["value"],
-				}, false); err == nil && len(res) > 0 {
-					record["currentIndex"] = math.Floor(utils.GetFloat(record, "current_index")) - 1
-					s.Domain.GetDb().UpdateQuery(ds.DBRequest.Name, record, map[string]interface{}{
-						utils.SpecialIDParam: record[utils.SpecialIDParam],
-					}, false)
-					return
-				}
-			}
-		}
-	}
 	s.Write(record, tableName)
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
 }

@@ -30,7 +30,6 @@ func (d *FilterService) CountNewDataAccess(tableName string, filter []interface{
 						ds.UserDBField: d.Domain.GetUserID(),
 					}, true, ds.DestTableDBField),
 			}, false)}
-	newFilter = append(newFilter, filter...)
 	ids := []string{}
 	if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(tableName, newFilter, false); err != nil {
 		return ids, 0

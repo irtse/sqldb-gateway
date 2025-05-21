@@ -24,35 +24,35 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 	}, false); err == nil && len(res) > 0 {
 		if utils.GetBool(res[0], "generate_task") {
 			i := int64(-1)
-			if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
-				"name":              connector.Quote("waiting mails responses"),
-				"current_index":     1,
-				"is_meta":           true,
+			if t, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+				"is_meta":           false,
 				"is_close":          false,
 				ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
 				ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
-			}, false); err == nil && len(res) > 0 {
-				i = utils.GetInt(res[0], utils.SpecialIDParam)
-			} else {
-				if id, err := s.Domain.GetDb().CreateQuery(ds.DBRequest.Name, map[string]interface{}{
-					"name":              "waiting mails responses",
-					"current_index":     1,
+			}, false); err == nil && len(t) > 0 {
+				if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+					"name":              connector.Quote("waiting mails responses"),
+					"current_index":     utils.GetFloat(t[0], "current_index"),
 					"is_meta":           true,
-					ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
-					ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
-				}, func(s string) (string, bool) { return "", true }); err == nil {
-					i = id
-				} else {
-					return
-				}
-			}
-			if i >= 0 {
-				if t, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
-					"is_meta":           false,
 					"is_close":          false,
 					ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
 					ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
-				}, false); err == nil && len(t) > 0 {
+				}, false); err == nil && len(res) > 0 {
+					i = utils.GetInt(res[0], utils.SpecialIDParam)
+				} else {
+					if id, err := s.Domain.GetDb().CreateQuery(ds.DBRequest.Name, map[string]interface{}{
+						"name":              "waiting mails responses",
+						"current_index":     1,
+						"is_meta":           true,
+						ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
+						ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
+					}, func(s string) (string, bool) { return "", true }); err == nil {
+						i = id
+					} else {
+						return
+					}
+				}
+				if i >= 0 {
 					for _, r := range t {
 						if tt, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 							ds.RequestDBField:           r[utils.SpecialIDParam],

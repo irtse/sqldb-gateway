@@ -121,8 +121,6 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	}
 	body.WriteString("</body>")
 	body.WriteString("</html>\n")
-	body.WriteString("--" + altboundary + "--\n")
-	body.WriteString("--" + boundary + "--\n")
 
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
@@ -137,6 +135,8 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		fileData, err := os.ReadFile(file_attached)
 		fmt.Println(fileData, err, file_attached)
 		if err == nil {
+			body.WriteString("--" + altboundary + "\n")
+
 			fileBase64 := base64.StdEncoding.EncodeToString(fileData)
 			body.WriteString("Content-Type: application/octet-stream\r\n")
 			body.WriteString("Content-Transfer-Encoding: base64\r\n")
@@ -151,6 +151,9 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			}
 		}
 	}
+	body.WriteString("--" + altboundary + "--\n")
+	body.WriteString("--" + boundary + "--\n")
+
 	fmt.Println(body.String())
 	// Charger le template HTML
 	var err error
