@@ -131,8 +131,8 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	if file_attached := utils.GetString(mail, "file_attached"); file_attached != "" {
 		splitted := strings.Split(file_attached, "/")
 		fileName := splitted[len(splitted)-1]
-		if !strings.Contains(fileName, "/mnt/files/") {
-			fileName = "/mnt/files/" + fileName
+		if !strings.Contains(file_attached, "/mnt/files/") {
+			file_attached = "/mnt/files/" + file_attached
 		}
 		fileData, err := os.ReadFile(file_attached)
 		if err == nil {
@@ -150,6 +150,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			}
 		}
 	}
+	fmt.Println(body.String())
 	// Charger le template HTML
 	var err error
 	if pwd != "" {
