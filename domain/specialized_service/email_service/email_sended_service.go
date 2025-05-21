@@ -1,7 +1,6 @@
 package email_service
 
 import (
-	"fmt"
 	"sqldb-ws/domain/domain_service/view_convertor"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
@@ -70,13 +69,12 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 						}
 					}
 				}
-				t, err := s.Domain.GetDb().CreateQuery(ds.DBTask.Name, map[string]interface{}{
+				s.Domain.GetDb().CreateQuery(ds.DBTask.Name, map[string]interface{}{
 					ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
 					ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
 					ds.RequestDBField:   i,
 					"name":              utils.GetString(record, "code"),
 				}, func(s string) (string, bool) { return "", true })
-				fmt.Println(t, err)
 			}
 		}
 	}

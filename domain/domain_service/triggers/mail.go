@@ -40,7 +40,6 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	if err := tmpl.Execute(&content, bodyToMap); err != nil {
 		return utils.Record{}, err
 	}
-	fmt.Println("subject", subject)
 	m := utils.Record{
 		"from_email":            utils.GetString(from, "id"),
 		"to_email":              utils.GetString(to, "id"), // SHOULD BE ID
@@ -69,7 +68,6 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	boundary := "mixed-boundary"
 	altboundary := "alt-boundary"
 	// En-têtes MIME
-	fmt.Println(mail)
 	body.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	body.WriteString(fmt.Sprintf("To: %s\r\n", to))
 	body.WriteString("Subject: " + utils.GetString(mail, "subject") + "\r\n")

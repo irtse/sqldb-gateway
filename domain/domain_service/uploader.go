@@ -97,8 +97,6 @@ func (u *Uploader) upload(file multipart.File, handler *multipart.FileHeader) (s
 	if storage == "" {
 		storage = "/mnt/files"
 	}
-	fmt.Println("START STORAGE ", storage)
-
 	os.MkdirAll(storage, os.ModePerm) // Ensure uploads dir exists
 	// Save the uploaded file
 	fileName := strings.Split(handler.Filename, ".")
@@ -113,7 +111,5 @@ func (u *Uploader) upload(file multipart.File, handler *multipart.FileHeader) (s
 	if err != nil {
 		return path, err
 	}
-	fmt.Println("START STORAGE PATH ", path)
-
 	return path, nil
 }

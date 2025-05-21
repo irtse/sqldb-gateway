@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"errors"
-	"fmt"
+	"os"
 	"sqldb-ws/controllers/controller"
 	"sqldb-ws/domain"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -23,7 +23,6 @@ type ExternalResponseController struct{ controller.AbstractController }
 // @Failure 403 user does not exist
 // @router /:code [get]
 func (e *ExternalResponseController) Post() {
-	fmt.Println("EXTERNAL")
 	code := e.Ctx.Input.Params()[":code"]
 	p, _ := e.Params()
 	body := map[string]interface{}{}
@@ -46,66 +45,20 @@ func (e *ExternalResponseController) Post() {
 			"code": code,
 		}), body); err != nil {
 			e.Response(utils.Results{}, err, "", "")
+			return
 		}
-		e.Ctx.Output.ContentType("html") // Optional, Beego usually handles it
-		e.Ctx.WriteString(fmt.Sprintf(`
-		<!DOCTYPE html>
-		<html lang="en">
-		<head>
-			<meta charset="UTF-8">
-			<title>%s</title>
-			<style>
-				body {
-					background: #f0f4f8;
-					font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-					display: flex;
-					justify-content: center;
-					align-items: center;
-					height: 100vh;
-				}
-				.card {
-					background: white;
-					padding: 40px 60px;
-					border-radius: 12px;
-					box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-					text-align: center;
-				}
-				h1 {
-					color: #4CAF50;
-					margin-bottom: 20px;
-				}
-				p {
-					color: #333;
-					font-size: 1.2em;
-				}
-				.button {
-					margin-top: 20px;
-					padding: 10px 20px;
-					background-color: #4CAF50;
-					color: white;
-					text-decoration: none;
-					border-radius: 6px;
-					transition: background-color 0.3s ease;
-				}
-				.button:hover {
-					background-color: #45a049;
-				}
-			</style>
-		</head>
-		<body>
-			<div class="card">
-				<h1>%s</h1>
-				<p>%s</p>
-			</div>
-		</body>
-		</html>
-		`, utils.Translate("Thank you"),
-			utils.Translate("Thanks for your answer!"),
-			utils.Translate("We appreciate your feedback and your time."),
-		))
-		return
+		e.Ctx.Output.ContentType("text/html") // Optional, Beego usually handles it
+		target := os.Getenv("LANG")
+		if target == "" {
+			target = "fr"
+		}
+		f, err := os.ReadFile("/opt/html/index_" + target + ".html")
+		if err != nil {
+			e.Response(utils.Results{}, err, "", "")
+		}
+		content := string(f)
+		e.Ctx.WriteString(content)
 	} else {
-		fmt.Println(err, res)
+		e.Response(utils.Results{}, errors.New("not a valid code response"), "", "")
 	}
-	e.Response(utils.Results{}, errors.New("not a valid code response"), "", "")
 }

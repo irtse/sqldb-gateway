@@ -53,7 +53,7 @@ func (v *ViewConvertor) TransformToView(results utils.Results, tableName string,
 }
 
 func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.SchemaModel, tableName string, isWorkflow bool, params utils.Params) utils.Results {
-	schemes, id, order, cols, addAction, _ := v.GetViewFields(tableName, false)
+	schemes, id, order, cols, addAction, _ := v.GetViewFields(tableName, false, results)
 	commentBody := map[string]interface{}{}
 	if len(results) == 1 {
 		commentBody = map[string]interface{}{
@@ -298,7 +298,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 		if sch, err := scheme.GetSchemaByID(record.GetInt(ds.SchemaDBField)); err != nil {
 			return nil
 		} else {
-			schema, id, order, _, addAction, _ := v.GetViewFields(sch.Name, false) // FOUND IT
+			schema, id, order, _, addAction, _ := v.GetViewFields(sch.Name, false, utils.Results{record}) // FOUND IT
 			o := []string{}
 			for _, ord := range order {
 				if len(otherOrder) == 0 || slices.Contains(otherOrder, ord) {
@@ -349,7 +349,6 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 			shallowVals = s
 		}
 		shallowVals, manyVals, manyPathVals = d.HandleLinkField(record, field, tableName, isEmpty, shallowVals, manyVals, manyPathVals)
-		fmt.Println("1", shallowVals)
 
 		if isEmpty {
 			vals[field.Name] = nil

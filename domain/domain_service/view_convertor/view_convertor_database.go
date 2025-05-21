@@ -59,7 +59,7 @@ func (d *ViewConvertor) NewDataAccess(schemaID int64, destIDs []string, meth uti
 	}
 }
 
-func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[string]interface{}, int64, []string, map[string]sm.FieldModel, []string, bool) {
+func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, results utils.Results) (map[string]interface{}, int64, []string, map[string]sm.FieldModel, []string, bool) {
 	tableName = sch.GetTablename(tableName)
 	cols := make(map[string]sm.FieldModel)
 	schemes := make(map[string]interface{})
@@ -97,7 +97,8 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 			shallowField.ActionPath = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, schema.Name, scheme.Name)
 			shallowField.LinkPath = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, schema.Name, scheme.Name)
 		}
-		shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName, additionalActions, schema, noRecursive)
+		shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName,
+			additionalActions, schema, noRecursive, results)
 		var m map[string]interface{}
 		b, _ = json.Marshal(shallowField)
 		err := json.Unmarshal(b, &m)
@@ -108,7 +109,26 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool) (map[s
 			m["hidden"] = scheme.Hidden
 			schemes[scheme.Name] = m
 		}
-		keysOrdered = append(keysOrdered, scheme.Name)
+		if !scheme.Hidden {
+			keysOrdered = append(keysOrdered, scheme.Name)
+		} else {
+			ids := []string{}
+			for _, r := range results {
+				ids = append(ids, utils.GetString(r, utils.SpecialIDParam))
+			}
+			// exception when a task is active with workflow schema with filter and its id
+			if res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+				ds.SchemaFieldDBField: scheme.ID,
+				ds.FilterDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+					utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+						ds.SchemaDBField:    schema.ID,
+						ds.DestTableDBField: ids,
+					}, false, ds.WorkflowSchemaDBField),
+				}, false, "view_"+ds.FilterDBField),
+			}, false); err == nil && len(res) > 0 {
+				keysOrdered = append(keysOrdered, scheme.Name)
+			}
+		}
 	}
 
 	sort.SliceStable(keysOrdered, func(i, j int) bool {
@@ -140,7 +160,7 @@ func (d *ViewConvertor) ProcessLinkedSchema(shallowField *sm.ViewFieldModel, sch
 }
 
 func (d *ViewConvertor) ProcessPermissions(shallowField sm.ViewFieldModel, scheme sm.FieldModel,
-	tableName string, additionalActions []string, schema sm.SchemaModel, noRecursive bool) (sm.ViewFieldModel, []string) {
+	tableName string, additionalActions []string, schema sm.SchemaModel, noRecursive bool, record utils.Results) (sm.ViewFieldModel, []string) {
 	for _, meth := range []utils.Method{utils.SELECT, utils.CREATE, utils.UPDATE, utils.DELETE} {
 		if d.Domain.VerifyAuth(tableName, "", "", meth) && (((meth == utils.SELECT || meth == utils.CREATE) && d.Domain.GetEmpty()) || !d.Domain.GetEmpty()) {
 			if !slices.Contains(additionalActions, meth.Method()) {
@@ -151,7 +171,7 @@ func (d *ViewConvertor) ProcessPermissions(shallowField sm.ViewFieldModel, schem
 			}
 		}
 		if scheme.GetLink() > 0 && !noRecursive {
-			shallowField = d.HandleRecursivePermissions(shallowField, scheme, meth)
+			shallowField = d.HandleRecursivePermissions(shallowField, scheme, meth, record)
 		}
 
 		if (meth == utils.UPDATE || meth == utils.CREATE) && d.Domain.GetEmpty() {
@@ -180,12 +200,12 @@ func (d *ViewConvertor) CheckAndAddImportAction(additionalActions []string, sche
 	return additionalActions
 }
 
-func (d *ViewConvertor) HandleRecursivePermissions(shallowField sm.ViewFieldModel, scheme sm.FieldModel, meth utils.Method) sm.ViewFieldModel {
+func (d *ViewConvertor) HandleRecursivePermissions(shallowField sm.ViewFieldModel, scheme sm.FieldModel, meth utils.Method, results utils.Results) sm.ViewFieldModel {
 	schema, _ := sch.GetSchemaByID(scheme.GetLink())
 	if d.Domain.VerifyAuth(schema.Name, "", "", meth) {
 		if strings.Contains(scheme.Type, "many") {
 			if s, ok := d.SchemaSeen[schema.Name]; !ok {
-				sch, _, _, _, _, _ := d.GetViewFields(schema.Name, true)
+				sch, _, _, _, _, _ := d.GetViewFields(schema.Name, true, results)
 				d.SchemaSeen[schema.Name] = sch
 				shallowField.DataSchema = sch
 			} else {
