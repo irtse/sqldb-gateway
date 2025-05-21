@@ -131,7 +131,9 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	if file_attached := utils.GetString(mail, "file_attached"); file_attached != "" {
 		splitted := strings.Split(file_attached, "/")
 		fileName := splitted[len(splitted)-1]
-
+		if !strings.Contains(fileName, "/mnt/files/") {
+			fileName = "/mnt/files/" + fileName
+		}
 		fileData, err := os.ReadFile(file_attached)
 		if err == nil {
 			fileBase64 := base64.StdEncoding.EncodeToString(fileData)
