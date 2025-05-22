@@ -24,7 +24,7 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	bodySchema int64, destID int64, destOnResponse int64, fileAttached string, signature string) (utils.Record, error) {
 	var subj bytes.Buffer
 	var content bytes.Buffer
-
+	fmt.Println(subject, tpl, bodyToMap)
 	// SHOULD MAP AND APPLY CODE
 	tmplSubj, err := template.New("email").Parse(subject)
 	if err == nil {
@@ -90,6 +90,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	}
 	body.WriteString("<body style=\"margin:0; padding:0; font-family:Arial, sans-serif;\">")
 
+	fmt.Println(mail)
 	body.WriteString(utils.GetString(mail, "content"))
 
 	code := utils.GetString(mail, "code")
@@ -122,7 +123,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	body.WriteString("</body>")
 	body.WriteString("</html>")
 	body.WriteString("\n--" + altboundary + "--\n")
-	fmt.Println(body.String())
+
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
 	pwd := os.Getenv("SMTP_PASSWORD")
