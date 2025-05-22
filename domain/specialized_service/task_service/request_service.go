@@ -220,7 +220,8 @@ func (s *RequestService) createTaskAndNotify(newTask, record map[string]interfac
 	if schema, err := schserv.GetSchema(ds.DBTask.Name); len(tasks) > 0 && err == nil {
 		task[ds.DestTableDBField] = tasks[0][utils.SpecialIDParam]
 		task["link_id"] = schema.ID
-		s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), task)
+		res, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), task)
+		fmt.Println("NOTIF", res, err)
 	}
 }
 
