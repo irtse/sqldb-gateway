@@ -86,7 +86,7 @@ func (db *Database) CreateQuery(name string, record map[string]interface{}, veri
 				if len(splitted) > 0 {
 					constraint := splitted[len(splitted)-1]
 					field := strings.ReplaceAll(strings.ReplaceAll(constraint, name+"_", ""), "_unique", "")
-					return i, errors.New("duplicate " + field + ", it should be unique !")
+					return i, errors.New("found a <" + field + "> already existing, it should be unique !")
 				}
 			}
 			return i, err
@@ -127,7 +127,7 @@ func (db *Database) UpdateQuery(name string, record map[string]interface{}, rest
 		if len(splitted) > 0 {
 			constraint := splitted[len(splitted)-1]
 			field := strings.ReplaceAll(strings.ReplaceAll(constraint, name+"_", ""), "_unique", "")
-			return errors.New("duplicate " + field + ", it should be unique !")
+			return errors.New("found a <" + field + "> already existing, it should be unique !")
 		}
 	}
 	return err
