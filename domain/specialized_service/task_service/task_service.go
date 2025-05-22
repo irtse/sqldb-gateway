@@ -210,11 +210,12 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 				} else {
 					schema, err := schserv.GetSchemaByID(utils.GetInt(scheme, SchemaDBField))
 					if err == nil {
-						vals, err := s.Domain.CreateSuperCall(utils.AllParams(schema.Name), utils.Record{})
-						if err == nil && len(vals) > 0 {
+						i, err := s.Domain.GetDb().CreateQuery(schema.Name, utils.Record{}, func(s string) (string, bool) {
+							return "", true
+						})
+						if err == nil {
 							newTask[SchemaDBField] = scheme[SchemaDBField]
-							newTask[DestTableDBField] = vals[0][utils.ReservedParam]
-						} else {
+							newTask[DestTableDBField] = i
 							fmt.Println("Can't create new scheme")
 							return
 						}
@@ -237,19 +238,22 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 				}
 				if utils.GetString(res, "nexts") == utils.ReservedParam || strings.Contains(utils.GetString(res, "nexts"),
 					utils.GetString(scheme, "wrapped_"+ds.WorkflowDBField)) {
-					tasks, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name), newTask)
-					if err != nil || len(tasks) == 0 {
+					i, err := s.Domain.GetDb().CreateQuery(ds.DBTask.Name, newTask, func(s string) (string, bool) {
+						return "", true
+					})
+					if err != nil {
 						continue
 					}
 					schema, err := schserv.GetSchema(ds.DBTask.Name)
-					if err == nil && tasks[0]["meta_"+RequestDBField] == nil {
+					if err == nil && newTask["meta_"+RequestDBField] == nil {
 						s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), utils.Record{"link_id": schema.ID,
-							sm.NAMEKEY:       "Task affected : " + tasks[0].GetString(sm.NAMEKEY),
-							"description":    "Task is affected : " + tasks[0].GetString(sm.NAMEKEY),
-							UserDBField:      utils.GetInt(tasks[0], UserDBField),
+							sm.NAMEKEY:       "Task affected : " + newTask.GetString(sm.NAMEKEY),
+							"description":    "Task is affected : " + newTask.GetString(sm.NAMEKEY),
+							UserDBField:      utils.GetInt(newTask, UserDBField),
 							EntityDBField:    scheme[EntityDBField],
 							UserDBField:      scheme[UserDBField],
-							DestTableDBField: tasks[0][utils.SpecialIDParam]})
+							DestTableDBField: i,
+						})
 					}
 				}
 			}

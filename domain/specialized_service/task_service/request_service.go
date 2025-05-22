@@ -219,6 +219,7 @@ func (s *RequestService) createTaskAndNotify(newTask, record map[string]interfac
 	}
 
 	if schema, err := schserv.GetSchema(ds.DBTask.Name); err == nil {
+		delete(task, ds.SchemaDBField)
 		task[ds.DestTableDBField] = i
 		task["link_id"] = schema.ID
 		res, err := s.Domain.GetDb().CreateQuery(ds.DBNotification.Name, task, func(s string) (string, bool) {
@@ -271,14 +272,16 @@ func CreateHierarchicalTask(domain utils.DomainITF, requestID int64, record, hie
 		"priority":          "normal",
 		sm.NAMEKEY:          "hierarchical verification",
 	}
-	if res, err := domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name).RootRaw(), newTask); err == nil && len(res) > 0 {
+	if i, err := domain.GetDb().CreateQuery(ds.DBTask.Name, newTask, func(s string) (string, bool) {
+		return "", true
+	}); err == nil {
 		if schema, err := schserv.GetSchema(ds.DBTask.Name); err == nil {
 			domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), utils.Record{
 				sm.NAMEKEY:          "Hierarchical verification on " + utils.GetString(record, sm.NAMEKEY) + " request",
 				"description":       utils.GetString(record, sm.NAMEKEY) + " request needs a hierarchical verification.",
 				ds.UserDBField:      hierarch["parent_"+ds.UserDBField],
 				"link_id":           schema.ID,
-				ds.DestTableDBField: res[0][utils.SpecialIDParam],
+				ds.DestTableDBField: i,
 			})
 		}
 	}

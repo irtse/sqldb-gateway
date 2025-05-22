@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	conn "sqldb-ws/infrastructure/connector"
 	"strings"
 )
@@ -83,8 +82,9 @@ func (t *TableRowService) Create(record map[string]interface{}) ([]map[string]in
 	if id, err = t.DB.CreateQuery(t.Name, record, verify); err != nil {
 		return t.DBError(nil, err)
 	}
-	t.DB.ClearQueryFilter().ApplyQueryFilters(fmt.Sprintf("id=%d", id), "", "", "")
-	r, err := t.DB.SelectQueryWithRestriction(t.Table.Name, map[string]interface{}{}, false)
+	r, err := t.DB.ClearQueryFilter().SelectQueryWithRestriction(t.Table.Name, map[string]interface{}{
+		"id": id,
+	}, false)
 	if len(r) > 0 {
 		t.Results = r
 		t.SpecializedService.SpecializedCreateRow(t.Results[0], t.Table.Name)
