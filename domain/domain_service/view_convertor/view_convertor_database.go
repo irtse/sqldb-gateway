@@ -116,18 +116,21 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 			for _, r := range results {
 				ids = append(ids, utils.GetString(r, utils.SpecialIDParam))
 			}
-			// exception when a task is active with workflow schema with filter and its id
-			if res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
-				ds.SchemaFieldDBField: scheme.ID,
-				ds.FilterDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
-					utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-						ds.SchemaDBField:    schema.ID,
-						ds.DestTableDBField: ids,
-					}, false, ds.WorkflowSchemaDBField),
-				}, false, "view_"+ds.FilterDBField),
-			}, false); err == nil && len(res) > 0 {
-				keysOrdered = append(keysOrdered, scheme.Name)
+			if len(ids) > 0 {
+				// exception when a task is active with workflow schema with filter and its id
+				if res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+					ds.SchemaFieldDBField: scheme.ID,
+					ds.FilterDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+						utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+							ds.SchemaDBField:    schema.ID,
+							ds.DestTableDBField: ids,
+						}, false, ds.WorkflowSchemaDBField),
+					}, false, "view_"+ds.FilterDBField),
+				}, false); err == nil && len(res) > 0 {
+					keysOrdered = append(keysOrdered, scheme.Name)
+				}
 			}
+
 		}
 	}
 
