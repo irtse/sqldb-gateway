@@ -83,6 +83,7 @@ func (db *Database) CreateQuery(name string, record map[string]interface{}, veri
 			i, err := db.QueryRow(query)
 			if err != nil && strings.Contains(err.Error(), "unique") {
 				splitted := strings.Split(err.Error(), "\"")
+				fmt.Println(err.Error(), splitted)
 				if len(splitted) > 0 {
 					constraint := splitted[len(splitted)-1]
 					field := strings.ReplaceAll(strings.ReplaceAll(constraint, name+"_", ""), "_unique", "")
