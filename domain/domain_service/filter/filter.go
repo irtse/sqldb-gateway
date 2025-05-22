@@ -337,7 +337,7 @@ func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []
 
 func (d *FilterService) GetCreatedAccessData(schemaID string) []string {
 	ids := []string{}
-	if dataAccess, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBDataAccess.Name,
+	if dataAccess, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDataAccess.Name,
 		map[string]interface{}{
 			"write":          true,
 			ds.SchemaDBField: schemaID,

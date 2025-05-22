@@ -436,7 +436,8 @@ func (s *ViewConvertor) getFilterByWFSchema(view *sm.ViewModel, schema sm.Schema
 								}
 							}
 							view.Order = newOrder
-							utils.ToMap(val)["readonly"] = true
+							m := utils.ToMap(val)
+							m["readonly"] = true
 						}
 					}
 				}

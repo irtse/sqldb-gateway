@@ -56,6 +56,7 @@ func Domain(superAdmin bool, user string, permsService *permissions.PermDomainSe
 }
 
 func (d *SpecializedDomain) VerifyAuth(tableName string, colName string, level string, method utils.Method, args ...string) bool {
+	fmt.Println(d.UserID)
 	if len(args) > 0 {
 		return d.PermsService.LocalPermsCheck(tableName, colName, level, method, args[0], d.UserID, d.Own)
 	} else {
