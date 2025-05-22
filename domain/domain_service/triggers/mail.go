@@ -89,7 +89,6 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	}
 	body.WriteString("<body style=\"margin:0; padding:0; font-family:Arial, sans-serif;\">")
 
-	fmt.Println(mail)
 	body.WriteString(utils.GetString(mail, "content"))
 
 	code := utils.GetString(mail, "code")
@@ -156,7 +155,6 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	}
 
 	body.WriteString("--" + boundary + "--\n")
-	fmt.Println(body.String())
 	// Charger le template HTML
 	var err error
 	if pwd != "" {

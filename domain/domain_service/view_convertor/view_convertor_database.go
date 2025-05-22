@@ -117,7 +117,6 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 				ids = append(ids, utils.GetString(r, utils.SpecialIDParam))
 			}
 			if len(ids) > 0 && strings.Trim(strings.Join(ids, ""), " ") != "" {
-				fmt.Println(ids)
 				// exception when a task is active with workflow schema with filter and its id
 				if res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
 					ds.SchemaFieldDBField: scheme.ID,

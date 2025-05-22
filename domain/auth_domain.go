@@ -33,8 +33,8 @@ func IsLogged(superAdmin bool, user string, token string) (utils.Results, error)
 				ds.DBEntityUser.Name,
 				map[string]interface{}{
 					ds.UserDBField: resp[utils.SpecialIDParam],
-				}, true, "id"),
-		}, false)
+				}, false, "id"),
+		}, true)
 	if err != nil {
 		return nil, err
 	}

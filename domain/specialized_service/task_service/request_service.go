@@ -2,7 +2,6 @@ package task_service
 
 import (
 	"errors"
-	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/task"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -196,8 +195,6 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 			return "", true
 		}); err == nil {
 			newTask[ds.DestTableDBField] = i
-		} else {
-			fmt.Println(err)
 		}
 	}
 	if utils.GetBool(newTask, "assign_to_creator") {
@@ -222,10 +219,9 @@ func (s *RequestService) createTaskAndNotify(newTask, record map[string]interfac
 		delete(task, ds.SchemaDBField)
 		task[ds.DestTableDBField] = i
 		task["link_id"] = schema.ID
-		res, err := s.Domain.GetDb().CreateQuery(ds.DBNotification.Name, task, func(s string) (string, bool) {
+		s.Domain.GetDb().CreateQuery(ds.DBNotification.Name, task, func(s string) (string, bool) {
 			return "", true
 		})
-		fmt.Println("NOTIF", res, err)
 	}
 }
 
