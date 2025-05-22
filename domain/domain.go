@@ -47,6 +47,7 @@ func Domain(superAdmin bool, user string, permsService *permissions.PermDomainSe
 	}
 	return &SpecializedDomain{
 		AbstractDomain: utils.AbstractDomain{
+			SearchInFiles:   map[string]string{},
 			DomainRequestID: uuid.New().String(),
 			SuperAdmin:      superAdmin, // carry the security level of the "User" or an inner action
 			User:            user,       // current user...
