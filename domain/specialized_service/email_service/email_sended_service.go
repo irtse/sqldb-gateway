@@ -93,6 +93,11 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 }
 
 func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
+	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
+		"code": record["code"],
+	}, false); err == nil && len(res) > 0 {
+		record["code"] = uuid.New()
+	}
 	if to := utils.GetString(record, "to_email"); to != "" {
 		s.To = to
 		delete(record, "to_email")

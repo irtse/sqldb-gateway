@@ -24,7 +24,6 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	bodySchema int64, destID int64, destOnResponse int64, fileAttached string, signature string) (utils.Record, error) {
 	var subj bytes.Buffer
 	var content bytes.Buffer
-	fmt.Println(subject, tpl, bodyToMap)
 	// SHOULD MAP AND APPLY CODE
 	tmplSubj, err := template.New("email").Parse(subject)
 	if err == nil {

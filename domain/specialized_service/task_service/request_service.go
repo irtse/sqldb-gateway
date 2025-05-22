@@ -207,12 +207,11 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 }
 
 func (s *RequestService) createTaskAndNotify(newTask, record map[string]interface{}) {
-	fmt.Println("createTaskAndNotify")
 	task := s.constructNotificationTask(newTask, record)
-	tasks, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name).RootRaw(), task)
-	fmt.Println("NOTIF", tasks, err)
-
-	if err != nil || len(tasks) == 0 {
+	i, err := s.Domain.GetDb().CreateQuery(ds.DBTask.Name, task, func(s string) (string, bool) {
+		return "", true
+	})
+	if err != nil {
 		return
 	}
 	if id, ok := newTask["wrapped_"+ds.WorkflowDBField]; ok && id != nil {
@@ -220,9 +219,11 @@ func (s *RequestService) createTaskAndNotify(newTask, record map[string]interfac
 	}
 
 	if schema, err := schserv.GetSchema(ds.DBTask.Name); err == nil {
-		task[ds.DestTableDBField] = tasks[0][utils.SpecialIDParam]
+		task[ds.DestTableDBField] = i
 		task["link_id"] = schema.ID
-		res, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name).RootRaw(), task)
+		res, err := s.Domain.GetDb().CreateQuery(ds.DBNotification.Name, task, func(s string) (string, bool) {
+			return "", true
+		})
 		fmt.Println("NOTIF", res, err)
 	}
 }

@@ -45,7 +45,6 @@ func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interfac
 			emailTo = utils.GetString(res[0], "email")
 		}
 	}
-	fmt.Println(emailTo)
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 		utils.SpecialIDParam: s.Domain.GetUserID(),
 	}, false); err == nil && len(res) > 0 && emailTo != "" {
@@ -57,7 +56,6 @@ func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interfac
 		}
 		fmt.Println("SENDING MAIL :", err)
 	} else {
-		fmt.Println(res, emailTo)
 		fmt.Println("can't email because of a missing <send to> user")
 	}
 }
