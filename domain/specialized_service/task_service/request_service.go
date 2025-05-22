@@ -2,6 +2,7 @@ package task_service
 
 import (
 	"errors"
+	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/task"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -195,6 +196,8 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 			return "", true
 		}); err == nil {
 			newTask[ds.DestTableDBField] = i
+		} else {
+			fmt.Println(err)
 		}
 	}
 	if utils.GetBool(newTask, "assign_to_creator") {
