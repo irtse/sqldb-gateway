@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"slices"
 
@@ -133,6 +134,7 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 				"email": connector.Quote(d.User),
 			}, true); err == nil && len(res) > 0 {
 				d.UserID = utils.GetString(res[0], utils.SpecialIDParam)
+				fmt.Println(d.UserID)
 			} else if !d.SuperAdmin {
 				return utils.Results{}, errors.New("not authorized : unknown user attempt to reach api")
 			}

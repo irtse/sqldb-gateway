@@ -191,8 +191,10 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 		newTask[ds.SchemaDBField] = record[ds.SchemaDBField]
 		newTask[ds.DestTableDBField] = record[ds.DestTableDBField]
 	} else if schema, err := schserv.GetSchemaByID(newTask.GetInt(ds.SchemaDBField)); err == nil {
-		if vals, err := s.Domain.CreateSuperCall(utils.AllParams(schema.Name), utils.Record{}); err == nil && len(vals) > 0 {
-			newTask[ds.DestTableDBField] = vals[0][utils.ReservedParam]
+		if i, err := s.Domain.GetDb().CreateQuery(schema.Name, utils.Record{}, func(s string) (string, bool) {
+			return "", true
+		}); err == nil {
+			newTask[ds.DestTableDBField] = i
 		}
 	}
 	if utils.GetBool(newTask, "assign_to_creator") {
@@ -208,7 +210,7 @@ func (s *RequestService) createTaskAndNotify(newTask, record map[string]interfac
 	}
 	task := s.constructNotificationTask(newTask, record)
 	s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name), task)
-	if id, ok := newTask["wrapped_"+ds.WorkflowDBField]; ok {
+	if id, ok := newTask["wrapped_"+ds.WorkflowDBField]; ok && id != nil {
 		s.createMetaRequest(task, id)
 	}
 
