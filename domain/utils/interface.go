@@ -15,6 +15,8 @@ type SpecializedServiceInfo interface{ GetName() string }
 
 type DomainITF interface {
 	// Main Procedure of services at Domain level.
+	AddDetectFileToSearchIn(fileField string, search string)
+	DetectFileToSearchIn() map[string]string
 	SuperCall(params Params, record Record, method Method, isOwn bool, args ...interface{}) (Results, error)
 	CreateSuperCall(params Params, record Record, args ...interface{}) (Results, error)
 	UpdateSuperCall(params Params, rec Record, args ...interface{}) (Results, error)

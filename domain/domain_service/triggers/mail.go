@@ -127,34 +127,35 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	pwd := os.Getenv("SMTP_PASSWORD")
 
 	if file_attached := utils.GetString(mail, "file_attached"); file_attached != "" {
-		splitted := strings.Split(file_attached, "/")
-		fileName := splitted[len(splitted)-1]
-		if !strings.Contains(file_attached, "/mnt/files/") {
-			file_attached = "/mnt/files/" + file_attached
-		}
-		fileData, err := os.ReadFile(file_attached)
-		fmt.Println(fileData, err, file_attached)
-		if err == nil {
-			body.WriteString("--" + altboundary + "\n")
+		files := strings.Split(file_attached, ",")
+		for _, filePath := range files {
+			splitted := strings.Split(filePath, "/")
+			fileName := splitted[len(splitted)-1]
+			if !strings.Contains(filePath, "/mnt/files/") {
+				filePath = "/mnt/files/" + filePath
+			}
+			fileData, err := os.ReadFile(filePath)
+			if err == nil {
+				body.WriteString("--" + altboundary + "\n")
 
-			fileBase64 := base64.StdEncoding.EncodeToString(fileData)
-			body.WriteString("Content-Type: application/octet-stream\r\n")
-			body.WriteString("Content-Transfer-Encoding: base64\r\n")
-			body.WriteString("Content-Disposition: attachment; filename=\"" + fileName + "\"\r\n\r\n")
-			// Diviser le base64 en lignes de 76 caractères (RFC)
-			for i := 0; i < len(fileBase64); i += 76 {
-				end := i + 76
-				if end > len(fileBase64) {
-					end = len(fileBase64)
+				fileBase64 := base64.StdEncoding.EncodeToString(fileData)
+				body.WriteString("Content-Type: application/octet-stream\r\n")
+				body.WriteString("Content-Transfer-Encoding: base64\r\n")
+				body.WriteString("Content-Disposition: attachment; filename=\"" + fileName + "\"\r\n\r\n")
+				// Diviser le base64 en lignes de 76 caractères (RFC)
+				for i := 0; i < len(fileBase64); i += 76 {
+					end := i + 76
+					if end > len(fileBase64) {
+						end = len(fileBase64)
+					}
+					body.WriteString(fileBase64[i:end] + "\r\n")
 				}
-				body.WriteString(fileBase64[i:end] + "\r\n")
 			}
 		}
 	}
 	body.WriteString("--" + altboundary + "--\n")
 	body.WriteString("--" + boundary + "--\n")
 
-	fmt.Println(body.String())
 	// Charger le template HTML
 	var err error
 	if pwd != "" {

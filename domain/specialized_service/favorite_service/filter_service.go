@@ -23,6 +23,14 @@ type FilterService struct {
 }
 
 func (s *FilterService) Entity() utils.SpecializedServiceInfo { return ds.DBFilter }
+func (s *FilterService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {
+	for _, record := range results {
+		s.Domain.GetDb().DeleteQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+			ds.FilterDBField: utils.ToString(record[utils.SpecialIDParam]),
+		}, false)
+	}
+}
+
 func (s *FilterService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
 	s.Write(record, ds.DBFilter.Name)
 	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
@@ -33,10 +41,13 @@ func (s *FilterService) SpecializedCreateRow(record map[string]interface{}, tabl
 }
 
 func (s *FilterService) Write(record utils.Record, tableName string) {
+	if s.UpdateFields {
+		s.Domain.GetDb().ClearQueryFilter().DeleteQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+			ds.FilterDBField: record[utils.SpecialIDParam],
+		}, false)
+	}
+
 	for _, field := range s.Fields {
-		if _, ok := record[ds.SchemaDBField]; !ok {
-			continue
-		}
 		if schema, err := schserv.GetSchemaByID(utils.ToInt64(record[ds.SchemaDBField])); err == nil && field["name"] != nil {
 			field[ds.FilterDBField] = record[utils.SpecialIDParam]
 			f, err := schema.GetField(utils.ToString(field["name"]))
@@ -44,7 +55,9 @@ func (s *FilterService) Write(record utils.Record, tableName string) {
 			if err == nil {
 				field[ds.SchemaFieldDBField] = f.ID
 			}
-			s.Domain.Call(utils.AllParams(ds.DBFilterField.Name), field, utils.CREATE)
+			s.Domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBFilterField.Name, field, func(v string) (string, bool) {
+				return "", true
+			})
 		}
 	}
 }
@@ -61,7 +74,7 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 		}
 		rec["is_selected"] = selected[rec.GetString(utils.SpecialIDParam)] // restore selected filters
 		schema, err := schserv.GetSchemaByID(rec.GetInt("schema_id"))
-		if fields, err2 := s.Domain.GetDb().SelectQueryWithRestriction( // get filter fields
+		if fields, err2 := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction( // get filter fields
 			ds.DBFilterField.Name,
 			map[string]interface{}{ds.FilterDBField: rec.GetInt(utils.SpecialIDParam)},
 			false,
@@ -78,6 +91,21 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 						Label:     ff.Label,
 						Index:     float64(utils.ToInt64(field["index"])),
 						Type:      ff.Type,
+						Value:     utils.ToString(field["value"]),
+						Separator: utils.ToString(field["separator"]),
+						Operator:  utils.ToString(field["operator"]),
+						Dir:       utils.ToString(field["dir"]),
+					}
+					if width, err := strconv.ParseFloat(utils.ToString(field["width"]), 64); err == nil {
+						model.Width = width
+					}
+					filterFields = append(filterFields, model)
+				} else if field[ds.SchemaFieldDBField] == nil {
+					model := sm.FilterModel{
+						Name:      "id",
+						Label:     "id",
+						Index:     0,
+						Type:      "integer",
 						Value:     utils.ToString(field["value"]),
 						Separator: utils.ToString(field["separator"]),
 						Operator:  utils.ToString(field["operator"]),
@@ -107,8 +135,8 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 func (s *FilterService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
 	if !strings.Contains(strings.Join(innerestr, ","), "dashboard_restricted") {
 		innerestr = append(innerestr, "dashboard_restricted=false") // add dashboard_restricted filter if not present AD
-		innerestr = append(innerestr, "hidden=false")               // add dashboard_restricted filter if not present AD
 	}
+	innerestr = append(innerestr, "hidden=false") // add dashboard_restricted filter if not present AD
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }
 
@@ -122,20 +150,17 @@ func (s *FilterService) VerifyDataIntegrity(record map[string]interface{}, table
 			return record, err, false
 		}
 		s.ProcessName(record)
+		s.Fields = make([]map[string]interface{}, 0)
 		s.ProcessFields(record, "view_fields")
 		s.ProcessFields(record, "filter_fields")
-
-		if method == utils.UPDATE && s.UpdateFields {
-			s.HandleUpdate(record)
-		}
 
 		if method == utils.CREATE {
 			s.HandleCreate(record)
 		}
-	} else {
-		s.HandleDelete(record)
 	}
-
+	if method == utils.UPDATE {
+		delete(record, "name")
+	}
 	s.ProcessSelection(record)
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
@@ -166,17 +191,10 @@ func (s *FilterService) ProcessName(record map[string]interface{}) {
 func (s *FilterService) ProcessFields(record map[string]interface{}, fieldType string) {
 	if fields, ok := record[fieldType]; ok {
 		s.UpdateFields = true
-		s.Fields = make([]map[string]interface{}, 0)
 		for _, field := range utils.ToList(fields) {
 			s.Fields = append(s.Fields, utils.ToMap(field))
 		}
 	}
-}
-
-func (s *FilterService) HandleUpdate(record map[string]interface{}) {
-	params := utils.AllParams(ds.DBFilterField.Name)
-	params.Set(ds.FilterDBField, utils.ToString(record[utils.SpecialIDParam]))
-	s.Domain.DeleteSuperCall(params)
 }
 
 func (s *FilterService) HandleCreate(record map[string]interface{}) {
@@ -214,14 +232,18 @@ func (s *FilterService) HandleEntityFilterNaming(record map[string]interface{}, 
 		ds.EntityDBField: utils.GetString(record, ds.EntityDBField),
 		ds.SchemaDBField: schema.ID,
 	}, false); err == nil {
-		*name += fmt.Sprintf("%s filter n°%d", schema.Label, len(res)+1)
+		s.RecursiveHandleEntityFilterNaming(schema.Label, len(res)+1, name)
 	}
 }
 
-func (s *FilterService) HandleDelete(record map[string]interface{}) {
-	params := utils.AllParams(ds.DBFilterField.Name)
-	params.Set(ds.FilterDBField, utils.ToString(record[utils.SpecialIDParam]))
-	s.Domain.DeleteSuperCall(params)
+func (s *FilterService) RecursiveHandleEntityFilterNaming(label string, index int, name *string) {
+	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
+		"name": fmt.Sprintf("%s filter n°%d", label, index),
+	}, false); err == nil && len(res) == 0 {
+		*name += fmt.Sprintf("%s filter n°%d", label, index)
+	} else {
+		s.RecursiveHandleEntityFilterNaming(label, index+1, name)
+	}
 }
 
 func (s *FilterService) ProcessSelection(record map[string]interface{}) {

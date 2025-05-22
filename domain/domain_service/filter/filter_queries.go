@@ -18,6 +18,9 @@ func (d *FilterService) GetEntityFilterQuery() string {
 }
 
 func (d *FilterService) CountNewDataAccess(tableName string, filter []interface{}) ([]string, int64) {
+	if d.Domain.GetUserID() == "" {
+		return []string{}, 0
+	}
 	newFilter := []interface{}{
 		connector.FormatSQLRestrictionWhereByMap("",
 			map[string]interface{}{
@@ -30,6 +33,7 @@ func (d *FilterService) CountNewDataAccess(tableName string, filter []interface{
 						ds.UserDBField: d.Domain.GetUserID(),
 					}, true, ds.DestTableDBField),
 			}, false)}
+	newFilter = append(newFilter, filter...)
 	ids := []string{}
 	if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(tableName, newFilter, false); err != nil {
 		return ids, 0

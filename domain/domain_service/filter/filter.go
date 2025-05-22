@@ -79,11 +79,14 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 			restriction["is_meta"] = false
 		}
 		alterRestr := []string{}
+		f := func(s string, search string) {
+			d.Domain.AddDetectFileToSearchIn(s, search)
+		}
 		if line, ok := domainParams.Get(utils.RootFilterLine); ok && tableName != ds.DBView.Name {
-			alterRestr = append(alterRestr, connector.FormatSQLRestrictionWhereInjection(line, schema.GetTypeAndLinkForField))
+			alterRestr = append(alterRestr, connector.FormatSQLRestrictionWhereInjection(line, schema.GetTypeAndLinkForField, f))
 		}
 		for key, val := range domainParams.Values {
-			typ, foreign, err := schema.GetTypeAndLinkForField(key)
+			typ, foreign, err := schema.GetTypeAndLinkForField(key, val, f)
 			if err != nil && key != utils.SpecialIDParam {
 				continue
 			}
@@ -95,7 +98,9 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 				}
 				newSTR += connector.MakeSqlItem("", typ, foreign, key, or, "=")
 			}
-			alterRestr = append(alterRestr, "("+newSTR+")")
+			if newSTR != "" {
+				alterRestr = append(alterRestr, "("+newSTR+")")
+			}
 		}
 		restr = append(alterRestr, restr...)
 		if schema.HasField(ds.SchemaDBField) && !d.Domain.IsSuperAdmin() {
@@ -132,7 +137,10 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 				if overrideOwn {
 					restrictions = newRestr
 				} else {
-					restr = append(restr, "("+connector.FormatSQLRestrictionWhereByMap("", newRestr, false)+")")
+					var s = connector.FormatSQLRestrictionWhereByMap("", newRestr, false)
+					if s != "" {
+						restr = append(restr, "("+s+")")
+					}
 				}
 			}
 		}
@@ -186,7 +194,11 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 	}
 	idParamsOk := len(s.Domain.GetParams().GetAsArgs(utils.SpecialIDParam)) > 0
 	if len(restrictions) > 0 && !(idParamsOk && slices.Contains(ds.PUPERMISSIONEXCEPTION, schema.Name)) {
-		restr = append(restr, "("+connector.FormatSQLRestrictionWhereByMap("", restrictions, true)+")")
+		var s = connector.FormatSQLRestrictionWhereByMap("", restrictions, true)
+		if s != "" {
+			restr = append(restr, "("+s+")")
+		}
+
 	}
 	return restr
 }
@@ -313,7 +325,7 @@ func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []
 		}
 		operator = "NOT IN"
 	}
-	if operator != "" {
+	if operator != "" && len(news) > 0 {
 		t := "id " + operator + " (" + strings.Join(news, ",") + ")"
 		SQLrestriction = append(SQLrestriction, "("+t+")")
 	}

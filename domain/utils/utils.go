@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -112,4 +113,27 @@ func Translate(str string) string {
 		return GetString(result, "translatedText")
 	}
 	return str
+}
+
+func SearchInFile(filename string, searchTerm string) bool {
+	filePath := filename
+	if !strings.Contains(filePath, "/mnt/files/") {
+		filePath = "/mnt/files/" + filename
+	}
+	file, err := os.Open(filePath)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return false
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, searchTerm) {
+			return true
+			// break // Uncomment to stop at first match
+		}
+	}
+	return false
 }

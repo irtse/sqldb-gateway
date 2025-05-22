@@ -103,7 +103,6 @@ func (u *Uploader) upload(file multipart.File, handler *multipart.FileHeader) (s
 	u.deleteBeforeUpload(storage, fileName[0])
 	path := filepath.Join(storage, handler.Filename)
 	dst, err := os.Create(path)
-	fmt.Println(storage, fileName, dst, err)
 	if err != nil {
 		return "", err
 	}

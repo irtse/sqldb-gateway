@@ -34,7 +34,7 @@ func FormatMathViewQuery(algo string, col string, naming ...string) string {
 	return strings.ToUpper(algo) + "(" + col + ") as " + resName
 }
 
-func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(string) (string, string, error)) string {
+func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(string, string, func(string, string)) (string, string, error), special func(string, string)) string {
 	alterRestr := ""
 	injection = SQLInjectionProtector(injection)
 	ands := strings.Split(injection, "+")
@@ -79,7 +79,7 @@ func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(st
 			if len(keyVal) != 2 {
 				continue
 			}
-			typ, link, err := getTypeAndLink(keyVal[0])
+			typ, link, err := getTypeAndLink(keyVal[0], keyVal[1], special)
 			if err != nil && keyVal[0] != "id" {
 				continue
 			}
@@ -93,6 +93,7 @@ func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(st
 		}
 	}
 	alterRestr = strings.ReplaceAll(strings.ReplaceAll(alterRestr, " OR ()", ""), " AND ()", "")
+	alterRestr = strings.ReplaceAll(strings.ReplaceAll(alterRestr, " () OR ", ""), "() AND ", "")
 	alterRestr = strings.ReplaceAll(alterRestr, "()", "")
 	return alterRestr
 }

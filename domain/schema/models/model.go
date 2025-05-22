@@ -88,10 +88,14 @@ func GetSchemaByID(id int64) (SchemaModel, error) {
 	return SchemaModel{}, errors.New("no schema corresponding to reference id")
 }
 
-func (t SchemaModel) GetTypeAndLinkForField(name string) (string, string, error) {
+func (t SchemaModel) GetTypeAndLinkForField(name string, search string, onUpload func(string, string)) (string, string, error) {
 	field, err := t.GetField(name)
 	if err != nil {
 		return "", "", err
+	}
+	if strings.Contains(field.Type, "upload") {
+		onUpload(field.Name, search)
+		return field.Type, "", errors.New("can't proceed a publication")
 	}
 	foreign, err := GetSchemaByID(field.GetLink())
 	if err != nil {

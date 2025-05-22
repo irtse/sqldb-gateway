@@ -190,11 +190,23 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 			}
 		}
 		res, err := d.Invoke(record, d.Method, args...)
+		if len(d.DetectFileToSearchIn()) > 0 {
+			newRes := utils.Results{}
+			for _, r := range res {
+				for search, field := range d.DetectFileToSearchIn() {
+					if r[field] != nil && utils.SearchInFile(utils.GetString(r, field), search) {
+						newRes = append(newRes, r)
+					}
+				}
+			}
+			res = newRes
+		}
 		if p, _ := d.Params.Get(utils.RootRawView); p != "enable" && err == nil && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
 			results := specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestIDParam)...)
 			d.Redirections = d.GetRedirections(results)
 			return results, err
 		}
+
 		return res, err
 	}
 }

@@ -20,6 +20,15 @@ type AbstractDomain struct {
 	Params          Params
 	File            multipart.File
 	FileHandler     *multipart.FileHeader
+	SearchInFiles   map[string]string
+}
+
+func (d *AbstractDomain) AddDetectFileToSearchIn(fileField string, search string) {
+	d.SearchInFiles[search] = fileField
+}
+
+func (d *AbstractDomain) DetectFileToSearchIn() map[string]string {
+	return d.SearchInFiles
 }
 
 func (d *AbstractDomain) GetUniqueRedirection() string {

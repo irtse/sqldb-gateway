@@ -408,7 +408,7 @@ var DBFilter = models.SchemaModel{
 	Label:    "filters",
 	Category: "",
 	Fields: []models.FieldModel{
-		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Index: 0},
+		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
 		{Name: "is_view", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 1},
 		{Name: "is_selected", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 2},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: false, Index: 3},
