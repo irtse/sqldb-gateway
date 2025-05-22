@@ -179,11 +179,11 @@ func (s *RequestService) handleInitialWorkflow(record map[string]interface{}) {
 	}
 
 	for _, newTask := range wfs {
-		s.prepareAndCreateTask(newTask, record, false)
+		s.prepareAndCreateTask(newTask, record)
 	}
 }
 
-func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[string]interface{}, passive bool) {
+func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[string]interface{}) {
 	newTask[ds.WorkflowSchemaDBField] = newTask[utils.SpecialIDParam]
 	delete(newTask, utils.SpecialIDParam)
 	newTask[ds.RequestDBField] = record[utils.SpecialIDParam]
@@ -207,13 +207,14 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 }
 
 func (s *RequestService) createTaskAndNotify(newTask, record map[string]interface{}) {
-	tasks, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name).RootRaw(), newTask)
+	fmt.Println("createTaskAndNotify")
+	task := s.constructNotificationTask(newTask, record)
+	tasks, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name).RootRaw(), task)
 	fmt.Println("NOTIF", tasks, err)
+
 	if err != nil || len(tasks) == 0 {
 		return
 	}
-	task := s.constructNotificationTask(newTask, record)
-	s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name), task)
 	if id, ok := newTask["wrapped_"+ds.WorkflowDBField]; ok && id != nil {
 		s.createMetaRequest(task, id)
 	}
@@ -221,7 +222,7 @@ func (s *RequestService) createTaskAndNotify(newTask, record map[string]interfac
 	if schema, err := schserv.GetSchema(ds.DBTask.Name); err == nil {
 		task[ds.DestTableDBField] = tasks[0][utils.SpecialIDParam]
 		task["link_id"] = schema.ID
-		res, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), task)
+		res, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name).RootRaw(), task)
 		fmt.Println("NOTIF", res, err)
 	}
 }

@@ -120,12 +120,12 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		`, host, code, host, code))
 	}
 	body.WriteString("</body>")
-	body.WriteString("</html>\n")
-
+	body.WriteString("</html>")
+	body.WriteString("\n--" + altboundary + "--\n")
+	fmt.Println(body.String())
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
 	pwd := os.Getenv("SMTP_PASSWORD")
-	body.WriteString("--" + altboundary + "--\n")
 
 	if file_attached := utils.GetString(mail, "file_attached"); file_attached != "" {
 		files := strings.Split(file_attached, ",")
@@ -156,7 +156,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	}
 
 	body.WriteString("--" + boundary + "--\n")
-
+	fmt.Println(body.String())
 	// Charger le template HTML
 	var err error
 	if pwd != "" {
