@@ -207,7 +207,8 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 }
 
 func (s *RequestService) createTaskAndNotify(newTask, record map[string]interface{}) {
-	tasks, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name), newTask)
+	tasks, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name).RootRaw(), newTask)
+	fmt.Println("NOTIF", tasks, err)
 	if err != nil || len(tasks) == 0 {
 		return
 	}
@@ -217,7 +218,7 @@ func (s *RequestService) createTaskAndNotify(newTask, record map[string]interfac
 		s.createMetaRequest(task, id)
 	}
 
-	if schema, err := schserv.GetSchema(ds.DBTask.Name); len(tasks) > 0 && err == nil {
+	if schema, err := schserv.GetSchema(ds.DBTask.Name); err == nil {
 		task[ds.DestTableDBField] = tasks[0][utils.SpecialIDParam]
 		task["link_id"] = schema.ID
 		res, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), task)

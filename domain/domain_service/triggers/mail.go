@@ -65,12 +65,15 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 
 func SendMail(from string, to string, mail utils.Record, isValidButton bool) error {
 	var body bytes.Buffer
+	boundary := "mixed-boundary"
 	altboundary := "alt-boundary"
 	// En-têtes MIME
 	body.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	body.WriteString(fmt.Sprintf("To: %s\r\n", to))
 	body.WriteString("Subject: " + utils.GetString(mail, "subject") + "\r\n")
 	body.WriteString("MIME-Version: 1.0\r\n")
+	body.WriteString("Content-Type: multipart/mixed; boundary=\"" + boundary + "\"\r\n")
+	body.WriteString("\r\n--" + boundary + "\r\n")
 	body.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", altboundary))
 	body.WriteString("\r\n")
 	// Partie texte
@@ -122,10 +125,11 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
 	pwd := os.Getenv("SMTP_PASSWORD")
+	body.WriteString("--" + altboundary + "--\n")
 
 	if file_attached := utils.GetString(mail, "file_attached"); file_attached != "" {
 		files := strings.Split(file_attached, ",")
-		for i, filePath := range files {
+		for _, filePath := range files {
 			splitted := strings.Split(filePath, "/")
 			fileName := splitted[len(splitted)-1]
 			if !strings.Contains(filePath, "/mnt/files/") {
@@ -133,7 +137,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			}
 			fileData, err := os.ReadFile(filePath)
 			if err == nil {
-				body.WriteString("\n--" + altboundary + "\n")
+				body.WriteString("--" + boundary + "\n")
 
 				fileBase64 := base64.StdEncoding.EncodeToString(fileData)
 				body.WriteString("Content-Type: application/octet-stream\r\n")
@@ -147,17 +151,11 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 					}
 					body.WriteString(fileBase64[i:end] + "\r\n")
 				}
-				body.WriteString("\n--" + altboundary)
-				if len(files)-1 == i {
-					body.WriteString("\n--" + altboundary)
-				} else {
-					body.WriteString("\n--" + altboundary + "--\n")
-				}
 			}
 		}
-	} else {
-		body.WriteString("--" + altboundary + "--\n")
 	}
+
+	body.WriteString("--" + boundary + "--\n")
 
 	// Charger le template HTML
 	var err error
