@@ -47,11 +47,7 @@ func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interfac
 	}
 	fmt.Println(emailTo)
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-		utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(
-			ds.DBEmailSended.Name, map[string]interface{}{
-				utils.SpecialIDParam: record[ds.EmailSendedDBField],
-			}, false, "from_email",
-		),
+		utils.SpecialIDParam: s.Domain.GetUserID(),
 	}, false); err == nil && len(res) > 0 && emailTo != "" {
 		if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
 			utils.SpecialIDParam: record[ds.EmailSendedDBField],
