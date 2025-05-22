@@ -191,7 +191,11 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 		newTask[ds.SchemaDBField] = record[ds.SchemaDBField]
 		newTask[ds.DestTableDBField] = record[ds.DestTableDBField]
 	} else if schema, err := schserv.GetSchemaByID(newTask.GetInt(ds.SchemaDBField)); err == nil {
-		if i, err := s.Domain.GetDb().CreateQuery(schema.Name, utils.Record{"is_draft": false}, func(s string) (string, bool) {
+		r := utils.Record{"is_draft": true}
+		if schema.HasField("name") {
+			r["name"] = schema.Label + " : " + utils.GetString(newTask, "name")
+		}
+		if i, err := s.Domain.GetDb().CreateQuery(schema.Name, utils.Record{"is_draft": true}, func(s string) (string, bool) {
 			return "", true
 		}); err == nil {
 			newTask[ds.DestTableDBField] = i

@@ -66,6 +66,7 @@ var PublicationActConferenceFR = models.SchemaModel{
 	Label:    "publication act conference",
 	Category: "domain",
 	Fields: []models.FieldModel{
+		{Name: "name", Type: models.VARCHAR.String(), Required: true, Index: 0},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: 0, Label: "téléchargement de la publication finalisée"},
 		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: 2},
@@ -79,6 +80,7 @@ var PublicationActArticleFR = models.SchemaModel{
 	Category: "domain",
 	CanOwned: true,
 	Fields: []models.FieldModel{
+		{Name: "name", Type: models.VARCHAR.String(), Required: true, Index: 0},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: 0, Label: "téléchargement de la publication finalisée"},
 		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: 2},
@@ -92,6 +94,7 @@ var PublicationActFR = models.SchemaModel{
 	Category: "domain",
 	CanOwned: true,
 	Fields: []models.FieldModel{
+		{Name: "name", Type: models.VARCHAR.String(), Required: true, Index: 0},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: 0, Label: "téléchargement de la publication finalisée"},
 		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: 2},

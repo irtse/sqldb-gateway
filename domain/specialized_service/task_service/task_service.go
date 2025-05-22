@@ -210,7 +210,11 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 				} else {
 					schema, err := schserv.GetSchemaByID(utils.GetInt(scheme, SchemaDBField))
 					if err == nil {
-						i, err := s.Domain.GetDb().CreateQuery(schema.Name, utils.Record{}, func(s string) (string, bool) {
+						r := utils.Record{"is_draft": true}
+						if schema.HasField("name") {
+							r["name"] = schema.Label + " : " + utils.GetString(newTask, "name")
+						}
+						i, err := s.Domain.GetDb().CreateQuery(schema.Name, r, func(s string) (string, bool) {
 							return "", true
 						})
 						if err == nil {
