@@ -94,7 +94,9 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, onUpload
 		return "", "", err
 	}
 	if strings.Contains(field.Type, "upload") {
-		onUpload(field.Name, search)
+		if strings.Contains(field.Type, "upload_str") {
+			onUpload(field.Name, search)
+		}
 		return field.Type, "", errors.New("can't proceed a publication")
 	}
 	foreign, err := GetSchemaByID(field.GetLink())

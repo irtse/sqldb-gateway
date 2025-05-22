@@ -80,7 +80,10 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 		}
 		alterRestr := []string{}
 		f := func(s string, search string) {
-			d.Domain.AddDetectFileToSearchIn(s, search)
+			splitted := strings.Split(s, ",")
+			for _, str := range splitted {
+				d.Domain.AddDetectFileToSearchIn(str, search)
+			}
 		}
 		if line, ok := domainParams.Get(utils.RootFilterLine); ok && tableName != ds.DBView.Name {
 			alterRestr = append(alterRestr, connector.FormatSQLRestrictionWhereInjection(line, schema.GetTypeAndLinkForField, f))
