@@ -59,45 +59,19 @@ var PublicationStatusFR = models.SchemaModel{
 		{Name: "name", Label: "nom", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
 	},
 }
-
-var PublicationActConferenceFR = models.SchemaModel{
-	Name:     "publication_act_conference",
-	CanOwned: true,
-	Label:    "publication act conference",
+var PublicationActFR = models.SchemaModel{
+	Name:     "publication_act",
+	Label:    "publication_act act article",
 	Category: "domain",
+	CanOwned: true,
 	Fields: []models.FieldModel{
-		{Name: "name", Type: models.VARCHAR.String(), Required: true, Index: 0},
+		{Name: "name", Type: models.VARCHAR.String(), Required: true, Index: -1},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: 0, Label: "téléchargement de la publication finalisée"},
 		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: 2},
 		{Name: "major_conference", Label: "la conférence visée est-elle incontournable dans ton domaine scientifique ?", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: 3},
-	},
-}
-
-var PublicationActArticleFR = models.SchemaModel{
-	Name:     "publication_act_article",
-	Label:    "publication act article",
-	Category: "domain",
-	CanOwned: true,
-	Fields: []models.FieldModel{
-		{Name: "name", Type: models.VARCHAR.String(), Required: true, Index: 0},
-		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
-			Index: 0, Label: "téléchargement de la publication finalisée"},
-		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: 2},
-		{Name: "major_conference", Label: "la publication est elle publiée dans un journal du premier quartile de ta discipline scientifique", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: 3},
-	},
-}
-
-var PublicationActFR = models.SchemaModel{
-	Name:     "publication_act",
-	Label:    "publication act",
-	Category: "domain",
-	CanOwned: true,
-	Fields: []models.FieldModel{
-		{Name: "name", Type: models.VARCHAR.String(), Required: true, Index: 0},
-		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
-			Index: 0, Label: "téléchargement de la publication finalisée"},
-		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: 2},
+		{Name: "published", Label: "la publication est elle publiée dans un journal du premier quartile de ta discipline scientifique", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: 3},
+		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 5, Hidden: true},
 	},
 }
 
@@ -117,10 +91,6 @@ var publicationFields = []models.FieldModel{
 		Index: 5, Label: "affiliation (société ou laboratoire de ratachement du 1ier auteur)"},
 	{Name: "publication", Type: models.UPLOAD_STR.String(), Required: true,
 		Index: 6, Label: "téléchargement de la publication"},
-	{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: "no",
-		Index: 6, Label: "la production a-t-elle fait l'objet d'un award ?"},
-	{Name: "awarded_by", Type: models.VARCHAR.String(), Required: false,
-		Index: 6, Label: "la production a été primée par"},
 }
 
 var ArticleFR = models.SchemaModel{
@@ -351,5 +321,21 @@ var OtherPublicationAuthorsFR = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
 		{Name: ds.RootID("other_publication"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication", Required: true, Index: 2},
+	},
+}
+
+var PublicationAwardFR = models.SchemaModel{
+	Name:     "publication_award",
+	Label:    "award_publication",
+	Category: "publications",
+	IsEnum:   true,
+	Fields: []models.FieldModel{
+		{Name: "name", Type: models.VARCHAR.String(), Required: true, Index: -1},
+		{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: "no",
+			Index: 1, Label: "la production a-t-elle fait l'objet d'un award ?"},
+		{Name: "awarded_by", Type: models.VARCHAR.String(), Required: false,
+			Index: 2, Label: "la production a été primée par"},
+		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 3, Hidden: true},
+		{Name: ds.RootID("other_publication"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication", Required: true, Index: 4, Readonly: true},
 	},
 }

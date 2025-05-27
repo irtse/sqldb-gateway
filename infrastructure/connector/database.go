@@ -237,7 +237,7 @@ type DB interface {
 	BuildCreateTableQuery(name string) string
 	BuildCreateQueries(tableName string, values string, cols string, typ string) []string
 	ApplyQueryFilters(restr string, order string, limit string, views string, additionnalRestriction ...string)
-	BuildUpdateQuery(col string, value interface{}, set string, cols []string, colValues []string, verify func(string) (string, bool)) (string, []string, []string)
+	BuildUpdateQuery(tableName string, col string, value interface{}, set string, cols []string, colValues []string, verify func(string) (string, bool)) (string, []string, []string)
 	BuildUpdateQueryWithRestriction(tableName string, record map[string]interface{}, restrictions map[string]interface{}, isOr bool) (string, error)
 	BuildUpdateRowQuery(tableName string, record map[string]interface{}, verify func(string) (string, bool)) (string, error)
 	BuildUpdateColumnQueries(tableName string, record map[string]interface{}, verify func(string) (string, bool)) ([]string, error)

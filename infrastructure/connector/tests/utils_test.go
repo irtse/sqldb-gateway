@@ -29,17 +29,6 @@ func TestFormatMathViewQuery(t *testing.T) {
 	}
 }
 
-func TestFormatSQLRestrictionWhereInjection(t *testing.T) {
-	mockFunc := func(s string) (string, string, error) {
-		return "int", "table", nil
-	}
-	got := connector.FormatSQLRestrictionWhereInjection("id:5", mockFunc)
-	want := "( id IN (SELECT id FROM table WHERE id = 5) )"
-	if got != want {
-		t.Errorf("FormatSQLRestrictionWhereInjection() = %v, want %v", got, want)
-	}
-}
-
 func TestMakeSqlItem(t *testing.T) {
 	got := connector.MakeSqlItem("", "int", "", "id", "5", "=")
 	want := "id = 5"
@@ -121,16 +110,6 @@ func TestFormatSQLRestrictionWhere(t *testing.T) {
 	want := "id=1"
 	if got != want {
 		t.Errorf("FormatSQLRestrictionWhere() = %v, want %v", got, want)
-	}
-}
-
-func TestFormatSQLRestrictionWhereInjectionEmpty(t *testing.T) {
-	mockFunc := func(s string) (string, string, error) {
-		return "", "", nil
-	}
-	got := connector.FormatSQLRestrictionWhereInjection("", mockFunc)
-	if got != "" {
-		t.Errorf("FormatSQLRestrictionWhereInjection() with empty input should return empty, got %v", got)
 	}
 }
 

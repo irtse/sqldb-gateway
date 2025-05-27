@@ -15,6 +15,7 @@ type SpecializedServiceInfo interface{ GetName() string }
 
 type DomainITF interface {
 	// Main Procedure of services at Domain level.
+	GetSpecialized(override string) infrastructure.InfraSpecializedServiceItf
 	AddDetectFileToSearchIn(fileField string, search string)
 	DetectFileToSearchIn() map[string]string
 	SuperCall(params Params, record Record, method Method, isOwn bool, args ...interface{}) (Results, error)

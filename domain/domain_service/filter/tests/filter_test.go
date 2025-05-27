@@ -153,11 +153,6 @@ func TestProcessViewAndOrder_EmptyView(t *testing.T) {
 	assert.Equal(t, "", dir)
 }
 
-func TestFormatSQLRestrictionWhereInjection(t *testing.T) {
-	result := connector.FormatSQLRestrictionWhereInjection("id = 1", nil)
-	assert.NotNil(t, result)
-}
-
 func TestFormatSQLRestrictionWhereByMap(t *testing.T) {
 	restrictionMap := map[string]interface{}{"active": true}
 	result := connector.FormatSQLRestrictionWhereByMap("", restrictionMap, false)

@@ -56,6 +56,22 @@ func (s *DelegationService) Write(results []map[string]interface{}, record map[s
 			delete(r, utils.SpecialIDParam)
 			s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name), newTask)
 		}
+	} else if utils.GetBool(record, "all_tasks") {
+		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+			ds.UserDBField: s.Domain.GetUserID(),
+		}, false); err == nil && len(res) > 0 {
+			for _, r := range res {
+				newTask := utils.Record{}
+				for k, v := range r {
+					newTask[k] = v
+				}
+				newTask[ds.UserDBField] = res[0]["delegated_"+ds.UserDBField]
+				newTask[ds.EntityDBField] = nil
+				newTask["binded_"+ds.TaskDBField] = r[utils.SpecialIDParam]
+				delete(r, utils.SpecialIDParam)
+				s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name), newTask)
+			}
+		}
 	}
 }
 

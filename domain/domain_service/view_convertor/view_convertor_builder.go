@@ -58,10 +58,7 @@ func (d *ViewConvertor) handleTaskWorkflow(record utils.Record) (sm.WorkflowMode
 	var workflow sm.WorkflowModel
 	reqRecord := d.FetchRecord(ds.DBRequest.Name,
 		map[string]interface{}{
-			ds.WorkflowDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(
-				ds.DBWorkflowSchema.Name, map[string]interface{}{
-					utils.SpecialIDParam: record.GetInt(ds.WorkflowSchemaDBField),
-				}, true, ds.WorkflowDBField),
+			utils.SpecialIDParam: utils.GetString(record, ds.RequestDBField),
 		})
 	if len(reqRecord) > 0 {
 		workflow = d.InitializeWorkflow(reqRecord[0])
@@ -127,7 +124,7 @@ func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id str
 		}
 
 		if workflow.Current != "" {
-			d.populateTaskDetails(&newStep, step)
+			d.populateTaskDetails(&newStep, step, requestID)
 		}
 
 		if wrapped, ok := step["wrapped_"+ds.RootID(ds.DBWorkflow.Name)]; ok {
@@ -140,8 +137,9 @@ func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id str
 	return workflow
 }
 
-func (d *ViewConvertor) populateTaskDetails(newStep *sm.WorkflowStepModel, step map[string]interface{}) {
+func (d *ViewConvertor) populateTaskDetails(newStep *sm.WorkflowStepModel, step map[string]interface{}, requestID string) {
 	tasks := d.FetchRecord(ds.DBTask.Name, map[string]interface{}{
+		ds.RequestDBField:        requestID,
 		ds.WorkflowSchemaDBField: utils.GetInt(step, utils.SpecialIDParam),
 	})
 	if len(tasks) > 0 {

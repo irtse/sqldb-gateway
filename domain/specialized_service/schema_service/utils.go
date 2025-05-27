@@ -34,7 +34,7 @@ func NewView(name string, label string, desc string, category string, schemaDB i
 func NewViewFromRecord(schema sm.SchemaModel, record utils.Record) utils.Record {
 	return utils.Record{
 		"id":          record["id"],
-		"new":         []string{},
+		"new":         0,
 		"name":        record["name"],
 		"label":       record["label"],
 		"description": record["description"],
@@ -43,6 +43,7 @@ func NewViewFromRecord(schema sm.SchemaModel, record utils.Record) utils.Record 
 		"is_list":     record["is_list"],
 		"readonly":    record["readonly"],
 		"category":    record["category"],
+		"schema_name": schema.Name,
 		"filter_path": fmt.Sprintf("/%s/%s?%s=%s&%s=enable&%s=%v",
 			utils.MAIN_PREFIX, ds.DBFilter.Name, utils.RootRowsParam,
 			utils.ReservedParam, utils.RootShallow, ds.SchemaDBField, schema.ID),

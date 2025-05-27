@@ -1,5 +1,4 @@
 #!/bin/bash
-
 cd plugins/cegid
 go build -buildmode=plugin -o plugin.so plugin.go
 

@@ -53,7 +53,7 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 							ds.DestTableDBField: r["mapped_with"+ds.DestTableDBField],
 							ds.SchemaDBField:    r["mapped_with"+ds.SchemaDBField],
 							"is_close":          false,
-							"name":              utils.GetString(r, "code"),
+							"name":              connector.Quote(utils.GetString(r, "code")),
 						}, false); err == nil {
 							for _, rec := range rr {
 								if utils.GetBool(r, "got_response") {

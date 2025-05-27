@@ -42,7 +42,7 @@ func (t *TriggerService) Trigger(fromSchema sm.SchemaModel, record utils.Record,
 			switch typ {
 			case "mail":
 				t.triggerMail(record, fromSchema,
-					utils.GetInt(r, ds.TriggerDBField),
+					utils.GetInt(r, utils.SpecialIDParam),
 					utils.GetInt(record, ds.SchemaDBField),
 					utils.GetInt(record, ds.DestTableDBField))
 			case "sms":
@@ -51,7 +51,7 @@ func (t *TriggerService) Trigger(fromSchema sm.SchemaModel, record utils.Record,
 				break
 			case "data":
 				t.triggerData(record, fromSchema,
-					utils.GetInt(r, ds.TriggerDBField),
+					utils.GetInt(r, utils.SpecialIDParam),
 					utils.GetInt(record, ds.SchemaDBField),
 					utils.GetInt(record, ds.DestTableDBField))
 			}
@@ -60,20 +60,24 @@ func (t *TriggerService) Trigger(fromSchema sm.SchemaModel, record utils.Record,
 }
 func (t *TriggerService) ParseMails(toSplit string) []map[string]interface{} {
 	splitted := ""
-	if len(strings.Split(toSplit, ";")) > 1 {
+	if len(strings.Split(toSplit, ";")) > 0 {
 		splitted = strings.ReplaceAll(strings.Join(strings.Split(toSplit, ";"), ","), " ", "")
-	} else if len(strings.Split(toSplit, ",")) > 1 {
+	} else if len(strings.Split(toSplit, ",")) > 0 {
 		splitted = strings.ReplaceAll(toSplit, " ", "")
-	} else if len(strings.Split(toSplit, " ")) > 1 {
+	} else if len(strings.Split(toSplit, " ")) > 0 {
 		splitted = strings.ReplaceAll(strings.Join(strings.Split(toSplit, ","), ","), " ", "")
 	}
-	if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-		"email": strings.Split(splitted, ","),
-	}, false); err == nil {
-		return res
+	if len(splitted) > 0 {
+		if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
+			"email": splitted,
+		}, false); err == nil {
+			return res
+		}
 	}
 	return []map[string]interface{}{}
 }
+
+// send_mail_to should be on request + task
 func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface{}) []map[string]interface{} {
 	if record["send_mail_to"] != nil { // it's a particular default field that detect overriding {
 		return t.ParseMails(utils.GetString(record, "send_mail_to"))
@@ -96,10 +100,12 @@ func (t *TriggerService) triggerMail(record utils.Record, fromSchema sm.SchemaMo
 }
 
 func (t *TriggerService) triggerData(record utils.Record, fromSchema sm.SchemaModel, triggerID, toSchemaID, destID int64) {
-	if toSchemaID < -1 || destID < -1 {
-		return
+	if toSchemaID < 0 || destID < 0 {
+		toSchemaID = utils.ToInt64(fromSchema.ID)
+		destID = utils.GetInt(record, utils.SpecialIDParam)
 	}
 	// PROBLEM WE CAN'T DECOLERATE and action on not a sub data of it. (not a problem for now)
+
 	rules := t.GetTriggerRules(triggerID, fromSchema, toSchemaID, record)
 	for _, r := range rules {
 		if toSchemaID != utils.GetInt(r, "to_"+ds.SchemaDBField) {
@@ -132,8 +138,7 @@ func (t *TriggerService) triggerData(record utils.Record, fromSchema sm.SchemaMo
 func (t *TriggerService) GetTriggerRules(triggerID int64, fromSchema sm.SchemaModel, toSchemaID int64, record utils.Record) []map[string]interface{} {
 	if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTriggerCondition.Name, map[string]interface{}{
 		ds.TriggerDBField: triggerID,
-		ds.SchemaDBField:  fromSchema.ID,
-	}, false); err == nil && len(res) > 1 {
+	}, false); err == nil && len(res) > 0 {
 		for _, cond := range res {
 			if cond[ds.SchemaFieldDBField] == nil && utils.GetString(record, utils.SpecialIDParam) != utils.GetString(cond, "value") {
 				return []map[string]interface{}{}
@@ -144,9 +149,8 @@ func (t *TriggerService) GetTriggerRules(triggerID int64, fromSchema sm.SchemaMo
 		}
 	}
 	rules, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTriggerRule.Name, map[string]interface{}{
-		ds.TriggerDBField:          triggerID,
-		"from_" + ds.SchemaDBField: fromSchema.ID,
-		"to_" + ds.SchemaDBField:   toSchemaID,
+		ds.TriggerDBField:        triggerID,
+		"to_" + ds.SchemaDBField: toSchemaID,
 	}, false)
 	if err != nil {
 		return []map[string]interface{}{}

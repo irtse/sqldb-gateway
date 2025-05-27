@@ -32,7 +32,6 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 	if restr != "" && !f.Domain.IsSuperCall() {
 		SQLrestriction = append(SQLrestriction, restr)
 	}
-
 	later := []string{}
 	for _, restr := range innerRestriction {
 		if strings.Contains(restr, " IN ") {
@@ -45,11 +44,15 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 			SQLrestriction = r
 		}
 	}
-
-	domainParams.Add(utils.RootColumnsParam, view, func(v string) bool { return !f.Domain.IsSuperCall() })
-	domainParams.Add(utils.RootOrderParam, order, func(v string) bool { return true })
-	domainParams.Add(utils.RootDirParam, dir, func(v string) bool { return true })
-
+	if view != "" {
+		domainParams.Add(utils.RootColumnsParam, view, func(v string) bool { return !f.Domain.IsSuperCall() })
+	}
+	if order != "" {
+		domainParams.Add(utils.RootOrderParam, order, func(v string) bool { return true })
+		if dir != "" {
+			domainParams.Add(utils.RootDirParam, dir, func(v string) bool { return true })
+		}
+	}
 	SQLrestriction = f.RestrictionBySchema(tableName, SQLrestriction, domainParams)
 	SQLOrder = domainParams.GetOrder(func(el string) bool { return schema.HasField(el) }, SQLOrder)
 	SQLLimit = domainParams.GetLimit(SQLLimit)
@@ -86,7 +89,9 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 			}
 		}
 		if line, ok := domainParams.Get(utils.RootFilterLine); ok && tableName != ds.DBView.Name {
-			alterRestr = append(alterRestr, connector.FormatSQLRestrictionWhereInjection(line, schema.GetTypeAndLinkForField, f))
+			if connector.FormatSQLRestrictionWhereInjection(line, schema.GetTypeAndLinkForField, f) != "" {
+				alterRestr = append(alterRestr, connector.FormatSQLRestrictionWhereInjection(line, schema.GetTypeAndLinkForField, f))
+			}
 		}
 		for key, val := range domainParams.Values {
 			typ, foreign, err := schema.GetTypeAndLinkForField(key, val, f)
@@ -105,7 +110,13 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 				alterRestr = append(alterRestr, "("+newSTR+")")
 			}
 		}
-		restr = append(alterRestr, restr...)
+		newRestr := []string{}
+		for _, alt := range alterRestr {
+			if alt != "" {
+				newRestr = append(newRestr, alt)
+			}
+		}
+		restr = append(newRestr, restr...)
 		if schema.HasField(ds.SchemaDBField) && !d.Domain.IsSuperAdmin() {
 			except := []string{ds.DBRequest.Name, ds.DBTask.Name, ds.DBDelegation.Name}
 			enum := []string{}
@@ -116,11 +127,17 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 					enum = append(enum, utils.ToString(s.ID))
 				}
 			}
-			restr = append(restr, connector.FormatSQLRestrictionWhereByMap(
-				"", map[string]interface{}{ds.SchemaDBField: enum}, false))
+			if connector.FormatSQLRestrictionWhereByMap(
+				"", map[string]interface{}{ds.SchemaDBField: enum}, false) != "" {
+				restr = append(restr, connector.FormatSQLRestrictionWhereByMap(
+					"", map[string]interface{}{ds.SchemaDBField: enum}, false))
+			}
+
 		}
 	}
-	restr = append(restr, connector.FormatSQLRestrictionWhereByMap("", restriction, false))
+	if strings.Trim(connector.FormatSQLRestrictionWhereByMap("", restriction, false), " ") != "" {
+		restr = append(restr, strings.Trim(connector.FormatSQLRestrictionWhereByMap("", restriction, false), " "))
+	}
 	return restr
 }
 
@@ -162,37 +179,39 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 	}
 	isUser := false
 	isUser = schema.HasField(ds.UserDBField) || s.Domain.GetTable() == ds.DBUser.Name
-
-	if isUser {
-		key := ds.UserDBField
-		if s.Domain.GetTable() == ds.DBUser.Name {
-			key = utils.SpecialIDParam
-		}
-		if s.Domain.GetUserID() != "" {
-			if scope, ok := s.Domain.GetParams().Get(utils.RootScope); ok && scope == "enable" {
-				restrictions[key] = s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
-					"parent_" + ds.UserDBField: s.Domain.GetUserID(),
-				}, true, ds.UserDBField)
-			} else {
-				restrictions[key] = s.Domain.GetUserID()
-			}
-		}
-	}
-	if schema.HasField(ds.EntityDBField) || s.Domain.GetTable() == ds.DBEntity.Name {
-		key := ds.EntityDBField
-		if s.Domain.GetTable() == ds.DBEntity.Name {
-			if !ok {
+	if scope, ok := s.Domain.GetParams().Get(utils.RootScope); !(ok && scope == "enable" && schema.Name == ds.DBTask.Name) {
+		if isUser {
+			key := ds.UserDBField
+			if s.Domain.GetTable() == ds.DBUser.Name {
 				key = utils.SpecialIDParam
 			}
+			if s.Domain.GetUserID() != "" {
+				if scope, ok := s.Domain.GetParams().Get(utils.RootScope); ok && scope == "enable" {
+					restrictions[key] = s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
+						"parent_" + ds.UserDBField: s.Domain.GetUserID(),
+					}, true, ds.UserDBField)
+				} else {
+					restrictions[key] = s.Domain.GetUserID()
+				}
+			}
 		}
-		if s.Domain.GetUserID() != "" {
-			restrictions[key] = s.GetEntityFilterQuery()
+		if schema.HasField(ds.EntityDBField) || s.Domain.GetTable() == ds.DBEntity.Name {
+			key := ds.EntityDBField
+			if s.Domain.GetTable() == ds.DBEntity.Name {
+				if !ok {
+					key = utils.SpecialIDParam
+				}
+			}
+			if s.Domain.GetUserID() != "" {
+				restrictions[key] = s.GetEntityFilterQuery()
+			}
 		}
 	}
-
 	if len(newRestr) > 0 {
 		for k, r := range newRestr {
-			restrictions[k] = r
+			if r != "" {
+				restrictions[k] = r
+			}
 		}
 	}
 	idParamsOk := len(s.Domain.GetParams().GetAsArgs(utils.SpecialIDParam)) > 0
@@ -237,7 +256,7 @@ func (s *FilterService) GetFilterForQuery(filterID string, viewfilterID string, 
 	filter := s.ProcessFilterRestriction(ids[utils.RootFilter], schema)
 	state := ""
 	if filterID != "" {
-		if fils, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name,
+		if fils, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilter.Name,
 			map[string]interface{}{
 				utils.SpecialIDParam: filterID,
 			}, false); err == nil && len(fils) > 0 {
@@ -260,9 +279,9 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.Sche
 	if err == nil && len(fields) > 0 {
 		for _, field := range fields {
 			if f, err := sch.GetFieldByID(utils.GetInt(field, ds.SchemaFieldDBField)); err == nil {
-				if utils.GetBool(field, "is_own") {
+				if utils.GetBool(field, "is_own") && len(s.RestrictionByEntityUser(schema, filter, true)) > 0 {
 					filter = append(filter, s.RestrictionByEntityUser(schema, filter, true)...)
-				} else {
+				} else if connector.FormatOperatorSQLRestriction(field["operator"], field["separator"], f.Name, field["value"], f.Type) != "" {
 					filter = append(filter,
 						"("+connector.FormatOperatorSQLRestriction(field["operator"], field["separator"], f.Name, field["value"], f.Type)+")")
 				}
@@ -314,24 +333,34 @@ func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []
 	if state == "all" || tableName == ds.DBView.Name {
 		return SQLrestriction
 	}
-	var operator string
-	news, _ := d.CountNewDataAccess(tableName, utils.ToListAnonymized(SQLrestriction))
 	if state == "new" {
-		operator = "IN"
-		if len(news) == 0 {
-			news = append(news, "NULL")
-		}
+		SQLrestriction = append(SQLrestriction, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
+			"!" + utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name,
+				map[string]interface{}{
+					"write":  false,
+					"update": false,
+					ds.SchemaDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(
+						ds.DBSchema.Name, map[string]interface{}{
+							"name": connector.Quote(tableName),
+						}, false, "id"),
+					ds.UserDBField: d.Domain.GetUserID(),
+				}, false, ds.DestTableDBField),
+		}, false))
+	} else {
+		SQLrestriction = append(SQLrestriction, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
+			utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name,
+				map[string]interface{}{
+					"write":  false,
+					"update": false,
+					ds.SchemaDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(
+						ds.DBSchema.Name, map[string]interface{}{
+							"name": connector.Quote(tableName),
+						}, false, "id"),
+					ds.UserDBField: d.Domain.GetUserID(),
+				}, false, ds.DestTableDBField),
+		}, false))
 	}
-	if state == "old" {
-		if len(news) == 0 {
-			return SQLrestriction
-		}
-		operator = "NOT IN"
-	}
-	if operator != "" && len(news) > 0 {
-		t := "id " + operator + " (" + strings.Join(news, ",") + ")"
-		SQLrestriction = append(SQLrestriction, "("+t+")")
-	}
+
 	return SQLrestriction
 }
 

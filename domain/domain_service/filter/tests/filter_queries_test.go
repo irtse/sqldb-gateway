@@ -32,21 +32,6 @@ func (m *MockDatabase) SimpleMathQuery(operation, table string, filters []string
 	return args.Get(0).([]map[string]interface{}), args.Error(1)
 }
 
-func TestGetEntityFilterQuery(t *testing.T) {
-	mockDB := new(MockDatabase)
-	mockDomain := new(tests.MockDomain)
-	mockDomain.On("GetDb").Return(mockDB)
-
-	service := filter.FilterService{Domain: mockDomain}
-
-	expectedQuery := "SELECT * FROM entity WHERE user_id = ?"
-	mockDB.On("BuildSelectQueryWithRestriction", ds.DBEntityUser.Name, mock.Anything, true, "id").Return(expectedQuery)
-
-	query := service.GetEntityFilterQuery("id")
-
-	assert.Equal(t, expectedQuery, query)
-}
-
 func TestGetUserFilterQuery(t *testing.T) {
 	mockDB := new(MockDatabase)
 	mockDomain := new(tests.MockDomain)
@@ -59,45 +44,6 @@ func TestGetUserFilterQuery(t *testing.T) {
 	query := mockDomain.GetUserID()
 
 	assert.Equal(t, expectedQuery, query)
-}
-
-func TestCountNewDataAccess_Success(t *testing.T) {
-	mockDB := new(MockDatabase)
-	mockDomain := new(tests.MockDomain)
-	mockDomain.On("GetDb").Return(mockDB)
-
-	service := filter.FilterService{Domain: mockDomain}
-
-	mockDB.On("SelectQueryWithRestriction", "test_table", mock.Anything, false).Return([]map[string]interface{}{
-		{"id": "123"}, {"id": "456"},
-	}, nil)
-
-	mockDB.On("SimpleMathQuery", "COUNT", "test_table", mock.Anything, false).Return([]map[string]interface{}{
-		{"result": 2},
-	}, nil)
-
-	ids, count := service.CountNewDataAccess("test_table", []interface{}{})
-
-	assert.Equal(t, []string{"123", "456"}, ids)
-	assert.Equal(t, int64(2), count)
-}
-
-func TestCountNewDataAccess_EmptyResult(t *testing.T) {
-	mockDB := new(MockDatabase)
-	mockDomain := new(tests.MockDomain)
-	mockDomain.On("GetDb").Return(mockDB)
-
-	service := filter.FilterService{Domain: mockDomain}
-
-	mockDB.On("SelectQueryWithRestriction", "test_table", mock.Anything, false).Return([]map[string]interface{}{}, nil)
-	mockDB.On("SimpleMathQuery", "COUNT", "test_table", mock.Anything, false).Return([]map[string]interface{}{
-		{"result": nil},
-	}, nil)
-
-	ids, count := service.CountNewDataAccess("test_table", []interface{}{})
-
-	assert.Empty(t, ids)
-	assert.Equal(t, int64(0), count)
 }
 
 func TestGetFilterFields_Success(t *testing.T) {

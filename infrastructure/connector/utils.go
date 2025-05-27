@@ -16,7 +16,7 @@ var SpecialTypes = []string{"char", "text", "date", "time", "interval", "var", "
 	"upload_multiple", "upload_str_multiple", "upload_img_multiple", "upload_class_multiple",
 	"html", "link_add"}
 
-func Quote(s string) string { return "'" + s + "'" }
+func Quote(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
 
 func RemoveLastChar(s string) string {
 	r := []rune(s)
@@ -34,15 +34,48 @@ func FormatMathViewQuery(algo string, col string, naming ...string) string {
 	return strings.ToUpper(algo) + "(" + col + ") as " + resName
 }
 
+func GetFieldInInjection(injection string, searchField string) (string, string) {
+	injection = SQLInjectionProtector(injection)
+	ands := strings.Split(injection, "+")
+	for _, andUndecoded := range ands {
+		and, _ := url.QueryUnescape(fmt.Sprint(andUndecoded))
+		ors := strings.Split(and, "|")
+		if len(ors) == 0 {
+			continue
+		}
+		for _, or := range ors {
+			operator := "~"
+			keyVal := []string{}
+			if strings.Contains(or, "<>~") {
+				keyVal = strings.Split(or, "<>~")
+				operator = " NOT LIKE "
+			} else if strings.Contains(or, "~") {
+				keyVal = strings.Split(or, "~")
+				operator = " LIKE "
+			} else if strings.Contains(or, ":") {
+				keyVal = strings.Split(or, ":")
+				operator = "="
+			}
+			if len(keyVal) != 2 {
+				continue
+			}
+			if len(keyVal) != 2 {
+				continue
+			}
+			if keyVal[0] == searchField {
+				return keyVal[1], operator
+			}
+		}
+	}
+	return "", ""
+}
+
 func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(string, string, func(string, string)) (string, string, error), special func(string, string)) string {
 	alterRestr := ""
 	injection = SQLInjectionProtector(injection)
 	ands := strings.Split(injection, "+")
 	for _, andUndecoded := range ands {
 		and, _ := url.QueryUnescape(fmt.Sprint(andUndecoded))
-		if len(strings.Trim(alterRestr, " ")) > 0 {
-			alterRestr += " AND "
-		}
 		ors := strings.Split(and, "|")
 		if len(ors) == 0 {
 			continue
@@ -89,11 +122,15 @@ func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(st
 			orRestr = MakeSqlItem(orRestr, typ, link, keyVal[0], keyVal[1], operator)
 		}
 		if len(orRestr) > 0 {
+			if len(strings.Trim(alterRestr, " ")) > 0 {
+				alterRestr += " AND "
+			}
 			alterRestr += "( " + orRestr + " )"
 		}
 	}
 	alterRestr = strings.ReplaceAll(strings.ReplaceAll(alterRestr, " OR ()", ""), " AND ()", "")
 	alterRestr = strings.ReplaceAll(strings.ReplaceAll(alterRestr, " () OR ", ""), "() AND ", "")
+	alterRestr = strings.ReplaceAll(strings.ReplaceAll(alterRestr, " OR  OR ", ""), " AND  AND ", "")
 	alterRestr = strings.ReplaceAll(alterRestr, "()", "")
 	return alterRestr
 }
@@ -159,7 +196,10 @@ func FormatOperatorSQLRestriction(operator interface{}, separator interface{}, n
 
 func FormatSQLRestrictionByList(SQLrestriction string, restrictions []interface{}, isOr bool) string {
 	for _, v := range restrictions {
-		if len(SQLrestriction) > 0 {
+		if strings.Trim(fmt.Sprintf("%v", v), " ") == "" {
+			continue
+		}
+		if len(strings.Trim(SQLrestriction, " ")) > 0 {
 			if isOr {
 				SQLrestriction += " OR "
 			} else {
@@ -173,6 +213,9 @@ func FormatSQLRestrictionByList(SQLrestriction string, restrictions []interface{
 
 func FormatSQLRestrictionWhereByMap(SQLrestriction string, restrictions map[string]interface{}, isOr bool) string {
 	for k, r := range restrictions {
+		if r == "" {
+			continue
+		}
 		k2 := k
 		karr := strings.Split(k, "_")
 		latest := karr[len(karr)-1]
@@ -198,7 +241,12 @@ func FormatSQLRestrictionWhereByMap(SQLrestriction string, restrictions map[stri
 			k2 = strings.ReplaceAll(k2, "!", "")
 			divided := strings.Split(fmt.Sprintf("%v", r), " ")
 			if len(divided) > 1 && slices.Contains([]string{"SELECT", "INSERT", "UPDATE", "DELETE"}, strings.ToUpper(divided[0])) {
-				SQLrestriction += k2 + " IN (" + fmt.Sprintf("%v", r) + ")"
+				if not {
+					SQLrestriction += k2 + " NOT IN (" + fmt.Sprintf("%v", r) + ")"
+				} else {
+					SQLrestriction += k2 + " IN (" + fmt.Sprintf("%v", r) + ")"
+				}
+
 			} else if len(divided) > 1 && slices.Contains([]string{"!SELECT", "!INSERT", "!UPDATE", "!DELETE"}, strings.ToUpper(divided[0])) {
 				r = strings.ReplaceAll(fmt.Sprintf("%v", r), "!SELECT", "SELECT")
 				r = strings.ReplaceAll(fmt.Sprintf("%v", r), "!INSERT", "INSERT")

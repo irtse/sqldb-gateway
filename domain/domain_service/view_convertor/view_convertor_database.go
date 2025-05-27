@@ -48,13 +48,35 @@ func (d *ViewConvertor) NewDataAccess(schemaID int64, destIDs []string, meth uti
 	}, true); err == nil && len(users) > 0 {
 		for _, destID := range destIDs {
 			id := utils.GetString(users[0], utils.SpecialIDParam)
-			d.Domain.CreateSuperCall(utils.AllParams(ds.DBDataAccess.Name),
+			if meth == utils.SELECT {
+				if res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
+					"write":             false,
+					"update":            false,
+					ds.DestTableDBField: destID,
+					ds.SchemaDBField:    schemaID,
+					ds.UserDBField:      id,
+				}, false); err == nil && len(res) == 0 {
+					d.Domain.GetDb().CreateQuery(ds.DBDataAccess.Name,
+						utils.Record{
+							"write":             meth == utils.CREATE,
+							"update":            meth == utils.UPDATE,
+							ds.DestTableDBField: destID,
+							ds.SchemaDBField:    schemaID,
+							ds.UserDBField:      id}, func(s string) (string, bool) {
+							return "", true
+						})
+				}
+				return
+			}
+			d.Domain.GetDb().CreateQuery(ds.DBDataAccess.Name,
 				utils.Record{
 					"write":             meth == utils.CREATE,
 					"update":            meth == utils.UPDATE,
 					ds.DestTableDBField: destID,
 					ds.SchemaDBField:    schemaID,
-					ds.UserDBField:      id})
+					ds.UserDBField:      id}, func(s string) (string, bool) {
+					return "", true
+				})
 		}
 	}
 }
@@ -149,7 +171,7 @@ func (d *ViewConvertor) ProcessLinkedSchema(shallowField *sm.ViewFieldModel, sch
 		shallowField.Type = utils.TransformType(scheme.Type)
 	}
 	shallowField.ActionPath = fmt.Sprintf("/%s/%s?rows=all&%s=enable", utils.MAIN_PREFIX, schema.Name, utils.RootShallow)
-	if (s.HasField(ds.SchemaDBField) && s.HasField(ds.DestTableDBField)) || schema.HasField(ds.SchemaDBField) {
+	if s.HasField(ds.DestTableDBField) || schema.HasField(ds.SchemaDBField) {
 		shallowField.LinkPath = shallowField.ActionPath
 	}
 	if strings.Contains(scheme.Type, "many") {

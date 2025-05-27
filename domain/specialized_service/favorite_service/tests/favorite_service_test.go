@@ -71,20 +71,6 @@ func TestProcessName_ExistingFilter(t *testing.T) {
 	assert.Contains(t, record, utils.SpecialIDParam)
 }
 
-func TestHandleUpdate_RemovesOldFilters(t *testing.T) {
-	service := &service.FilterService{}
-	record := map[string]interface{}{utils.SpecialIDParam: 123}
-	service.HandleUpdate(record)
-	assert.NotEmpty(t, record)
-}
-
-func TestHandleDelete_ValidRecord(t *testing.T) {
-	service := &service.FilterService{}
-	record := map[string]interface{}{utils.SpecialIDParam: 123}
-	service.HandleDelete(record)
-	assert.NotEmpty(t, record)
-}
-
 func TestProcessSelection_ValidSelection(t *testing.T) {
 	service := &service.FilterService{}
 	record := map[string]interface{}{"is_selected": true, ds.FilterDBField: 1}

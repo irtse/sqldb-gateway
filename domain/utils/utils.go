@@ -1,16 +1,19 @@
 package utils
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/ledongthuc/pdf"
+	"github.com/unidoc/unioffice/document"
 )
 
 func PrepareEnum(enum string) string {
@@ -120,20 +123,63 @@ func SearchInFile(filename string, searchTerm string) bool {
 	if !strings.Contains(filePath, "/mnt/files/") {
 		filePath = "/mnt/files/" + filename
 	}
-	file, err := os.Open(filePath)
+	text, err := readFileAsText(filePath)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
 		return false
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.Contains(line, searchTerm) {
-			return true
-			// break // Uncomment to stop at first match
-		}
+	if strings.Contains(text, searchTerm) {
+		return true
+	} else {
+		return false
 	}
-	return false
+}
+
+func readFileAsText(path string) (string, error) {
+	ext := strings.ToLower(filepath.Ext(path))
+
+	switch ext {
+	case ".txt":
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return "", err
+		}
+		return string(data), nil
+
+	case ".docx":
+		doc, err := document.Open(path)
+		if err != nil {
+			return "", err
+		}
+		var text string
+		for _, para := range doc.Paragraphs() {
+			for _, run := range para.Runs() {
+				text += run.Text()
+			}
+		}
+		return text, nil
+
+	case ".pdf":
+		f, r, err := pdf.Open(path)
+		defer f.Close()
+		if err != nil {
+			return "", err
+		}
+		var text string
+		totalPage := r.NumPage()
+		for pageIndex := 1; pageIndex <= totalPage; pageIndex++ {
+			p := r.Page(pageIndex)
+			if p.V.IsNull() {
+				continue
+			}
+			text, err := p.GetPlainText(nil)
+			if err != nil {
+				return "", err
+			}
+			text += text
+		}
+		return text, nil
+	default:
+		return "", fmt.Errorf("unsupported file extension: %s", ext)
+	}
 }

@@ -11,6 +11,7 @@ import (
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
+	"time"
 )
 
 type RequestService struct {
@@ -64,6 +65,7 @@ func (s *RequestService) VerifyDataIntegrity(record map[string]interface{}, tabl
 		} else {
 			record["name"] = wf[0][sm.NAMEKEY]
 			record[ds.SchemaDBField] = wf[0][ds.SchemaDBField]
+			record["send_mail_to"] = wf[0]["send_mail_to"]
 		}
 
 	} else if s.Domain.GetMethod() == utils.UPDATE {
@@ -88,11 +90,8 @@ func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, 
 		p.Set(ds.DestTableDBField, utils.ToString(rec[utils.SpecialIDParam]))
 		switch rec["state"] {
 		case "dismiss":
-			p.Set(sm.NAMEKEY, "Dissmissed "+utils.GetString(rec, sm.NAMEKEY))
-			p.Set("description", utils.GetString(rec, sm.NAMEKEY)+" is dissmissed and closed.")
-			task.SetEndedRequest(utils.GetString(rec, ds.SchemaDBField),
-				utils.GetString(rec, ds.DestTableDBField), utils.GetString(rec, utils.SpecialIDParam), s.Domain.GetDb())
 		case "refused":
+			rec["state"] = "refused"
 			p.Set(sm.NAMEKEY, "Rejected "+utils.GetString(rec, sm.NAMEKEY))
 			p.Set("description", utils.GetString(rec, sm.NAMEKEY)+" is rejected and closed.")
 			task.SetEndedRequest(utils.GetString(rec, ds.SchemaDBField), utils.GetString(rec, ds.DestTableDBField),
@@ -191,51 +190,108 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 		newTask[ds.SchemaDBField] = record[ds.SchemaDBField]
 		newTask[ds.DestTableDBField] = record[ds.DestTableDBField]
 	} else if schema, err := schserv.GetSchemaByID(newTask.GetInt(ds.SchemaDBField)); err == nil {
+		// THERE o_o
 		r := utils.Record{"is_draft": true}
 		if schema.HasField("name") {
-			r["name"] = schema.Label + " : " + utils.GetString(newTask, "name")
+			r["name"] = utils.GetString(newTask, "name")
 		}
-		if i, err := s.Domain.GetDb().CreateQuery(schema.Name, utils.Record{"is_draft": true}, func(s string) (string, bool) {
+		if schema.HasField(ds.DestTableDBField) && schema.HasField(ds.SchemaDBField) {
+			// get workflow source schema + dest ID
+			r[ds.DestTableDBField] = record[ds.DestTableDBField]
+			r[ds.SchemaDBField] = record[ds.SchemaDBField]
+		}
+		for _, f := range schema.Fields {
+			if f.GetLink() == record[ds.SchemaDBField] {
+				r[f.Name] = record[ds.DestTableDBField]
+			}
+		}
+
+		if i, err := s.Domain.GetDb().CreateQuery(schema.Name, r, func(s string) (string, bool) {
 			return "", true
 		}); err == nil {
 			newTask[ds.DestTableDBField] = i
+			s.Domain.GetDb().CreateQuery(ds.DBDataAccess.Name, map[string]interface{}{
+				ds.SchemaDBField:    schema.ID,
+				ds.DestTableDBField: i,
+				ds.UserDBField:      s.Domain.GetUserID(),
+				"write":             true,
+				"update":            false,
+			}, func(s string) (string, bool) {
+				return "", true
+			})
 		}
 	}
 	if utils.GetBool(newTask, "assign_to_creator") {
 		newTask[ds.UserDBField] = s.Domain.GetUserID()
 	}
-	s.createTaskAndNotify(newTask, record)
+	s.createTaskAndNotify(newTask)
 }
 
-func (s *RequestService) createTaskAndNotify(newTask, record map[string]interface{}) {
-	task := s.constructNotificationTask(newTask, record)
+func (s *RequestService) createTaskAndNotify(newTask map[string]interface{}) {
+	task := s.constructNotificationTask(newTask)
 	i, err := s.Domain.GetDb().CreateQuery(ds.DBTask.Name, task, func(s string) (string, bool) {
 		return "", true
 	})
 	if err != nil {
 		return
 	}
+	currentTime := time.Now()
+	sqlFilter := []string{
+		"('" + currentTime.Format("2000-01-01") + "' < start_date OR '" + currentTime.Format("2000-01-01") + "' > end_date)",
+	}
+	sqlFilter = append(sqlFilter, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
+		"all_tasks":    true,
+		ds.UserDBField: s.Domain.GetUserID(),
+	}, false))
+	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false); err == nil && len(res) > 0 {
+		tmpUser := utils.GetInt(task, ds.UserDBField)
+		for _, delegated := range res {
+			task["binded_dbtask"] = i
+			task[ds.UserDBField] = delegated["delegated_"+ds.UserDBField]
+			if y, err := s.Domain.GetDb().CreateQuery(ds.DBTask.Name, task, func(s string) (string, bool) {
+				return "", true
+			}); err == nil {
+				notify(task, y, s.Domain)
+			}
+		}
+		delete(task, "binded_dbtask")
+		task[ds.UserDBField] = tmpUser
+	}
 	if id, ok := newTask["wrapped_"+ds.WorkflowDBField]; ok && id != nil {
 		s.createMetaRequest(task, id)
 	}
+	notify(task, i, s.Domain)
+}
 
+func notify(task utils.Record, i int64, domain utils.DomainITF) {
 	if schema, err := schserv.GetSchema(ds.DBTask.Name); err == nil {
-		delete(task, ds.SchemaDBField)
-		task[ds.DestTableDBField] = i
-		task["link_id"] = schema.ID
-		s.Domain.GetDb().CreateQuery(ds.DBNotification.Name, task, func(s string) (string, bool) {
+		notif := utils.Record{
+			"name":              utils.GetString(task, "name"),
+			"description":       utils.GetString(task, "description"),
+			ds.UserDBField:      task[ds.UserDBField],
+			ds.EntityDBField:    task[ds.EntityDBField],
+			ds.DestTableDBField: i,
+		}
+		notif["link_id"] = schema.ID
+		domain.GetDb().CreateQuery(ds.DBNotification.Name, notif, func(s string) (string, bool) {
 			return "", true
 		})
 	}
 }
 
-func (s *RequestService) constructNotificationTask(newTask utils.Record, record map[string]interface{}) map[string]interface{} {
+func (s *RequestService) constructNotificationTask(newTask utils.Record) map[string]interface{} {
 	task := map[string]interface{}{
-		sm.NAMEKEY:          "Task affected : " + newTask.GetString(sm.NAMEKEY),
-		"description":       "Task is affected : " + newTask.GetString(sm.NAMEKEY),
-		ds.UserDBField:      newTask[ds.UserDBField],
-		ds.SchemaDBField:    newTask[ds.SchemaDBField],
-		ds.DestTableDBField: record[ds.DestTableDBField],
+		sm.NAMEKEY:               newTask.GetString(sm.NAMEKEY),
+		"description":            "Task is affected : " + newTask.GetString(sm.NAMEKEY),
+		"urgency":                newTask["urgency"],
+		"priority":               newTask["priority"],
+		ds.WorkflowSchemaDBField: newTask[ds.WorkflowSchemaDBField],
+		ds.UserDBField:           newTask[ds.UserDBField],
+		ds.EntityDBField:         newTask[ds.EntityDBField],
+		ds.SchemaDBField:         newTask[ds.SchemaDBField],
+		ds.DestTableDBField:      newTask[ds.DestTableDBField],
+		ds.RequestDBField:        newTask[ds.RequestDBField],
+		"send_mail_to":           newTask["send_mail_to"],
 	}
 	return task
 }
@@ -275,14 +331,28 @@ func CreateHierarchicalTask(domain utils.DomainITF, requestID int64, record, hie
 	if i, err := domain.GetDb().CreateQuery(ds.DBTask.Name, newTask, func(s string) (string, bool) {
 		return "", true
 	}); err == nil {
-		if schema, err := schserv.GetSchema(ds.DBTask.Name); err == nil {
-			domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), utils.Record{
-				sm.NAMEKEY:          "Hierarchical verification on " + utils.GetString(record, sm.NAMEKEY) + " request",
-				"description":       utils.GetString(record, sm.NAMEKEY) + " request needs a hierarchical verification.",
-				ds.UserDBField:      hierarch["parent_"+ds.UserDBField],
-				"link_id":           schema.ID,
-				ds.DestTableDBField: i,
-			})
+		currentTime := time.Now()
+		sqlFilter := []string{
+			"('" + currentTime.Format("2000-01-01") + "' < start_date OR '" + currentTime.Format("2000-01-01") + "' > end_date)",
 		}
+		sqlFilter = append(sqlFilter, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
+			"all_tasks":    true,
+			ds.UserDBField: domain.GetUserID(),
+		}, false))
+		if res, err := domain.GetDb().SelectQueryWithRestriction(ds.DBDelegation.Name, sqlFilter, false); err == nil && len(res) > 0 {
+			tmpUser := utils.GetInt(newTask, ds.UserDBField)
+			for _, delegated := range res {
+				newTask["binded_dbtask"] = i
+				newTask[ds.UserDBField] = delegated["delegated_"+ds.UserDBField]
+				if y, err := domain.GetDb().CreateQuery(ds.DBTask.Name, newTask, func(s string) (string, bool) {
+					return "", true
+				}); err == nil {
+					notify(newTask, y, domain)
+				}
+			}
+			delete(newTask, "binded_dbtask")
+			newTask[ds.UserDBField] = tmpUser
+		}
+		notify(newTask, i, domain)
 	}
 }

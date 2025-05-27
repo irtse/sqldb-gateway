@@ -15,7 +15,7 @@ var DestTableDBField = ds.RootID("dest_table")
 var FilterDBField = ds.RootID(ds.DBFilter.Name)
 
 func NewTask(name interface{}, description interface{}, urgency interface{}, priority interface{},
-	workflowDB interface{}, schemaDB interface{}, requestDB interface{}, userDB interface{}, entityDB interface{}) utils.Record {
+	workflowDB interface{}, schemaDB interface{}, requestDB interface{}, userDB interface{}, entityDB interface{}, sendMail interface{}) utils.Record {
 	r := utils.Record{
 		"name":                name,
 		"description":         description,
@@ -26,6 +26,7 @@ func NewTask(name interface{}, description interface{}, urgency interface{}, pri
 		RequestDBField:        requestDB,
 		UserDBField:           userDB,
 		EntityDBField:         entityDB,
+		"send_mail_to":        sendMail,
 	}
 	toDelete := []string{}
 	for k, v := range r {

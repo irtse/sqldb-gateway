@@ -60,7 +60,7 @@ func (p Params) GetOrder(condition func(string) bool, order []string) []string {
 		order = strings.Split(ToString(orderBy), ",")
 	}
 	return connector.FormatSQLOrderBy(order, direction, func(el string) bool {
-		return !condition(el) && el != SpecialIDParam
+		return condition(el) && el != SpecialIDParam
 	})
 }
 

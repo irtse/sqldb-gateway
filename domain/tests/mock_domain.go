@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
+	"sqldb-ws/infrastructure/service"
 	"sync"
 
 	"github.com/stretchr/testify/mock"
@@ -21,6 +22,17 @@ func NewMockDomain() *MockDomain {
 		records: make(map[string][]map[string]interface{}),
 		params:  utils.NewParams(map[string]string{}),
 	}
+}
+
+func (d *MockDomain) GetSpecialized(override string) service.InfraSpecializedServiceItf {
+	return nil
+}
+
+func (d *MockDomain) AddDetectFileToSearchIn(fileField string, search string) {
+}
+
+func (d *MockDomain) DetectFileToSearchIn() map[string]string {
+	return map[string]string{}
 }
 func (d *MockDomain) GetUniqueRedirection() string {
 	return ""

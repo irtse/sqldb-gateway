@@ -48,7 +48,7 @@ func SetEndedRequest(schemaID string, destID string, requestID string, db connec
 	if _, ok := endedRequestCache[schemaID][destID]; !ok {
 		endedRequestCache[schemaID][destID] = map[string][]string{}
 	}
-	if res, err := db.SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+	if res, err := db.ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 		ds.RequestDBField: requestID,
 	}, false); err == nil && len(res) > 0 {
 		if _, ok := endedRequestCache[schemaID][destID][requestID]; !ok {

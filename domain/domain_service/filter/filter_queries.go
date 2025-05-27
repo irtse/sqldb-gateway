@@ -1,7 +1,6 @@
 package filter
 
 import (
-	"slices"
 	"sort"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/utils"
@@ -17,38 +16,44 @@ func (d *FilterService) GetEntityFilterQuery() string {
 		}, true, ds.EntityDBField)
 }
 
-func (d *FilterService) CountNewDataAccess(tableName string, filter []interface{}) ([]string, int64) {
+func (d *FilterService) CountMaxDataAccess(tableName string, filter []string) (int64, string) {
 	if d.Domain.GetUserID() == "" {
-		return []string{}, 0
+		return 0, ""
 	}
-	newFilter := []interface{}{
-		connector.FormatSQLRestrictionWhereByMap("",
-			map[string]interface{}{
-				utils.SpecialIDParam: "!" + d.Domain.GetDb().BuildSelectQueryWithRestriction(
-					ds.DBDataAccess.Name, map[string]interface{}{
-						ds.SchemaDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(
-							ds.DBSchema.Name, map[string]interface{}{
-								"name": connector.Quote(tableName),
-							}, false, "id"),
-						ds.UserDBField: d.Domain.GetUserID(),
-					}, true, ds.DestTableDBField),
-			}, false)}
-	newFilter = append(newFilter, filter...)
-	ids := []string{}
-	if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(tableName, newFilter, false); err != nil {
-		return ids, 0
+	restr, _, _, _ := d.Domain.GetSpecialized(tableName).GenerateQueryFilter(tableName, filter...)
+	count := int64(0)
+	res, err := d.Domain.GetDb().ClearQueryFilter().SimpleMathQuery("COUNT", tableName, []interface{}{restr}, false)
+	if len(res) == 0 || err != nil || res[0]["result"] == nil {
+		return 0, restr
 	} else {
-		for _, rec := range res {
-			if !slices.Contains(ids, utils.GetString(rec, utils.SpecialIDParam)) {
-				ids = append(ids, utils.GetString(rec, utils.SpecialIDParam))
-			}
-		}
+		count = utils.ToInt64(res[0]["result"])
 	}
-	res, err := d.Domain.GetDb().SimpleMathQuery("COUNT", tableName, filter, false)
-	if len(res) == 0 || err != nil || res[0]["result"] == nil || utils.ToInt64(res[0]["result"]) == 0 {
-		return ids, 0
+	return count, restr
+}
+
+func (d *FilterService) CountNewDataAccess(tableName string, filter []string) (int64, int64) {
+	if d.Domain.GetUserID() == "" || d.Domain.GetEmpty() {
+		return 0, 0
 	}
-	return ids, utils.ToInt64(res[0]["result"])
+	newCount := int64(0)
+	count, restr := d.CountMaxDataAccess(tableName, filter)
+	newFilter := map[string]interface{}{
+		"!id": d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
+			"write":  false,
+			"update": false,
+			ds.SchemaDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
+				ds.DBSchema.Name, map[string]interface{}{
+					"name": connector.Quote(tableName),
+				}, false, "id"),
+			ds.UserDBField: d.Domain.GetUserID(),
+		}, false, ds.DestTableDBField),
+	}
+	filter = []string{restr}
+	filter = append(filter, connector.FormatSQLRestrictionWhereByMap("", newFilter, false))
+	if res, err := d.Domain.GetDb().ClearQueryFilter().SimpleMathQuery("COUNT", tableName, utils.ToListAnonymized(filter), false); err == nil && len(res) > 0 {
+		newCount = utils.ToInt64(res[0]["result"])
+	}
+	return newCount, count
 }
 
 func (s *FilterService) GetFilterFields(viewfilterID string, schemaID string) []map[string]interface{} {

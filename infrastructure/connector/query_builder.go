@@ -245,7 +245,7 @@ func (db *Database) ApplyQueryFilters(restr string, order string, limit string, 
 	}
 }
 
-func (db *Database) BuildUpdateQuery(col string, value interface{}, set string,
+func (db *Database) BuildUpdateQuery(tablename string, col string, value interface{}, set string,
 	cols []string, colValues []string, verify func(string) (string, bool)) (string, []string, []string) {
 	if db == nil || db.Conn == nil {
 		db = Open(db)
@@ -254,8 +254,14 @@ func (db *Database) BuildUpdateQuery(col string, value interface{}, set string,
 	if col == "id" && fmt.Sprintf("%v", value) != "0" && fmt.Sprintf("%v", value) != "" {
 		db.SQLRestriction = "id=" + fmt.Sprintf("%v", value) + " "
 	}
-	if typ, ok := verify(col); ok && !slices.Contains([]string{"NULL", "null", "'null'", ""}, FormatForSQL(strings.Split(typ, ":")[0], value)) {
-		if value == "" || reflect.TypeOf(value).Kind().String() == "string" {
+	if typ, ok := verify(col); ok && (!slices.Contains([]string{"NULL", "null", "'null'", ""}, FormatForSQL(strings.Split(typ, ":")[0], value)) || typ == "") {
+		if value == nil || value == "" {
+			set += " " + col + " IS " + Quote(strings.ReplaceAll(fmt.Sprintf("%v", value), "'", "''")) + ","
+			cols = append(cols, col)
+			colValues = append(colValues, "NULL")
+			return set, cols, colValues
+		}
+		if value == "" || (reflect.TypeOf(value) != nil && reflect.TypeOf(value).Kind().String() == "string") {
 			set += " " + col + "=" + Quote(strings.ReplaceAll(fmt.Sprintf("%v", value), "'", "''")) + ","
 			cols = append(cols, col)
 			colValues = append(colValues, Quote(strings.ReplaceAll(fmt.Sprintf("%v", value), "'", "''")))
@@ -264,7 +270,6 @@ func (db *Database) BuildUpdateQuery(col string, value interface{}, set string,
 			cols = append(cols, col)
 			colValues = append(colValues, FormatForSQL(strings.Split(typ, ":")[0], value))
 		}
-
 	}
 	return set, cols, colValues
 }
@@ -276,7 +281,7 @@ func (db *Database) BuildUpdateQueryWithRestriction(tableName string, record map
 	}
 	set := ""
 	for key, element := range record {
-		set, _, _ = db.BuildUpdateQuery(key, element, set, []string{}, []string{}, func(s string) (string, bool) { return "", true })
+		set, _, _ = db.BuildUpdateQuery(tableName, key, element, set, []string{}, []string{}, func(s string) (string, bool) { return "", true })
 	}
 	set = RemoveLastChar(set)
 	if set == "" {
@@ -296,7 +301,7 @@ func (db *Database) BuildUpdateRowQuery(tableName string, record map[string]inte
 	}
 	set := ""
 	for key, element := range record {
-		set, _, _ = db.BuildUpdateQuery(key, element, set, []string{}, []string{}, verify)
+		set, _, _ = db.BuildUpdateQuery(tableName, key, element, set, []string{}, []string{}, verify)
 	}
 	set = RemoveLastChar(set)
 	if set == "" {

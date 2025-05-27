@@ -290,6 +290,7 @@ var DBWorkflow = models.SchemaModel{
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template entry", Index: 3},
 		{Name: "steps", Type: "onetomany", ForeignTable: RootName("workflow_schema"), Required: false, Index: 4},
 		{Name: "view_" + RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Label: "filter to apply on step", Index: 5, Hidden: true},
+		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 12, Hidden: true},
 	},
 }
 
@@ -316,6 +317,7 @@ var DBWorkflowSchema = models.SchemaModel{
 		{Name: "view_" + RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Label: "filter to apply on step", Index: 10, Hidden: true},
 		{Name: "readonly_not_assignee", Type: models.BOOLEAN.String(), Required: false, Default: false, Label: "readonly for not assignee", Index: 11, Hidden: true},
 		{Name: "assign_to_creator", Type: models.BOOLEAN.String(), Required: false, Default: false, Label: "assign to creator", Index: 12, Hidden: true},
+		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 12, Hidden: true},
 	},
 }
 
@@ -337,6 +339,7 @@ var DBRequest = models.SchemaModel{
 		{Name: RootID(DBWorkflow.Name), Type: models.INTEGER.String(), ForeignTable: DBWorkflow.Name, Required: false, Label: "request type", Index: 8},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Label: "created by", Index: 9},
 		{Name: "is_meta", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 10, Hidden: true},
+		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 12, Hidden: true},
 	},
 }
 
@@ -360,7 +363,9 @@ var DBConsentResponse = models.SchemaModel{
 	IsEnum:   true,
 	Fields: []models.FieldModel{
 		{Name: "is_consenting", Label: "consentant", Type: models.BOOLEAN.String(), Required: true, Readonly: false, Index: 0},
-		{Name: RootID(DBConsent.Name), Type: models.INTEGER.String(), ForeignTable: DBConsent.Name, Required: true, Readonly: true, Label: "consent template attached", Index: 2, Hidden: true},
+		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 1},
+		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 2},
+		{Name: RootID(DBConsent.Name), Type: models.INTEGER.String(), ForeignTable: DBConsent.Name, Required: true, Readonly: true, Label: "consent template attached", Index: 3, Hidden: true},
 	},
 }
 
@@ -387,6 +392,7 @@ var DBTask = models.SchemaModel{
 		{Name: "nexts", Type: models.BIGVARCHAR.String(), Required: false, Default: "all", Hidden: true, Index: 12},
 		{Name: "meta_" + RootID(DBRequest.Name), Type: models.INTEGER.String(), ForeignTable: DBRequest.Name, Required: false, Hidden: true, Readonly: true, Label: "meta request attached", Index: 13},
 		{Name: "binded_dbtask", Type: models.INTEGER.String(), ForeignTable: "dbtask", Required: false, Readonly: true, Label: "binded task", Hidden: true, Index: 14},
+		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 12, Hidden: true},
 	},
 }
 
@@ -520,6 +526,18 @@ var DBView = models.SchemaModel{
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Index: 12},
 		{Name: "own_view", Type: models.BOOLEAN.String(), Required: false, Index: 13},
 		{Name: "group_by", Type: models.INTEGER.String(), ForeignTable: DBSchemaField.Name, Required: false, Label: "group by", Index: 14},
+		{Name: "only_super_admin", Type: models.BOOLEAN.String(), Required: false, Default: false, Level: models.LEVELADMIN, Index: 15},
+	},
+}
+
+// DBViewAttribution express a view attribution in the database for a user or an entity
+var DBViewSchema = models.SchemaModel{
+	Name:     RootName("view_schema"),
+	Label:    "view schemas",
+	Category: "",
+	Fields: []models.FieldModel{
+		{Name: RootID(DBView.Name), Type: models.INTEGER.String(), ForeignTable: DBView.Name, Required: true, Index: 0},
+		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: true, Index: 1},
 	},
 }
 
@@ -576,7 +594,8 @@ var DBDelegation = models.SchemaModel{
 			Level: models.LEVELADMIN, Label: "user with hierarchy"},
 		{Name: models.STARTKEY, Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_TIMESTAMP", Index: 2},
 		{Name: models.ENDKEY, Type: models.TIMESTAMP.String(), Required: false, Index: 3},
-		{Name: RootID(DBTask.Name), Type: models.INTEGER.String(), ForeignTable: DBTask.Name, Required: true, Index: 4, Label: "task delegated"},
+		{Name: RootID(DBTask.Name), Type: models.INTEGER.String(), ForeignTable: DBTask.Name, Required: false, Index: 4, Label: "task delegated"},
+		{Name: "all", Type: models.BOOLEAN.String(), Required: false, Index: 5, Label: "delegated till end date"},
 	},
 }
 
@@ -618,6 +637,7 @@ var ROOTTABLES = []models.SchemaModel{DBSchemaField, DBUser, DBWorkflow, DBView,
 	DBConsentResponse, DBEmailTemplate,
 	DBTrigger, DBTriggerRule, DBTriggerCondition,
 	DBFieldAutoFill,
+	DBViewSchema,
 	DBEmailSended, DBEmailTemplate, DBEmailResponse, DBEmailSendedUser,
 }
 

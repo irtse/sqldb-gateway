@@ -134,7 +134,7 @@ func TestGetViewFields_Error(t *testing.T) {
 	mockDomain.On("IsSuperAdmin").Return(false)
 
 	vc := view_convertor.NewViewConvertor(mockDomain)
-	schemes, id, keysOrdered, cols, actions, isReadonly := vc.GetViewFields("invalid_table", false)
+	schemes, id, keysOrdered, cols, actions, isReadonly := vc.GetViewFields("invalid_table", false, utils.Results{})
 
 	assert.Empty(t, schemes)
 	assert.Equal(t, int64(-1), id)
@@ -167,7 +167,7 @@ func TestProcessPermissions(t *testing.T) {
 	field := sm.ViewFieldModel{}
 	actions := []string{}
 
-	field, actions = vc.ProcessPermissions(field, sm.FieldModel{}, "test_table", actions, sm.SchemaModel{})
+	field, actions = vc.ProcessPermissions(field, sm.FieldModel{}, "test_table", actions, sm.SchemaModel{}, false, utils.Results{})
 
 	assert.Contains(t, actions, "create")
 }
@@ -198,7 +198,7 @@ func TestHandleRecursivePermissions(t *testing.T) {
 	field := sm.ViewFieldModel{}
 	scheme := sm.FieldModel{Type: "many", Name: "linked_table"}
 
-	field = vc.HandleRecursivePermissions(field, scheme, utils.SELECT)
+	field = vc.HandleRecursivePermissions(field, scheme, utils.SELECT, utils.Results{})
 
 	assert.Equal(t, "link", field.Type)
 	assert.Contains(t, field.Actions, "select")

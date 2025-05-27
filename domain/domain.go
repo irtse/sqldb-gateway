@@ -36,11 +36,10 @@ var EXCEPTION_FUNC = []string{"Count"}
 type SpecializedDomain struct {
 	utils.AbstractDomain
 	PermsService *permissions.PermDomainService
-	Service      infrastructure.InfraServiceItf
 	Db           *conn.Database
 }
 
-// generate a new domain controller.
+// generate a new domain controller
 func Domain(superAdmin bool, user string, permsService *permissions.PermDomainService) *SpecializedDomain {
 	if permsService == nil {
 		permsService = permissions.NewPermDomainService(conn.Open(nil), user, superAdmin, false)
@@ -62,6 +61,15 @@ func (d *SpecializedDomain) VerifyAuth(tableName string, colName string, level s
 	} else {
 		return d.PermsService.PermsCheck(tableName, colName, level, method, d.UserID, d.Own)
 	}
+}
+
+func (d *SpecializedDomain) GetSpecialized(override string) infrastructure.InfraSpecializedServiceItf {
+	if override != "" {
+		spe := domain.SpecializedService(d.TableName)
+		spe.SetDomain(d)
+		return spe
+	}
+	return d.SpecializedService
 }
 
 func (s *SpecializedDomain) HandleRecordAttributes(record utils.Record) {
@@ -126,6 +134,7 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 			}
 		})
 		specializedService := domain.SpecializedService(d.TableName)
+		d.SpecializedService = specializedService
 		specializedService.SetDomain(d)
 		d.Db = conn.Open(d.Db)
 		defer d.Db.Close()
@@ -193,17 +202,6 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 			}
 		}
 		res, err := d.Invoke(record, d.Method, args...)
-		if len(d.DetectFileToSearchIn()) > 0 {
-			newRes := utils.Results{}
-			for _, r := range res {
-				for search, field := range d.DetectFileToSearchIn() {
-					if r[field] != nil && utils.SearchInFile(utils.GetString(r, field), search) {
-						newRes = append(newRes, r)
-					}
-				}
-			}
-			res = newRes
-		}
 		if p, _ := d.Params.Get(utils.RootRawView); p != "enable" && err == nil && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
 			results := specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestIDParam)...)
 			d.Redirections = d.GetRedirections(results)

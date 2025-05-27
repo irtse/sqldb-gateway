@@ -89,7 +89,7 @@ func TestHandleDBSchemaField_MissingSchema(t *testing.T) {
 	vc := view_convertor.NewViewConvertor(mockDomain)
 	shallowVals := make(map[string]interface{})
 
-	datapath, exists := vc.HandleDBSchemaField(utils.Record{"id": 1}, sm.FieldModel{Name: "schema_id"}, "test_table", shallowVals)
+	datapath, _, exists := vc.HandleDBSchemaField(utils.Record{"id": 1}, sm.FieldModel{Name: "schema_id"}, "test_table", shallowVals)
 	assert.Empty(t, datapath)
 	assert.False(t, exists)
 }

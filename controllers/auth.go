@@ -1,6 +1,9 @@
 package controllers
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base64"
 	"errors"
 	"os"
 	"sqldb-ws/controllers/controller"
@@ -15,6 +18,9 @@ type AuthController struct{ controller.AbstractController }
 
 // LLDAP HERE
 // func (l *AuthController) LoginLDAP() { }
+
+var key = []byte("zpnbsswigxgnttgjqjlcnowoaishpqel") // 32 bytes
+var iv = []byte("mhtwqevzehivjzjj")
 
 // @Title Login
 // @Description User login
@@ -41,9 +47,17 @@ func (l *AuthController) Login() {
 			valid = controller.CheckLdap(utils.GetString(response[0], "name"), utils.GetString(body, "password"))
 		} else {
 			pass, ok := body["password"] // then compare password founded in base and ... whatever... you know what's about
+			plain, err := decrypt(utils.ToString(pass), key, iv)
+			if err != nil {
+				l.Response(response, err, "", "")
+				return
+			}
 			pwd, ok1 := response[0]["password"]
 			if ok && ok1 {
-				valid, _ = argon2.VerifyEncoded([]byte(utils.ToString(pass)), []byte(utils.ToString(pwd)))
+				valid, _ = argon2.VerifyEncoded([]byte(utils.ToString(plain)), []byte(utils.ToString(pwd)))
+				if !valid {
+					valid, _ = argon2.VerifyEncoded([]byte(utils.ToString(pass)), []byte(utils.ToString(pwd)))
+				}
 			}
 		}
 		if valid {
@@ -90,4 +104,21 @@ func (l *AuthController) Refresh() {
 	token := l.MySession(login, superAdmin, false) // update session variables
 	response, err := domain.IsLogged(true, login, token)
 	l.Response(response, err, "", "")
+}
+
+func decrypt(encryptedBase64 string, key []byte, iv []byte) (string, error) {
+	ciphertext, _ := base64.StdEncoding.DecodeString(encryptedBase64)
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	mode := cipher.NewCBCDecrypter(block, iv)
+	decrypted := make([]byte, len(ciphertext))
+	mode.CryptBlocks(decrypted, ciphertext)
+
+	// Remove PKCS7 padding
+	padding := int(decrypted[len(decrypted)-1])
+	return string(decrypted[:len(decrypted)-padding]), nil
 }

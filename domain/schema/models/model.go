@@ -93,6 +93,9 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, onUpload
 	if err != nil {
 		return "", "", err
 	}
+	if field.Name == "dbdest_table_id" {
+		return field.Type, "", errors.New("can't proceed a publication")
+	}
 	if strings.Contains(field.Type, "upload") {
 		if strings.Contains(field.Type, "upload_str") {
 			onUpload(field.Name, search)
@@ -103,6 +106,7 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, onUpload
 	if err != nil {
 		return field.Type, "", nil
 	}
+
 	return field.Type, foreign.Name, nil
 }
 func (t SchemaModel) GetField(name string) (FieldModel, error) {
@@ -282,6 +286,7 @@ type ViewItemModel struct {
 	Sharing       SharingModel             `json:"sharing"`
 	Draft         bool                     `json:"is_draft"`
 	Synthesis     string                   `json:"synthesis_path"`
+	New           bool                     `json:"new"`
 }
 
 type SharingModel struct {

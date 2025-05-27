@@ -16,20 +16,18 @@ func (t *AbstractController) MySession(userId string, superAdmin bool, delete bo
 	var err error
 	token := ""
 	delFunc := func() { // set up a lambda call back function to delete in session and token in base if needed
-		if t.GetSession(SESSIONS_KEY) != nil {
-			t.DelSession(SESSIONS_KEY) // user_id key
-			t.DelSession(ADMIN_KEY)    // super_admin key
-		}
 		if os.Getenv("AUTH_MODE") != AUTHMODE[0] { // in case of token way of authenticate
 			domain.SetToken(superAdmin, userId, nil)
+		} else {
+			t.DelSession(SESSIONS_KEY) // user_id key
+			t.DelSession(ADMIN_KEY)    // super_admin key
 		}
 	}
 	if delete {
 		delFunc()
 		return token
 	} // if only deletion quit after launching lambda
-	t.SetSession(SESSIONS_KEY, userId) // load superadmin and user id in session in any case
-	t.SetSession(ADMIN_KEY, superAdmin)
+
 	if os.Getenv("AUTH_MODE") != AUTHMODE[0] { // if token way of authentication
 		tokenService := &Token{} // generate a new token with all needed claims
 		token, err = tokenService.Create(userId, superAdmin)
@@ -38,7 +36,11 @@ func (t *AbstractController) MySession(userId string, superAdmin bool, delete bo
 			return token
 		} // then update user with its brand new token.
 		domain.SetToken(superAdmin, userId, token)
-	} // launch a 24h session timer after this session will be killed.
+	} else {
+		t.SetSession(SESSIONS_KEY, userId) // load superadmin and user id in session in any case
+		t.SetSession(ADMIN_KEY, superAdmin)
+	}
+	// launch a 24h session timer after this session will be killed.
 	timer := time.AfterFunc(time.Hour*24, delFunc)
 	defer timer.Stop()
 	return token

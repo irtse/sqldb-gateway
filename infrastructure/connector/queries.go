@@ -24,14 +24,7 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		db = Open(db)
 		defer db.Close()
 	}
-	if strings.Contains(db.BuildSelectQueryWithRestriction(name, restrictions, isOr), "LIKE") {
-		fmt.Println("LIKE DETECTED", db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
-	}
 	res, err := db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
-	if err != nil {
-		debug.PrintStack()
-		fmt.Println(db.BuildSelectQueryWithRestriction(name, restrictions, isOr), err)
-	}
 	return res, err
 }
 
@@ -75,17 +68,15 @@ func (db *Database) CreateQuery(name string, record map[string]interface{}, veri
 	var columns, values []string = []string{}, []string{}
 
 	for key, element := range record {
-		_, columns, values = db.BuildUpdateQuery(key, element, "", columns, values, verify)
+		_, columns, values = db.BuildUpdateQuery(name, key, element, "", columns, values, verify)
 	}
 	for _, query := range db.BuildCreateQueries(name, strings.Join(values, ","), strings.Join(columns, ","), "") {
-
 		if db.GetDriver() == PostgresDriver {
 			i, err := db.QueryRow(query)
 			if err != nil && strings.Contains(err.Error(), "unique") {
 				splitted := strings.Split(err.Error(), "\"")
 				if len(splitted) > 1 {
 					constraint := splitted[1]
-					fmt.Println(err.Error(), splitted, constraint)
 					field := strings.ReplaceAll(strings.ReplaceAll(constraint, name+"_", ""), "_unique", "")
 					return i, errors.New("we found a <" + field + "> already existing, it should be unique !")
 				}
@@ -125,7 +116,6 @@ func (db *Database) UpdateQuery(name string, record map[string]interface{}, rest
 	err = db.Query(q)
 	if err != nil && strings.Contains(err.Error(), "unique") {
 		splitted := strings.Split(err.Error(), "\"")
-		fmt.Println(err.Error(), splitted)
 		if len(splitted) > 1 {
 			constraint := splitted[1]
 			field := strings.ReplaceAll(strings.ReplaceAll(constraint, name+"_", ""), "_unique", "")
@@ -198,6 +188,8 @@ func (db *Database) QueryAssociativeArray(query string) ([]map[string]interface{
 	}
 	rows, err := db.Conn.Query(query)
 	if err != nil {
+		debug.PrintStack()
+		fmt.Println(query)
 		return nil, err
 	}
 	defer rows.Close()

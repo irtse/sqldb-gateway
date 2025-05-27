@@ -16,3 +16,4 @@
 # vendor/
 
 sqldb-ws
+files/*

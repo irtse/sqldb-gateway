@@ -1,26 +1,35 @@
 package utils
 
-import "mime/multipart"
+import (
+	"mime/multipart"
+	infrastructure "sqldb-ws/infrastructure/service"
+)
 
 type AbstractDomain struct {
-	Redirections    []string
-	DomainRequestID string
-	TableName       string
-	AutoLoad        bool
-	User            string
-	UserID          string
-	Shallowed       bool
-	SuperAdmin      bool
-	RawView         bool
-	Super           bool
-	Empty           bool
-	LowerRes        bool
-	Own             bool
-	Method          Method
-	Params          Params
-	File            multipart.File
-	FileHandler     *multipart.FileHeader
-	SearchInFiles   map[string]string
+	Service            infrastructure.InfraServiceItf
+	SpecializedService infrastructure.InfraSpecializedServiceItf
+	Redirections       []string
+	DomainRequestID    string
+	TableName          string
+	AutoLoad           bool
+	User               string
+	UserID             string
+	Shallowed          bool
+	SuperAdmin         bool
+	RawView            bool
+	Super              bool
+	Empty              bool
+	LowerRes           bool
+	Own                bool
+	Method             Method
+	Params             Params
+	File               multipart.File
+	FileHandler        *multipart.FileHeader
+	SearchInFiles      map[string]string
+}
+
+func (d *AbstractDomain) GetSpecialized(override string) infrastructure.InfraSpecializedServiceItf {
+	return d.SpecializedService
 }
 
 func (d *AbstractDomain) AddDetectFileToSearchIn(fileField string, search string) {
