@@ -261,6 +261,12 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 						r[ds.DestTableDBField] = requests[0][ds.DestTableDBField]
 						r[ds.SchemaDBField] = requests[0][ds.SchemaDBField]
 					}
+					if schema.HasField(ds.UserDBField) {
+						r[ds.UserDBField] = record[ds.UserDBField]
+					}
+					if schema.HasField(ds.EntityDBField) {
+						r[ds.EntityDBField] = record[ds.EntityDBField]
+					}
 					for _, f := range schema.Fields {
 						if f.GetLink() == requests[0][ds.SchemaDBField] {
 							r[f.Name] = requests[0][ds.DestTableDBField]

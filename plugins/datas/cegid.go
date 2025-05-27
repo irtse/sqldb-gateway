@@ -72,6 +72,8 @@ var PublicationActFR = models.SchemaModel{
 		{Name: "major_conference", Label: "la conférence visée est-elle incontournable dans ton domaine scientifique ?", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: 3},
 		{Name: "published", Label: "la publication est elle publiée dans un journal du premier quartile de ta discipline scientifique", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: 3},
 		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 5, Hidden: true},
+		{Name: ds.UserDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: false, Index: 6, Label: "user with hierarchy"},
+		{Name: ds.EntityDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: false, Index: 7, Label: "entity with hierarchy"},
 	},
 }
 
@@ -337,5 +339,7 @@ var PublicationAwardFR = models.SchemaModel{
 			Index: 2, Label: "la production a été primée par"},
 		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 3, Hidden: true},
 		{Name: ds.RootID("other_publication"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication", Required: true, Index: 4, Readonly: true},
+		{Name: ds.UserDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: false, Index: 5, Label: "user with hierarchy"},
+		{Name: ds.EntityDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: false, Index: 6, Label: "entity with hierarchy"},
 	},
 }

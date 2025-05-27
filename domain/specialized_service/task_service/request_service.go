@@ -200,6 +200,12 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 			r[ds.DestTableDBField] = record[ds.DestTableDBField]
 			r[ds.SchemaDBField] = record[ds.SchemaDBField]
 		}
+		if schema.HasField(ds.UserDBField) {
+			r[ds.UserDBField] = record[ds.UserDBField]
+		}
+		if schema.HasField(ds.EntityDBField) {
+			r[ds.EntityDBField] = record[ds.EntityDBField]
+		}
 		for _, f := range schema.Fields {
 			if f.GetLink() == record[ds.SchemaDBField] {
 				r[f.Name] = record[ds.DestTableDBField]
