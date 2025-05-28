@@ -119,7 +119,7 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 			}
 			rec["filter_fields"] = filterFields
 			if rec["elder"] == nil { // get elder filter
-				if fils, _ := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name,
+				if fils, _ := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilter.Name,
 					map[string]interface{}{"id": rec[utils.SpecialIDParam]}, false); len(fils) > 0 {
 					rec["elder"] = fils[0]["elder"]
 				} else {
@@ -179,7 +179,7 @@ func (s *FilterService) ProcessLink(record map[string]interface{}) error {
 
 func (s *FilterService) ProcessName(record map[string]interface{}) {
 	if name, ok := record["name"]; ok {
-		if result, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
+		if result, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
 			ds.SchemaDBField: record[ds.SchemaDBField],
 			"name":           connector.Quote(utils.ToString(name)),
 		}, false); err == nil && len(result) > 0 {
@@ -219,7 +219,7 @@ func (s *FilterService) HandleUserFilterNaming(record map[string]interface{}, sc
 		return
 	}
 	record[ds.UserDBField] = s.Domain.GetUserID()
-	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
 		ds.UserDBField:   s.Domain.GetUserID(),
 		ds.SchemaDBField: schema.ID,
 	}, false); err == nil {
@@ -228,7 +228,7 @@ func (s *FilterService) HandleUserFilterNaming(record map[string]interface{}, sc
 }
 
 func (s *FilterService) HandleEntityFilterNaming(record map[string]interface{}, schema sm.SchemaModel, name *string) {
-	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
 		ds.EntityDBField: utils.GetString(record, ds.EntityDBField),
 		ds.SchemaDBField: schema.ID,
 	}, false); err == nil {
@@ -237,7 +237,7 @@ func (s *FilterService) HandleEntityFilterNaming(record map[string]interface{}, 
 }
 
 func (s *FilterService) RecursiveHandleEntityFilterNaming(label string, index int, name *string) {
-	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
 		"name": fmt.Sprintf("%s filter n°%d", label, index),
 	}, false); err == nil && len(res) == 0 {
 		*name += fmt.Sprintf("%s filter n°%d", label, index)

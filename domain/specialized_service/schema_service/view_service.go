@@ -46,7 +46,7 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 	params := s.Domain.GetParams().Copy()
 	schemas := []models.SchemaModel{}
 	if len(results) == 1 {
-		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBViewSchema.Name, map[string]interface{}{
+		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBViewSchema.Name, map[string]interface{}{
 			ds.ViewDBField: results[0][utils.SpecialIDParam],
 		}, false); err == nil {
 			for _, r := range res {
@@ -213,7 +213,7 @@ func (s *ViewService) getOrder(rec utils.Record, record utils.Record, values map
 // this filter a view only with its property
 func (s *ViewService) getFilter(rec utils.Record, record utils.Record, values map[string]interface{}, schema sm.SchemaModel) (utils.Record, utils.Record, map[string]interface{}) {
 	if record[ds.FilterDBField] != nil && s.Domain.GetEmpty() {
-		if fields, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+		if fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
 			ds.FilterDBField + "_1": s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
 				"is_view":              false,
 				"dashboard_restricted": false,
@@ -334,7 +334,7 @@ func (s *ViewService) extractItems(value []interface{}, key string, rec utils.Re
 					if strings.Contains(operator, "LIKE") {
 						cmd = "name::text " + operator + val
 					}
-					if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schemaDest.Name, []string{
+					if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schemaDest.Name, []string{
 						"id = " + utils.GetString(utils.ToMap(values), ds.DestTableDBField), cmd,
 					}, false); err == nil && len(res) == 0 {
 						continue

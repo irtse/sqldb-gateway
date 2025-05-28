@@ -44,7 +44,9 @@ func NewPermDomainService(db *conn.Database, user string, isSuperAdmin bool, emp
 
 func (p *PermDomainService) PermsBuilder(userID string) {
 	filterOwnPermsQueryRestriction := p.BuildFilterOwnPermsQueryRestriction(userID)
-	datas, _ := p.db.SelectQueryWithRestriction(ds.DBPermission.Name, filterOwnPermsQueryRestriction, false)
+	datas, _ := p.db.SelectQueryWithRestriction(ds.DBPermission.Name, []interface{}{
+		connector.FormatSQLRestrictionWhereByMap("", filterOwnPermsQueryRestriction, false),
+	}, false)
 	if len(datas) == 0 {
 		return
 	}
@@ -57,27 +59,25 @@ func (p *PermDomainService) PermsBuilder(userID string) {
 }
 
 func (p *PermDomainService) BuildFilterOwnPermsQueryRestriction(userID string) map[string]interface{} {
-	return map[string]interface{}{
-		"id": p.db.BuildSelectQueryWithRestriction(
-			ds.DBRolePermission.Name,
-			map[string]interface{}{
-				ds.DBRole.Name + "_id": p.db.BuildSelectQueryWithRestriction(
-					ds.DBRoleAttribution.Name,
-					map[string]interface{}{
-						ds.DBUser.Name + "_id":   userID,
-						ds.DBEntity.Name + "_id": p.EntitySelectQuery(userID),
-					}, true, ds.DBRole.Name+"_id"),
-			}, false, ds.DBPermission.Name+"_id"),
-	}
-}
-
-func (p *PermDomainService) EntitySelectQuery(myUserID string) string {
-	return p.db.BuildSelectQueryWithRestriction(
+	test := p.db.BuildSelectQueryWithRestriction(
 		ds.DBEntityUser.Name,
 		map[string]interface{}{
-			ds.DBUser.Name + "_id": myUserID,
+			ds.DBUser.Name + "_id": userID,
 		}, true, ds.DBEntity.Name+"_id",
 	)
+	role := p.db.BuildSelectQueryWithRestriction(
+		ds.DBRoleAttribution.Name,
+		map[string]interface{}{
+			ds.DBUser.Name + "_id":   userID,
+			ds.DBEntity.Name + "_id": test,
+		}, true, ds.DBRole.Name+"_id")
+	return map[string]interface{}{
+		utils.SpecialIDParam: p.db.BuildSelectQueryWithRestriction(
+			ds.DBRolePermission.Name,
+			map[string]interface{}{
+				ds.DBRole.Name + "_id": role,
+			}, false, ds.DBPermission.Name+"_id"),
+	}
 }
 
 func (p *PermDomainService) ProcessPermissionRecord(record map[string]interface{}) {
@@ -250,14 +250,19 @@ func (p *PermDomainService) checkUpdateCreatePermissions(tableName, destID strin
 	if e != nil {
 		return false
 	}
-	if res, err := p.db.SimpleMathQuery("COUNT", ds.DBDataAccess.Name, map[string]interface{}{
+	test := p.db.BuildSelectQueryWithRestriction(
+		ds.DBEntityUser.Name,
+		map[string]interface{}{
+			ds.UserDBField: myUserID,
+		}, true, ds.EntityDBField,
+	)
+	if res, err := p.db.ClearQueryFilter().SimpleMathQuery("COUNT", ds.DBDataAccess.Name, map[string]interface{}{
 		ds.SchemaDBField:           sch.ID,
 		utils.RootDestTableIDParam: destID,
 		ds.UserDBField:             myUserID,
-		ds.EntityDBField:           p.EntitySelectQuery(myUserID),
 		"write":                    true,
 	}, true); err == nil && len(res) > 0 && res[0]["result"] != nil && utils.ToInt64(res[0]["result"]) > 0 {
-		if res, err := p.db.SimpleMathQuery("COUNT", ds.DBRequest.Name, map[string]interface{}{
+		if res, err := p.db.ClearQueryFilter().SimpleMathQuery("COUNT", ds.DBRequest.Name, map[string]interface{}{
 			ds.SchemaDBField:           sch.ID,
 			utils.RootDestTableIDParam: destID,
 			"is_close":                 false,
@@ -265,11 +270,12 @@ func (p *PermDomainService) checkUpdateCreatePermissions(tableName, destID strin
 			return true
 		}
 	}
+
 	res, err := p.db.SimpleMathQuery("COUNT", ds.DBTask.Name, map[string]interface{}{
 		utils.SpecialIDParam: p.db.BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 			ds.UserDBField:   myUserID,
-			ds.EntityDBField: p.EntitySelectQuery(myUserID),
-		}, true),
+			ds.EntityDBField: test,
+		}, true, utils.SpecialIDParam),
 		ds.SchemaDBField:           sch.ID,
 		utils.RootDestTableIDParam: destID,
 		"is_close":                 false,

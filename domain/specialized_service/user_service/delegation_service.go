@@ -42,7 +42,7 @@ func (s *DelegationService) SpecializedDeleteRow(results []map[string]interface{
 
 func (s *DelegationService) Write(results []map[string]interface{}, record map[string]interface{}) {
 	if taskID := utils.GetInt(record, ds.TaskDBField); taskID >= 0 {
-		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 			utils.SpecialIDParam: taskID,
 		}, false); err == nil && len(res) > 0 {
 			r := res[0]
@@ -57,7 +57,7 @@ func (s *DelegationService) Write(results []map[string]interface{}, record map[s
 			s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name), newTask)
 		}
 	} else if utils.GetBool(record, "all_tasks") {
-		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 			ds.UserDBField: s.Domain.GetUserID(),
 		}, false); err == nil && len(res) > 0 {
 			for _, r := range res {

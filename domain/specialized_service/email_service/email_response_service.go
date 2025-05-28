@@ -28,7 +28,7 @@ func (s *EmailResponseService) VerifyDataIntegrity(record map[string]interface{}
 	if code == "" {
 		return record, errors.New("no code found"), false
 	}
-	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
 		"code": connector.Quote(code),
 	}, false); err == nil && len(res) > 0 {
 		record[ds.EmailSendedDBField] = res[0][utils.SpecialIDParam]
@@ -40,16 +40,16 @@ func (s *EmailResponseService) VerifyDataIntegrity(record map[string]interface{}
 }
 
 func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
-	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
 		utils.SpecialIDParam: utils.GetString(record, ds.EmailSendedDBField),
 	}, false); err == nil {
 		for _, r := range res {
-			if templs, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
+			if templs, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
 				utils.SpecialIDParam: utils.GetString(record, ds.EmailSendedDBField),
 			}, false); err == nil {
 				for _, t := range templs {
 					if utils.GetBool(t, "generate_task") {
-						if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+						if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 							ds.DestTableDBField: r["mapped_with"+ds.DestTableDBField],
 							ds.SchemaDBField:    r["mapped_with"+ds.SchemaDBField],
 							"is_close":          false,

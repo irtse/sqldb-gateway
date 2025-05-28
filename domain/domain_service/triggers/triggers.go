@@ -68,8 +68,12 @@ func (t *TriggerService) ParseMails(toSplit string) []map[string]interface{} {
 		splitted = strings.ReplaceAll(strings.Join(strings.Split(toSplit, ","), ","), " ", "")
 	}
 	if len(splitted) > 0 {
+		s := []string{}
+		for _, ss := range strings.Split(splitted, ",") {
+			s = append(s, connector.Quote(ss))
+		}
 		if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-			"email": splitted,
+			"email": s,
 		}, false); err == nil {
 			return res
 		}
@@ -95,7 +99,7 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 
 func (t *TriggerService) triggerMail(record utils.Record, fromSchema sm.SchemaModel, triggerID, toSchemaID, destID int64) {
 	for _, mail := range t.TriggerManualMail("auto", record, fromSchema, triggerID, toSchemaID, destID) {
-		t.Domain.CreateSuperCall(utils.AllParams(ds.DBEmailSended.Name), mail)
+		t.Domain.CreateSuperCall(utils.AllParams(ds.DBEmailSended.Name).RootRaw(), mail)
 	}
 }
 

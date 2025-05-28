@@ -24,13 +24,13 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 	}, false); err == nil && len(res) > 0 {
 		if utils.GetBool(res[0], "generate_task") {
 			i := int64(-1)
-			if t, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+			if t, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 				"is_meta":           false,
 				"is_close":          false,
 				ds.DestTableDBField: record["mapped_with"+ds.DestTableDBField],
 				ds.SchemaDBField:    record["mapped_with"+ds.SchemaDBField],
 			}, false); err == nil && len(t) > 0 {
-				if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+				if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 					"name":              connector.Quote("waiting mails responses"),
 					"current_index":     utils.GetFloat(t[0], "current_index"),
 					"is_meta":           true,
@@ -54,7 +54,7 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 				}
 				if i >= 0 {
 					for _, r := range t {
-						if tt, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+						if tt, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 							ds.RequestDBField:           r[utils.SpecialIDParam],
 							"meta_" + ds.RequestDBField: i,
 							"name":                      connector.Quote("waiting mails responses"),
@@ -80,10 +80,10 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 	}
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
 	if s.To != "" {
-		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
+		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 			utils.SpecialIDParam: s.To,
 		}, false); err == nil && len(res) > 0 {
-			s.Domain.GetDb().CreateQuery(ds.DBEmailSendedUser.Name, map[string]interface{}{
+			s.Domain.CreateSuperCall(utils.AllParams(ds.DBEmailSendedUser.Name).RootRaw(), map[string]interface{}{
 				"name":                utils.GetString(res[0], "email"),
 				ds.UserDBField:        s.To,
 				ds.EmailSendedDBField: record[utils.SpecialIDParam],
@@ -93,7 +93,7 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 }
 
 func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
-	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
 		"code": connector.Quote(utils.GetString(record, "code")),
 	}, false); err == nil && len(res) > 0 {
 		record["code"] = uuid.New()

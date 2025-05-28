@@ -67,7 +67,7 @@ func (s *FilterService) GetFilterFields(viewfilterID string, schemaID string) []
 			map[string]interface{}{ds.SchemaDBField: schemaID}, false)
 	}
 	restriction[ds.FilterDBField] = viewfilterID
-	if fields, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false); err == nil {
+	if fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false); err == nil {
 		sort.SliceStable(fields, func(i, j int) bool {
 			return utils.ToInt64(fields[i]["index"]) <= utils.ToInt64(fields[j]["index"])
 		})
@@ -89,7 +89,7 @@ func (s *FilterService) GetFilterIDs(filterID string, viewfilterID string, schem
 				ds.FilterDBField: p,
 			}
 			restriction["is_view"] = v == utils.RootViewFilter
-			if fields, err := s.Domain.GetDb().SelectQueryWithRestriction(
+			if fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(
 				ds.DBFilterField.Name, restriction, false); err == nil && len(fields) > 0 {
 				filtersID[v] = p
 			}

@@ -58,7 +58,7 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 			}
 		}
 		if _, ok := record["is_draft"]; !ok || !utils.GetBool(record, "is_draft") {
-			if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBConsentResponse.Name, map[string]interface{}{
+			if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBConsentResponse.Name, map[string]interface{}{
 				ds.ConsentDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
 					ds.SchemaDBField: sch.ID,
 					"optionnal":      false,

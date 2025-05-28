@@ -2,6 +2,7 @@ package task_service
 
 import (
 	"errors"
+	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/task"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -55,6 +56,13 @@ func (s *RequestService) VerifyDataIntegrity(record map[string]interface{}, tabl
 		record[ds.UserDBField] = s.Domain.GetUserID()
 		if hierarchy, err := GetHierarchical(s.Domain); err != nil || len(hierarchy) > 0 {
 			record["current_index"] = 0
+			if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+				"index":                          1,
+				"before_hierarchical_validation": true,
+				ds.WorkflowDBField:               record[ds.WorkflowDBField],
+			}, false); err == nil && len(res) == 0 {
+				record["current_index"] = 1
+			}
 		} else {
 			record["current_index"] = 1
 		}
@@ -81,6 +89,8 @@ func (s *RequestService) VerifyDataIntegrity(record map[string]interface{}, tabl
 	return record, nil, true
 }
 func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
+	fmt.Println("UPDATE")
+	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
 	if _, ok := record["is_draft"]; ok && utils.GetBool(record, "is_draft") {
 		return
 	}
@@ -125,7 +135,6 @@ func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, 
 			}
 		}
 	}
-	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
 }
 
 // vérifier qu'il n'existe pas déjà une request méta en cour... si oui... faire une tache méta dans la nouvelle request
@@ -137,7 +146,7 @@ func (s *RequestService) Write(record utils.Record, tableName string) {
 
 	if utils.GetInt(record, "current_index") == 0 {
 		found := false
-		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 			"index":            1,
 			ds.WorkflowDBField: record[ds.WorkflowDBField],
 		}, false); err == nil {
@@ -249,7 +258,7 @@ func (s *RequestService) createTaskAndNotify(newTask map[string]interface{}) {
 		"all_tasks":    true,
 		ds.UserDBField: s.Domain.GetUserID(),
 	}, false))
-	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false); err == nil && len(res) > 0 {
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false); err == nil && len(res) > 0 {
 		tmpUser := utils.GetInt(task, ds.UserDBField)
 		for _, delegated := range res {
 			task["binded_dbtask"] = i

@@ -43,7 +43,7 @@ func (s *UserService) GenerateQueryFilter(tableName string, innerestr ...string)
 		innerestr = append(innerestr, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
 			utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBShare.Name, map[string]interface{}{
 				ds.UserDBField: s.Domain.GetUserID(),
-			}, true, "parent_"+ds.UserDBField),
+			}, true, "shared_"+ds.UserDBField),
 		}, true))
 	}
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)

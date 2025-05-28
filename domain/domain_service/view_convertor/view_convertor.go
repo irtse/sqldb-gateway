@@ -243,7 +243,7 @@ func (s *ViewConvertor) getFieldFill(sch sm.SchemaModel, key string) interface{}
 	var value interface{}
 	f, _ := sch.GetField(key)
 
-	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFieldAutoFill.Name, map[string]interface{}{
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFieldAutoFill.Name, map[string]interface{}{
 		ds.SchemaFieldDBField: f.ID,
 	}, true); err == nil && len(res) > 0 {
 		r := res[0]
@@ -253,13 +253,13 @@ func (s *ViewConvertor) getFieldFill(sch sm.SchemaModel, key string) interface{}
 			if schID, err := strconv.Atoi(utils.ToString(r["from_"+ds.SchemaDBField])); err == nil && schID >= 0 {
 				if schFrom, err := scheme.GetSchemaByID(utils.ToInt64(r["from_"+ds.SchemaDBField])); err == nil {
 					if ff, err2 := schFrom.GetFieldByID(utils.GetInt(r, "from_"+ds.SchemaFieldDBField)); err2 == nil {
-						if ress, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, map[string]interface{}{
+						if ress, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schFrom.Name, map[string]interface{}{
 							utils.SpecialIDParam: dest,
 						}, true); err == nil && len(ress) > 0 {
 							value = s.fromITF(ress[0][ff.Name])
 						}
 					} else {
-						if ress, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, map[string]interface{}{
+						if ress, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schFrom.Name, map[string]interface{}{
 							utils.SpecialIDParam: dest,
 						}, true); err == nil && len(ress) > 0 {
 							value = s.fromITF(ress[0][ff.ID])
@@ -274,7 +274,7 @@ func (s *ViewConvertor) getFieldFill(sch sm.SchemaModel, key string) interface{}
 						value = s.Domain.GetUserID()
 					} else {
 						restr := filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)
-						if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, utils.ToListAnonymized(restr), false); err == nil && len(rr) > 0 {
+						if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schFrom.Name, utils.ToListAnonymized(restr), false); err == nil && len(rr) > 0 {
 							value = s.fromITF(rr[0][ff.Name])
 						}
 					}
@@ -283,7 +283,7 @@ func (s *ViewConvertor) getFieldFill(sch sm.SchemaModel, key string) interface{}
 						value = s.Domain.GetUserID()
 					} else {
 						restr := filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)
-						if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(schFrom.Name, utils.ToListAnonymized(restr), false); err == nil && len(rr) > 0 {
+						if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schFrom.Name, utils.ToListAnonymized(restr), false); err == nil && len(rr) > 0 {
 							value = s.fromITF(rr[0][utils.SpecialIDParam])
 						}
 					}
@@ -322,6 +322,11 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 		_, ok := v.Domain.GetParams().Get(utils.RootShallow)
 		if ok {
 			otherOrder := []string{}
+			entity := v.Domain.GetDb().BuildSelectQueryWithRestriction(
+				ds.DBEntityUser.Name,
+				map[string]interface{}{
+					ds.UserDBField: v.Domain.GetUserID(),
+				}, true, ds.EntityDBField)
 			if v.Domain.GetEmpty() {
 				if res, err := v.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
 					ds.FilterDBField: v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
@@ -347,12 +352,8 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 				}, false, utils.SpecialIDParam),
 				ds.FilterDBField + "_1": v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 					utils.SpecialIDParam: v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-						ds.UserDBField: v.Domain.GetUserID(),
-						ds.EntityDBField: v.Domain.GetDb().BuildSelectQueryWithRestriction(
-							ds.DBEntityUser.Name,
-							map[string]interface{}{
-								ds.UserDBField: v.Domain.GetUserID(),
-							}, true, ds.EntityDBField),
+						ds.UserDBField:   v.Domain.GetUserID(),
+						ds.EntityDBField: entity,
 					}, true, ds.WorkflowSchemaDBField),
 				}, false, "view_"+ds.FilterDBField),
 				ds.FilterDBField + "_2": v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
@@ -516,7 +517,7 @@ func (s *ViewConvertor) getFilterByWFSchema(view *sm.ViewModel, schema sm.Schema
 	tasks := task.GetTasks(schema.ID, utils.GetString(record, utils.SpecialIDParam))
 	if tasks != nil {
 		for _, task := range *tasks {
-			if fields, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+			if fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
 				ds.FilterDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 					ds.WorkflowDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 						utils.SpecialIDParam: task.TaskID,
@@ -557,11 +558,11 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 	if !s.Domain.GetEmpty() && len(results) != 1 {
 		return []map[string]interface{}{}
 	}
-	if consents, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
+	if consents, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
 		ds.SchemaDBField: schemaID,
 	}, false); err == nil && len(consents) > 0 {
 		if len(results) > 0 {
-			if consentsResp, err := s.Domain.GetDb().SelectQueryWithRestriction(
+			if consentsResp, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(
 				ds.DBConsentResponse.Name,
 				map[string]interface{}{
 					ds.SchemaDBField:    schemaID,

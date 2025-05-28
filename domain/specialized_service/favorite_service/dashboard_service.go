@@ -108,7 +108,7 @@ func (s *DashboardService) VerifyDataIntegrity(record map[string]interface{}, ta
 
 func (s *DashboardService) ProcessName(record map[string]interface{}) {
 	if name, ok := record["name"]; ok {
-		if result, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBDashboard.Name, map[string]interface{}{
+		if result, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDashboard.Name, map[string]interface{}{
 			"name": name,
 		}, false); err == nil && len(result) > 0 {
 			record[utils.SpecialIDParam] = result[0][utils.SpecialIDParam]

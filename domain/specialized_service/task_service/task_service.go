@@ -2,6 +2,7 @@ package task_service
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/task"
@@ -34,7 +35,7 @@ func (s *TaskService) SpecializedCreateRow(record map[string]interface{}, tableN
 		"all_tasks":    true,
 		ds.UserDBField: s.Domain.GetUserID(),
 	}, false))
-	if dels, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false); err == nil && len(dels) > 0 {
+	if dels, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false); err == nil && len(dels) > 0 {
 		tmpUser := utils.GetInt(record, ds.UserDBField)
 		for _, delegated := range dels {
 			record["binded_dbtask"] = record[utils.SpecialIDParam]
@@ -94,7 +95,7 @@ func (s *TaskService) SpecializedUpdateRow(results []map[string]interface{}, rec
 		"all_tasks":    true,
 		ds.UserDBField: s.Domain.GetUserID(),
 	}, false))
-	if dels, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false); err == nil && len(dels) > 0 {
+	if dels, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false); err == nil && len(dels) > 0 {
 		for _, delegated := range dels {
 			for _, r := range results {
 				tmpUser := utils.GetInt(r, ds.UserDBField)
@@ -127,14 +128,17 @@ func (s *TaskService) deleteAll(destID string, schID int64) {
 			ds.SchemaDBField:    schID,
 		}), false); err == nil {
 			for _, req := range reqs {
-				s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), utils.Record{
-					"link_id":        nil,
-					sm.NAMEKEY:       "Request cancelled : " + utils.GetString(req, "name"),
-					"description":    "Request is cancelled : " + utils.GetString(req, "name"),
-					UserDBField:      req[UserDBField],
-					EntityDBField:    req[EntityDBField],
-					DestTableDBField: destID,
-				})
+				s.Domain.GetDb().CreateQuery(ds.DBNotification.Name,
+					utils.Record{
+						"link_id":        nil,
+						sm.NAMEKEY:       "Request cancelled : " + utils.GetString(req, "name"),
+						"description":    "Request is cancelled : " + utils.GetString(req, "name"),
+						UserDBField:      req[UserDBField],
+						EntityDBField:    req[EntityDBField],
+						DestTableDBField: destID,
+					}, func(s string) (string, bool) {
+						return "", true
+					})
 			}
 		}
 	}
@@ -165,6 +169,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 			utils.SpecialIDParam: utils.GetInt(res, RequestDBField),
 		}, false)
 		if err != nil || len(requests) == 0 {
+			fmt.Println("TEST UPDATE")
 			continue
 		}
 		order := requests[0]["current_index"]
@@ -174,6 +179,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 				"state":         []string{"'pending'", "'progressing'"},
 				"binded_dbtask": nil,
 			}, false); err == nil && len(otherPendingTasks) > 0 {
+			fmt.Println("TEST otherPendingTasks")
 			continue
 		}
 
@@ -228,7 +234,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		}
 
 		newRecRequest = SetClosureStatus(newRecRequest)
-		s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBRequest.Name, newRecRequest[utils.SpecialIDParam]), newRecRequest)
+		s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBRequest.Name, newRecRequest[utils.SpecialIDParam]).RootRaw(), newRecRequest)
 		for _, scheme := range schemes {
 			if current_index != newRecRequest.GetFloat("current_index") {
 				HandleHierarchicalVerification(s.Domain, utils.GetInt(res, ds.RequestDBField), record)
@@ -313,14 +319,18 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 					}
 					schema, err := schserv.GetSchema(ds.DBTask.Name)
 					if err == nil && newTask["meta_"+RequestDBField] == nil {
-						s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), utils.Record{"link_id": schema.ID,
-							sm.NAMEKEY:       newTask.GetString(sm.NAMEKEY),
-							"description":    "Task is affected : " + newTask.GetString(sm.NAMEKEY),
-							UserDBField:      utils.GetInt(newTask, UserDBField),
-							EntityDBField:    scheme[EntityDBField],
-							UserDBField:      scheme[UserDBField],
-							DestTableDBField: i,
-						})
+						s.Domain.GetDb().CreateQuery(ds.DBNotification.Name,
+							utils.Record{
+								"link_id":        schema.ID,
+								sm.NAMEKEY:       newTask.GetString(sm.NAMEKEY),
+								"description":    "Task is affected : " + newTask.GetString(sm.NAMEKEY),
+								UserDBField:      utils.GetInt(newTask, UserDBField),
+								EntityDBField:    scheme[EntityDBField],
+								UserDBField:      scheme[UserDBField],
+								DestTableDBField: i,
+							}, func(s string) (string, bool) {
+								return "", true
+							})
 					}
 				}
 			}

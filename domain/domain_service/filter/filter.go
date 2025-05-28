@@ -275,7 +275,7 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.Sche
 		ds.FilterDBField: filterID,
 	}
 	s.Domain.GetDb().ClearQueryFilter()
-	fields, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false)
+	fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false)
 	if err == nil && len(fields) > 0 {
 		for _, field := range fields {
 			if f, err := sch.GetFieldByID(utils.GetInt(field, ds.SchemaFieldDBField)); err == nil {
