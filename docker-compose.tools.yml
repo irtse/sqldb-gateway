@@ -10,8 +10,12 @@ services:
     user: '0'
     networks:
       - sqldb
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_AUTH_ANONYMOUS_ORG_NAME=Main Org.
     ports:
-      - '3000:3000'
+      - '8080:3000'
     # adding the mount volume point which we create earlier
     volumes:
       - '$PWD/data:/var/lib/grafana'
