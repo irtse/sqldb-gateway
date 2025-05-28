@@ -19,7 +19,7 @@ var SERVICES = []utils.SpecializedServiceITF{
 	&task.TaskService{},
 	&task.WorkflowService{},
 	&favorite.FilterService{},
-	&favorite.DashboardService{},
+	//&favorite.DashboardService{},
 	&user.DelegationService{},
 	&user.ShareService{},
 	&user.UserService{},
