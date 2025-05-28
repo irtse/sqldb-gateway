@@ -21,6 +21,9 @@ services:
     # adding the mount volume point which we create earlier
     volumes:
       - '$PWD/data:/var/lib/grafana'
+      - ./custom.js:/etc/grafana/custom.js
+      - ./custom-entrypoint.sh:/etc/grafana/custom-entrypoint.sh
+    entrypoint: ["/etc/grafana/custom-entrypoint.sh"]
   pg:
     image: postgres:alpine
     container_name: ${DBHOST:-sqldb-ws-pg}
