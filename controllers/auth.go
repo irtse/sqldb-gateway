@@ -114,12 +114,18 @@ func (l *AuthController) Refresh() {
 	l.Response(response, err, "", "")
 }
 
-func decrypt(encryptedBase64 string, key []byte, iv []byte) (string, error) {
+func decrypt(encryptedBase64 string, key []byte, iv []byte) (s string, e error) {
+	defer func() {
+		if r := recover(); r != nil {
+			return
+		}
+	}()
 	ciphertext, _ := base64.StdEncoding.DecodeString(encryptedBase64)
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return "", err
+		e = err
+		return
 	}
 
 	mode := cipher.NewCBCDecrypter(block, iv)
@@ -128,5 +134,6 @@ func decrypt(encryptedBase64 string, key []byte, iv []byte) (string, error) {
 
 	// Remove PKCS7 padding
 	padding := int(decrypted[len(decrypted)-1])
-	return string(decrypted[:len(decrypted)-padding]), nil
+	s = string(decrypted[:len(decrypted)-padding])
+	return
 }
