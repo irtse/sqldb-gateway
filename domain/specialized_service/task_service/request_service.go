@@ -2,7 +2,6 @@ package task_service
 
 import (
 	"errors"
-	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/task"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -89,11 +88,10 @@ func (s *RequestService) VerifyDataIntegrity(record map[string]interface{}, tabl
 	return record, nil, true
 }
 func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
-	fmt.Println("UPDATE")
-	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
 	if _, ok := record["is_draft"]; ok && utils.GetBool(record, "is_draft") {
 		return
 	}
+	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
 	for _, rec := range results {
 		p := utils.AllParams(ds.DBNotification.Name)
 		p.Set(ds.UserDBField, utils.ToString(rec[ds.UserDBField]))
@@ -143,7 +141,6 @@ func (s *RequestService) Write(record utils.Record, tableName string) {
 	if _, ok := record["is_draft"]; ok && utils.GetBool(record, "is_draft") {
 		return
 	}
-
 	if utils.GetInt(record, "current_index") == 0 {
 		found := false
 		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
@@ -180,8 +177,9 @@ func (s *RequestService) handleInitialWorkflow(record map[string]interface{}) {
 		ds.WorkflowDBField: record[ds.WorkflowDBField],
 	}, false)
 	if err != nil || len(wfs) == 0 {
-		params := utils.GetRowTargetParameters(ds.DBRequest.Name, utils.GetString(record, utils.SpecialIDParam))
-		s.Domain.DeleteSuperCall(params)
+		s.Domain.GetDb().DeleteQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+			utils.SpecialIDParam: utils.GetString(record, utils.SpecialIDParam),
+		}, false)
 		return
 	}
 
@@ -312,7 +310,7 @@ func (s *RequestService) constructNotificationTask(newTask utils.Record) map[str
 }
 
 func (s *RequestService) createMetaRequest(task map[string]interface{}, id interface{}) {
-	s.Domain.CreateSuperCall(utils.AllParams(ds.DBRequest.Name), utils.Record{
+	s.Domain.CreateSuperCall(utils.AllParams(ds.DBRequest.Name).RootRaw(), utils.Record{
 		ds.WorkflowDBField:  id,
 		sm.NAMEKEY:          "Meta request for " + utils.GetString(task, sm.NAMEKEY) + " task.",
 		"current_index":     1,

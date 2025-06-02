@@ -13,6 +13,7 @@ func (db *Database) BuildDeleteQueryWithRestriction(name string, restrictions ma
 		db = Open(db)
 		defer db.Close()
 	}
+
 	query := fmt.Sprintf("DELETE FROM %s", name)
 	if t := FormatSQLRestrictionWhereByMap("", restrictions, isOr); t != "" {
 		query += " WHERE " + t
@@ -27,6 +28,7 @@ func (db *Database) BuildSimpleMathQueryWithRestriction(algo string, name string
 		db = Open(db)
 		defer db.Close()
 	}
+
 	col := "*" // default to all columns
 	query := "SELECT " + strings.ToUpper(algo) + "(" + col + ") as result FROM " + name
 	kind := reflect.TypeOf(restrictions).Kind()
@@ -56,6 +58,7 @@ func (db *Database) BuildSelectQueryWithRestriction(name string, restrictions in
 	if len(view) > 0 {
 		viewStr = strings.Join(view, ",")
 	}
+
 	query := fmt.Sprintf("SELECT %s FROM %s", viewStr, name)
 	kind := reflect.TypeOf(restrictions).Kind()
 	if (kind == reflect.Map && len(restrictions.(map[string]interface{})) > 0) || ((kind == reflect.Array || kind == reflect.Slice) && len(restrictions.([]interface{})) > 0) || db.SQLRestriction != "" {
@@ -113,6 +116,7 @@ func (db *Database) BuildMathQuery(algo string, name string, naming ...string) s
 			}
 		}
 	}
+
 	query := "SELECT " + strings.ToUpper(algo) + "(" + col + ") as " + resName + " FROM " + name
 	if db.SQLRestriction != "" {
 		query += " WHERE " + db.SQLRestriction
@@ -126,6 +130,7 @@ func (db *Database) BuildDeleteQuery(tableName string, colName string) string {
 		db = Open(db)
 		defer db.Close()
 	}
+
 	if colName == "" { // if no column name is specified then delete in rows
 		return "DELETE FROM " + tableName + " WHERE " + db.SQLRestriction
 	}
@@ -287,6 +292,9 @@ func (db *Database) BuildUpdateQueryWithRestriction(tableName string, record map
 	if set == "" {
 		return "", errors.New("no value to update")
 	}
+	if strings.Contains(FormatSQLRestrictionWhereByMap("", restrictions, isOr), "main.") {
+		tableName = tableName + " as main "
+	}
 	query := "UPDATE " + tableName + " SET " + set
 	if t := FormatSQLRestrictionWhereByMap("", restrictions, isOr); t != "" {
 		query += " WHERE " + t
@@ -307,10 +315,14 @@ func (db *Database) BuildUpdateRowQuery(tableName string, record map[string]inte
 	if set == "" {
 		return "", errors.New("no value to update")
 	}
+	if strings.Contains(db.SQLRestriction, "main.") {
+		tableName = tableName + " as main "
+	}
 	query := "UPDATE " + tableName + " SET " + set
 	if db.SQLRestriction != "" {
 		query += " WHERE " + db.SQLRestriction
 	}
+
 	query = db.applyOrderAndLimit(query)
 	return query, nil
 }

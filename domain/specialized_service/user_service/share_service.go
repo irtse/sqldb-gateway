@@ -20,7 +20,7 @@ type ShareService struct {
 func (s *ShareService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
 }
-func (s *ShareService) Entity() utils.SpecializedServiceInfo { return ds.DBDelegation }
+func (s *ShareService) Entity() utils.SpecializedServiceInfo { return ds.DBShare }
 func (s *ShareService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
 	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 }

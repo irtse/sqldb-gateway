@@ -18,18 +18,42 @@ type AbstractSpecializedService struct {
 }
 
 func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]interface{}, tablename string) {
+	if s, ok := s.Domain.GetParams().Get(utils.RootRawView); ok && s == "enable" {
+		return
+	}
 	sch, err := sch.GetSchema(tablename)
 	if err == nil {
 		triggers.NewTrigger(s.Domain).Trigger(sch, record, utils.CREATE)
 	}
-
 }
 
 func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]interface{}, record map[string]interface{}) {
+	if s, ok := s.Domain.GetParams().Get(utils.RootRawView); ok && s == "enable" {
+		return
+	}
 	sch, err := sch.GetSchema(s.Domain.GetTable())
 	if err == nil {
-		for _, record := range res {
+		for _, rec := range res {
 			triggers.NewTrigger(s.Domain).Trigger(sch, record, utils.UPDATE)
+			if s.Domain.GetTable() == ds.DBRequest.Name || s.Domain.GetTable() == ds.DBTask.Name {
+				continue
+			}
+			if reqs, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+				ds.DestTableDBField: rec[utils.SpecialIDParam],
+				ds.SchemaDBField:    sch.ID,
+			}, false); err == nil && len(reqs) == 0 {
+				if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+					ds.WorkflowDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
+						ds.SchemaDBField: sch.ID,
+					}, false, utils.SpecialIDParam),
+				}, false); err == nil && len(res) > 0 {
+					s.Domain.CreateSuperCall(utils.AllParams(ds.DBRequest.Name).RootRaw(), map[string]interface{}{
+						ds.WorkflowDBField:  res[0][ds.WorkflowDBField],
+						ds.DestTableDBField: rec[utils.SpecialIDParam],
+						ds.SchemaDBField:    sch.ID,
+					})
+				}
+			}
 		}
 	}
 }

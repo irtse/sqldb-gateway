@@ -2,7 +2,6 @@ package task_service
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/task"
@@ -169,7 +168,6 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 			utils.SpecialIDParam: utils.GetInt(res, RequestDBField),
 		}, false)
 		if err != nil || len(requests) == 0 {
-			fmt.Println("TEST UPDATE")
 			continue
 		}
 		order := requests[0]["current_index"]
@@ -179,7 +177,6 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 				"state":         []string{"'pending'", "'progressing'"},
 				"binded_dbtask": nil,
 			}, false); err == nil && len(otherPendingTasks) > 0 {
-			fmt.Println("TEST otherPendingTasks")
 			continue
 		}
 
@@ -232,7 +229,6 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 				break
 			}
 		}
-
 		newRecRequest = SetClosureStatus(newRecRequest)
 		s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBRequest.Name, newRecRequest[utils.SpecialIDParam]).RootRaw(), newRecRequest)
 		for _, scheme := range schemes {
@@ -268,10 +264,10 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 						r[ds.SchemaDBField] = requests[0][ds.SchemaDBField]
 					}
 					if schema.HasField(ds.UserDBField) {
-						r[ds.UserDBField] = record[ds.UserDBField]
+						r[ds.UserDBField] = newTask[ds.UserDBField]
 					}
 					if schema.HasField(ds.EntityDBField) {
-						r[ds.EntityDBField] = record[ds.EntityDBField]
+						r[ds.EntityDBField] = newTask[ds.EntityDBField]
 					}
 					for _, f := range schema.Fields {
 						if f.GetLink() == requests[0][ds.SchemaDBField] {

@@ -144,9 +144,6 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []string, overrideOwn bool) []string {
 	newRestr := map[string]interface{}{}
 	restrictions := map[string]interface{}{}
-	id, ok := s.Domain.GetParams().Get(utils.SpecialIDParam)
-	realID := strings.Split(id, ",")
-
 	if s.Domain.IsOwn(false, false, s.Domain.GetMethod()) || overrideOwn {
 		ids := s.GetCreatedAccessData(schema.ID)
 		if len(ids) > 0 {
@@ -164,18 +161,19 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 				}
 			}
 		}
+	} else if !s.Domain.IsShallowed() {
+		restr = append(restr, "("+connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
+			"is_draft": false,
+			utils.SpecialIDParam + "_10": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name+" as d",
+				map[string]interface{}{
+					"d." + ds.SchemaDBField:    schema.ID,
+					"d." + ds.DestTableDBField: "main.id",
+					"d." + ds.UserDBField:      s.Domain.GetUserID(),
+					"d.write":                  true,
+				}, false, ds.DestTableDBField),
+		}, true)+")")
 	} else {
-		if !ok {
-			restrictions["is_draft"] = false
-		} else {
-			if access, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
-				ds.SchemaDBField:    schema.ID,
-				ds.DestTableDBField: realID,
-				"write":             true,
-			}, false); err != nil || len(access) == 0 {
-				restrictions["is_draft"] = false
-			}
-		}
+		restrictions["is_draft"] = false
 	}
 	isUser := false
 	isUser = schema.HasField(ds.UserDBField) || s.Domain.GetTable() == ds.DBUser.Name

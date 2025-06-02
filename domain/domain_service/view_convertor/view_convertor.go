@@ -189,11 +189,13 @@ func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, tableN
 		createdIds = filter.NewFilterService(v.Domain).GetCreatedAccessData(sch.ID)
 	}
 	for index, record := range results {
-		view.Triggers = append(view.Triggers, v.getTriggers(
-			record.Copy(), v.Domain.GetMethod(), sch,
-			utils.GetInt(record, ds.SchemaDBField),
-			utils.GetInt(record, ds.DestTableDBField))...,
-		)
+		if !utils.GetBool(record, "is_draft") {
+			view.Triggers = append(view.Triggers, v.getTriggers(
+				record.Copy(), v.Domain.GetMethod(), sch,
+				utils.GetInt(record, ds.SchemaDBField),
+				utils.GetInt(record, ds.DestTableDBField))...,
+			)
+		}
 		go v.ConvertRecordToView(index, view, channel, record, tableName, cols, v.Domain.GetEmpty(), isWorkflow, params, createdIds)
 	}
 	for range results {
@@ -318,7 +320,9 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 		} else if f, err := sch.GetField("name"); err == nil {
 			translatable = f.Translatable
 		}
-		ts = v.getTriggers(record, v.Domain.GetMethod(), sch, utils.GetInt(record, ds.SchemaDBField), utils.GetInt(record, ds.DestTableDBField))
+		if !utils.GetBool(record, "is_draft") {
+			ts = v.getTriggers(record, v.Domain.GetMethod(), sch, utils.GetInt(record, ds.SchemaDBField), utils.GetInt(record, ds.DestTableDBField))
+		}
 		_, ok := v.Domain.GetParams().Get(utils.RootShallow)
 		if ok {
 			otherOrder := []string{}
@@ -562,6 +566,7 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 		ds.SchemaDBField: schemaID,
 	}, false); err == nil && len(consents) > 0 {
 		if len(results) > 0 {
+			fmt.Println(schemaID, results[0][utils.SpecialIDParam], utils.GetString(consents[0], utils.SpecialIDParam))
 			if consentsResp, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(
 				ds.DBConsentResponse.Name,
 				map[string]interface{}{
@@ -578,6 +583,7 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 			c["name"] = utils.GetString(r, "name")
 			c["optionnal"] = utils.GetBool(r, "optionnal")
 			c["body"] = map[string]interface{}{
+				ds.SchemaDBField:  r[ds.SchemaDBField],
 				ds.ConsentDBField: r[utils.SpecialIDParam],
 			}
 			c["action_path"] = fmt.Sprintf("/%s/%s?%s=%s", utils.MAIN_PREFIX, ds.DBConsentResponse.Name, utils.RootRowsParam, utils.ReservedParam)

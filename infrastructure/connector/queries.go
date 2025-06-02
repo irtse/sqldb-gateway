@@ -13,10 +13,15 @@ func (db *Database) DeleteQueryWithRestriction(name string, restrictions map[str
 		db = Open(db)
 		defer db.Close()
 	}
-	if !strings.Contains(db.BuildDeleteQueryWithRestriction(name, restrictions, isOr), "id=") {
+	q := db.BuildDeleteQueryWithRestriction(name, restrictions, isOr)
+	if strings.Contains(q, "main.") {
+		name = name + " as main "
+		q = db.BuildDeleteQueryWithRestriction(name, restrictions, isOr)
+	}
+	if !strings.Contains(q, "id=") {
 		return errors.New("can't delete with a related or id specified")
 	}
-	return db.Query(db.BuildDeleteQueryWithRestriction(name, restrictions, isOr))
+	return db.Query(q)
 }
 
 func (db *Database) SelectQueryWithRestriction(name string, restrictions interface{}, isOr bool) ([]map[string]interface{}, error) {
@@ -24,7 +29,15 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		db = Open(db)
 		defer db.Close()
 	}
-	res, err := db.QueryAssociativeArray(db.BuildSelectQueryWithRestriction(name, restrictions, isOr))
+	q := db.BuildSelectQueryWithRestriction(name, restrictions, isOr)
+	if strings.Contains(q, "main.") {
+		name = name + " as main "
+		q = db.BuildSelectQueryWithRestriction(name, restrictions, isOr)
+	}
+	if strings.Contains(name, "dbuser") {
+		fmt.Println(name, q)
+	}
+	res, err := db.QueryAssociativeArray(q)
 	return res, err
 }
 
@@ -33,7 +46,12 @@ func (db *Database) SimpleMathQuery(algo string, name string, restrictions inter
 		db = Open(db)
 		defer db.Close()
 	}
-	return db.QueryAssociativeArray(db.BuildSimpleMathQueryWithRestriction(algo, name, restrictions, isOr))
+	q := db.BuildSimpleMathQueryWithRestriction(algo, name, restrictions, isOr)
+	if strings.Contains(q, "main.") {
+		name = name + " as main "
+		q = db.BuildSimpleMathQueryWithRestriction(algo, name, restrictions, isOr)
+	}
+	return db.QueryAssociativeArray(q)
 }
 
 func (db *Database) MathQuery(algo string, name string, naming ...string) ([]map[string]interface{}, error) {
@@ -41,7 +59,12 @@ func (db *Database) MathQuery(algo string, name string, naming ...string) ([]map
 		db = Open(db)
 		defer db.Close()
 	}
-	return db.QueryAssociativeArray(db.BuildMathQuery(algo, name, naming...))
+	q := db.BuildMathQuery(algo, name, naming...)
+	if strings.Contains(q, "main.") {
+		name = name + " as main "
+		q = db.BuildMathQuery(algo, name, naming...)
+	}
+	return db.QueryAssociativeArray(q)
 }
 
 func (db *Database) SchemaQuery(name string) ([]map[string]interface{}, error) {
@@ -109,8 +132,11 @@ func (db *Database) UpdateQuery(name string, record map[string]interface{}, rest
 		defer db.Close()
 	}
 	q, err := db.BuildUpdateQueryWithRestriction(name, record, restriction, isOr)
+	if strings.Contains(q, "main.") {
+		name = name + " as main "
+		q, err = db.BuildUpdateQueryWithRestriction(name, record, restriction, isOr)
+	}
 	if err != nil {
-
 		return err
 	}
 	err = db.Query(q)
@@ -132,6 +158,11 @@ func (db *Database) DeleteQuery(name string, colName string) error {
 	}
 	if !strings.Contains(db.BuildDeleteQuery(name, colName), "id=") {
 		return errors.New("can't delete with a related or id specified")
+	}
+	q := db.BuildDeleteQuery(name, colName)
+	if strings.Contains(q, "main.") {
+		name = name + " as main "
+		q = db.BuildDeleteQuery(name, colName)
 	}
 	return db.Query(db.BuildDeleteQuery(name, colName))
 }

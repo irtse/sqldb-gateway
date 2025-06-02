@@ -18,7 +18,6 @@ type EmailSendedUserService struct {
 func (s *EmailSendedUserService) Entity() utils.SpecializedServiceInfo { return ds.DBEmailSendedUser }
 
 func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
-	fmt.Println("TEST")
 	isValid := false
 	emailTo := ""
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
@@ -52,8 +51,8 @@ func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interfac
 		if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
 			utils.SpecialIDParam: record[ds.EmailSendedDBField],
 		}, false); err == nil && len(rr) > 0 {
-			err = triggers.SendMail(utils.GetString(res[0], "email"), emailTo, rr[0], isValid)
-			fmt.Println("SENDING MAIL :", err)
+			fmt.Println(res[0])
+			go triggers.SendMail(utils.GetString(res[0], "email"), emailTo, rr[0], isValid)
 		}
 		fmt.Println("SENDING MAIL :", err)
 	} else {
