@@ -295,7 +295,7 @@ func notify(task utils.Record, i int64, domain utils.DomainITF) {
 func (s *RequestService) constructNotificationTask(newTask utils.Record) map[string]interface{} {
 	task := map[string]interface{}{
 		sm.NAMEKEY:               newTask.GetString(sm.NAMEKEY),
-		"description":            "Task is affected : " + newTask.GetString(sm.NAMEKEY),
+		"description":            newTask.GetString(sm.NAMEKEY),
 		"urgency":                newTask["urgency"],
 		"priority":               newTask["priority"],
 		ds.WorkflowSchemaDBField: newTask[ds.WorkflowSchemaDBField],
@@ -305,6 +305,13 @@ func (s *RequestService) constructNotificationTask(newTask utils.Record) map[str
 		ds.DestTableDBField:      newTask[ds.DestTableDBField],
 		ds.RequestDBField:        newTask[ds.RequestDBField],
 		"send_mail_to":           newTask["send_mail_to"],
+	}
+	if schema, err := schserv.GetSchemaByID(newTask.GetInt(ds.SchemaDBField)); err == nil {
+		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
+			utils.SpecialIDParam: newTask.GetInt(ds.DestTableDBField),
+		}, false); err == nil && len(res) > 0 {
+			task[sm.NAMEKEY] = utils.GetString(task, sm.NAMEKEY) + " <" + utils.GetString(res[0], "name") + ">"
+		}
 	}
 	return task
 }

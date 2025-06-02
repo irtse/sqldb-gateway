@@ -247,6 +247,13 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 					scheme[EntityDBField],
 					scheme["send_mail_to"],
 				)
+				if schema, err := schserv.GetSchemaByID(newTask.GetInt(ds.SchemaDBField)); err == nil {
+					if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
+						utils.SpecialIDParam: newTask.GetInt(ds.DestTableDBField),
+					}, false); err == nil && len(res) > 0 {
+						newTask[sm.NAMEKEY] = utils.GetString(newTask, sm.NAMEKEY) + " <" + utils.GetString(res[0], "name") + ">"
+					}
+				}
 				if utils.GetBool(scheme, "assign_to_creator") {
 					newTask[ds.UserDBField] = s.Domain.GetUserID()
 				}
@@ -319,7 +326,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 							utils.Record{
 								"link_id":        schema.ID,
 								sm.NAMEKEY:       newTask.GetString(sm.NAMEKEY),
-								"description":    "Task is affected : " + newTask.GetString(sm.NAMEKEY),
+								"description":    newTask.GetString(sm.NAMEKEY),
 								UserDBField:      utils.GetInt(newTask, UserDBField),
 								EntityDBField:    scheme[EntityDBField],
 								UserDBField:      scheme[UserDBField],
