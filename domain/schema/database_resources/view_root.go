@@ -1,9 +1,7 @@
 package database
 
-import "sqldb-ws/domain/schema/models"
-
 var DBRootViews = []map[string]interface{}{
-	{models.NAMEKEY: "submit request",
+	/*{models.NAMEKEY: "submit request",
 		"is_list":       false,
 		"is_shortcut":   true,
 		"indexable":     true,
@@ -85,5 +83,5 @@ var DBRootViews = []map[string]interface{}{
 			"fields": []interface{}{
 				map[string]interface{}{"name": "state", "value": "completed", "dir": "ASC", "index": 0, "operator": "=", "separator": "and"},
 			},
-		}},
+		}},*/
 }

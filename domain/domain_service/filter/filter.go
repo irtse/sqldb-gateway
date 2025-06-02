@@ -145,9 +145,10 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []string, overrideOwn bool) []string {
 	newRestr := map[string]interface{}{}
 	restrictions := map[string]interface{}{}
-	fmt.Println(s.Domain.IsOwn(false, false, s.Domain.GetMethod()), schema.Name)
 	if s.Domain.IsOwn(false, false, s.Domain.GetMethod()) || overrideOwn {
 		ids := s.GetCreatedAccessData(schema.ID)
+		fmt.Println(s.Domain.IsOwn(false, false, s.Domain.GetMethod()), schema.Name, ids)
+
 		if len(ids) > 0 {
 			newRestr[utils.SpecialIDParam] = ids
 		} else {
@@ -163,6 +164,7 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 				}
 			}
 		}
+		fmt.Println(s.Domain.IsOwn(false, false, s.Domain.GetMethod()), schema.Name, newRestr)
 	} else if !s.Domain.IsShallowed() {
 		restr = append(restr, "("+connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
 			"is_draft": false,
