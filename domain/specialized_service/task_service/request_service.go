@@ -306,13 +306,14 @@ func (s *RequestService) constructNotificationTask(newTask utils.Record) map[str
 		ds.RequestDBField:        newTask[ds.RequestDBField],
 		"send_mail_to":           newTask["send_mail_to"],
 	}
-	if schema, err := schserv.GetSchemaByID(newTask.GetInt(ds.SchemaDBField)); err == nil {
+	/*if schema, err := schserv.GetSchemaByID(newTask.GetInt(ds.SchemaDBField)); err == nil {
 		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
-			utils.SpecialIDParam: newTask.GetInt(ds.DestTableDBField),
+			utils.SpecialIDParam: newTask[ds.DestTableDBField],
 		}, false); err == nil && len(res) > 0 {
+			fmt.Println(utils.GetString(res[0], "name"))
 			task[sm.NAMEKEY] = utils.GetString(task, sm.NAMEKEY) + " <" + utils.GetString(res[0], "name") + ">"
 		}
-	}
+	}*/
 	return task
 }
 

@@ -74,7 +74,6 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 		if strings.Trim(utils.GetString(r, "sqlfilter"), " ") != "" {
 			f = append(f, utils.GetString(r, "sqlfilter"))
 		}
-		fmt.Println(f)
 		news, maxs := filterService.CountNewDataAccess(utils.GetString(r, "schema_name"), f)
 		for _, scheme := range schemas {
 			news1, maxs1 := filterService.CountNewDataAccess(scheme.Name, f)
@@ -110,7 +109,6 @@ func (s *ViewService) TransformToView(record utils.Record, schemas []models.Sche
 			return !ok && k != "new" && !strings.Contains(k, "dest_table") && k != "id"
 		})
 		sqlFilter, view, dir := s.getFilterDetails(record)
-		fmt.Println(view)
 		params.UpdateParamsWithFilters(view, dir)
 		params.EnrichCondition(domainParams.Values, func(k string) bool {
 			return k != utils.RootRowsParam && k != utils.SpecialIDParam && k != utils.RootTableParam

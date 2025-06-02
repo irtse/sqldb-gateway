@@ -26,6 +26,7 @@ type AbstractDomain struct {
 	File               multipart.File
 	FileHandler        *multipart.FileHeader
 	SearchInFiles      map[string]string
+	IsDraftToPublished bool
 }
 
 func (d *AbstractDomain) GetSpecialized(override string) infrastructure.InfraSpecializedServiceItf {
@@ -34,6 +35,10 @@ func (d *AbstractDomain) GetSpecialized(override string) infrastructure.InfraSpe
 
 func (d *AbstractDomain) AddDetectFileToSearchIn(fileField string, search string) {
 	d.SearchInFiles[search] = fileField
+}
+
+func (d *AbstractDomain) GetIsDraftToPublished() bool {
+	return d.IsDraftToPublished
 }
 
 func (d *AbstractDomain) DetectFileToSearchIn() map[string]string {

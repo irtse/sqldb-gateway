@@ -176,6 +176,10 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 }
 
 func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, specializedService utils.SpecializedServiceITF, args ...interface{}) (utils.Results, error) {
+	if record["is_draft"] != nil && !utils.GetBool(record, "is_draft") {
+		d.IsDraftToPublished = true
+	}
+
 	d.Params.Add(utils.SpecialIDParam, strings.ToLower(rowName), func(_ string) bool {
 		return strings.ToLower(rowName) != utils.ReservedParam
 	})

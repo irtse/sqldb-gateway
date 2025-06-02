@@ -24,6 +24,10 @@ func NewMockDomain() *MockDomain {
 	}
 }
 
+func (d *MockDomain) GetIsDraftToPublished() bool {
+	return false
+}
+
 func (d *MockDomain) GetSpecialized(override string) service.InfraSpecializedServiceItf {
 	return nil
 }

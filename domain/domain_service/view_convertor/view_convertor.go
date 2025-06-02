@@ -762,6 +762,9 @@ func (d *ViewConvertor) getTriggers(record utils.Record, method utils.Method, fr
 	if _, ok := d.Domain.GetParams().Get(utils.SpecialIDParam); method == utils.DELETE || (!ok && method == utils.SELECT) {
 		return []sm.ManualTriggerModel{}
 	}
+	if utils.UPDATE == method && d.Domain.GetIsDraftToPublished() {
+		method = utils.CREATE
+	}
 	mt := []sm.ManualTriggerModel{}
 	triggerService := triggers.NewTrigger(d.Domain)
 	if res, err := triggerService.GetTriggers("manual", method, fromSchema.ID); err == nil {

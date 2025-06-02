@@ -115,6 +115,7 @@ var ArticleAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
+		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
 		{Name: ds.RootID("article"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "article", Required: true, Index: 2},
 	},
@@ -144,6 +145,7 @@ var ConferenceAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
+		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
 		{Name: ds.RootID("conference_presentation"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "conference_presentation", Required: true, Index: 2},
 	},
@@ -170,6 +172,7 @@ var PresentationAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
+		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
 		{Name: ds.RootID("presentation"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "presentation", Required: true, Index: 2},
 	},
@@ -199,6 +202,7 @@ var PosterAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
+		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
 		{Name: ds.RootID("poster"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "poster", Required: true, Index: 2},
 	},
@@ -222,6 +226,7 @@ var HDRAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
+		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
 		{Name: ds.RootID("research_authorization"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "research_authorization", Required: true, Index: 2},
 	},
@@ -249,6 +254,7 @@ var ThesisAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
+		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
 		{Name: ds.RootID("thesis"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "thesis", Required: true, Index: 2},
 	},
@@ -274,6 +280,7 @@ var InternshipAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
+		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
 		{Name: ds.RootID("internship"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "internship", Required: true, Index: 2},
 	},
@@ -298,6 +305,7 @@ var DemoAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
+		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
 		{Name: ds.RootID("demo"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "demo", Required: true, Index: 2},
 	},
@@ -321,6 +329,7 @@ var OtherPublicationAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
+		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
 		{Name: ds.RootID("other_publication"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication", Required: true, Index: 2},
 	},
