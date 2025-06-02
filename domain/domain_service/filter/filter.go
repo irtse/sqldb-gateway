@@ -162,6 +162,8 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 						restr = append(restr, "("+s+")")
 					}
 				}
+			} else {
+				newRestr[utils.SpecialIDParam] = nil
 			}
 		}
 		fmt.Println(s.Domain.IsOwn(false, false, s.Domain.GetMethod()), schema.Name, newRestr)
