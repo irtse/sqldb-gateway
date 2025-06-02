@@ -566,7 +566,6 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 		ds.SchemaDBField: schemaID,
 	}, false); err == nil && len(consents) > 0 {
 		if len(results) > 0 {
-			fmt.Println(schemaID, results[0][utils.SpecialIDParam], utils.GetString(consents[0], utils.SpecialIDParam))
 			if consentsResp, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(
 				ds.DBConsentResponse.Name,
 				map[string]interface{}{
