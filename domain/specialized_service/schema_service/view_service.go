@@ -74,6 +74,7 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 		if strings.Trim(utils.GetString(r, "sqlfilter"), " ") != "" {
 			f = append(f, utils.GetString(r, "sqlfilter"))
 		}
+		fmt.Println(f)
 		news, maxs := filterService.CountNewDataAccess(utils.GetString(r, "schema_name"), f)
 		for _, scheme := range schemas {
 			news1, maxs1 := filterService.CountNewDataAccess(scheme.Name, f)
