@@ -228,7 +228,7 @@ func (d *FilterService) viewbyFields(schema sm.SchemaModel, domainParams utils.P
 	views, _ := domainParams.Get(utils.RootColumnsParam)
 
 	for _, field := range schema.Fields {
-		manyOK := field.Type == sm.MANYTOMANY.String() || field.Type == sm.ONETOMANY.String()
+		manyOK := strings.Contains(field.Type, "many")
 		if len(views) > 0 && !strings.Contains(views, field.Name) || manyOK {
 			continue
 		}
