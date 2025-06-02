@@ -145,6 +145,7 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []string, overrideOwn bool) []string {
 	newRestr := map[string]interface{}{}
 	restrictions := map[string]interface{}{}
+	fmt.Println(s.Domain.IsOwn(false, false, s.Domain.GetMethod()), schema.Name)
 	if s.Domain.IsOwn(false, false, s.Domain.GetMethod()) || overrideOwn {
 		ids := s.GetCreatedAccessData(schema.ID)
 		if len(ids) > 0 {
