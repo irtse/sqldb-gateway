@@ -2,6 +2,7 @@ package permission
 
 import (
 	"encoding/json"
+	"fmt"
 	"slices"
 	"sqldb-ws/domain/schema"
 	schserv "sqldb-ws/domain/schema"
@@ -44,6 +45,7 @@ func NewPermDomainService(db *conn.Database, user string, isSuperAdmin bool, emp
 
 func (p *PermDomainService) PermsBuilder(userID string) {
 	filterOwnPermsQueryRestriction := p.BuildFilterOwnPermsQueryRestriction(userID)
+	fmt.Println(filterOwnPermsQueryRestriction)
 	datas, _ := p.db.SelectQueryWithRestriction(ds.DBPermission.Name, []interface{}{
 		connector.FormatSQLRestrictionWhereByMap("", filterOwnPermsQueryRestriction, false),
 	}, false)
