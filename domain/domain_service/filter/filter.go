@@ -269,6 +269,7 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.Sche
 		return ""
 	}
 	var filter []string
+	var orFilter []string
 	restriction := map[string]interface{}{
 		ds.FilterDBField: filterID,
 	}
@@ -278,14 +279,26 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.Sche
 		for _, field := range fields {
 			if f, err := sch.GetFieldByID(utils.GetInt(field, ds.SchemaFieldDBField)); err == nil {
 				if utils.GetBool(field, "is_own") && len(s.RestrictionByEntityUser(schema, filter, true)) > 0 {
-					filter = append(filter, s.RestrictionByEntityUser(schema, filter, true)...)
+					if field["separator"] == "or" {
+						orFilter = append(orFilter, s.RestrictionByEntityUser(schema, orFilter, true)...)
+					} else {
+						filter = append(filter, s.RestrictionByEntityUser(schema, filter, true)...)
+					}
 				} else if connector.FormatOperatorSQLRestriction(field["operator"], field["separator"], f.Name, field["value"], f.Type) != "" {
-					filter = append(filter,
-						"("+connector.FormatOperatorSQLRestriction(field["operator"], field["separator"], f.Name, field["value"], f.Type)+")")
+					if field["separator"] == "or" {
+						orFilter = append(orFilter,
+							"("+connector.FormatOperatorSQLRestriction(field["operator"], field["separator"], f.Name, field["value"], f.Type)+")")
+					} else {
+						filter = append(filter,
+							"("+connector.FormatOperatorSQLRestriction(field["operator"], field["separator"], f.Name, field["value"], f.Type)+")")
+					}
 				}
 
 			}
 		}
+	}
+	if len(orFilter) > 0 {
+		filter = append(filter, "("+strings.Join(orFilter, " OR ")+")")
 	}
 	return strings.Join(filter, " AND ")
 }
