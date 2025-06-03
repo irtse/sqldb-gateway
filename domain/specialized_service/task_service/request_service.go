@@ -24,7 +24,6 @@ func (s *RequestService) TransformToGenericView(results utils.Results, tableName
 	// TODO: here send back my passive task...
 	res := view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 	if len(results) == 1 && s.Domain.GetMethod() == utils.CREATE {
-		fmt.Println("THERE", results)
 		// retrieve... tasks affected to you
 		if r, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 			ds.RequestDBField: results[0][utils.SpecialIDParam],

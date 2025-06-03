@@ -331,7 +331,6 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 				map[string]interface{}{
 					ds.UserDBField: v.Domain.GetUserID(),
 				}, true, ds.EntityDBField)
-			fmt.Println(entity)
 			if v.Domain.GetEmpty() {
 				if res, err := v.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
 					ds.FilterDBField: v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
@@ -350,30 +349,34 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 						}
 					}
 				}
-			} else if res, err := v.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
-				ds.FilterDBField: v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
-					"is_view":              true,
-					"dashboard_restricted": false,
-				}, false, utils.SpecialIDParam),
-				ds.FilterDBField + "_1": v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
-					utils.SpecialIDParam: v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-						ds.UserDBField:   v.Domain.GetUserID(),
-						ds.EntityDBField: entity,
-					}, true, ds.WorkflowSchemaDBField),
-				}, false, "view_"+ds.FilterDBField),
-				ds.FilterDBField + "_2": v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
-					utils.SpecialIDParam: v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-						ds.SchemaDBField: sch.ID,
-						"is_close":       false,
-					}, false, ds.WorkflowSchemaDBField),
-				}, false, "view_"+ds.FilterDBField),
-			}, false); err == nil {
-				for _, r := range res {
-					if f, err := schema.GetFieldByID(utils.GetInt(r, ds.SchemaFieldDBField)); err == nil {
-						otherOrder = append(otherOrder, f.Name)
+			}
+			if v.Domain.GetUserID() != "" {
+				if res, err := v.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+					ds.FilterDBField: v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
+						"is_view":              true,
+						"dashboard_restricted": false,
+					}, false, utils.SpecialIDParam),
+					ds.FilterDBField + "_1": v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+						utils.SpecialIDParam: v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+							ds.UserDBField:   v.Domain.GetUserID(),
+							ds.EntityDBField: entity,
+						}, true, ds.WorkflowSchemaDBField),
+					}, false, "view_"+ds.FilterDBField),
+					ds.FilterDBField + "_2": v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+						utils.SpecialIDParam: v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+							ds.SchemaDBField: sch.ID,
+							"is_close":       false,
+						}, false, ds.WorkflowSchemaDBField),
+					}, false, "view_"+ds.FilterDBField),
+				}, false); err == nil {
+					for _, r := range res {
+						if f, err := schema.GetFieldByID(utils.GetInt(r, ds.SchemaFieldDBField)); err == nil {
+							otherOrder = append(otherOrder, f.Name)
+						}
 					}
 				}
 			}
+
 		}
 	}
 	view := sm.ViewModel{
