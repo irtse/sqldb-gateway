@@ -76,10 +76,9 @@ func TestConvertRecordToView(t *testing.T) {
 // 8. Test IsReadonly returns correct boolean values
 func TestIsReadonly(t *testing.T) {
 	mockDomain := new(tests.MockDomain)
-	vc := view_convertor.NewViewConvertor(mockDomain)
 	record := utils.Record{"state": "completed"}
 
-	readonly := vc.IsReadonly("test_table", record, []string{})
+	readonly := view_convertor.IsReadonly("test_table", record, []string{}, mockDomain)
 	assert.True(t, readonly)
 }
 
@@ -110,9 +109,7 @@ func TestHandleLinkField_EmptyRecord(t *testing.T) {
 
 // 11. Test BuildPath function (if applicable)
 func TestBuildPath(t *testing.T) {
-	mockDomain := new(tests.MockDomain)
-	vc := view_convertor.NewViewConvertor(mockDomain)
-	path := vc.BuildPath("test_table", "123")
+	path := utils.BuildPath("test_table", "123")
 
 	assert.NotEmpty(t, path)
 }

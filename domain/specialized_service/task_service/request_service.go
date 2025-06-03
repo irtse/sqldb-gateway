@@ -2,9 +2,11 @@ package task_service
 
 import (
 	"errors"
+	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/task"
 	"sqldb-ws/domain/domain_service/view_convertor"
+	"sqldb-ws/domain/schema"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -20,7 +22,27 @@ type RequestService struct {
 
 func (s *RequestService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
 	// TODO: here send back my passive task...
-	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
+	res := view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
+	if len(results) == 1 && s.Domain.GetMethod() == utils.CREATE {
+		fmt.Println("THERE", results)
+		// retrieve... tasks affected to you
+		if r, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+			ds.RequestDBField: results[0][utils.SpecialIDParam],
+			utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+				ds.UserDBField: s.Domain.GetUserID(),
+				ds.EntityDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
+					ds.UserDBField: s.Domain.GetUserID(),
+				}, false, ds.EntityDBField),
+			}, true, utils.SpecialIDParam),
+		}, false); err == nil && len(r) > 0 {
+			if sch, err := schema.GetSchema(ds.DBTask.Name); err == nil {
+				res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(r[0], utils.SpecialIDParam))
+			}
+		} else if sch, err := schema.GetSchemaByID(utils.GetInt(results[0], ds.SchemaDBField)); err == nil {
+			res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(results[0], ds.DestTableDBField))
+		}
+	}
+	return res
 }
 func (s *RequestService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
 	n := []string{}
@@ -200,7 +222,16 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 		// THERE o_o
 		r := utils.Record{"is_draft": true}
 		if schema.HasField("name") {
-			r["name"] = utils.GetString(newTask, "name")
+			if schema, err := schserv.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err == nil {
+				if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
+					utils.SpecialIDParam: record[ds.DestTableDBField],
+				}, false); err == nil && len(res) > 0 {
+					fmt.Println(utils.GetString(res[0], "name"))
+					r[sm.NAMEKEY] = "<" + utils.GetString(res[0], "name") + "> " + utils.GetString(newTask, sm.NAMEKEY)
+				}
+			} else {
+				r["name"] = utils.GetString(newTask, "name")
+			}
 		}
 		if schema.HasField(ds.DestTableDBField) && schema.HasField(ds.SchemaDBField) {
 			// get workflow source schema + dest ID
@@ -237,15 +268,16 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 	if utils.GetBool(newTask, "assign_to_creator") {
 		newTask[ds.UserDBField] = s.Domain.GetUserID()
 	}
-	s.createTaskAndNotify(newTask)
+	s.createTaskAndNotify(newTask, record)
 }
 
-func (s *RequestService) createTaskAndNotify(newTask map[string]interface{}) {
-	task := s.constructNotificationTask(newTask)
+func (s *RequestService) createTaskAndNotify(newTask map[string]interface{}, request utils.Record) {
+	task := s.constructNotificationTask(newTask, request)
 	i, err := s.Domain.GetDb().CreateQuery(ds.DBTask.Name, task, func(s string) (string, bool) {
 		return "", true
 	})
 	if err != nil {
+		fmt.Println(i, err)
 		return
 	}
 	currentTime := time.Now()
@@ -292,7 +324,7 @@ func notify(task utils.Record, i int64, domain utils.DomainITF) {
 	}
 }
 
-func (s *RequestService) constructNotificationTask(newTask utils.Record) map[string]interface{} {
+func (s *RequestService) constructNotificationTask(newTask utils.Record, request utils.Record) map[string]interface{} {
 	task := map[string]interface{}{
 		sm.NAMEKEY:               newTask.GetString(sm.NAMEKEY),
 		"description":            newTask.GetString(sm.NAMEKEY),
@@ -306,14 +338,14 @@ func (s *RequestService) constructNotificationTask(newTask utils.Record) map[str
 		ds.RequestDBField:        newTask[ds.RequestDBField],
 		"send_mail_to":           newTask["send_mail_to"],
 	}
-	/*if schema, err := schserv.GetSchemaByID(newTask.GetInt(ds.SchemaDBField)); err == nil {
+	if schema, err := schserv.GetSchemaByID(request.GetInt(ds.SchemaDBField)); err == nil {
 		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
-			utils.SpecialIDParam: newTask[ds.DestTableDBField],
+			utils.SpecialIDParam: request[ds.DestTableDBField],
 		}, false); err == nil && len(res) > 0 {
 			fmt.Println(utils.GetString(res[0], "name"))
-			task[sm.NAMEKEY] = utils.GetString(task, sm.NAMEKEY) + " <" + utils.GetString(res[0], "name") + ">"
+			task[sm.NAMEKEY] = "<" + utils.GetString(res[0], "name") + "> " + utils.GetString(task, sm.NAMEKEY)
 		}
-	}*/
+	}
 	return task
 }
 

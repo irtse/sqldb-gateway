@@ -34,6 +34,41 @@ func FormatMathViewQuery(algo string, col string, naming ...string) string {
 	return strings.ToUpper(algo) + "(" + col + ") as " + resName
 }
 
+func DeleteFieldInInjection(injection string, searchField string) string {
+	injection = SQLInjectionProtector(injection)
+	ands := strings.Split(injection, "+")
+	deleteOr := ""
+
+	for _, andUndecoded := range ands {
+		and, _ := url.QueryUnescape(fmt.Sprint(andUndecoded))
+		ors := strings.Split(and, "|")
+		if len(ors) == 0 {
+			continue
+		}
+		for _, or := range ors {
+			keyVal := []string{}
+			if strings.Contains(or, "<>~") {
+				keyVal = strings.Split(or, "<>~")
+			} else if strings.Contains(or, "~") {
+				keyVal = strings.Split(or, "~")
+			} else if strings.Contains(or, ":") {
+				keyVal = strings.Split(or, ":")
+			}
+			if len(keyVal) != 2 {
+				continue
+			}
+			if keyVal[0] == searchField {
+				deleteOr = or
+				break
+			}
+		}
+	}
+	if deleteOr != "" {
+		return strings.ReplaceAll(injection, deleteOr, "")
+	}
+	return injection
+}
+
 func GetFieldInInjection(injection string, searchField string) (string, string) {
 	injection = SQLInjectionProtector(injection)
 	ands := strings.Split(injection, "+")
@@ -55,9 +90,6 @@ func GetFieldInInjection(injection string, searchField string) (string, string) 
 			} else if strings.Contains(or, ":") {
 				keyVal = strings.Split(or, ":")
 				operator = "="
-			}
-			if len(keyVal) != 2 {
-				continue
 			}
 			if len(keyVal) != 2 {
 				continue

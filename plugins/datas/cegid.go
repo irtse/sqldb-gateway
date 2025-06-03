@@ -61,7 +61,7 @@ var PublicationStatusFR = models.SchemaModel{
 }
 var PublicationActFR = models.SchemaModel{
 	Name:     "publication_act",
-	Label:    "publication_act act article",
+	Label:    "publication act act article",
 	Category: "domain",
 	CanOwned: true,
 	Fields: []models.FieldModel{

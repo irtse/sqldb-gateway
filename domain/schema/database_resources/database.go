@@ -329,7 +329,7 @@ var DBRequest = models.SchemaModel{
 	Label:    "requests",
 	Category: "request",
 	Fields: []models.FieldModel{
-		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
+		{Name: models.NAMEKEY, Type: models.TEXT.String(), Required: true, Readonly: true, Index: 0},
 		{Name: "state", Type: models.VARCHAR.String(), Required: false, Default: models.STATEPENDING, Level: models.LEVELRESPONSIBLE, Index: 1},
 		{Name: "is_close", Type: models.BOOLEAN.String(), Required: false, Default: false, Level: models.LEVELRESPONSIBLE, Index: 2},
 		{Name: "current_index", Type: models.FLOAT8.String(), Required: false, Default: 0, Index: 3},
@@ -376,7 +376,7 @@ var DBTask = models.SchemaModel{
 	Category: "request",
 	Fields: []models.FieldModel{
 		{Name: RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 0},
-		{Name: models.NAMEKEY, Label: "task to be done", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 1},
+		{Name: models.NAMEKEY, Label: "task to be done", Type: models.TEXT.String(), Required: true, Readonly: true, Index: 1},
 		{Name: "description", Type: models.BIGVARCHAR.String(), Required: false, Index: 11},
 		{Name: "state", Type: models.ENUMSTATE.String(), Required: false, Default: models.STATEPENDING, Index: 2},
 		{Name: "is_close", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 3, Hidden: true},
@@ -537,7 +537,7 @@ var DBViewSchema = models.SchemaModel{
 	Category: "",
 	Fields: []models.FieldModel{
 		{Name: RootID(DBView.Name), Type: models.INTEGER.String(), ForeignTable: DBView.Name, Required: true, Index: 0},
-		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: true, Index: 1},
+		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Index: 1},
 	},
 }
 
@@ -559,7 +559,7 @@ var DBNotification = models.SchemaModel{
 	Label:    "notifications",
 	Category: "",
 	Fields: []models.FieldModel{
-		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: true, Index: 0},
+		{Name: models.NAMEKEY, Type: models.TEXT.String(), Required: true, Index: 0},
 		{Name: "description", Type: models.BIGVARCHAR.String(), Required: false, Index: 1},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: true, Label: "assigned user", Index: 2},
 		{Name: RootID(DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: DBEntity.Name, Required: false, Readonly: true, Label: "assigned entity", Index: 3},

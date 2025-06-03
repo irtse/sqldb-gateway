@@ -2,6 +2,7 @@ package utils
 
 import (
 	"strconv"
+	"strings"
 	// API COMMON query params !
 )
 
@@ -84,7 +85,7 @@ func GetString(record map[string]interface{}, column string) string {
 	if record[column] == nil {
 		return ""
 	}
-	return ToString(record[column])
+	return strings.ReplaceAll(strings.ReplaceAll(ToString(record[column]), "''", "'"), "''", "'")
 }
 
 func GetFloat(record map[string]interface{}, column string) float64 {

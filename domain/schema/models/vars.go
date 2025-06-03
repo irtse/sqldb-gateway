@@ -97,7 +97,7 @@ func DataTypeToEnum() string {
 
 func enumName(name string) string {
 	if strings.Contains(name, "enum") {
-		return strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.ToLower(name), ",", "_"), "'", ""), "(", "__"), ")", ""), " ", "")
+		return strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.ToLower(name), ",", "_"), "'", ""), "''", "'"), "(", "__"), ")", ""), " ", "")
 	}
 	return name
 }

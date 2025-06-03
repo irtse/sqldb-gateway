@@ -16,6 +16,14 @@ import (
 	"github.com/unidoc/unioffice/document"
 )
 
+func BuildPath(tableName string, rows string, extra ...string) string {
+	path := fmt.Sprintf("/%s/%s?rows=%v", MAIN_PREFIX, tableName, rows)
+	for _, ext := range extra {
+		path += "&" + ext
+	}
+	return path
+}
+
 func PrepareEnum(enum string) string {
 	if !strings.Contains(enum, "enum") {
 		return enum
@@ -51,6 +59,9 @@ func ToListAnonymized(who []string) []interface{} {
 }
 
 func ToList(who interface{}) []interface{} {
+	if who == nil {
+		return []interface{}{}
+	}
 	if reflect.TypeOf(who).Kind() == reflect.Slice {
 		return who.([]interface{})
 	}

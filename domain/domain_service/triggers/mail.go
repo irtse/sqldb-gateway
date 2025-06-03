@@ -43,7 +43,7 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 		"from_email":            utils.GetString(from, "id"),
 		"to_email":              utils.GetString(to, "id"), // SHOULD BE ID
 		"subject":               subject,
-		"content":               strings.ReplaceAll(content.String(), "''", "'"),
+		"content":               strings.ReplaceAll(strings.ReplaceAll(content.String(), "''", "'"), "''", "'"),
 		"file_attached":         "",
 		ds.EmailTemplateDBField: tplID,
 	}

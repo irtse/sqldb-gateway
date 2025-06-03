@@ -184,8 +184,14 @@ func (d *ViewConvertor) ProcessLinkedSchema(shallowField *sm.ViewFieldModel, sch
 	}
 }
 
-func (d *ViewConvertor) ProcessPermissions(shallowField sm.ViewFieldModel, scheme sm.FieldModel,
-	tableName string, additionalActions []string, schema sm.SchemaModel, noRecursive bool, record utils.Results) (sm.ViewFieldModel, []string) {
+func (d *ViewConvertor) ProcessPermissions(
+	shallowField sm.ViewFieldModel,
+	scheme sm.FieldModel,
+	tableName string,
+	additionalActions []string,
+	schema sm.SchemaModel,
+	noRecursive bool,
+	record utils.Results) (sm.ViewFieldModel, []string) {
 	for _, meth := range []utils.Method{utils.SELECT, utils.CREATE, utils.UPDATE, utils.DELETE} {
 		if d.Domain.VerifyAuth(tableName, "", "", meth) && (((meth == utils.SELECT || meth == utils.CREATE) && d.Domain.GetEmpty()) || !d.Domain.GetEmpty()) {
 			if !slices.Contains(additionalActions, meth.Method()) {

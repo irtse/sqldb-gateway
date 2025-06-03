@@ -7,7 +7,9 @@ import (
 	"slices"
 
 	"sqldb-ws/domain/domain_service"
+	"sqldb-ws/domain/domain_service/filter"
 	permissions "sqldb-ws/domain/domain_service/permission"
+	"sqldb-ws/domain/domain_service/view_convertor"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -192,6 +194,16 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 		record[utils.SpecialIDParam], _ = url.QueryUnescape(utils.ToString(record[utils.SpecialIDParam]))
 		record[utils.SpecialIDParam] = strings.Split(utils.ToString(record[utils.SpecialIDParam]), ",")[0]
 	}
+	if d.Method == utils.DELETE {
+		createdIds := []string{}
+		sch, err := schserv.GetSchema(d.GetTable())
+		if err == nil {
+			createdIds = filter.NewFilterService(d).GetCreatedAccessData(sch.ID)
+		}
+		if view_convertor.IsReadonly(d.GetTable(), record, createdIds, d) {
+			return utils.Results{}, errors.New("can't delete data")
+		}
+	}
 	d.Service = infrastructure.NewTableRowService(d.Db, d.SuperAdmin, d.User, strings.ToLower(d.TableName), specializedService)
 	if d.Method == utils.IMPORT {
 		path, err := domain_service.NewUploader(d).ApplyUpload(d.File, d.FileHandler)
@@ -199,7 +211,7 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 	} else {
 		if p, _ := d.Params.Get(utils.RootShallow); p == "enable" {
 			if _, ok := d.Params.Get(utils.RootLimit); !ok {
-				d.Params.Set(utils.RootLimit, "20")
+				d.Params.Set(utils.RootLimit, "10")
 			}
 			if _, ok := d.Params.Get(utils.RootOffset); !ok {
 				d.Params.Set(utils.RootOffset, "0")

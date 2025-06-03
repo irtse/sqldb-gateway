@@ -124,7 +124,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 		IsWrapper:   tableName == ds.DBTask.Name || tableName == ds.DBRequest.Name,
 		SchemaID:    id,
 		SchemaName:  tableName,
-		ActionPath:  v.BuildPath(tableName, utils.ReservedParam),
+		ActionPath:  utils.BuildPath(tableName, utils.ReservedParam),
 		Order:       o,
 		Actions:     addAction,
 		CommentBody: commentBody,
@@ -331,6 +331,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 				map[string]interface{}{
 					ds.UserDBField: v.Domain.GetUserID(),
 				}, true, ds.EntityDBField)
+			fmt.Println(entity)
 			if v.Domain.GetEmpty() {
 				if res, err := v.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
 					ds.FilterDBField: v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
@@ -402,13 +403,13 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 			}
 			view.Description = fmt.Sprintf("%s shallowed data", tableName)
 			view.IsWrapper = tableName == ds.DBTask.Name || tableName == ds.DBRequest.Name
-			view.Path = v.BuildPath(sch.Name, utils.ReservedParam)
+			view.Path = utils.BuildPath(sch.Name, utils.ReservedParam)
 			view.Schema = schema
 
 			view.SchemaID = id
 			view.SchemaName = tableName
 			view.Actions = addAction
-			view.ActionPath = v.BuildPath(sch.Name, utils.ReservedParam)
+			view.ActionPath = utils.BuildPath(sch.Name, utils.ReservedParam)
 			view.Order = o
 			view.Consents = v.getConsent(utils.ToString(id), []utils.Record{record})
 		}
@@ -427,8 +428,8 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 	if !isEmpty {
 		if err == nil {
 			synthesisPath = d.getSynthesis(record, schema)
-			historyPath = d.BuildPath(ds.DBDataAccess.Name, utils.ReservedParam, utils.RootOrderParam+"=access_date", utils.RootDirParam+"=asc", utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
-			commentPath = d.BuildPath(ds.DBComment.Name, utils.ReservedParam, utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
+			historyPath = utils.BuildPath(ds.DBDataAccess.Name, utils.ReservedParam, utils.RootOrderParam+"=access_date", utils.RootDirParam+"=asc", utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
+			commentPath = utils.BuildPath(ds.DBComment.Name, utils.ReservedParam, utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
 		}
 		vals[utils.SpecialIDParam] = record.GetString(utils.SpecialIDParam)
 	}
@@ -462,7 +463,7 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 		HistoryPath:   historyPath,
 		ValueMany:     manyVals,
 		ValuePathMany: manyPathVals,
-		Readonly:      d.IsReadonly(tableName, record, createdIds),
+		Readonly:      IsReadonly(tableName, record, createdIds, d.Domain),
 		Workflow:      d.EnrichWithWorkFlowView(record, tableName, isWorkflow),
 		Draft:         utils.GetBool(record, "is_draft"),
 		Synthesis:     synthesisPath,
@@ -664,7 +665,7 @@ func (d *ViewConvertor) HandleDBSchemaField(record utils.Record, field sm.FieldM
 	}
 	shallowVals[ds.SchemaDBField] = utils.Record{"id": utils.ToString(schema.ID), "name": utils.ToString(schema.Name), "label": utils.ToString(schema.Label)}
 	if destOk && dest != nil {
-		datapath = d.BuildPath(schema.Name, utils.ToString(dest))
+		datapath = utils.BuildPath(schema.Name, utils.ToString(dest))
 		if t, err := d.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
 			utils.SpecialIDParam: dest,
 		}, false); err == nil && len(t) > 0 {
@@ -673,7 +674,7 @@ func (d *ViewConvertor) HandleDBSchemaField(record utils.Record, field sm.FieldM
 				sm.NAMEKEY:           utils.ToString(t[0][sm.NAMEKEY]),
 				sm.LABELKEY:          utils.ToString(t[0][sm.NAMEKEY]),
 				"data_ref":           "@" + utils.ToString(schema.ID) + ":" + utils.ToString(t[0][utils.SpecialIDParam]),
-				"values_path":        d.BuildPath(utils.ToString(schema.ID), utils.ToString(t[0][utils.SpecialIDParam]), utils.RootShallow+"=enable"),
+				"values_path":        utils.BuildPath(utils.ToString(schema.ID), utils.ToString(t[0][utils.SpecialIDParam]), utils.RootShallow+"=enable"),
 			}
 		}
 	}
@@ -702,7 +703,7 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 		for _, f := range l.Fields {
 			if field.Type == sm.ONETOMANY.String() && field.GetLink() > 0 {
 				if strings.Contains(f.Name, tableName) && strings.Contains(f.Name, "_id") {
-					manyPathVals[field.Name] = d.BuildPath(
+					manyPathVals[field.Name] = utils.BuildPath(
 						link, utils.ReservedParam,
 						f.Name+"="+record.GetString(utils.SpecialIDParam))
 					break
@@ -792,12 +793,12 @@ func (d *ViewConvertor) getMailTriggers(record utils.Record, fromSchema sm.Schem
 		for _, f := range sch.Fields {
 			if f.GetLink() > 0 {
 				if sch2, err := schema.GetSchemaByID(f.GetLink()); err == nil {
-					s[f.Name].(map[string]interface{})["action_path"] = d.BuildPath(sch2.Name, utils.ReservedParam, utils.RootShallow+"=enable")
+					s[f.Name].(map[string]interface{})["action_path"] = utils.BuildPath(sch2.Name, utils.ReservedParam, utils.RootShallow+"=enable")
 					for _, f2 := range sch2.Fields {
 						if f2.GetLink() > 0 && strings.Contains(f2.Name, "_id") && !strings.Contains(f2.Name, sch2.Name) {
 							if sch3, err := schema.GetSchemaByID(f2.GetLink()); err == nil {
 								s[f.Name].(map[string]interface{})["data_schema"] = sch2.ToMapRecord()
-								s[f.Name].(map[string]interface{})["values_path"] = d.BuildPath(sch3.Name, utils.ReservedParam, utils.RootShallow+"=enable")
+								s[f.Name].(map[string]interface{})["values_path"] = utils.BuildPath(sch3.Name, utils.ReservedParam, utils.RootShallow+"=enable")
 							}
 						}
 					}
@@ -815,7 +816,7 @@ func (d *ViewConvertor) getMailTriggers(record utils.Record, fromSchema sm.Schem
 				Type:        "mail",
 				Schema:      s,
 				Body:        m,
-				ActionPath:  d.BuildPath(sch.Name, utils.ReservedParam),
+				ActionPath:  utils.BuildPath(sch.Name, utils.ReservedParam),
 			})
 		}
 		return bodies, nil
@@ -823,14 +824,14 @@ func (d *ViewConvertor) getMailTriggers(record utils.Record, fromSchema sm.Schem
 
 }
 
-func (d *ViewConvertor) IsReadonly(tableName string, record utils.Record, createdIds []string) bool {
-	if d.Domain.GetEmpty() || utils.GetBool(record, "is_draft") {
+func IsReadonly(tableName string, record utils.Record, createdIds []string, d utils.DomainITF) bool {
+	if d.GetEmpty() || utils.GetBool(record, "is_draft") {
 		return false
 	}
 	readonly := true
 	for _, meth := range []utils.Method{utils.CREATE, utils.UPDATE} {
-		if d.Domain.VerifyAuth(tableName, "", "", meth, record.GetString(utils.SpecialIDParam)) {
-			if (meth == utils.CREATE && d.Domain.GetEmpty()) || meth == utils.UPDATE {
+		if d.VerifyAuth(tableName, "", "", meth, record.GetString(utils.SpecialIDParam)) {
+			if (meth == utils.CREATE && d.GetEmpty()) || meth == utils.UPDATE {
 				readonly = false
 				break
 			}
@@ -839,24 +840,24 @@ func (d *ViewConvertor) IsReadonly(tableName string, record utils.Record, create
 	if sch, err := scheme.GetSchema(tableName); err == nil {
 		m := map[string]interface{}{
 			"is_close":     false,
-			ds.UserDBField: d.Domain.GetUserID(),
+			ds.UserDBField: d.GetUserID(),
 		}
 		if tableName == ds.DBTask.Name {
 			delete(m, ds.UserDBField)
-			m[utils.SpecialIDParam+"_1"] = d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-				ds.EntityDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(
+			m[utils.SpecialIDParam+"_1"] = d.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+				ds.EntityDBField: d.GetDb().BuildSelectQueryWithRestriction(
 					ds.DBEntityUser.Name,
 					map[string]interface{}{
-						ds.UserDBField: d.Domain.GetUserID(),
+						ds.UserDBField: d.GetUserID(),
 					}, true, ds.EntityDBField),
-				ds.UserDBField: d.Domain.GetUserID(),
+				ds.UserDBField: d.GetUserID(),
 			}, true, utils.SpecialIDParam)
 			m[utils.SpecialIDParam] = record[utils.SpecialIDParam]
-			m[ds.WorkflowSchemaDBField] = d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+			m[ds.WorkflowSchemaDBField] = d.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 				utils.SpecialIDParam: record[ds.WorkflowSchemaDBField],
 			}, false, utils.SpecialIDParam)
 
-			if res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, m, false); err != nil || len(res) == 0 {
+			if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, m, false); err != nil || len(res) == 0 {
 				return true
 			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
 				return false
@@ -864,7 +865,7 @@ func (d *ViewConvertor) IsReadonly(tableName string, record utils.Record, create
 		} else {
 			m[ds.DestTableDBField] = record[utils.SpecialIDParam]
 			m[ds.SchemaDBField] = sch.ID
-			if res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
+			if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
 				return true
 			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
 				return false

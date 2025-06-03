@@ -3,6 +3,7 @@ package schema_service
 import (
 	"fmt"
 	"runtime"
+	"slices"
 	"sort"
 	filterserv "sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/task"
@@ -42,78 +43,121 @@ func (s *ViewService) GenerateQueryFilter(tableName string, innerestr ...string)
 
 func (s *ViewService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) (res utils.Results) {
 	runtime.GOMAXPROCS(5)
-	channel := make(chan utils.Record, len(results))
 	params := s.Domain.GetParams().Copy()
-	schemas := []models.SchemaModel{}
-	if len(results) == 1 {
+	schemas := []*models.SchemaModel{}
+	if len(results) == 1 && !utils.GetBool(results[0], "is_empty") && !s.Domain.IsShallowed() {
 		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBViewSchema.Name, map[string]interface{}{
 			ds.ViewDBField: results[0][utils.SpecialIDParam],
 		}, false); err == nil {
 			for _, r := range res {
 				if sch, err := schserv.GetSchemaByID(utils.GetInt(r, ds.SchemaDBField)); err == nil {
-					schemas = append(schemas, sch)
+					schemas = append(schemas, &sch)
 				}
 			}
 		}
 	}
+
+	channel := make(chan utils.Record, len(results))
 	for _, record := range results {
-		go s.TransformToView(record, schemas, params, channel, dest_id...)
+		go s.TransformToView(record, nil, params, channel, dest_id...)
 	}
+
 	for range results {
 		if rec := <-channel; rec != nil {
 			res = append(res, rec)
 		}
 	}
-	for _, r := range res {
-		if utils.GetBool(r, "is_empty") {
-			continue
+	if len(res) <= 1 && len(schemas) > 0 && !s.Domain.GetEmpty() && !s.Domain.IsShallowed() {
+		subChan := make(chan utils.Record, len(schemas))
+		for _, schema := range schemas {
+			go s.TransformToView(results[0], schema, params, subChan, dest_id...)
 		}
+		for _, schema := range schemas {
+			if rec := <-subChan; rec != nil {
+				for _, i := range utils.ToList(rec["items"]) {
+					res[0]["items"] = append(utils.ToList(res[0]["items"]), i)
+				}
+				res[0]["new"] = utils.GetInt(res[0], "new") + utils.GetInt(rec, "new")
+				res[0]["max"] = utils.GetInt(res[0], "max") + utils.GetInt(rec, "max")
 
-		filterService := filterserv.NewFilterService(s.Domain)
-		f := []string{}
-		if strings.Trim(utils.GetString(r, "sqlfilter"), " ") != "" {
-			f = append(f, utils.GetString(r, "sqlfilter"))
+				if !slices.Contains(utils.ToListStr(utils.ToList(rec["order"])), "type") {
+					res[0]["order"] = append([]interface{}{"type"}, utils.ToList(rec["order"])...)
+				}
+				newSchema := map[string]interface{}{}
+				for k, v := range rec["schema"].(map[string]interface{}) {
+					if schema.HasField(k) {
+						newSchema[k] = v
+					}
+				}
+				typ := models.ViewFieldModel{
+					Label:    "type",
+					Type:     "enum__" + schema.Label,
+					Index:    2,
+					Readonly: true,
+					Active:   true,
+				}
+				if utils.ToMap(res[0]["schema"])["type"] == nil {
+					newSchema["type"] = typ
+				} else {
+					typ = utils.ToMap(res[0]["schema"])["type"].(models.ViewFieldModel)
+					typ.Type += "_" + schema.Name
+					newSchema["type"] = typ
+				}
+				res[0]["schema"] = newSchema
+			}
 		}
-		news, maxs := filterService.CountNewDataAccess(utils.GetString(r, "schema_name"), f)
-		for _, scheme := range schemas {
-			news1, maxs1 := filterService.CountNewDataAccess(scheme.Name, f)
-			news += news1
-			maxs += maxs1
-		}
-		r["new"] = news
-		r["max"] = maxs
-		delete(r, "sqlfilter")
 	}
-
 	sort.SliceStable(res, func(i, j int) bool {
 		return utils.ToInt64(res[i]["index"]) <= utils.ToInt64(res[j]["index"])
 	})
 	return
 }
 
-func (s *ViewService) TransformToView(record utils.Record, schemas []models.SchemaModel, domainParams utils.Params,
+func (s *ViewService) TransformToView(record utils.Record, schema *models.SchemaModel, domainParams utils.Params,
 	channel chan utils.Record, dest_id ...string) {
 	s.Domain.SetOwn(record.GetBool("own_view"))
-	if schema, err := schserv.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err != nil {
+	if schema == nil {
+		if s, err := schserv.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err == nil {
+			schema = &s
+		}
+	}
+	dp := domainParams.Copy()
+	if schema == nil {
 		channel <- nil
 	} else {
+		notFound := false
+		if line, ok := domainParams.Get(utils.RootFilterLine); ok {
+			if val, operator := connector.GetFieldInInjection(line, "type"); val != "" {
+				if strings.Contains(operator, "LIKE") {
+					if strings.Contains(operator, "NOT") && (strings.Contains(schema.Label, val) || strings.Contains(schema.Name, val)) {
+						notFound = true
+					} else if !strings.Contains(schema.Label, val) && !strings.Contains(schema.Name, val) {
+
+					}
+				} else if schema.Name != val && schema.Label != val {
+					notFound = true
+				}
+				dp.Set(utils.RootFilterLine, connector.DeleteFieldInInjection(line, "type"))
+			}
+		}
 		// retrive additionnal view to combine to the main... add a type can be filtered by a filter line
 		// add type onto order and schema plus verify if filter not implied.
 		// may regenerate to get limits... for file... for type and for dest_table_id if needed.
 		s.Domain.HandleRecordAttributes(record)
-		rec := NewViewFromRecord(schema, record)
+		rec := NewViewFromRecord(*schema, record)
 		s.addFavorizeInfo(record, rec)
+
 		params := utils.GetRowTargetParameters(schema.Name, s.combineDestinations(dest_id))
-		params = params.EnrichCondition(domainParams.Values, func(k string) bool {
+		params = params.EnrichCondition(dp.Values, func(k string) bool {
 			_, ok := params.Values[k]
 			return !ok && k != "new" && !strings.Contains(k, "dest_table") && k != "id"
 		})
 		sqlFilter, view, dir := s.getFilterDetails(record)
 		params.UpdateParamsWithFilters(view, dir)
-		params.EnrichCondition(domainParams.Values, func(k string) bool {
+		params.EnrichCondition(dp.Values, func(k string) bool {
 			return k != utils.RootRowsParam && k != utils.SpecialIDParam && k != utils.RootTableParam
 		})
-		domainParams.Delete(func(k string) bool {
+		dp.Delete(func(k string) bool {
 			return k == utils.RootRowsParam || k == utils.SpecialIDParam || k == utils.RootTableParam || k == utils.SpecialSubIDParam
 		})
 		if _, ok := record["group_by"]; ok {
@@ -121,62 +165,21 @@ func (s *ViewService) TransformToView(record utils.Record, schemas []models.Sche
 				params.Set(utils.RootGroupBy, field.Name)
 			}
 		}
-		if f, ok := domainParams.Get(utils.RootGroupBy); ok {
+		if f, ok := dp.Get(utils.RootGroupBy); ok {
 			params.Set(utils.RootGroupBy, f)
 			rec["group_by"] = f
 		}
 		datas := utils.Results{}
-		rec["sqlfilter"] = sqlFilter
-		if shal, ok := s.Domain.GetParams().Get(utils.RootShallow); !ok || shal != "enable" {
+		if shal, ok := s.Domain.GetParams().Get(utils.RootShallow); (!ok || shal != "enable") && !notFound {
 			datas, rec = s.fetchData(params, sqlFilter, rec)
 		}
-		record, rec = s.processData(rec, datas, schema, record, view, params)
-		if !s.Domain.IsShallowed() {
-			for _, scheme := range schemas {
-				if line, ok := params.Get(utils.RootFilterLine); ok {
-					if val, operator := connector.GetFieldInInjection(line, "type"); val != "" {
-						if strings.Contains(operator, "LIKE") {
-							if strings.Contains(operator, "NOT") && strings.Contains(scheme.Label, val) {
-								continue
-							} else if !strings.Contains(scheme.Label, val) {
-								continue
-							}
-						} else if scheme.Label != val {
-							continue
-						}
-					}
-				}
-				treated := view_convertor.NewViewConvertor(s.Domain).TransformToView(datas, scheme.Name, false, params)
-				if len(treated) > 0 {
-					items := treated[0]["items"].([]interface{})
-					rec, view = s.extractItems(utils.ToList(items), "items", rec, record,
-						schema, view, params, true)
-					newSchema := map[string]interface{}{}
-					for k, v := range rec["schema"].(map[string]interface{}) {
-						if scheme.HasField(k) {
-							newSchema[k] = v
-						}
-					}
-					if rec["order"] != nil {
-						order := []string{"type"}
-						for _, o := range rec["order"].([]string) {
-							if newSchema[o] != nil {
-								order = append(order, o)
-							}
-						}
-						rec["order"] = order
-					}
-					newSchema["type"] = models.ViewFieldModel{
-						Label:    "type",
-						Type:     "varchar",
-						Index:    2,
-						Readonly: true,
-						Active:   true,
-					}
-					rec["schema"] = newSchema
-				}
-			}
+		record, rec = s.processData(rec, datas, *schema, record, view, params)
+		for _, i := range utils.ToList(rec["items"]) {
+			utils.ToMap(i)["schema_id"] = schema.ID
+			values := utils.ToMap(i)["values"]
 
+			utils.ToMap(values)["type"] = schema.Label
+			utils.ToMap(i)["values"] = values
 		}
 		rec["link_path"] = "/" + utils.MAIN_PREFIX + "/" + fmt.Sprintf(ds.DBView.Name) + "?rows=" + utils.ToString(record[utils.SpecialIDParam])
 		if _, ok := record["group_by"]; ok { // express by each column we are foldered TODO : if not in view add it

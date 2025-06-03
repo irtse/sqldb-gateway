@@ -323,7 +323,7 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 
 func (t *TriggerService) getFileAttached(toSchema sm.SchemaModel, record utils.Record) string {
 	for k, v := range record {
-		if f, err := toSchema.GetField(k); err == nil && strings.ToLower(f.Type) == "html" {
+		if f, err := toSchema.GetField(k); err == nil && strings.Contains(strings.ToLower(f.Type), "upload") {
 			return utils.ToString(v)
 		}
 	}

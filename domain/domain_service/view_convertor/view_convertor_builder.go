@@ -1,7 +1,6 @@
 package view_convertor
 
 import (
-	"fmt"
 	"slices"
 	"sqldb-ws/domain/domain_service/filter"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -147,14 +146,6 @@ func (d *ViewConvertor) populateTaskDetails(newStep *sm.WorkflowStepModel, step 
 		newStep.IsCurrent = utils.Compare(tasks[0]["state"], "pending")
 		newStep.IsDismiss = utils.Compare(tasks[0]["is_dismiss"], "dismiss")
 	}
-}
-
-func (d *ViewConvertor) BuildPath(tableName string, rows string, extra ...string) string {
-	path := fmt.Sprintf("/%s/%s?rows=%v", utils.MAIN_PREFIX, tableName, rows)
-	for _, ext := range extra {
-		path += "&" + ext
-	}
-	return path
 }
 
 // TODO : Add hierarchical view in the workflow enrich
