@@ -13,6 +13,7 @@ var CoCFR = models.SchemaModel{
 	IsEnum:   true,
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "nom", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
+		{Name: "label", Label: "label", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 0},
 		{Name: ds.RootID(ds.DBEntity.Name), Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: true, Index: 1, Label: "entité en relation"},
 	},
 }
@@ -61,7 +62,7 @@ var PublicationStatusFR = models.SchemaModel{
 }
 var PublicationActFR = models.SchemaModel{
 	Name:     "publication_act",
-	Label:    "publication act act article",
+	Label:    "publication_act act article",
 	Category: "domain",
 	CanOwned: true,
 	Fields: []models.FieldModel{
