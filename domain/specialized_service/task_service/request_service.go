@@ -276,7 +276,6 @@ func (s *RequestService) createTaskAndNotify(newTask map[string]interface{}, req
 		return "", true
 	})
 	if err != nil {
-		fmt.Println(i, err)
 		return
 	}
 	currentTime := time.Now()

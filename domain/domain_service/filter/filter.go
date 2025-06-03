@@ -1,7 +1,6 @@
 package filter
 
 import (
-	"fmt"
 	"net/url"
 	"slices"
 	"sort"
@@ -380,6 +379,5 @@ func (d *FilterService) GetCreatedAccessData(schemaID string) []string {
 			}
 		}
 	}
-	fmt.Println(schemaID, d.Domain.GetUserID(), ids)
 	return ids
 }

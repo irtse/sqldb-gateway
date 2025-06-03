@@ -69,8 +69,6 @@ func (db *Database) BuildSelectQueryWithRestriction(name string, restrictions in
 		if t := FormatSQLRestrictionWhereByMap("", restrictions.(map[string]interface{}), isOr); t != "" {
 			query += t
 			isAnd = true
-		} else {
-			fmt.Println("WTF1", kind, restrictions, name)
 		}
 	} else if (kind == reflect.Array || kind == reflect.Slice) && len(restrictions.([]interface{})) > 0 {
 		if t := FormatSQLRestrictionByList("", restrictions.([]interface{}), isOr); t != "" {
@@ -79,11 +77,7 @@ func (db *Database) BuildSelectQueryWithRestriction(name string, restrictions in
 			}
 			query += t
 			isAnd = true
-		} else {
-			fmt.Println("WTF2", kind, restrictions, name)
 		}
-	} else {
-		fmt.Println("WTF", kind, restrictions, name)
 	}
 	if db.SQLRestriction != "" {
 		if isAnd {

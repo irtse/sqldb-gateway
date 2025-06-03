@@ -1,6 +1,7 @@
 package task_service
 
 import (
+	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/view_convertor"
 	"sqldb-ws/domain/schema"
@@ -35,8 +36,10 @@ func (s *WorkflowService) TransformToGenericView(results utils.Results, tableNam
 					utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBFilterField.Name,
 						map[string]interface{}{
 							ds.FilterDBField: i,
-						}, false, ds.SchemaFieldDBField)}, false); err == nil {
+						}, false, ds.SchemaFieldDBField),
+				}, false); err == nil {
 				for _, f := range fields {
+					fmt.Println(f["name"])
 					newSchema[utils.GetString(f, "name")] = schema[utils.GetString(f, "name")]
 				}
 			}

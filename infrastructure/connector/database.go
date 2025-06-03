@@ -198,6 +198,8 @@ func (db *Database) ClearQueryFilter() *Database {
 	db.SQLOrder = ""
 	db.SQLRestriction = ""
 	db.SQLView = ""
+	db.SQLLimit = ""
+	db.SQLDir = ""
 	return db
 }
 

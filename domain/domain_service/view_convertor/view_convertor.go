@@ -408,7 +408,6 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 			view.IsWrapper = tableName == ds.DBTask.Name || tableName == ds.DBRequest.Name
 			view.Path = utils.BuildPath(sch.Name, utils.ReservedParam)
 			view.Schema = schema
-
 			view.SchemaID = id
 			view.SchemaName = tableName
 			view.Actions = addAction

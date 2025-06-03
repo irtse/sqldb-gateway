@@ -153,7 +153,6 @@ func (s *ViewService) TransformToView(record utils.Record, schema *models.Schema
 			return !ok && k != "new" && !strings.Contains(k, "dest_table") && k != "id"
 		})
 		sqlFilter, view, dir := s.getFilterDetails(record, schema)
-		fmt.Println(sqlFilter)
 		params.UpdateParamsWithFilters(view, dir)
 		params.EnrichCondition(dp.Values, func(k string) bool {
 			return k != utils.RootRowsParam && k != utils.SpecialIDParam && k != utils.RootTableParam
