@@ -67,6 +67,7 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 			res = append(res, rec)
 		}
 	}
+	fmt.Println(res[0]["max"])
 	if len(res) <= 1 && len(schemas) > 0 && !s.Domain.GetEmpty() && !s.Domain.IsShallowed() {
 		subChan := make(chan utils.Record, len(schemas))
 		for _, schema := range schemas {

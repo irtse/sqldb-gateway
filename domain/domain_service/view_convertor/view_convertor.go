@@ -115,6 +115,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 			o = append(o, or)
 		}
 	}
+	max, _ := filter.NewFilterService(v.Domain).CountMaxDataAccess(schema.Name, []string{})
 	view := sm.ViewModel{
 		ID:          id,
 		Name:        schema.Name,
@@ -133,6 +134,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 		Redirection: v.getRedirection(),
 		Triggers:    []sm.ManualTriggerModel{},
 		Consents:    v.getConsent(schema.ID, results),
+		Max:         max,
 	}
 	v.ProcessResultsConcurrently(results, tableName, cols, isWorkflow, &view, params)
 	// if there is only one item in the view, we can set the view readonly to the item readonly
