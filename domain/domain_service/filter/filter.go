@@ -256,7 +256,6 @@ func (s *FilterService) GetFilterForQuery(filterID string, viewfilterID string, 
 }
 
 func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.SchemaModel) string {
-	fmt.Println(filterID, schema.Name)
 	if filterID == "" {
 		return ""
 	}
@@ -381,5 +380,6 @@ func (d *FilterService) GetCreatedAccessData(schemaID string) []string {
 			}
 		}
 	}
+	fmt.Println(schemaID, d.Domain.GetUserID(), ids)
 	return ids
 }
