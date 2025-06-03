@@ -152,7 +152,8 @@ func (s *ViewService) TransformToView(record utils.Record, schema *models.Schema
 			_, ok := params.Values[k]
 			return !ok && k != "new" && !strings.Contains(k, "dest_table") && k != "id"
 		})
-		sqlFilter, view, dir := s.getFilterDetails(record)
+		sqlFilter, view, dir := s.getFilterDetails(record, schema)
+		fmt.Println(sqlFilter)
 		params.UpdateParamsWithFilters(view, dir)
 		params.EnrichCondition(dp.Values, func(k string) bool {
 			return k != utils.RootRowsParam && k != utils.SpecialIDParam && k != utils.RootTableParam
@@ -260,15 +261,12 @@ func (s *ViewService) combineDestinations(dest_id []string) string {
 	return strings.Join(dest_id, ",")
 }
 
-func (s *ViewService) getFilterDetails(record utils.Record) (string, string, string) {
+func (s *ViewService) getFilterDetails(record utils.Record, schema *models.SchemaModel) (string, string, string) {
 	filter := utils.GetString(record, ds.FilterDBField)
 	viewFilter := utils.GetString(record, ds.ViewFilterDBField)
-	if sch, err := schserv.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err == nil {
-		sqlFilter, view, _, dir, _ := filterserv.NewFilterService(s.Domain).GetFilterForQuery(
-			filter, viewFilter, sch, s.Domain.GetParams())
-		return sqlFilter, view, dir
-	}
-	return "", "", ""
+	sqlFilter, view, _, dir, _ := filterserv.NewFilterService(s.Domain).GetFilterForQuery(
+		filter, viewFilter, *schema, s.Domain.GetParams())
+	return sqlFilter, view, dir
 }
 func (s *ViewService) fetchData(params utils.Params, sqlFilter string, rec utils.Record) (utils.Results, utils.Record) {
 	datas := utils.Results{}
