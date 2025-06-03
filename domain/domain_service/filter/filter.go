@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"net/url"
 	"slices"
 	"sort"
@@ -255,6 +256,7 @@ func (s *FilterService) GetFilterForQuery(filterID string, viewfilterID string, 
 }
 
 func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.SchemaModel) string {
+	fmt.Println(filterID, schema.Name)
 	if filterID == "" {
 		return ""
 	}
