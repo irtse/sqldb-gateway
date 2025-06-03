@@ -269,7 +269,7 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.Sche
 	fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false)
 	if err == nil && len(fields) > 0 {
 		for _, field := range fields {
-			if f, err := sch.GetFieldByID(utils.GetInt(field, ds.SchemaFieldDBField)); err == nil {
+			if f, err := schema.GetFieldByID(utils.GetInt(field, ds.SchemaFieldDBField)); err == nil {
 				if utils.GetBool(field, "is_own") && len(s.RestrictionByEntityUser(schema, orFilter, true)) > 0 {
 					if field["separator"] == "or" {
 						orFilter = append(orFilter, s.RestrictionByEntityUser(schema, orFilter, true)...)
