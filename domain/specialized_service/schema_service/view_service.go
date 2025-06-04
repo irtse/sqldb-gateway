@@ -62,15 +62,19 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 	for _, record := range results {
 		go s.TransformToView(record, nil, params, channel, dest_id...)
 	}
-
+	var wg sync.WaitGroup
 	for range results {
-		if rec := <-channel; rec != nil {
-			if s.Domain.IsOwn(false, false, s.Domain.GetMethod()) && !slices.Contains(utils.ToList(rec["actions"]), "delete") {
-				rec["actions"] = append(utils.ToList(rec["actions"]), "delete")
+		wg.Add(1)
+		go func() {
+			if rec := <-channel; rec != nil {
+				if s.Domain.IsOwn(false, false, s.Domain.GetMethod()) && !slices.Contains(utils.ToList(rec["actions"]), "delete") {
+					rec["actions"] = append(utils.ToList(rec["actions"]), "delete")
+				}
+				res = append(res, rec)
 			}
-			res = append(res, rec)
-		}
+		}()
 	}
+	wg.Wait()
 	if len(res) <= 1 && len(schemas) > 0 && !s.Domain.GetEmpty() && !s.Domain.IsShallowed() {
 		subChan := make(chan utils.Record, len(schemas))
 		for _, schema := range schemas {
