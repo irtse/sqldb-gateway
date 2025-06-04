@@ -95,6 +95,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 	if err != nil {
 		return schemes, -1, keysOrdered, cols, additionalActions, true
 	}
+	l := sync.Mutex{}
 	var wg sync.WaitGroup
 	for _, scheme := range schema.Fields {
 		wg.Add(1)
@@ -104,6 +105,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 			if !d.Domain.IsSuperAdmin() && !d.Domain.VerifyAuth(tableName, scheme.Name, scheme.Level, utils.SELECT) {
 				return
 			}
+			l.Lock()
 			if cols, ok := d.Domain.GetParams().Get(utils.RootColumnsParam); ok && cols != "" && !strings.Contains(cols, scheme.Name) {
 				return
 			}
@@ -112,6 +114,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 				Actions:    []string{},
 			}
 			cols[scheme.Name] = scheme
+			l.Unlock()
 			b, _ := json.Marshal(scheme)
 			json.Unmarshal(b, &shallowField)
 
@@ -129,8 +132,10 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 				shallowField.ActionPath = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, schema.Name, scheme.Name)
 				shallowField.LinkPath = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, schema.Name, scheme.Name)
 			}
+			l.Lock()
 			shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName,
 				additionalActions, schema, noRecursive, results)
+			l.Unlock()
 			fmt.Println("PROCESS TIMER ProcessPermissions", scheme.Name, time.Since(start))
 			var m map[string]interface{}
 			b, _ = json.Marshal(shallowField)
@@ -140,7 +145,9 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 				m["autofill"] = d.getFieldFill(schema, scheme.Name)
 				m["translatable"] = scheme.Translatable
 				m["hidden"] = scheme.Hidden
+				l.Lock()
 				schemes[scheme.Name] = m
+				l.Unlock()
 			}
 			fmt.Println("PROCESS TIMER getFieldFill", scheme.Name, time.Since(start))
 			if !scheme.Hidden {

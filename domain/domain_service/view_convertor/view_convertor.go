@@ -143,7 +143,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 	}
 	fmt.Println("start instance view when schema", schema.Name, time.Since(start))
 	v.ProcessResultsConcurrently(results, tableName, cols, isWorkflow, &view, params)
-	fmt.Println("start ProcessResultsConcurrently when schema", schema.Name, time.Since(start))
+	fmt.Println("start transformFullView when schema", schema.Name, time.Since(start))
 	// if there is only one item in the view, we can set the view readonly to the item readonly
 	if len(view.Items) == 1 {
 		view.Readonly = view.Items[0].Readonly
