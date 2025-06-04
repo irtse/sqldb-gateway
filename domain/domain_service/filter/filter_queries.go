@@ -3,7 +3,6 @@ package filter
 import (
 	"fmt"
 	"sort"
-	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
@@ -65,11 +64,9 @@ func (s *FilterService) GetFilterFields(viewfilterID string, schemaID string) []
 	}
 	restriction := map[string]interface{}{}
 	if schemaID != "" {
-		if sch, err := schema.GetSchemaByID(utils.ToInt64(schemaID)); err == nil && sch.HasField(ds.SchemaDBField) {
-			restriction[ds.SchemaFieldDBField] = s.Domain.GetDb().BuildSelectQueryWithRestriction(
-				ds.DBSchemaField.Name,
-				map[string]interface{}{ds.SchemaDBField: schemaID}, false)
-		}
+		restriction[ds.SchemaFieldDBField] = s.Domain.GetDb().BuildSelectQueryWithRestriction(
+			ds.DBSchemaField.Name,
+			map[string]interface{}{ds.SchemaDBField: schemaID}, false)
 	}
 	restriction[ds.FilterDBField] = viewfilterID
 	if fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false); err == nil {
