@@ -18,6 +18,7 @@ import (
 	"sqldb-ws/infrastructure/connector"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type ViewConvertor struct {
@@ -161,16 +162,25 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 	if sch, err := scheme.GetSchema(tableName); err == nil {
 		max, _ = filter.NewFilterService(v.Domain).CountMaxDataAccess(sch.Name, []string{})
 	}
+	var wg sync.WaitGroup
 	for _, record := range results {
-		if _, ok := record["is_draft"]; ok && record.GetBool("is_draft") && !v.Domain.IsOwn(false, false, utils.SELECT) {
-			continue
-		}
-		if record.GetString(sm.NAMEKEY) == "" {
-			res = append(res, record)
-			continue
-		}
-		res = append(res, v.createShallowedViewItem(record, tableName, isWorkflow, max))
+		wg.Add(1)
+		go func() {
+			if _, ok := record["is_draft"]; ok && record.GetBool("is_draft") && !v.Domain.IsOwn(false, false, utils.SELECT) {
+				wg.Done()
+				return
+			}
+			if record.GetString(sm.NAMEKEY) == "" {
+				res = append(res, record)
+				wg.Done()
+				return
+			}
+			res = append(res, v.createShallowedViewItem(record, tableName, isWorkflow, max))
+			wg.Done()
+		}()
+
 	}
+	wg.Done()
 	return res
 }
 
@@ -277,8 +287,8 @@ func (s *ViewConvertor) getFieldFill(sch sm.SchemaModel, key string) interface{}
 					if schFrom.Name == ds.DBUser.Name && ff.Name == utils.SpecialIDParam {
 						value = s.Domain.GetUserID()
 					} else {
-						restr := filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)
-						if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schFrom.Name, utils.ToListAnonymized(restr), false); err == nil && len(rr) > 0 {
+						if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schFrom.Name,
+							utils.ToListAnonymized(filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)), false); err == nil && len(rr) > 0 {
 							value = s.fromITF(rr[0][ff.Name])
 						}
 					}
@@ -286,8 +296,9 @@ func (s *ViewConvertor) getFieldFill(sch sm.SchemaModel, key string) interface{}
 					if schFrom.Name == ds.DBUser.Name {
 						value = s.Domain.GetUserID()
 					} else {
-						restr := filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)
-						if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schFrom.Name, utils.ToListAnonymized(restr), false); err == nil && len(rr) > 0 {
+						if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schFrom.Name,
+							utils.ToListAnonymized(filter.NewFilterService(s.Domain).RestrictionByEntityUser(schFrom, []string{}, true)),
+							false); err == nil && len(rr) > 0 {
 							value = s.fromITF(rr[0][utils.SpecialIDParam])
 						}
 					}

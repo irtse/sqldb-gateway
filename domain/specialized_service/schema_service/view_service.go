@@ -16,6 +16,7 @@ import (
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
 	"strings"
+	"sync"
 )
 
 // DONE - ~ 200 LINES - NOT TESTED
@@ -75,41 +76,47 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 		for _, schema := range schemas {
 			go s.TransformToView(results[0], schema, params, subChan, dest_id...)
 		}
+		var wg sync.WaitGroup
 		for z, schema := range schemas {
-			if rec := <-subChan; rec != nil {
-				fmt.Println(z, schema)
-				for _, i := range utils.ToList(rec["items"]) {
-					res[0]["items"] = append(utils.ToList(res[0]["items"]), i)
-				}
-				res[0]["new"] = utils.GetInt(res[0], "new") + utils.GetInt(rec, "new")
-				res[0]["max"] = utils.GetInt(res[0], "max") + utils.GetInt(rec, "max")
-
-				if !slices.Contains(utils.ToListStr(utils.ToList(rec["order"])), "type") {
-					res[0]["order"] = append([]interface{}{"type"}, utils.ToList(rec["order"])...)
-				}
-				newSchema := map[string]interface{}{}
-				for k, v := range rec["schema"].(map[string]interface{}) {
-					if schema.HasField(k) {
-						newSchema[k] = v
+			wg.Add(1)
+			go func() {
+				if rec := <-subChan; rec != nil {
+					fmt.Println(z, schema.Name)
+					for _, i := range utils.ToList(rec["items"]) {
+						res[0]["items"] = append(utils.ToList(res[0]["items"]), i)
 					}
+					res[0]["new"] = utils.GetInt(res[0], "new") + utils.GetInt(rec, "new")
+					res[0]["max"] = utils.GetInt(res[0], "max") + utils.GetInt(rec, "max")
+
+					if !slices.Contains(utils.ToListStr(utils.ToList(rec["order"])), "type") {
+						res[0]["order"] = append([]interface{}{"type"}, utils.ToList(rec["order"])...)
+					}
+					newSchema := map[string]interface{}{}
+					for k, v := range rec["schema"].(map[string]interface{}) {
+						if schema.HasField(k) {
+							newSchema[k] = v
+						}
+					}
+					typ := models.ViewFieldModel{
+						Label:    "type",
+						Type:     "enum__" + schema.Label,
+						Index:    2,
+						Readonly: true,
+						Active:   true,
+					}
+					if utils.ToMap(res[0]["schema"])["type"] == nil {
+						newSchema["type"] = typ
+					} else {
+						typ = utils.ToMap(res[0]["schema"])["type"].(models.ViewFieldModel)
+						typ.Type += "_" + schema.Name
+						newSchema["type"] = typ
+					}
+					res[0]["schema"] = newSchema
+					wg.Done()
 				}
-				typ := models.ViewFieldModel{
-					Label:    "type",
-					Type:     "enum__" + schema.Label,
-					Index:    2,
-					Readonly: true,
-					Active:   true,
-				}
-				if utils.ToMap(res[0]["schema"])["type"] == nil {
-					newSchema["type"] = typ
-				} else {
-					typ = utils.ToMap(res[0]["schema"])["type"].(models.ViewFieldModel)
-					typ.Type += "_" + schema.Name
-					newSchema["type"] = typ
-				}
-				res[0]["schema"] = newSchema
-			}
+			}()
 		}
+		wg.Wait()
 	}
 	sort.SliceStable(res, func(i, j int) bool {
 		return utils.ToInt64(res[i]["index"]) <= utils.ToInt64(res[j]["index"])
