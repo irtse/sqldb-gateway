@@ -223,12 +223,16 @@ func ImportUserHierachy() {
 			} else {
 				if strings.Contains(strings.ToLower(header), "compétence") && data[i] != "" {
 					cocName = data[i]
+					if !slices.Contains([]string{"CIAC", "CIAA", "CIAS", "CSEC", "CSOM", "CSIS", "CMCP", "CMMP", "CMSA", "CEHT", "CEHF"}, cocName) {
+						cocName = "other"
+					}
 					if !slices.Contains(insideCoc, cocName) {
 						insideCoc = append(insideCoc, cocName)
 						res, err := d.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
 							"name": cocName,
 						}, func(s string) (string, bool) { return "", true })
 						if err == nil {
+
 							d.GetDb().CreateQuery(models.CoCFR.Name, map[string]interface{}{
 								"name":           cocName,
 								ds.EntityDBField: res,

@@ -12,6 +12,7 @@ import (
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
 	"strings"
+	"time"
 )
 
 func (v *ViewConvertor) GetShortcuts(schemaID string, actions []string) map[string]string {
@@ -88,12 +89,12 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 	schemes := make(map[string]interface{})
 	keysOrdered := []string{}
 	additionalActions := []string{}
-
 	schema, err := sch.GetSchema(tableName)
 	if err != nil {
 		return schemes, -1, keysOrdered, cols, additionalActions, true
 	}
 	for _, scheme := range schema.Fields {
+		start := time.Now()
 		if !d.Domain.IsSuperAdmin() && !d.Domain.VerifyAuth(tableName, scheme.Name, scheme.Level, utils.SELECT) {
 			continue
 		}
@@ -113,15 +114,18 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 		} else {
 			shallowField.Type = utils.TransformType(scheme.Type)
 		}
+		fmt.Println("PROCESS TIMER ", scheme.Name, time.Since(start))
 		if scheme.GetLink() > 0 {
 			d.ProcessLinkedSchema(&shallowField, scheme, tableName, schema)
 		}
+		fmt.Println("PROCESS TIMER ProcessLinkedSchema", scheme.Name, time.Since(start))
 		if strings.Contains(scheme.Type, "upload") {
 			shallowField.ActionPath = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, schema.Name, scheme.Name)
 			shallowField.LinkPath = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, schema.Name, scheme.Name)
 		}
 		shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName,
 			additionalActions, schema, noRecursive, results)
+		fmt.Println("PROCESS TIMER ProcessPermissions", scheme.Name, time.Since(start))
 		var m map[string]interface{}
 		b, _ = json.Marshal(shallowField)
 		err := json.Unmarshal(b, &m)
@@ -132,6 +136,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 			m["hidden"] = scheme.Hidden
 			schemes[scheme.Name] = m
 		}
+		fmt.Println("PROCESS TIMER getFieldFill", scheme.Name, time.Since(start))
 		if !scheme.Hidden {
 			keysOrdered = append(keysOrdered, scheme.Name)
 		} else {
@@ -155,6 +160,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 			}
 
 		}
+		fmt.Println("PROCESS TIMER ORDER", scheme.Name, time.Since(start))
 	}
 
 	sort.SliceStable(keysOrdered, func(i, j int) bool {
