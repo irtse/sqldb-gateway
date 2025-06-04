@@ -12,7 +12,7 @@ import (
 func Autoload() []sm.SchemaModel {
 	ds.PERMISSIONEXCEPTION = append(ds.PERMISSIONEXCEPTION, []string{
 		models.CoCFR.Name, models.ProjectFR.Name, models.Axis.Name,
-		models.PublicationStatusFR.Name, models.ArticleFR.Name,
+		models.PublicationStatusFR.Name,
 		models.OtherPublicationAuthorsFR.Name,
 		models.ArticleAuthorsFR.Name,
 		models.ConferenceAuthorsFR.Name,
@@ -24,8 +24,6 @@ func Autoload() []sm.SchemaModel {
 		models.PresentationAuthorsFR.Name,
 		models.ThesisAuthorsFR.Name,
 		models.PublicationAwardFR.Name,
-	}...)
-	ds.AllPERMISSIONEXCEPTION = append(ds.AllPERMISSIONEXCEPTION, []string{
 		models.ArticleFR.Name, models.OtherPublicationFR.Name,
 		models.DemoFR.Name, models.InternshipFR.Name, models.ThesisFR.Name, models.HDRFR.Name,
 		models.PosterFR.Name, models.PresentationFR.Name, models.ConferenceFR.Name,
@@ -42,6 +40,9 @@ func Autoload() []sm.SchemaModel {
 		models.PresentationAuthorsFR.Name,
 		models.ThesisAuthorsFR.Name,
 		models.PublicationAwardFR.Name,
+		models.ArticleFR.Name, models.OtherPublicationFR.Name,
+		models.DemoFR.Name, models.InternshipFR.Name, models.ThesisFR.Name, models.HDRFR.Name,
+		models.PosterFR.Name, models.PresentationFR.Name, models.ConferenceFR.Name,
 	}...)
 	return []sm.SchemaModel{models.CoCFR, models.ProjectFR, models.Axis,
 		models.OtherPublicationFR, models.DemoFR, models.InternshipFR, models.ThesisFR, models.HDRFR,

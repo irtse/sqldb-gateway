@@ -64,6 +64,9 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 
 	for range results {
 		if rec := <-channel; rec != nil {
+			if s.Domain.IsOwn(false, false, s.Domain.GetMethod()) && !slices.Contains(utils.ToList(rec["actions"]), "delete") {
+				rec["actions"] = append(utils.ToList(rec["actions"]), "delete")
+			}
 			res = append(res, rec)
 		}
 	}

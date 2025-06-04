@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"sqldb-ws/domain/domain_service/filter"
 	sch "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -193,7 +194,12 @@ func (d *ViewConvertor) ProcessPermissions(
 	noRecursive bool,
 	record utils.Results) (sm.ViewFieldModel, []string) {
 	for _, meth := range []utils.Method{utils.SELECT, utils.CREATE, utils.UPDATE, utils.DELETE} {
-		if d.Domain.VerifyAuth(tableName, "", "", meth) && (((meth == utils.SELECT || meth == utils.CREATE) && d.Domain.GetEmpty()) || !d.Domain.GetEmpty()) {
+		if utils.DELETE == meth && len(record) == 1 {
+			createdIds := filter.NewFilterService(d.Domain).GetCreatedAccessData(schema.ID)
+			if !IsReadonly(schema.Name, record[0], createdIds, d.Domain) {
+				additionalActions = append(additionalActions, meth.Method())
+			}
+		} else if d.Domain.VerifyAuth(tableName, "", "", meth) && (((meth == utils.SELECT || meth == utils.CREATE) && d.Domain.GetEmpty()) || !d.Domain.GetEmpty()) {
 			if !slices.Contains(additionalActions, meth.Method()) {
 				additionalActions = append(additionalActions, meth.Method())
 			}

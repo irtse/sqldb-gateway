@@ -154,35 +154,8 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 		if d.Method.IsMath() {
 			d.Method = utils.SELECT
 		}
-		if !d.SuperAdmin && !d.PermsService.PermsCheck(d.TableName, "", "", d.Method, d.UserID, d.Own) && !d.AutoLoad {
-			if d.Method == utils.DELETE {
-				foundDeps := map[string]string{}
-				for kp, pv := range d.GetParams().Values {
-					if strings.Contains(kp, "_id") {
-						foundDeps[kp] = pv
-					}
-				}
-				for kp, pv := range foundDeps {
-					createdIds := []string{}
-					kp = strings.ReplaceAll(kp, "_id", "")
-					sch, err := schserv.GetSchema(kp)
-					if err == nil {
-						createdIds = filter.NewFilterService(d).GetCreatedAccessData(sch.ID)
-					} else {
-						kp = strings.ReplaceAll(kp, "db", "")
-						sch, err := schserv.GetSchema(kp)
-						if err == nil {
-							createdIds = filter.NewFilterService(d).GetCreatedAccessData(sch.ID)
-						}
-					}
-					if view_convertor.IsReadonly(kp,
-						utils.Record{utils.SpecialIDParam: pv}, createdIds, d) {
-						return utils.Results{}, errors.New("not authorized to " + method.String() + " " + d.TableName + " data")
-					}
-				}
-			} else {
-				return utils.Results{}, errors.New("not authorized to " + method.String() + " " + d.TableName + " data")
-			}
+		if !d.SuperAdmin && !d.PermsService.PermsCheck(d.TableName, "", "", d.Method, d.UserID, d.Own) && !d.AutoLoad && method != utils.DELETE {
+			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + d.TableName + " data")
 		}
 		// load the highest entity avaiable Table level.
 		d.Service = infrastructure.NewTableService(d.Db, d.SuperAdmin, d.User, strings.ToLower(d.TableName))
@@ -220,6 +193,9 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 		record[utils.SpecialIDParam], _ = d.Params.Get(utils.SpecialIDParam)
 		record[utils.SpecialIDParam], _ = url.QueryUnescape(utils.ToString(record[utils.SpecialIDParam]))
 		record[utils.SpecialIDParam] = strings.Split(utils.ToString(record[utils.SpecialIDParam]), ",")[0]
+	}
+	if d.Method == utils.DELETE && !d.CanDelete(record) {
+		return utils.Results{}, errors.New("can't delete datas")
 	}
 	d.Service = infrastructure.NewTableRowService(d.Db, d.SuperAdmin, d.User, strings.ToLower(d.TableName), specializedService)
 	if d.Method == utils.IMPORT {
@@ -288,4 +264,47 @@ func (d *SpecializedDomain) ClearDeprecatedDatas(tableName string) {
 		p := utils.AllParams(tableName).RootRaw()
 		d.SuperCall(p, utils.Record{}, utils.DELETE, false, sqlFilter)
 	}
+}
+
+func (d *SpecializedDomain) CanDelete(record utils.Record) bool {
+	if d.SuperAdmin || d.PermsService.PermsCheck(d.TableName, "", "", d.Method, d.UserID, d.Own) || d.AutoLoad {
+		return true
+	}
+	foundDeps := map[string]string{}
+	for kp, pv := range d.GetParams().Values {
+		if strings.Contains(kp, "_id") {
+			foundDeps[kp] = pv
+		}
+	}
+	if len(foundDeps) == 0 {
+		for kp, pv := range foundDeps {
+			createdIds := []string{}
+			kp = strings.ReplaceAll(kp, "_id", "")
+			sch, err := schserv.GetSchema(kp)
+			if err == nil {
+				createdIds = filter.NewFilterService(d).GetCreatedAccessData(sch.ID)
+			} else {
+				kp = strings.ReplaceAll(kp, "db", "")
+				sch, err := schserv.GetSchema(kp)
+				if err == nil {
+					createdIds = filter.NewFilterService(d).GetCreatedAccessData(sch.ID)
+				}
+			}
+			if view_convertor.IsReadonly(kp,
+				utils.Record{utils.SpecialIDParam: pv}, createdIds, d) {
+				return false
+			}
+		}
+	} else {
+		createdIds := []string{}
+		sch, err := schserv.GetSchema(d.GetTable())
+		if err == nil {
+			createdIds = filter.NewFilterService(d).GetCreatedAccessData(sch.ID)
+		}
+		if view_convertor.IsReadonly(d.GetTable(),
+			utils.Record{utils.SpecialIDParam: record[utils.SpecialIDParam]}, createdIds, d) {
+			return false
+		}
+	}
+	return true
 }
