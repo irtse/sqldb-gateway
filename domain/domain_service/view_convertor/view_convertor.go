@@ -56,7 +56,7 @@ func (v *ViewConvertor) TransformToView(results utils.Results, tableName string,
 
 func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.SchemaModel, isWorkflow bool, params utils.Params) utils.Results {
 	start := time.Now()
-	schemes, id, order, cols, addAction, _ := v.GetViewFields(schema.Name, false, results)
+	schemes, id, order, _, addAction, _ := v.GetViewFields(schema.Name, false, results)
 	fmt.Println("start transformFullView when schema", schema.Name, time.Since(start))
 	commentBody := map[string]interface{}{}
 	if len(results) == 1 {
@@ -142,7 +142,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 		Max:         max,
 	}
 	fmt.Println("start instance view when schema", schema.Name, time.Since(start))
-	v.ProcessResultsConcurrently(results, schema, cols, isWorkflow, &view, params)
+	v.ProcessResultsConcurrently(results, schema, isWorkflow, &view, params)
 	fmt.Println("start transformFullView when schema", schema.Name, time.Since(start))
 	// if there is only one item in the view, we can set the view readonly to the item readonly
 	if len(view.Items) == 1 {
@@ -158,6 +158,21 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 	if view.Readonly { // if the view is readonly, we remove the actions
 		view.Actions = []string{"get"}
 	}
+	sort.SliceStable(view.Items, func(i, j int) bool { return view.Items[i].Sort < view.Items[j].Sort })
+	return utils.Results{view.ToRecord()}
+}
+
+func (v *ViewConvertor) TransformMultipleSchema(results utils.Results, schema sm.SchemaModel, isWorkflow bool, params utils.Params) utils.Results {
+	start := time.Now()
+	max, _ := filter.NewFilterService(v.Domain).CountMaxDataAccess(schema.Name, []string{})
+	view := sm.ViewModel{
+		Items: []sm.ViewItemModel{},
+		Max:   max,
+	}
+	fmt.Println("start instance view when schema", schema.Name, time.Since(start))
+	v.ProcessResultsConcurrently(results, schema, isWorkflow, &view, params)
+	fmt.Println("start transformFullView when schema", schema.Name, time.Since(start))
+	// if there is only one item in the view, we can set the view readonly to the item readonly
 	sort.SliceStable(view.Items, func(i, j int) bool { return view.Items[i].Sort < view.Items[j].Sort })
 	return utils.Results{view.ToRecord()}
 }
@@ -191,7 +206,7 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 }
 
 func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, schema sm.SchemaModel,
-	cols map[string]sm.FieldModel, isWorkflow bool, view *sm.ViewModel, params utils.Params) {
+	isWorkflow bool, view *sm.ViewModel, params utils.Params) {
 	const maxConcurrent = 5
 	runtime.GOMAXPROCS(maxConcurrent)
 	channel := make(chan sm.ViewItemModel, len(results))
@@ -210,7 +225,7 @@ func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, schema
 				utils.GetInt(record, ds.DestTableDBField))...,
 			)
 		}
-		go v.ConvertRecordToView(index, view, channel, record, schema, cols, v.Domain.GetEmpty(), isWorkflow, params, createdIds)
+		go v.ConvertRecordToView(index, view, channel, record, schema, v.Domain.GetEmpty(), isWorkflow, params, createdIds)
 	}
 	for range results {
 		rec := <-channel
@@ -435,7 +450,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 }
 
 func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, channel chan sm.ViewItemModel,
-	record utils.Record, schema sm.SchemaModel, cols map[string]sm.FieldModel, isEmpty bool, isWorkflow bool, params utils.Params,
+	record utils.Record, schema sm.SchemaModel, isEmpty bool, isWorkflow bool, params utils.Params,
 	createdIds []string) {
 
 	vals, shallowVals, manyPathVals := make(map[string]interface{}), make(map[string]interface{}), make(map[string]string)
@@ -447,7 +462,7 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 		commentPath = utils.BuildPath(ds.DBComment.Name, utils.ReservedParam, utils.RootDestTableIDParam+"="+record.GetString(utils.SpecialIDParam), ds.RootID(ds.DBSchema.Name)+"="+utils.ToString(schema.ID))
 		vals[utils.SpecialIDParam] = record.GetString(utils.SpecialIDParam)
 	}
-	for _, field := range cols {
+	for _, field := range schema.Fields {
 		if d, s, ok := d.HandleDBSchemaField(record, field, shallowVals); ok && d != "" {
 			datapath = d
 			shallowVals = s

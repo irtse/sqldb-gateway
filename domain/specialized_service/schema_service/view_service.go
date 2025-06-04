@@ -61,7 +61,7 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 
 	channel := make(chan utils.Record, len(results))
 	for _, record := range results {
-		go s.TransformToView(record, nil, params, channel, dest_id...)
+		go s.TransformToView(record, false, nil, params, channel, dest_id...)
 	}
 	var wg sync.WaitGroup
 	for range results {
@@ -80,9 +80,32 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 	if len(res) <= 1 && len(schemas) > 0 && !s.Domain.GetEmpty() && !s.Domain.IsShallowed() {
 		subChan := make(chan utils.Record, len(schemas))
 		for _, schema := range schemas {
-			go s.TransformToView(results[0], schema, params, subChan, dest_id...)
+			go s.TransformToView(results[0], true, schema, params, subChan, dest_id...)
 		}
 		var wg sync.WaitGroup
+		for _, schema := range schemas {
+			newSchema := map[string]interface{}{}
+			for k, v := range res[0]["schema"].(map[string]interface{}) {
+				if schema.HasField(k) {
+					newSchema[k] = v
+				}
+			}
+			typ := models.ViewFieldModel{
+				Label:    "type",
+				Type:     "enum__" + schema.Label,
+				Index:    2,
+				Readonly: true,
+				Active:   true,
+			}
+			if utils.ToMap(res[0]["schema"])["type"] == nil {
+				newSchema["type"] = typ
+			} else {
+				typ = utils.ToMap(res[0]["schema"])["type"].(models.ViewFieldModel)
+				typ.Type += "_" + schema.Name
+				newSchema["type"] = typ
+			}
+			res[0]["schema"] = newSchema
+		}
 		for z, schema := range schemas {
 			wg.Add(1)
 			go func() {
@@ -97,27 +120,6 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 					if !slices.Contains(utils.ToListStr(utils.ToList(rec["order"])), "type") {
 						res[0]["order"] = append([]interface{}{"type"}, utils.ToList(rec["order"])...)
 					}
-					newSchema := map[string]interface{}{}
-					for k, v := range rec["schema"].(map[string]interface{}) {
-						if schema.HasField(k) {
-							newSchema[k] = v
-						}
-					}
-					typ := models.ViewFieldModel{
-						Label:    "type",
-						Type:     "enum__" + schema.Label,
-						Index:    2,
-						Readonly: true,
-						Active:   true,
-					}
-					if utils.ToMap(res[0]["schema"])["type"] == nil {
-						newSchema["type"] = typ
-					} else {
-						typ = utils.ToMap(res[0]["schema"])["type"].(models.ViewFieldModel)
-						typ.Type += "_" + schema.Name
-						newSchema["type"] = typ
-					}
-					res[0]["schema"] = newSchema
 					wg.Done()
 				}
 			}()
@@ -130,7 +132,7 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 	return
 }
 
-func (s *ViewService) TransformToView(record utils.Record, schema *models.SchemaModel, domainParams utils.Params,
+func (s *ViewService) TransformToView(record utils.Record, multiple bool, schema *models.SchemaModel, domainParams utils.Params,
 	channel chan utils.Record, dest_id ...string) {
 	start := time.Now()
 
@@ -196,7 +198,7 @@ func (s *ViewService) TransformToView(record utils.Record, schema *models.Schema
 			datas, rec = s.fetchData(params, sqlFilter, rec)
 		}
 		fmt.Println("since start fetching params", schema.Name, time.Since(start))
-		record, rec = s.processData(rec, datas, *schema, record, view, params)
+		record, rec = s.processData(rec, multiple, datas, *schema, record, view, params)
 		fmt.Println("since start processingData", schema.Name, time.Since(start))
 		rec["link_path"] = "/" + utils.MAIN_PREFIX + "/" + fmt.Sprintf(ds.DBView.Name) + "?rows=" + utils.ToString(record[utils.SpecialIDParam])
 		if _, ok := record["group_by"]; ok { // express by each column we are foldered TODO : if not in view add it
@@ -293,16 +295,23 @@ func (s *ViewService) fetchData(params utils.Params, sqlFilter string, rec utils
 	return datas, rec
 }
 
-func (s *ViewService) processData(rec utils.Record, datas utils.Results, schema sm.SchemaModel,
+func (s *ViewService) processData(rec utils.Record, multiple bool, datas utils.Results, schema sm.SchemaModel,
 	record utils.Record, view string, params utils.Params) (utils.Record, utils.Record) {
 	if utils.Compare(record["is_empty"], true) {
 		datas = append(datas, utils.Record{})
 	}
 	if !s.Domain.IsShallowed() {
-		treated := view_convertor.NewViewConvertor(s.Domain).TransformToView(datas, schema.Name, false, params)
+		treated := utils.Results{}
+		if !multiple {
+			treated = view_convertor.NewViewConvertor(s.Domain).TransformToView(datas, schema.Name, false, params)
+		} else {
+			treated = view_convertor.NewViewConvertor(s.Domain).TransformMultipleSchema(datas, schema, false, params)
+		}
 
 		if len(treated) > 0 {
-			rec["schema"] = s.extractSchema(utils.ToMap(treated[0]["schema"]), record, schema, params, view)
+			if !multiple {
+				rec["schema"] = s.extractSchema(utils.ToMap(treated[0]["schema"]), record, schema, params, view)
+			}
 			for k, v := range treated[0] {
 				if v != nil {
 					switch k {
