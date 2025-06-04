@@ -737,6 +737,7 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 			if _, ok := manyVals[field.Name]; !ok {
 				manyVals[field.Name] = utils.Results{}
 			}
+			fmt.Println(tableName)
 			if res, err := d.Domain.GetDb().SelectQueryWithRestriction(lid.Name, map[string]interface{}{
 				utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(link, map[string]interface{}{
 					ds.RootID(tableName): record.GetString(utils.SpecialIDParam),
