@@ -155,7 +155,34 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 			d.Method = utils.SELECT
 		}
 		if !d.SuperAdmin && !d.PermsService.PermsCheck(d.TableName, "", "", d.Method, d.UserID, d.Own) && !d.AutoLoad {
-			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + d.TableName + " data")
+			if d.Method == utils.DELETE {
+				foundDeps := map[string]string{}
+				for kp, pv := range d.GetParams().Values {
+					if strings.Contains(kp, "_id") {
+						foundDeps[kp] = pv
+					}
+				}
+				for kp, pv := range foundDeps {
+					createdIds := []string{}
+					kp = strings.ReplaceAll(kp, "_id", "")
+					sch, err := schserv.GetSchema(kp)
+					if err == nil {
+						createdIds = filter.NewFilterService(d).GetCreatedAccessData(sch.ID)
+					} else {
+						kp = strings.ReplaceAll(kp, "db", "")
+						sch, err := schserv.GetSchema(kp)
+						if err == nil {
+							createdIds = filter.NewFilterService(d).GetCreatedAccessData(sch.ID)
+						}
+					}
+					if view_convertor.IsReadonly(kp,
+						utils.Record{utils.SpecialIDParam: pv}, createdIds, d) {
+						return utils.Results{}, errors.New("not authorized to " + method.String() + " " + d.TableName + " data")
+					}
+				}
+			} else {
+				return utils.Results{}, errors.New("not authorized to " + method.String() + " " + d.TableName + " data")
+			}
 		}
 		// load the highest entity avaiable Table level.
 		d.Service = infrastructure.NewTableService(d.Db, d.SuperAdmin, d.User, strings.ToLower(d.TableName))
@@ -193,16 +220,6 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 		record[utils.SpecialIDParam], _ = d.Params.Get(utils.SpecialIDParam)
 		record[utils.SpecialIDParam], _ = url.QueryUnescape(utils.ToString(record[utils.SpecialIDParam]))
 		record[utils.SpecialIDParam] = strings.Split(utils.ToString(record[utils.SpecialIDParam]), ",")[0]
-	}
-	if d.Method == utils.DELETE {
-		createdIds := []string{}
-		sch, err := schserv.GetSchema(d.GetTable())
-		if err == nil {
-			createdIds = filter.NewFilterService(d).GetCreatedAccessData(sch.ID)
-		}
-		if view_convertor.IsReadonly(d.GetTable(), record, createdIds, d) {
-			return utils.Results{}, errors.New("can't delete data")
-		}
 	}
 	d.Service = infrastructure.NewTableRowService(d.Db, d.SuperAdmin, d.User, strings.ToLower(d.TableName), specializedService)
 	if d.Method == utils.IMPORT {

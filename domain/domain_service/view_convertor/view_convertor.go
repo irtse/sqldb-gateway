@@ -703,7 +703,6 @@ func (d *ViewConvertor) HandleLinkField(record utils.Record, field sm.FieldModel
 func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel, tableName, link string,
 	manyVals map[string]utils.Results, manyPathVals map[string]string) (map[string]utils.Results, map[string]string) {
 	if !d.Domain.IsShallowed() {
-		fmt.Println(tableName, field.Name, field.GetLink())
 		l, _ := scheme.GetSchemaByID(field.GetLink())
 		for _, f := range l.Fields {
 			if field.Type == sm.ONETOMANY.String() && field.GetLink() > 0 {
@@ -715,12 +714,10 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 				}
 				continue
 			}
-			fmt.Println(tableName, f.Name)
 			if strings.Contains(f.Name, tableName) || f.Name == utils.SpecialIDParam || f.GetLink() <= 0 {
 				continue
 			}
 			lid, _ := scheme.GetSchemaByID(f.GetLink())
-			fmt.Println("ZOOM3", lid.Name, link, ds.RootID(tableName), record.GetString(utils.SpecialIDParam))
 			if _, ok := manyVals[field.Name]; !ok {
 				manyVals[field.Name] = utils.Results{}
 			}
@@ -738,7 +735,6 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 			}, false); err == nil {
 				for _, r := range res {
 					manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
-					fmt.Println(manyVals[field.Name])
 				}
 			}
 		}

@@ -2,7 +2,6 @@ package task_service
 
 import (
 	"errors"
-	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/task"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -225,7 +224,6 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 				if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
 					utils.SpecialIDParam: record[ds.DestTableDBField],
 				}, false); err == nil && len(res) > 0 {
-					fmt.Println(utils.GetString(res[0], "name"))
 					r[sm.NAMEKEY] = "<" + utils.GetString(res[0], "name") + "> " + utils.GetString(newTask, sm.NAMEKEY)
 				}
 			} else {
@@ -340,7 +338,6 @@ func (s *RequestService) constructNotificationTask(newTask utils.Record, request
 		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
 			utils.SpecialIDParam: request[ds.DestTableDBField],
 		}, false); err == nil && len(res) > 0 {
-			fmt.Println(utils.GetString(res[0], "name"))
 			task[sm.NAMEKEY] = "<" + utils.GetString(res[0], "name") + "> " + utils.GetString(task, sm.NAMEKEY)
 		}
 	}

@@ -49,6 +49,7 @@ func ImportProjectAxis() {
 		}
 		if len(record) == 3 && !slices.Contains(inside, utils.GetString(record, "name")) {
 			inside = append(inside, utils.GetString(record, "name"))
+			// TODO Axe : entity binded to user
 			if res, err := d.GetDb().SelectQueryWithRestriction(models.Axis.Name, map[string]interface{}{
 				"code": connector.Quote(utils.GetString(record, "code")),
 			}, false); err == nil && len(res) > 0 {
@@ -58,7 +59,7 @@ func ImportProjectAxis() {
 				}, false)
 				continue
 			}
-			// TODO Axe : entity binded to user
+
 			res, err := d.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
 				"name": record["name"],
 			}, func(s string) (string, bool) { return "", true })
@@ -198,7 +199,7 @@ func ImportUserHierachy() {
 	if filepath == "" {
 		filepath = "./user_test.csv"
 	}
-	cocName := ""
+
 	headers, datas := importFile(filepath)
 	inside := []string{}
 	insideCoc := []string{}
@@ -206,6 +207,7 @@ func ImportUserHierachy() {
 		"name": "CDP",
 	}, func(s string) (string, bool) { return "", true })
 	for _, data := range datas {
+		cocName := ""
 		record := map[string]interface{}{}
 		for i, header := range headers {
 			if realLabel, ok := mapped[header]; ok && realLabel != "" && data[i] != "" {
@@ -219,7 +221,7 @@ func ImportUserHierachy() {
 					record[realLabel] = data[i]
 				}
 			} else {
-				if strings.ToLower(header) == "compétence" && data[i] != "" {
+				if strings.Contains(strings.ToLower(header), "compétence") && data[i] != "" {
 					cocName = data[i]
 					if !slices.Contains(insideCoc, cocName) {
 						insideCoc = append(insideCoc, cocName)
@@ -235,24 +237,8 @@ func ImportUserHierachy() {
 					}
 				}
 			}
-
 		}
 		if len(record) > 0 {
-			if !slices.Contains(inside, utils.GetString(record, "name")) {
-				inside = append(inside, utils.GetString(record, "name"))
-				if utils.GetBool(record, "active") {
-					if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-						"name": connector.Quote(utils.GetString(record, "name")),
-					}, false); err == nil && len(res) > 0 {
-						record[utils.SpecialIDParam] = res[0][utils.SpecialIDParam]
-						d.GetDb().UpdateQuery(ds.DBUser.Name, record, map[string]interface{}{
-							utils.SpecialIDParam: res[0][utils.SpecialIDParam],
-						}, false)
-						return
-					}
-					d.GetDb().CreateQuery(ds.DBUser.Name, record, func(s string) (string, bool) { return "", true })
-				}
-			}
 			m := map[string]interface{}{
 				ds.UserDBField: d.GetDb().BuildSelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 					"name": connector.Quote(utils.ToString(record["name"])),
@@ -271,10 +257,24 @@ func ImportUserHierachy() {
 				if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBEntity.Name, map[string]interface{}{
 					"name": connector.Quote(cocName),
 				}, false); err == nil && len(res) > 0 {
-					d.GetDb().DeleteQueryWithRestriction(ds.DBEntityUser.Name, m, false)
-
 					m[ds.EntityDBField] = res[0][utils.SpecialIDParam]
+					d.GetDb().DeleteQueryWithRestriction(ds.DBEntityUser.Name, m, false)
 					d.GetDb().CreateQuery(ds.DBEntityUser.Name, m, func(s string) (string, bool) { return "", true })
+				}
+			}
+			if !slices.Contains(inside, utils.GetString(record, "name")) {
+				inside = append(inside, utils.GetString(record, "name"))
+				if utils.GetBool(record, "active") {
+					if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
+						"name": connector.Quote(utils.GetString(record, "name")),
+					}, false); err == nil && len(res) > 0 {
+						record[utils.SpecialIDParam] = res[0][utils.SpecialIDParam]
+						d.GetDb().UpdateQuery(ds.DBUser.Name, record, map[string]interface{}{
+							utils.SpecialIDParam: res[0][utils.SpecialIDParam],
+						}, false)
+					} else {
+						d.GetDb().CreateQuery(ds.DBUser.Name, record, func(s string) (string, bool) { return "", true })
+					}
 				}
 			}
 		}
@@ -299,10 +299,10 @@ func ImportUserHierachy() {
 			}
 		}
 		if userID != "" && hierarchyID != "" {
-			d.DeleteSuperCall(utils.AllParams(ds.DBHierarchy.Name), map[string]interface{}{
+			d.GetDb().DeleteQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
 				ds.UserDBField:             userID,
 				"parent_" + ds.UserDBField: hierarchyID,
-			})
+			}, false)
 			d.GetDb().CreateQuery(ds.DBHierarchy.Name, map[string]interface{}{
 				"parent_" + ds.UserDBField: hierarchyID,
 				ds.UserDBField:             userID,
