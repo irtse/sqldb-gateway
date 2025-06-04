@@ -17,7 +17,6 @@ import (
 	"sqldb-ws/infrastructure/connector"
 	"strings"
 	"sync"
-	"time"
 )
 
 // DONE - ~ 200 LINES - NOT TESTED
@@ -107,11 +106,10 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 			res[0]["schema"] = newSchema
 		}
 		res[0]["order"] = append([]interface{}{"type"}, utils.ToList(res[0]["order"])...)
-		for z, schema := range schemas {
+		for range schemas {
 			wg.Add(1)
 			go func() {
 				if rec := <-subChan; rec != nil {
-					fmt.Println(z, schema.Name)
 					for _, i := range utils.ToList(rec["items"]) {
 						res[0]["items"] = append(utils.ToList(res[0]["items"]), i)
 					}
@@ -131,8 +129,6 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 
 func (s *ViewService) TransformToView(record utils.Record, multiple bool, schema *models.SchemaModel, domainParams utils.Params,
 	channel chan utils.Record, dest_id ...string) {
-	start := time.Now()
-
 	s.Domain.SetOwn(record.GetBool("own_view"))
 	if schema == nil {
 		if s, err := schserv.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err == nil {
@@ -159,7 +155,6 @@ func (s *ViewService) TransformToView(record utils.Record, multiple bool, schema
 				dp.Set(utils.RootFilterLine, connector.DeleteFieldInInjection(line, "type"))
 			}
 		}
-		fmt.Println("since start verify filterLine", schema.Name, time.Since(start))
 		// retrive additionnal view to combine to the main... add a type can be filtered by a filter line
 		// add type onto order and schema plus verify if filter not implied.
 		// may regenerate to get limits... for file... for type and for dest_table_id if needed.
@@ -189,14 +184,11 @@ func (s *ViewService) TransformToView(record utils.Record, multiple bool, schema
 			params.Set(utils.RootGroupBy, f)
 			rec["group_by"] = f
 		}
-		fmt.Println("since start build params", schema.Name, time.Since(start))
 		datas := utils.Results{}
 		if shal, ok := s.Domain.GetParams().Get(utils.RootShallow); (!ok || shal != "enable") && !notFound {
 			datas, rec = s.fetchData(params, sqlFilter, rec)
 		}
-		fmt.Println("since start fetching params", schema.Name, time.Since(start))
 		record, rec = s.processData(rec, multiple, datas, *schema, record, view, params)
-		fmt.Println("since start processingData", schema.Name, time.Since(start))
 		rec["link_path"] = "/" + utils.MAIN_PREFIX + "/" + fmt.Sprintf(ds.DBView.Name) + "?rows=" + utils.ToString(record[utils.SpecialIDParam])
 		if _, ok := record["group_by"]; ok { // express by each column we are foldered TODO : if not in view add it
 			field, err := schema.GetFieldByID(record.GetInt("group_by"))
@@ -207,7 +199,6 @@ func (s *ViewService) TransformToView(record utils.Record, multiple bool, schema
 		if f, ok := domainParams.Get(utils.RootGroupBy); ok {
 			rec["group_by"] = f
 		}
-		fmt.Println("since start postprocess", schema.Name, time.Since(start))
 		channel <- rec
 	}
 }

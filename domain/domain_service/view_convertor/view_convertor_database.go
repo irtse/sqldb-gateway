@@ -13,7 +13,6 @@ import (
 	"sqldb-ws/infrastructure/connector"
 	"strings"
 	"sync"
-	"time"
 )
 
 func (v *ViewConvertor) GetShortcuts(schemaID string, actions []string) map[string]string {
@@ -96,7 +95,6 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 	}
 	l := sync.Mutex{}
 	var wg sync.WaitGroup
-	start := time.Now()
 	for _, scheme := range schema.Fields {
 		wg.Add(1)
 		go func() {
@@ -171,7 +169,6 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 		}()
 	}
 	wg.Wait()
-	fmt.Println("TIMER ", time.Since(start))
 	sort.SliceStable(keysOrdered, func(i, j int) bool {
 		return utils.ToInt64(utils.ToMap(schemes[keysOrdered[i]])["index"]) <= utils.ToInt64(utils.ToMap(schemes[keysOrdered[j]])["index"])
 	})
