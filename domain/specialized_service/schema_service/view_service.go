@@ -106,6 +106,7 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 			}
 			res[0]["schema"] = newSchema
 		}
+		res[0]["order"] = append([]interface{}{"type"}, utils.ToList(res[0]["order"])...)
 		for z, schema := range schemas {
 			wg.Add(1)
 			go func() {
@@ -116,9 +117,6 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 					}
 					res[0]["new"] = utils.GetInt(res[0], "new") + utils.GetInt(rec, "new")
 					res[0]["max"] = utils.GetInt(res[0], "max") + utils.GetInt(rec, "max")
-					if !slices.Contains(utils.ToListStr(utils.ToList(rec["order"])), "type") {
-						res[0]["order"] = append([]interface{}{"type"}, utils.ToList(res[0]["order"])...)
-					}
 					wg.Done()
 				}
 			}()
