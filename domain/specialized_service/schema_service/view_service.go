@@ -75,8 +75,9 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 		for _, schema := range schemas {
 			go s.TransformToView(results[0], schema, params, subChan, dest_id...)
 		}
-		for _, schema := range schemas {
+		for z, schema := range schemas {
 			if rec := <-subChan; rec != nil {
+				fmt.Println(z, schema)
 				for _, i := range utils.ToList(rec["items"]) {
 					res[0]["items"] = append(utils.ToList(res[0]["items"]), i)
 				}
