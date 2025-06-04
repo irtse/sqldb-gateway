@@ -71,6 +71,7 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 					rec["actions"] = append(utils.ToList(rec["actions"]), "delete")
 				}
 				res = append(res, rec)
+				wg.Done()
 			}
 		}()
 	}
