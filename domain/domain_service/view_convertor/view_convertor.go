@@ -180,7 +180,7 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 		}()
 
 	}
-	wg.Done()
+	wg.Wait()
 	return res
 }
 
