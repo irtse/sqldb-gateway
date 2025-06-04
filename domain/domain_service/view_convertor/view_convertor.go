@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type ViewConvertor struct {
@@ -54,7 +55,9 @@ func (v *ViewConvertor) TransformToView(results utils.Results, tableName string,
 }
 
 func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.SchemaModel, tableName string, isWorkflow bool, params utils.Params) utils.Results {
+	start := time.Now()
 	schemes, id, order, cols, addAction, _ := v.GetViewFields(tableName, false, results)
+	fmt.Println("start transformFullView when schema", schema.Name, time.Since(start))
 	commentBody := map[string]interface{}{}
 	if len(results) == 1 {
 		commentBody = map[string]interface{}{
@@ -116,6 +119,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 			o = append(o, or)
 		}
 	}
+	fmt.Println("start build order when schema", schema.Name, time.Since(start))
 	max, _ := filter.NewFilterService(v.Domain).CountMaxDataAccess(schema.Name, []string{})
 	view := sm.ViewModel{
 		ID:          id,
@@ -137,7 +141,9 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 		Consents:    v.getConsent(schema.ID, results),
 		Max:         max,
 	}
+	fmt.Println("start instance view when schema", schema.Name, time.Since(start))
 	v.ProcessResultsConcurrently(results, tableName, cols, isWorkflow, &view, params)
+	fmt.Println("start ProcessResultsConcurrently when schema", schema.Name, time.Since(start))
 	// if there is only one item in the view, we can set the view readonly to the item readonly
 	if len(view.Items) == 1 {
 		view.Readonly = view.Items[0].Readonly
