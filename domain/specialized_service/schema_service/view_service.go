@@ -79,7 +79,7 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 	if len(res) <= 1 && len(schemas) > 0 && !s.Domain.GetEmpty() && !s.Domain.IsShallowed() {
 		subChan := make(chan utils.Record, len(schemas))
 		for _, schema := range schemas {
-			go s.TransformToView(results[0], true, schema, params, subChan, dest_id...)
+			s.TransformToView(results[0], true, schema, params, subChan, dest_id...)
 		}
 		var wg sync.WaitGroup
 		for _, schema := range schemas {
@@ -272,6 +272,7 @@ func (s *ViewService) combineDestinations(dest_id []string) string {
 func (s *ViewService) getFilterDetails(record utils.Record, schema *models.SchemaModel) (string, string, string) {
 	filter := utils.GetString(record, ds.FilterDBField)
 	viewFilter := utils.GetString(record, ds.ViewFilterDBField)
+	fmt.Println(filter, viewFilter, schema.Name)
 	sqlFilter, view, _, dir, _ := filterserv.NewFilterService(s.Domain).GetFilterForQuery(
 		filter, viewFilter, *schema, s.Domain.GetParams())
 	return sqlFilter, view, dir

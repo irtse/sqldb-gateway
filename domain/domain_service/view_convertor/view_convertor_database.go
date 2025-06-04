@@ -94,81 +94,71 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 		return schemes, -1, keysOrdered, cols, additionalActions, true
 	}
 	l := sync.Mutex{}
-	var wg sync.WaitGroup
 	for _, scheme := range schema.Fields {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if !d.Domain.IsSuperAdmin() && !d.Domain.VerifyAuth(tableName, scheme.Name, scheme.Level, utils.SELECT) {
-				return
-			}
-			l.Lock()
-			if cols, ok := d.Domain.GetParams().Get(utils.RootColumnsParam); ok && cols != "" && !strings.Contains(cols, scheme.Name) {
-				return
-			}
-			shallowField := sm.ViewFieldModel{
-				ActionPath: "",
-				Actions:    []string{},
-			}
-			cols[scheme.Name] = scheme
-			l.Unlock()
-			b, _ := json.Marshal(scheme)
-			json.Unmarshal(b, &shallowField)
+		if !d.Domain.IsSuperAdmin() && !d.Domain.VerifyAuth(tableName, scheme.Name, scheme.Level, utils.SELECT) {
+			continue
+		}
+		l.Lock()
+		if cols, ok := d.Domain.GetParams().Get(utils.RootColumnsParam); ok && cols != "" && !strings.Contains(cols, scheme.Name) {
+			continue
+		}
+		shallowField := sm.ViewFieldModel{
+			ActionPath: "",
+			Actions:    []string{},
+		}
+		cols[scheme.Name] = scheme
+		l.Unlock()
+		b, _ := json.Marshal(scheme)
+		json.Unmarshal(b, &shallowField)
 
-			if scheme.Name == utils.RootDestTableIDParam {
-				shallowField.Type = "link"
-			} else {
-				shallowField.Type = utils.TransformType(scheme.Type)
-			}
-			if scheme.GetLink() > 0 {
-				d.ProcessLinkedSchema(&shallowField, scheme, tableName, schema)
-			}
-			if strings.Contains(scheme.Type, "upload") {
-				shallowField.ActionPath = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, schema.Name, scheme.Name)
-				shallowField.LinkPath = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, schema.Name, scheme.Name)
-			}
-			l.Lock()
-			shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName,
-				additionalActions, schema, noRecursive, results)
-			l.Unlock()
-			var m map[string]interface{}
-			b, _ = json.Marshal(shallowField)
-			err := json.Unmarshal(b, &m)
+		if scheme.Name == utils.RootDestTableIDParam {
+			shallowField.Type = "link"
+		} else {
+			shallowField.Type = utils.TransformType(scheme.Type)
+		}
+		if scheme.GetLink() > 0 {
+			d.ProcessLinkedSchema(&shallowField, scheme, tableName, schema)
+		}
+		if strings.Contains(scheme.Type, "upload") {
+			shallowField.ActionPath = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, schema.Name, scheme.Name)
+			shallowField.LinkPath = fmt.Sprintf("/%s/%s/import?rows=all&columns=%s", utils.MAIN_PREFIX, schema.Name, scheme.Name)
+		}
+		shallowField, additionalActions = d.ProcessPermissions(shallowField, scheme, tableName,
+			additionalActions, schema, noRecursive, results)
+		var m map[string]interface{}
+		b, _ = json.Marshal(shallowField)
+		err := json.Unmarshal(b, &m)
 
-			if err == nil {
-				m["autofill"] = d.getFieldFill(schema, scheme.Name)
-				m["translatable"] = scheme.Translatable
-				m["hidden"] = scheme.Hidden
-				l.Lock()
-				schemes[scheme.Name] = m
-				l.Unlock()
+		if err == nil {
+			m["autofill"] = d.getFieldFill(schema, scheme.Name)
+			m["translatable"] = scheme.Translatable
+			m["hidden"] = scheme.Hidden
+			schemes[scheme.Name] = m
+		}
+		if !scheme.Hidden {
+			keysOrdered = append(keysOrdered, scheme.Name)
+		} else {
+			ids := []string{}
+			for _, r := range results {
+				ids = append(ids, utils.GetString(r, utils.SpecialIDParam))
 			}
-			if !scheme.Hidden {
-				keysOrdered = append(keysOrdered, scheme.Name)
-			} else {
-				ids := []string{}
-				for _, r := range results {
-					ids = append(ids, utils.GetString(r, utils.SpecialIDParam))
+			if len(ids) > 0 && strings.Trim(strings.Join(ids, ""), " ") != "" {
+				// exception when a task is active with workflow schema with filter and its id
+				if res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+					ds.SchemaFieldDBField: scheme.ID,
+					ds.FilterDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+						utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+							ds.SchemaDBField:    schema.ID,
+							ds.DestTableDBField: ids,
+						}, false, ds.WorkflowSchemaDBField),
+					}, false, "view_"+ds.FilterDBField),
+				}, false); err == nil && len(res) > 0 {
+					keysOrdered = append(keysOrdered, scheme.Name)
 				}
-				if len(ids) > 0 && strings.Trim(strings.Join(ids, ""), " ") != "" {
-					// exception when a task is active with workflow schema with filter and its id
-					if res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
-						ds.SchemaFieldDBField: scheme.ID,
-						ds.FilterDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
-							utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-								ds.SchemaDBField:    schema.ID,
-								ds.DestTableDBField: ids,
-							}, false, ds.WorkflowSchemaDBField),
-						}, false, "view_"+ds.FilterDBField),
-					}, false); err == nil && len(res) > 0 {
-						keysOrdered = append(keysOrdered, scheme.Name)
-					}
-				}
-
 			}
-		}()
+
+		}
 	}
-	wg.Wait()
 	sort.SliceStable(keysOrdered, func(i, j int) bool {
 		return utils.ToInt64(utils.ToMap(schemes[keysOrdered[i]])["index"]) <= utils.ToInt64(utils.ToMap(schemes[keysOrdered[j]])["index"])
 	})
