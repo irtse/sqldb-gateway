@@ -224,7 +224,7 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 				if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
 					utils.SpecialIDParam: record[ds.DestTableDBField],
 				}, false); err == nil && len(res) > 0 {
-					r[sm.NAMEKEY] = "<" + utils.GetString(res[0], "name") + "> " + utils.GetString(newTask, sm.NAMEKEY)
+					r[sm.NAMEKEY] = utils.GetString(res[0], "name")
 				}
 			} else {
 				r["name"] = utils.GetString(newTask, "name")
@@ -333,13 +333,6 @@ func (s *RequestService) constructNotificationTask(newTask utils.Record, request
 		ds.DestTableDBField:      newTask[ds.DestTableDBField],
 		ds.RequestDBField:        newTask[ds.RequestDBField],
 		"send_mail_to":           newTask["send_mail_to"],
-	}
-	if schema, err := schserv.GetSchemaByID(request.GetInt(ds.SchemaDBField)); err == nil {
-		if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
-			utils.SpecialIDParam: request[ds.DestTableDBField],
-		}, false); err == nil && len(res) > 0 {
-			task[sm.NAMEKEY] = "<" + utils.GetString(res[0], "name") + "> " + utils.GetString(task, sm.NAMEKEY)
-		}
 	}
 	return task
 }

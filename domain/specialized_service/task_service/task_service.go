@@ -247,13 +247,6 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 					scheme[EntityDBField],
 					scheme["send_mail_to"],
 				)
-				if schema, err := schserv.GetSchemaByID(utils.GetInt(requests[0], ds.SchemaDBField)); err == nil {
-					if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
-						utils.SpecialIDParam: utils.GetInt(requests[0], ds.DestTableDBField),
-					}, false); err == nil && len(res) > 0 {
-						newTask[sm.NAMEKEY] = "<" + utils.GetString(res[0], "name") + "> " + utils.GetString(newTask, sm.NAMEKEY)
-					}
-				}
 				if utils.GetBool(scheme, "assign_to_creator") {
 					newTask[ds.UserDBField] = s.Domain.GetUserID()
 				}
@@ -267,7 +260,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 							if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
 								utils.SpecialIDParam: requests[0][ds.DestTableDBField],
 							}, false); err == nil && len(res) > 0 {
-								r[sm.NAMEKEY] = "<" + utils.GetString(res[0], "name") + "> " + utils.GetString(newTask, sm.NAMEKEY)
+								r[sm.NAMEKEY] = utils.GetString(res[0], "name")
 							}
 						} else {
 							r["name"] = utils.GetString(newTask, "name")

@@ -322,12 +322,15 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 }
 
 func (t *TriggerService) getFileAttached(toSchema sm.SchemaModel, record utils.Record) string {
+	attached := ""
 	for k, v := range record {
 		if f, err := toSchema.GetField(k); err == nil && strings.Contains(strings.ToLower(f.Type), "upload") {
-			return utils.ToString(v)
+			if len(attached) == 0 {
+				attached = utils.ToString(v)
+			}
 		}
 	}
-	return ""
+	return attached
 }
 
 func (t *TriggerService) getLinkLabel(toSchema sm.SchemaModel, record utils.Record) utils.Record {
