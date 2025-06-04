@@ -461,7 +461,7 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 		} else {
 			shallowVals = s
 		}
-		shallowVals, manyVals, manyPathVals = d.HandleLinkField(record, field, schema.Name, isEmpty, shallowVals, manyVals, manyPathVals)
+		shallowVals, manyVals, manyPathVals = d.HandleLinkField(record, field, schema, isEmpty, shallowVals, manyVals, manyPathVals)
 
 		if isEmpty {
 			vals[field.Name] = nil
@@ -701,7 +701,7 @@ func (d *ViewConvertor) HandleDBSchemaField(record utils.Record, field sm.FieldM
 	return datapath, shallowVals, true
 }
 
-func (d *ViewConvertor) HandleLinkField(record utils.Record, field sm.FieldModel, tableName string, shallow bool,
+func (d *ViewConvertor) HandleLinkField(record utils.Record, field sm.FieldModel, schema sm.SchemaModel, shallow bool,
 	shallowVals map[string]interface{}, manyVals map[string]utils.Results, manyPathVals map[string]string) (map[string]interface{}, map[string]utils.Results, map[string]string) {
 	if (record.GetString(field.Name) == "" && !strings.Contains(field.Type, "many")) || field.GetLink() <= 0 || shallow {
 		return shallowVals, manyVals, manyPathVals
@@ -709,20 +709,20 @@ func (d *ViewConvertor) HandleLinkField(record utils.Record, field sm.FieldModel
 	link := scheme.GetTablename(utils.ToString(field.Link))
 
 	if strings.Contains(field.Type, "many") {
-		manyVals, manyPathVals = d.HandleManyField(record, field, tableName, link, manyVals, manyPathVals)
+		manyVals, manyPathVals = d.HandleManyField(record, field, schema, link, manyVals, manyPathVals)
 		return shallowVals, manyVals, manyPathVals
 	}
 	shallowVals = d.HandleOneField(record, field, link, shallowVals)
 	return shallowVals, manyVals, manyPathVals
 }
 
-func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel, tableName, link string,
+func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel, schema sm.SchemaModel, link string,
 	manyVals map[string]utils.Results, manyPathVals map[string]string) (map[string]utils.Results, map[string]string) {
 	if !d.Domain.IsShallowed() {
 		l, _ := scheme.GetSchemaByID(field.GetLink())
 		for _, f := range l.Fields {
 			if field.Type == sm.ONETOMANY.String() && field.GetLink() > 0 {
-				if strings.Contains(f.Name, tableName) && strings.Contains(f.Name, "_id") {
+				if strings.Contains(f.Name, schema.Name) && strings.Contains(f.Name, "_id") {
 					manyPathVals[field.Name] = utils.BuildPath(
 						link, utils.ReservedParam,
 						f.Name+"="+record.GetString(utils.SpecialIDParam))
@@ -730,25 +730,25 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 				}
 				continue
 			}
-			if strings.Contains(f.Name, tableName) || f.Name == utils.SpecialIDParam || f.GetLink() <= 0 {
+			if strings.Contains(f.Name, schema.Name) || f.Name == utils.SpecialIDParam || f.GetLink() <= 0 {
 				continue
 			}
 			lid, _ := scheme.GetSchemaByID(f.GetLink())
 			if _, ok := manyVals[field.Name]; !ok {
 				manyVals[field.Name] = utils.Results{}
 			}
-			fmt.Println(tableName)
+			fmt.Println(schema.Name)
 			if res, err := d.Domain.GetDb().SelectQueryWithRestriction(lid.Name, map[string]interface{}{
 				utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(link, map[string]interface{}{
-					ds.RootID(tableName): record.GetString(utils.SpecialIDParam),
+					ds.RootID(schema.Name): record.GetString(utils.SpecialIDParam),
 				}, false, ds.RootID(lid.Name))}, false); err == nil {
 				for _, r := range res {
 					manyVals[field.Name] = append(manyVals[field.Name], r)
 				}
 			}
 			if res, err := d.Domain.GetDb().SelectQueryWithRestriction(link, map[string]interface{}{
-				ds.RootID(lid.Name):  nil,
-				ds.RootID(tableName): record.GetString(utils.SpecialIDParam),
+				ds.RootID(lid.Name):    nil,
+				ds.RootID(schema.Name): record.GetString(utils.SpecialIDParam),
 			}, false); err == nil {
 				for _, r := range res {
 					manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})

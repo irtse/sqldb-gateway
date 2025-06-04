@@ -67,7 +67,7 @@ func TestConvertRecordToView(t *testing.T) {
 	channel := make(chan sm.ViewItemModel, 1)
 
 	record := utils.Record{"id": "1", "name": "Test"}
-	vc.ConvertRecordToView(0, nil, channel, record, "test_table", nil, false, false, utils.NewParams(map[string]string{}), []string{})
+	vc.ConvertRecordToView(0, nil, channel, record, sm.SchemaModel{}, false, false, utils.NewParams(map[string]string{}), []string{})
 
 	result := <-channel
 	assert.NotEmpty(t, result.Values)
@@ -88,7 +88,7 @@ func TestHandleDBSchemaField_MissingSchema(t *testing.T) {
 	vc := view_convertor.NewViewConvertor(mockDomain)
 	shallowVals := make(map[string]interface{})
 
-	datapath, _, exists := vc.HandleDBSchemaField(utils.Record{"id": 1}, sm.FieldModel{Name: "schema_id"}, "test_table", shallowVals)
+	datapath, _, exists := vc.HandleDBSchemaField(utils.Record{"id": 1}, sm.FieldModel{Name: "schema_id"}, shallowVals)
 	assert.Empty(t, datapath)
 	assert.False(t, exists)
 }
@@ -102,7 +102,7 @@ func TestHandleLinkField_EmptyRecord(t *testing.T) {
 	manyVals := make(map[string]utils.Results)
 	manyPathVals := make(map[string]string)
 
-	vc.HandleLinkField(utils.Record{}, sm.FieldModel{Name: "link"}, "test_table", false, shallowVals, manyVals, manyPathVals)
+	vc.HandleLinkField(utils.Record{}, sm.FieldModel{Name: "link"}, sm.SchemaModel{Name: "table_test"}, false, shallowVals, manyVals, manyPathVals)
 
 	assert.Empty(t, shallowVals)
 }
@@ -136,7 +136,7 @@ func TestHandleManyField_ValidSchema(t *testing.T) {
 	manyPathVals := make(map[string]string)
 	record := utils.Record{"id": "1"}
 
-	vc.HandleManyField(record, sm.FieldModel{Name: "many_field"}, "test_table", "linked_table", manyVals, manyPathVals)
+	vc.HandleManyField(record, sm.FieldModel{Name: "many_field"}, sm.SchemaModel{Name: "table_test"}, "linked_table", manyVals, manyPathVals)
 	assert.NotNil(t, manyVals)
 }
 
