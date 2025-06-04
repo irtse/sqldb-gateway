@@ -224,14 +224,15 @@ func ImportUserHierachy() {
 				if strings.Contains(strings.ToLower(header), "compétence") && data[i] != "" {
 					cocName = data[i]
 					if !slices.Contains([]string{"CIAC", "CIAA", "CIAS", "CSEC", "CSOM", "CSIS", "CMCP", "CMMP", "CMSA", "CEHT", "CEHF"}, strings.ToUpper(cocName)) {
-						cocName = "other"
+						cocName = "other competence center"
 					}
 					if !slices.Contains(insideCoc, cocName) {
 						insideCoc = append(insideCoc, cocName)
-						fmt.Println(cocName)
+
 						res, err := d.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
 							"name": cocName,
 						}, func(s string) (string, bool) { return "", true })
+						fmt.Println(cocName, err)
 						if err == nil {
 							d.GetDb().CreateQuery(models.CoCFR.Name, map[string]interface{}{
 								"name":           cocName,
