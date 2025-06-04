@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"sort"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -22,6 +23,7 @@ func (d *FilterService) CountMaxDataAccess(tableName string, filter []string) (i
 		return 0, ""
 	}
 	restr, _, _, _ := d.Domain.GetSpecialized(tableName).GenerateQueryFilter(tableName, filter...)
+	fmt.Println(tableName, restr)
 	count := int64(0)
 	res, err := d.Domain.GetDb().ClearQueryFilter().SimpleMathQuery("COUNT", tableName, []interface{}{restr}, false)
 	if len(res) == 0 || err != nil || res[0]["result"] == nil {
