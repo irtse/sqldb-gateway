@@ -81,7 +81,6 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 		for _, schema := range schemas {
 			s.TransformToView(results[0], true, schema, params, subChan, dest_id...)
 		}
-		var wg sync.WaitGroup
 		for _, schema := range schemas {
 			newSchema := map[string]interface{}{}
 			for k, v := range res[0]["schema"].(map[string]interface{}) {
@@ -107,19 +106,14 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 		}
 		res[0]["order"] = append([]interface{}{"type"}, utils.ToList(res[0]["order"])...)
 		for range schemas {
-			wg.Add(1)
-			go func() {
-				if rec := <-subChan; rec != nil {
-					for _, i := range utils.ToList(rec["items"]) {
-						res[0]["items"] = append(utils.ToList(res[0]["items"]), i)
-					}
-					res[0]["new"] = utils.GetInt(res[0], "new") + utils.GetInt(rec, "new")
-					res[0]["max"] = utils.GetInt(res[0], "max") + utils.GetInt(rec, "max")
-					wg.Done()
+			if rec := <-subChan; rec != nil {
+				for _, i := range utils.ToList(rec["items"]) {
+					res[0]["items"] = append(utils.ToList(res[0]["items"]), i)
 				}
-			}()
+				res[0]["new"] = utils.GetInt(res[0], "new") + utils.GetInt(rec, "new")
+				res[0]["max"] = utils.GetInt(res[0], "max") + utils.GetInt(rec, "max")
+			}
 		}
-		wg.Wait()
 	}
 	sort.SliceStable(res, func(i, j int) bool {
 		return utils.ToInt64(res[i]["index"]) <= utils.ToInt64(res[j]["index"])
