@@ -617,13 +617,12 @@ var DBShare = models.SchemaModel{
 	},
 } // TODO PERMISSION
 
-var OWNPERMISSIONEXCEPTION = []string{DBNotification.Name, DBDelegation.Name,
-	DBDashboard.Name, DBDashboardElement.Name, DBDashboardMathField.Name, DBShare.Name}
+var OWNPERMISSIONEXCEPTION = []string{DBNotification.Name, DBDelegation.Name, DBDashboard.Name, DBDashboardElement.Name, DBDashboardMathField.Name}
 var AllPERMISSIONEXCEPTION = []string{DBNotification.Name, DBViewAttribution.Name, DBUser.Name, DBFilter.Name, DBFilterField.Name, DBComment.Name}
-var POSTPERMISSIONEXCEPTION = []string{DBEmailSended.Name, DBEmailSendedUser.Name, DBRequest.Name, DBConsentResponse.Name, DBDelegation.Name}
+var POSTPERMISSIONEXCEPTION = []string{DBEmailSended.Name, DBEmailSendedUser.Name, DBRequest.Name, DBConsentResponse.Name, DBDelegation.Name, DBShare.Name}
 var PUPERMISSIONEXCEPTION = []string{DBTask.Name, DBEmailResponse.Name}
 var PERMISSIONEXCEPTION = []string{
-	DBDashboard.Name, DBView.Name, DBTask.Name,
+	DBDashboard.Name, DBView.Name, DBTask.Name, DBShare.Name,
 	DBDelegation.Name, DBRequest.Name, DBWorkflow.Name,
 	DBEntity.Name, DBSchema.Name,
 	DBSchemaField.Name, DBComment.Name,
