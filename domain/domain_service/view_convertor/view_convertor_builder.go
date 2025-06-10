@@ -2,7 +2,6 @@ package view_convertor
 
 import (
 	"slices"
-	"sqldb-ws/domain/domain_service/filter"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
@@ -97,10 +96,13 @@ func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id str
 	}
 
 	workflow.Steps = make(map[string][]sm.WorkflowStepModel)
-	filter := filter.NewFilterService(d.Domain)
 	if hierarchical, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
-		ds.UserDBField:   d.Domain.GetUserID(),
-		ds.EntityDBField: filter.GetEntityFilterQuery(),
+		ds.UserDBField: d.Domain.GetUserID(),
+		ds.EntityDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
+			ds.DBEntityUser.Name,
+			map[string]interface{}{
+				ds.UserDBField: d.Domain.GetUserID(),
+			}, true, ds.EntityDBField),
 	}, false); err == nil && len(hierarchical) > 0 {
 		workflow.Steps["0"] = []sm.WorkflowStepModel{}
 		/*for _, hierarch := range hierarchical {
