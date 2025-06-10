@@ -6,7 +6,7 @@ COPY . .
  
 ENV CGO_ENABLED=1
 
-RUN rm ./files/*
+RUN rm -rf files
 
 RUN go build -buildmode=plugin -o plugins/cegid/plugin.so plugins/cegid/plugin.go
 RUN go build -buildmode=plugin -o plugins/autoload_cegid/plugin.so plugins/autoload_cegid/plugin.go
