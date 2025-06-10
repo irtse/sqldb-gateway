@@ -337,7 +337,7 @@ func (t *TriggerService) getLinkLabel(toSchema sm.SchemaModel, record utils.Reco
 	for _, field := range toSchema.Fields {
 		if linkScheme, err := sm.GetSchemaByID(field.GetLink()); err == nil {
 			// there is a link... soooo do something
-			if res, err := t.Domain.GetDb().SelectQueryWithRestriction(linkScheme.Name, map[string]interface{}{
+			if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(linkScheme.Name, map[string]interface{}{
 				utils.SpecialIDParam: record[field.Name],
 			}, false); err == nil && len(res) > 0 {
 				item := res[0]

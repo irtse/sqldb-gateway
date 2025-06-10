@@ -149,7 +149,7 @@ func (d *DashboardService) HandleDelete(record map[string]interface{}) {
 }
 
 func (d *DashboardService) getDashBoardElement(dashboardID string) ([]map[string]interface{}, error) {
-	return d.Domain.GetDb().SelectQueryWithRestriction(ds.DBDashboardElement.Name, map[string]interface{}{
+	return d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDashboardElement.Name, map[string]interface{}{
 		ds.DashboardDBField: dashboardID,
 	}, false)
 }
@@ -204,7 +204,7 @@ func (d *DashboardService) GetFilterRestrictionAndOrder(filt interface{}, elemen
 	var restriction, orderBy string
 	f := filter.NewFilterService(d.Domain)
 
-	res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{utils.SpecialIDParam: filt}, false)
+	res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{utils.SpecialIDParam: filt}, false)
 	if err != nil || len(res) == 0 {
 		return "", "", fmt.Errorf("failed to fetch filter: %v", err)
 	}

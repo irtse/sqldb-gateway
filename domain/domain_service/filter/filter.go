@@ -176,7 +176,7 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 			}
 			if s.Domain.GetUserID() != "" {
 				if scope, ok := s.Domain.GetParams().Get(utils.RootScope); ok && scope == "enable" {
-					restrictions[key] = s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
+					restrictions[key] = s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
 						"parent_" + ds.UserDBField: s.Domain.GetUserID(),
 					}, true, ds.UserDBField)
 				} else {
@@ -338,11 +338,11 @@ func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []
 	}
 	if state == "new" {
 		SQLrestriction = append(SQLrestriction, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
-			"!" + utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name,
+			"!" + utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name,
 				map[string]interface{}{
 					"write":  false,
 					"update": false,
-					ds.SchemaDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(
+					ds.SchemaDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
 						ds.DBSchema.Name, map[string]interface{}{
 							"name": connector.Quote(tableName),
 						}, false, "id"),
@@ -351,11 +351,11 @@ func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []
 		}, false))
 	} else {
 		SQLrestriction = append(SQLrestriction, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
-			utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name,
+			utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name,
 				map[string]interface{}{
 					"write":  false,
 					"update": false,
-					ds.SchemaDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(
+					ds.SchemaDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
 						ds.DBSchema.Name, map[string]interface{}{
 							"name": connector.Quote(tableName),
 						}, false, "id"),

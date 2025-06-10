@@ -21,7 +21,7 @@ func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interfac
 	isValid := false
 	emailTo := ""
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
-		utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(
+		utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
 			ds.DBEmailSended.Name, map[string]interface{}{
 				utils.SpecialIDParam: record[ds.EmailSendedDBField],
 			}, false, ds.EmailTemplateDBField,

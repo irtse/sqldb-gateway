@@ -90,7 +90,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 		ds.FilterDBField + "_1": v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 			utils.SpecialIDParam: v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 				ds.UserDBField: v.Domain.GetUserID(),
-				ds.EntityDBField: v.Domain.GetDb().BuildSelectQueryWithRestriction(
+				ds.EntityDBField: v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
 					ds.DBEntityUser.Name,
 					map[string]interface{}{
 						ds.UserDBField: v.Domain.GetUserID(),
@@ -347,7 +347,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 		_, ok := v.Domain.GetParams().Get(utils.RootShallow)
 		if ok {
 			otherOrder := []string{}
-			entity := v.Domain.GetDb().BuildSelectQueryWithRestriction(
+			entity := v.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
 				ds.DBEntityUser.Name,
 				map[string]interface{}{
 					ds.UserDBField: v.Domain.GetUserID(),
@@ -543,11 +543,11 @@ func (s *ViewConvertor) getFilterByWFSchema(view *sm.ViewModel, schema sm.Schema
 	if tasks != nil {
 		for _, task := range *tasks {
 			if fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
-				ds.FilterDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
-					ds.WorkflowDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+				ds.FilterDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+					ds.WorkflowDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 						utils.SpecialIDParam: task.TaskID,
 					}, false, ds.WorkflowDBField),
-					ds.WorkflowDBField + "_1": s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
+					ds.WorkflowDBField + "_1": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
 						ds.SchemaDBField: schema.ID,
 					}, false, utils.SpecialIDParam),
 				}, false, ds.FilterDBField),
@@ -686,7 +686,7 @@ func (d *ViewConvertor) HandleDBSchemaField(record utils.Record, field sm.FieldM
 	shallowVals[ds.SchemaDBField] = utils.Record{"id": utils.ToString(schema.ID), "name": utils.ToString(schema.Name), "label": utils.ToString(schema.Label)}
 	if destOk && dest != nil {
 		datapath = utils.BuildPath(schema.Name, utils.ToString(dest))
-		if t, err := d.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
+		if t, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
 			utils.SpecialIDParam: dest,
 		}, false); err == nil && len(t) > 0 {
 			shallowVals[ds.DestTableDBField] = utils.Record{
@@ -738,15 +738,15 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 				manyVals[field.Name] = utils.Results{}
 			}
 			fmt.Println(schema.Name)
-			if res, err := d.Domain.GetDb().SelectQueryWithRestriction(lid.Name, map[string]interface{}{
-				utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(link, map[string]interface{}{
+			if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(lid.Name, map[string]interface{}{
+				utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(link, map[string]interface{}{
 					ds.RootID(schema.Name): record.GetString(utils.SpecialIDParam),
 				}, false, ds.RootID(lid.Name))}, false); err == nil {
 				for _, r := range res {
 					manyVals[field.Name] = append(manyVals[field.Name], r)
 				}
 			}
-			if res, err := d.Domain.GetDb().SelectQueryWithRestriction(link, map[string]interface{}{
+			if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(link, map[string]interface{}{
 				ds.RootID(lid.Name):    nil,
 				ds.RootID(schema.Name): record.GetString(utils.SpecialIDParam),
 			}, false); err == nil {
@@ -873,8 +873,8 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 		}
 		if tableName == ds.DBTask.Name {
 			delete(m, ds.UserDBField)
-			m[utils.SpecialIDParam+"_1"] = d.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-				ds.EntityDBField: d.GetDb().BuildSelectQueryWithRestriction(
+			m[utils.SpecialIDParam+"_1"] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+				ds.EntityDBField: d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
 					ds.DBEntityUser.Name,
 					map[string]interface{}{
 						ds.UserDBField: d.GetUserID(),
@@ -882,11 +882,11 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 				ds.UserDBField: d.GetUserID(),
 			}, true, utils.SpecialIDParam)
 			m[utils.SpecialIDParam] = record[utils.SpecialIDParam]
-			m[ds.WorkflowSchemaDBField] = d.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+			m[ds.WorkflowSchemaDBField] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 				utils.SpecialIDParam: record[ds.WorkflowSchemaDBField],
 			}, false, utils.SpecialIDParam)
 
-			if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, m, false); err != nil || len(res) == 0 {
+			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, m, false); err != nil || len(res) == 0 {
 				return true
 			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
 				return false
@@ -894,7 +894,7 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 		} else {
 			m[ds.DestTableDBField] = record[utils.SpecialIDParam]
 			m[ds.SchemaDBField] = sch.ID
-			if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
+			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
 				return true
 			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
 				return false

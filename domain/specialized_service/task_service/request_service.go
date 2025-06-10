@@ -24,11 +24,11 @@ func (s *RequestService) TransformToGenericView(results utils.Results, tableName
 	res := view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 	if len(results) == 1 && s.Domain.GetMethod() == utils.CREATE {
 		// retrieve... tasks affected to you
-		if r, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+		if r, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 			ds.RequestDBField: results[0][utils.SpecialIDParam],
-			utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+			utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 				ds.UserDBField: s.Domain.GetUserID(),
-				ds.EntityDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
+				ds.EntityDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
 					ds.UserDBField: s.Domain.GetUserID(),
 				}, false, ds.EntityDBField),
 			}, true, utils.SpecialIDParam),
@@ -48,7 +48,7 @@ func (s *RequestService) GenerateQueryFilter(tableName string, innerestr ...stri
 	if !s.Domain.IsSuperCall() {
 		n = append(n, "("+connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
 			ds.UserDBField: s.Domain.GetUserID(),
-			ds.UserDBField + "_1": s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
+			ds.UserDBField + "_1": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
 				"parent_" + ds.UserDBField: s.Domain.GetUserID(),
 			}, true, ds.UserDBField),
 		}, true)+")")
@@ -59,7 +59,7 @@ func (s *RequestService) GenerateQueryFilter(tableName string, innerestr ...stri
 
 func GetHierarchical(domain utils.DomainITF) ([]map[string]interface{}, error) {
 	f := filter.NewFilterService(domain)
-	return domain.GetDb().SelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
+	return domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
 		ds.UserDBField:   domain.GetUserID(),
 		ds.EntityDBField: f.GetEntityFilterQuery(),
 	}, true)
@@ -221,7 +221,7 @@ func (s *RequestService) prepareAndCreateTask(newTask utils.Record, record map[s
 		r := utils.Record{"is_draft": true}
 		if schema.HasField("name") {
 			if schema, err := schserv.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err == nil {
-				if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
+				if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
 					utils.SpecialIDParam: record[ds.DestTableDBField],
 				}, false); err == nil && len(res) > 0 {
 					r[sm.NAMEKEY] = utils.GetString(res[0], "name")
@@ -380,7 +380,7 @@ func CreateHierarchicalTask(domain utils.DomainITF, requestID int64, record, hie
 			"all_tasks":    true,
 			ds.UserDBField: domain.GetUserID(),
 		}, false))
-		if res, err := domain.GetDb().SelectQueryWithRestriction(ds.DBDelegation.Name, sqlFilter, false); err == nil && len(res) > 0 {
+		if res, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDelegation.Name, sqlFilter, false); err == nil && len(res) > 0 {
 			tmpUser := utils.GetInt(newTask, ds.UserDBField)
 			for _, delegated := range res {
 				newTask["binded_dbtask"] = i

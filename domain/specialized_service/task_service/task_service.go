@@ -158,7 +158,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 				"closing_date":                res["closing_date"],
 			}, map[string]interface{}{
 				utils.SpecialIDParam: binded,
-				utils.SpecialIDParam + "_1": s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+				utils.SpecialIDParam + "_1": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 					"binded_dbtask":            binded,
 					"!" + utils.SpecialIDParam: res[utils.SpecialIDParam],
 				}, false, utils.SpecialIDParam),
@@ -257,7 +257,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 					r := utils.Record{"is_draft": true}
 					if schema.HasField("name") {
 						if schema, err := schserv.GetSchemaByID(utils.GetInt(requests[0], ds.SchemaDBField)); err == nil {
-							if res, err := s.Domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
+							if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
 								utils.SpecialIDParam: requests[0][ds.DestTableDBField],
 							}, false); err == nil && len(res) > 0 {
 								r[sm.NAMEKEY] = utils.GetString(res[0], "name")

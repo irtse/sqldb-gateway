@@ -20,7 +20,7 @@ func (v *ViewConvertor) GetShortcuts(schemaID string, actions []string) map[stri
 	m := map[string]interface{}{
 		"shortcut_on_schema": schemaID,
 	}
-	if results, err := v.Domain.GetDb().SelectQueryWithRestriction(ds.DBView.Name, m, false); err == nil {
+	if results, err := v.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBView.Name, m, false); err == nil {
 		for _, shortcut := range results {
 			if utils.GetBool(shortcut, "is_empty") {
 				scheme, err := sch.GetSchemaByID(utils.ToInt64(schemaID))
@@ -44,14 +44,14 @@ func (d *ViewConvertor) FetchRecord(tableName string, m map[string]interface{}) 
 
 func (d *ViewConvertor) NewDataAccess(schemaID int64, destIDs []string, meth utils.Method) {
 	d.Domain.GetDb().ClearQueryFilter()
-	if users, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
+	if users, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 		"name":  connector.Quote(d.Domain.GetUser()),
 		"email": connector.Quote(d.Domain.GetUser()),
 	}, true); err == nil && len(users) > 0 {
 		for _, destID := range destIDs {
 			id := utils.GetString(users[0], utils.SpecialIDParam)
 			if meth == utils.SELECT {
-				if res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
+				if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
 					"write":             false,
 					"update":            false,
 					ds.DestTableDBField: destID,
@@ -144,10 +144,10 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 			}
 			if len(ids) > 0 && strings.Trim(strings.Join(ids, ""), " ") != "" {
 				// exception when a task is active with workflow schema with filter and its id
-				if res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+				if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
 					ds.SchemaFieldDBField: scheme.ID,
-					ds.FilterDBField: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
-						utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+					ds.FilterDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+						utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 							ds.SchemaDBField:    schema.ID,
 							ds.DestTableDBField: ids,
 						}, false, ds.WorkflowSchemaDBField),
@@ -222,14 +222,14 @@ func (d *ViewConvertor) ProcessPermissions(
 
 func (d *ViewConvertor) CheckAndAddImportAction(additionalActions []string, schema sm.SchemaModel) []string {
 	d.Domain.GetDb().ClearQueryFilter()
-	res, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{ds.SchemaDBField: schema.GetID()}, false)
+	res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{ds.SchemaDBField: schema.GetID()}, false)
 	if err == nil && len(res) > 0 {
 		ids := []string{}
 		for _, rec := range res {
 			ids = append(ids, utils.ToString(rec[utils.SpecialIDParam]))
 		}
 		d.Domain.GetDb().ClearQueryFilter()
-		res, _ = d.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
+		res, _ = d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
 			utils.SpecialIDParam: ids,
 		}, false)
 		if len(res) == 0 {

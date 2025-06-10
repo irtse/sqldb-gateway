@@ -34,7 +34,7 @@ func (u *Uploader) ApplyUpload(file multipart.File, handler *multipart.FileHeade
 				if f, _ := sch.GetField(columnName); !strings.Contains(f.Type, "upload") {
 					return "", errors.New("must be a field of upload type")
 				}
-				if res, err := u.Domain.GetDb().SelectQueryWithRestriction(sch.Name,
+				if res, err := u.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name,
 					map[string]interface{}{
 						utils.SpecialIDParam: id,
 					}, false); err == nil && len(res) > 0 {

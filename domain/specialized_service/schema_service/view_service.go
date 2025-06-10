@@ -220,7 +220,7 @@ func (s *ViewService) getOrder(rec utils.Record, record utils.Record, values map
 func (s *ViewService) getFilter(rec utils.Record, record utils.Record, values map[string]interface{}, schema sm.SchemaModel) (utils.Record, utils.Record, map[string]interface{}) {
 	if record[ds.FilterDBField] != nil && s.Domain.GetEmpty() {
 		if fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
-			ds.FilterDBField + "_1": s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
+			ds.FilterDBField + "_1": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
 				"is_view":              false,
 				"dashboard_restricted": false,
 			}, false, utils.SpecialIDParam),

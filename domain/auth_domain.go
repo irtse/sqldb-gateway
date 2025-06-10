@@ -18,7 +18,7 @@ func SetToken(superAdmin bool, user string, token interface{}) (utils.Results, e
 func IsLogged(superAdmin bool, user string, token string) (utils.Results, error) {
 	domain := Domain(superAdmin, user, nil)
 
-	response, err := domain.GetDb().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
+	response, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 		"name":  connector.Quote(strings.ToLower(user)),
 		"email": connector.Quote(strings.ToLower(user)),
 	}, true)
@@ -26,10 +26,10 @@ func IsLogged(superAdmin bool, user string, token string) (utils.Results, error)
 		return nil, err
 	}
 	resp := response[0]
-	notifs, err := domain.GetDb().SelectQueryWithRestriction(ds.DBNotification.Name,
+	notifs, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBNotification.Name,
 		map[string]interface{}{
 			ds.UserDBField: resp[utils.SpecialIDParam],
-			ds.EntityDBField: domain.GetDb().BuildSelectQueryWithRestriction(
+			ds.EntityDBField: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
 				ds.DBEntityUser.Name,
 				map[string]interface{}{
 					ds.UserDBField: resp[utils.SpecialIDParam],

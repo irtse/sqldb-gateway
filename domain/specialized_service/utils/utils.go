@@ -38,12 +38,12 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 			if s.Domain.GetTable() == ds.DBRequest.Name || s.Domain.GetTable() == ds.DBTask.Name {
 				continue
 			}
-			if reqs, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+			if reqs, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 				ds.DestTableDBField: rec[utils.SpecialIDParam],
 				ds.SchemaDBField:    sch.ID,
 			}, false); err == nil && len(reqs) == 0 {
-				if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
-					ds.WorkflowDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
+				if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+					ds.WorkflowDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
 						ds.SchemaDBField: sch.ID,
 					}, false, utils.SpecialIDParam),
 				}, false); err == nil && len(res) > 0 {
@@ -83,7 +83,7 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 		}
 		if _, ok := record["is_draft"]; !ok || !utils.GetBool(record, "is_draft") {
 			if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBConsentResponse.Name, map[string]interface{}{
-				ds.ConsentDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
+				ds.ConsentDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
 					ds.SchemaDBField: sch.ID,
 					"optionnal":      false,
 				}, false, "id"),

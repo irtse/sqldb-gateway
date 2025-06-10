@@ -29,13 +29,13 @@ func (s *UserService) TransformToGenericView(results utils.Results, tableName st
 func (s *UserService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
 	if scope, ok := s.Domain.GetParams().Get(utils.RootScope); ok && scope == "enable" && s.Domain.GetUserID() != "" {
 		innerestr = append(innerestr, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
-			"!" + utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBShare.Name, map[string]interface{}{
+			"!" + utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBShare.Name, map[string]interface{}{
 				ds.UserDBField: s.Domain.GetUserID(),
 			}, true, "shared_"+ds.UserDBField),
 		}, true))
 	} else if scope, ok := s.Domain.GetParams().Get(utils.RootScope); ok && scope == "disable" && s.Domain.GetUserID() != "" {
 		innerestr = append(innerestr, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
-			utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBShare.Name, map[string]interface{}{
+			utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBShare.Name, map[string]interface{}{
 				ds.UserDBField: s.Domain.GetUserID(),
 			}, true, "shared_"+ds.UserDBField),
 		}, true))

@@ -98,7 +98,7 @@ func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id str
 
 	workflow.Steps = make(map[string][]sm.WorkflowStepModel)
 	filter := filter.NewFilterService(d.Domain)
-	if hierarchical, err := d.Domain.GetDb().SelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
+	if hierarchical, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
 		ds.UserDBField:   d.Domain.GetUserID(),
 		ds.EntityDBField: filter.GetEntityFilterQuery(),
 	}, false); err == nil && len(hierarchical) > 0 {

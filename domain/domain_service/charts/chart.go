@@ -21,7 +21,7 @@ func (l *Chart) GetAxisDatas(dashboardElement utils.Record, axis string) (map[st
 	datas := map[string]float64{}
 	if sch, err := schema.GetSchemaByID(utils.GetInt(dashboardElement, ds.SchemaDBField)); err == nil {
 		restr, sd, ed := l.GetFilterString(sch, utils.GetString(dashboardElement, ds.FilterDBField))
-		if m, err := l.Domain.GetDb().SelectQueryWithRestriction(ds.DBDashboardMathField.Name, map[string]interface{}{
+		if m, err := l.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDashboardMathField.Name, map[string]interface{}{
 			utils.SpecialIDParam: dashboardElement[ds.DashboardMathDBField],
 		}, false); err == nil && len(m) > 0 {
 			return l.getAxisDatas(axis, dashboardElement, m[0], sd, ed, restr, datas, labels, restr)
@@ -35,7 +35,7 @@ func (l *Chart) getAxisDatas(axis string, dashboardElement utils.Record, mathEle
 	algo, _ := mathElement["column_math_func"]
 	function, _ := mathElement["row_math_func"]
 	if i, ok := dashboardElement[axis]; ok {
-		if res, err := l.Domain.GetDb().SelectQueryWithRestriction(ds.DBDashboardLabel.Name, map[string]interface{}{
+		if res, err := l.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDashboardLabel.Name, map[string]interface{}{
 			utils.SpecialIDParam: i,
 		}, false); err == nil && len(res) > 0 {
 			labelRef := res[0]
@@ -63,9 +63,9 @@ func (l *Chart) getLabelsByColID(colID int64, sch sm.SchemaModel) []string {
 	if err != nil {
 		return labels
 	}
-	l.Domain.GetDb().SetSQLGroupBy(f.Name)
-	l.Domain.GetDb().SetSQLView(f.Name)
-	if res, err := l.Domain.GetDb().SelectQueryWithRestriction(sch.Name, map[string]interface{}{}, false); err == nil {
+	l.Domain.GetDb().ClearQueryFilter().SetSQLGroupBy(f.Name)
+	l.Domain.GetDb().ClearQueryFilter().SetSQLView(f.Name)
+	if res, err := l.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name, map[string]interface{}{}, false); err == nil {
 		for _, r := range res {
 			if _, ok := r[f.Name]; ok {
 				labels = append(labels, f.Name)
@@ -107,7 +107,7 @@ func (l *Chart) GetFilterString(schema sm.SchemaModel, filterID string) ([]strin
 	if ok {
 		alterRestr = append(alterRestr, connector.FormatSQLRestrictionWhereByMap("",
 			map[string]interface{}{
-				utils.SpecialIDParam: l.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
+				utils.SpecialIDParam: l.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
 					"access_date": "> " + connector.Quote(startDate),
 					"write":       true,
 				}, false),
@@ -117,7 +117,7 @@ func (l *Chart) GetFilterString(schema sm.SchemaModel, filterID string) ([]strin
 	if ok {
 		alterRestr = append(alterRestr, connector.FormatSQLRestrictionWhereByMap("",
 			map[string]interface{}{
-				utils.SpecialIDParam: l.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
+				utils.SpecialIDParam: l.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
 					"access_date": "< " + connector.Quote(endDate),
 					"write":       true,
 				}, false),

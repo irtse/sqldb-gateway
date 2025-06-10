@@ -32,7 +32,7 @@ func (s *WorkflowService) TransformToGenericView(results utils.Results, tableNam
 			newSchema := map[string]interface{}{}
 			if fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBSchemaField.Name,
 				map[string]interface{}{
-					utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBFilterField.Name,
+					utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBFilterField.Name,
 						map[string]interface{}{
 							ds.FilterDBField: i,
 						}, false, ds.SchemaFieldDBField),

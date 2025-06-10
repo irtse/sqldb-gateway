@@ -6,14 +6,14 @@ import (
 )
 
 func Load(domain utils.DomainITF) {
-	if res, err := domain.GetDb().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+	if res, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 		"is_close": true,
 	}, false); err == nil {
 		for _, r := range res {
 			SetEndedRequest(utils.GetString(r, ds.SchemaDBField), utils.GetString(r, ds.DestTableDBField), utils.GetString(r, utils.SpecialIDParam), domain.GetDb())
 		}
 	}
-	if res, err := domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{}, false); err == nil {
+	if res, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{}, false); err == nil {
 		for _, r := range res {
 			CreateTask(domain, r)
 		}
@@ -25,8 +25,8 @@ func CreateTask(domain utils.DomainITF, record utils.Record) {
 	if !utils.GetBool(record, "is_close") {
 		view := []string{}
 		if ok {
-			if res, err := domain.GetDb().SelectQueryWithRestriction(ds.SchemaFieldDBField, map[string]interface{}{
-				utils.SpecialIDParam: domain.GetDb().BuildSelectQueryWithRestriction(ds.FilterFieldDBField,
+			if res, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.SchemaFieldDBField, map[string]interface{}{
+				utils.SpecialIDParam: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.FilterFieldDBField,
 					map[string]interface{}{
 						ds.FilterFieldDBField: f,
 					}, false, ds.SchemaFieldDBField),
