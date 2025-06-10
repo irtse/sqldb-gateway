@@ -22,6 +22,7 @@ func (d *FilterService) CountMaxDataAccess(schema *sm.SchemaModel, filter []stri
 	if d.Domain.GetUserID() == "" {
 		return 0, ""
 	}
+	fmt.Println("there")
 	restr, _, _, _ := d.Domain.GetSpecialized(schema.Name).GenerateQueryFilter(schema.Name, filter...)
 	fmt.Println(schema.Name, restr, d.Domain.GetSpecialized(schema.Name))
 	count := int64(0)

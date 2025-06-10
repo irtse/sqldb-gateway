@@ -18,7 +18,6 @@ import (
 	"sqldb-ws/infrastructure/connector"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 type ViewConvertor struct {
@@ -174,25 +173,16 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 	if sch, err := scheme.GetSchema(tableName); err == nil {
 		max, _ = filter.NewFilterService(v.Domain).CountMaxDataAccess(&sch, []string{})
 	}
-	var wg sync.WaitGroup
 	for _, record := range results {
-		wg.Add(1)
-		go func() {
-			if _, ok := record["is_draft"]; ok && record.GetBool("is_draft") && !v.Domain.IsOwn(false, false, utils.SELECT) {
-				wg.Done()
-				return
-			}
-			if record.GetString(sm.NAMEKEY) == "" {
-				res = append(res, record)
-				wg.Done()
-				return
-			}
-			res = append(res, v.createShallowedViewItem(record, tableName, isWorkflow, max))
-			wg.Done()
-		}()
-
+		if _, ok := record["is_draft"]; ok && record.GetBool("is_draft") && !v.Domain.IsOwn(false, false, utils.SELECT) {
+			continue
+		}
+		if record.GetString(sm.NAMEKEY) == "" {
+			res = append(res, record)
+			continue
+		}
+		res = append(res, v.createShallowedViewItem(record, tableName, isWorkflow, max))
 	}
-	wg.Wait()
 	return res
 }
 
