@@ -34,9 +34,6 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		name = name + " as main "
 		q = db.BuildSelectQueryWithRestriction(name, restrictions, isOr)
 	}
-	if strings.Contains(name, "poster") || strings.Contains(name, "conference") || strings.Contains(name, "article") {
-		fmt.Println(name, q)
-	}
 	res, err := db.QueryAssociativeArray(q)
 	return res, err
 }

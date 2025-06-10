@@ -12,7 +12,7 @@ services:
     ports: 
       - 8081:8080
     volumes:
-      - ${SOURCE:-./files}:/mnt/files
+      - ./files:/mnt/files
       - ./html:/opt/html
     labels:
         - "traefik.enable=true"
