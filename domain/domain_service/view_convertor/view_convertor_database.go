@@ -130,7 +130,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 		err := json.Unmarshal(b, &m)
 
 		if err == nil {
-			m["autofill"] = d.getFieldFill(schema, scheme.Name)
+			m["autofill"] = d.getFieldFill(&schema, scheme.Name)
 			m["translatable"] = scheme.Translatable
 			m["hidden"] = scheme.Hidden
 			schemes[scheme.Name] = m

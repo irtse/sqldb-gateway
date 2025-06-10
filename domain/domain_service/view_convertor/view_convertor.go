@@ -216,7 +216,7 @@ func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, schema
 				utils.GetInt(record, ds.DestTableDBField))...,
 			)
 		}
-		go v.ConvertRecordToView(index, view, channel, record, schema, v.Domain.GetEmpty(), isWorkflow, params, createdIds)
+		go v.ConvertRecordToView(index, view, channel, record, &schema, v.Domain.GetEmpty(), isWorkflow, params, createdIds)
 	}
 	for range results {
 		rec := <-channel
@@ -258,7 +258,7 @@ func (s *ViewConvertor) getSharing(schemaID string, rec sm.ViewItemModel, userID
 	return rec
 }
 
-func (s *ViewConvertor) getFieldFill(sch sm.SchemaModel, key string) interface{} {
+func (s *ViewConvertor) getFieldFill(sch *sm.SchemaModel, key string) interface{} {
 	if !sch.HasField(key) {
 		return nil
 	}
@@ -317,7 +317,7 @@ func (s *ViewConvertor) getFieldFill(sch sm.SchemaModel, key string) interface{}
 	return value
 }
 
-func (s *ViewConvertor) getFieldsFill(sch sm.SchemaModel, values map[string]interface{}) map[string]interface{} {
+func (s *ViewConvertor) getFieldsFill(sch *sm.SchemaModel, values map[string]interface{}) map[string]interface{} {
 	if !s.Domain.GetEmpty() {
 		return values
 	}
@@ -441,7 +441,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 }
 
 func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, channel chan sm.ViewItemModel,
-	record utils.Record, schema sm.SchemaModel, isEmpty bool, isWorkflow bool, params utils.Params,
+	record utils.Record, schema *sm.SchemaModel, isEmpty bool, isWorkflow bool, params utils.Params,
 	createdIds []string) {
 
 	vals, shallowVals, manyPathVals := make(map[string]interface{}), make(map[string]interface{}), make(map[string]string)
@@ -538,7 +538,7 @@ func (s *ViewConvertor) getOrder(view *sm.ViewModel, record utils.Record, values
 	}
 	return values
 }
-func (s *ViewConvertor) getFilterByWFSchema(view *sm.ViewModel, schema sm.SchemaModel, record utils.Record) {
+func (s *ViewConvertor) getFilterByWFSchema(view *sm.ViewModel, schema *sm.SchemaModel, record utils.Record) {
 	tasks := task.GetTasks(schema.ID, utils.GetString(record, utils.SpecialIDParam))
 	if tasks != nil {
 		for _, task := range *tasks {
@@ -614,7 +614,7 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 	return []map[string]interface{}{}
 }
 
-func (s *ViewConvertor) getSynthesis(record utils.Record, schema sm.SchemaModel) string {
+func (s *ViewConvertor) getSynthesis(record utils.Record, schema *sm.SchemaModel) string {
 	taskIDs := ""
 	if schema.Name == ds.DBTask.Name {
 		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
@@ -701,7 +701,7 @@ func (d *ViewConvertor) HandleDBSchemaField(record utils.Record, field sm.FieldM
 	return datapath, shallowVals, true
 }
 
-func (d *ViewConvertor) HandleLinkField(record utils.Record, field sm.FieldModel, schema sm.SchemaModel, shallow bool,
+func (d *ViewConvertor) HandleLinkField(record utils.Record, field sm.FieldModel, schema *sm.SchemaModel, shallow bool,
 	shallowVals map[string]interface{}, manyVals map[string]utils.Results, manyPathVals map[string]string) (map[string]interface{}, map[string]utils.Results, map[string]string) {
 	if (record.GetString(field.Name) == "" && !strings.Contains(field.Type, "many")) || field.GetLink() <= 0 || shallow {
 		return shallowVals, manyVals, manyPathVals
@@ -716,7 +716,7 @@ func (d *ViewConvertor) HandleLinkField(record utils.Record, field sm.FieldModel
 	return shallowVals, manyVals, manyPathVals
 }
 
-func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel, schema sm.SchemaModel, link string,
+func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel, schema *sm.SchemaModel, link string,
 	manyVals map[string]utils.Results, manyPathVals map[string]string) (map[string]utils.Results, map[string]string) {
 	if !d.Domain.IsShallowed() {
 		l, _ := scheme.GetSchemaByID(field.GetLink())
