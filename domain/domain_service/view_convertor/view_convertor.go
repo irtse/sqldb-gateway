@@ -761,7 +761,7 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 
 func (d *ViewConvertor) HandleOneField(record utils.Record, field sm.FieldModel, link string, shallowVals map[string]interface{}) map[string]interface{} {
 	v := record.GetString(field.Name)
-	if r, err := d.Domain.GetDb().SelectQueryWithRestriction(link, map[string]interface{}{
+	if r, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(link, map[string]interface{}{
 		utils.SpecialIDParam: v,
 	}, false); err == nil && len(r) > 0 {
 		ref := fmt.Sprintf("@%v:%v", field.Link, r[0][utils.SpecialIDParam])

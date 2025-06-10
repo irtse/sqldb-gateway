@@ -41,7 +41,7 @@ func TransformType(enum string) string {
 }
 
 func ToMap(who interface{}) map[string]interface{} {
-	if reflect.TypeOf(who).Kind() == reflect.Map {
+	if who != nil && reflect.TypeOf(who).Kind() == reflect.Map {
 		return who.(map[string]interface{})
 	}
 	return map[string]interface{}{}
@@ -49,7 +49,7 @@ func ToMap(who interface{}) map[string]interface{} {
 
 func ToListAnonymized(who []string) []interface{} {
 	i := []interface{}{}
-	if reflect.TypeOf(who).Kind() == reflect.Slice {
+	if who != nil && reflect.TypeOf(who).Kind() == reflect.Slice {
 		for _, w := range who {
 			i = append(i, w)
 		}

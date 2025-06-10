@@ -64,9 +64,9 @@ func (s *FilterService) GetFilterFields(viewfilterID string, schemaID string) []
 	}
 	restriction := map[string]interface{}{}
 	if schemaID != "" {
-		restriction[ds.SchemaFieldDBField] = s.Domain.GetDb().BuildSelectQueryWithRestriction(
+		restriction[ds.SchemaFieldDBField] = s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
 			ds.DBSchemaField.Name,
-			map[string]interface{}{ds.SchemaDBField: schemaID}, false)
+			map[string]interface{}{ds.SchemaDBField: schemaID}, false, utils.SpecialIDParam)
 	}
 	restriction[ds.FilterDBField] = viewfilterID
 	if fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false); err == nil {
