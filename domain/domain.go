@@ -67,7 +67,7 @@ func (d *SpecializedDomain) VerifyAuth(tableName string, colName string, level s
 
 func (d *SpecializedDomain) GetSpecialized(override string) infrastructure.InfraSpecializedServiceItf {
 	if override != "" {
-		spe := domain.SpecializedService(d.TableName)
+		spe := domain.SpecializedService(override)
 		spe.SetDomain(d)
 		return spe
 	}
