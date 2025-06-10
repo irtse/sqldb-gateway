@@ -23,7 +23,7 @@ func (d *FilterService) CountMaxDataAccess(schema *sm.SchemaModel, filter []stri
 		return 0, ""
 	}
 	restr, _, _, _ := d.Domain.GetSpecialized(schema.Name).GenerateQueryFilter(schema.Name, filter...)
-	fmt.Println(schema.Name, restr)
+	fmt.Println(schema.Name, restr, d.Domain.GetSpecialized(schema.Name))
 	count := int64(0)
 	res, err := d.Domain.GetDb().ClearQueryFilter().SimpleMathQuery("COUNT", schema.Name, []interface{}{restr}, false)
 	if len(res) == 0 || err != nil || res[0]["result"] == nil {
