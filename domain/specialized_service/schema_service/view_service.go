@@ -183,7 +183,7 @@ func (s *ViewService) TransformToView(record utils.Record, multiple bool, schema
 		if shal, ok := s.Domain.GetParams().Get(utils.RootShallow); (!ok || shal != "enable") && !notFound {
 			datas, rec = s.fetchData(params, sqlFilter, rec)
 		}
-		record, rec = s.processData(rec, multiple, datas, *schema, record, view, params)
+		record, rec = s.processData(rec, multiple, datas, schema, record, view, params)
 		rec["link_path"] = "/" + utils.MAIN_PREFIX + "/" + fmt.Sprintf(ds.DBView.Name) + "?rows=" + utils.ToString(record[utils.SpecialIDParam])
 		if _, ok := record["group_by"]; ok { // express by each column we are foldered TODO : if not in view add it
 			field, err := schema.GetFieldByID(record.GetInt("group_by"))
@@ -217,7 +217,7 @@ func (s *ViewService) getOrder(rec utils.Record, record utils.Record, values map
 }
 
 // this filter a view only with its property
-func (s *ViewService) getFilter(rec utils.Record, record utils.Record, values map[string]interface{}, schema sm.SchemaModel) (utils.Record, utils.Record, map[string]interface{}) {
+func (s *ViewService) getFilter(rec utils.Record, record utils.Record, values map[string]interface{}, schema *sm.SchemaModel) (utils.Record, utils.Record, map[string]interface{}) {
 	if record[ds.FilterDBField] != nil && s.Domain.GetEmpty() {
 		if fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
 			ds.FilterDBField + "_1": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
@@ -279,7 +279,7 @@ func (s *ViewService) fetchData(params utils.Params, sqlFilter string, rec utils
 	return datas, rec
 }
 
-func (s *ViewService) processData(rec utils.Record, multiple bool, datas utils.Results, schema sm.SchemaModel,
+func (s *ViewService) processData(rec utils.Record, multiple bool, datas utils.Results, schema *sm.SchemaModel,
 	record utils.Record, view string, params utils.Params) (utils.Record, utils.Record) {
 	if utils.Compare(record["is_empty"], true) {
 		datas = append(datas, utils.Record{})
@@ -314,7 +314,7 @@ func (s *ViewService) processData(rec utils.Record, multiple bool, datas utils.R
 	return record, rec
 }
 
-func (s *ViewService) extractSchema(value map[string]interface{}, record utils.Record, schema sm.SchemaModel, params utils.Params, view string) map[string]interface{} {
+func (s *ViewService) extractSchema(value map[string]interface{}, record utils.Record, schema *sm.SchemaModel, params utils.Params, view string) map[string]interface{} {
 	newV := map[string]interface{}{}
 	for fieldName, field := range value {
 		if fieldName != ds.WorkflowDBField && schema.Name == ds.DBRequest.Name && utils.Compare(record["is_empty"], true) {
@@ -328,7 +328,7 @@ func (s *ViewService) extractSchema(value map[string]interface{}, record utils.R
 }
 
 func (s *ViewService) extractItems(value []interface{}, key string, rec utils.Record, record utils.Record,
-	schema sm.SchemaModel, view string, params utils.Params, main bool) (utils.Record, string) {
+	schema *sm.SchemaModel, view string, params utils.Params, main bool) (utils.Record, string) {
 	for _, item := range value {
 		values := utils.ToMap(item)["values"]
 		utils.ToMap(item)["schema_id"] = schema.ID

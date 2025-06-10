@@ -23,7 +23,7 @@ func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]inte
 	}
 	sch, err := sch.GetSchema(tablename)
 	if err == nil {
-		triggers.NewTrigger(s.Domain).Trigger(sch, record, utils.CREATE)
+		triggers.NewTrigger(s.Domain).Trigger(&sch, record, utils.CREATE)
 	}
 }
 
@@ -34,7 +34,7 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 	sch, err := sch.GetSchema(s.Domain.GetTable())
 	if err == nil {
 		for _, rec := range res {
-			triggers.NewTrigger(s.Domain).Trigger(sch, record, utils.UPDATE)
+			triggers.NewTrigger(s.Domain).Trigger(&sch, record, utils.UPDATE)
 			if s.Domain.GetTable() == ds.DBRequest.Name || s.Domain.GetTable() == ds.DBTask.Name {
 				continue
 			}

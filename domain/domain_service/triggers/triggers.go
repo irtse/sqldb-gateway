@@ -32,7 +32,7 @@ func (t *TriggerService) GetTriggers(mode string, method utils.Method, fromSchem
 	}, false)
 }
 
-func (t *TriggerService) Trigger(fromSchema sm.SchemaModel, record utils.Record, method utils.Method) {
+func (t *TriggerService) Trigger(fromSchema *sm.SchemaModel, record utils.Record, method utils.Method) {
 	if t.Domain.GetAutoload() {
 		return
 	}
@@ -97,13 +97,13 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 	return []map[string]interface{}{}
 }
 
-func (t *TriggerService) triggerMail(record utils.Record, fromSchema sm.SchemaModel, triggerID, toSchemaID, destID int64) {
+func (t *TriggerService) triggerMail(record utils.Record, fromSchema *sm.SchemaModel, triggerID, toSchemaID, destID int64) {
 	for _, mail := range t.TriggerManualMail("auto", record, fromSchema, triggerID, toSchemaID, destID) {
 		t.Domain.CreateSuperCall(utils.AllParams(ds.DBEmailSended.Name).RootRaw(), mail)
 	}
 }
 
-func (t *TriggerService) triggerData(record utils.Record, fromSchema sm.SchemaModel, triggerID, toSchemaID, destID int64) {
+func (t *TriggerService) triggerData(record utils.Record, fromSchema *sm.SchemaModel, triggerID, toSchemaID, destID int64) {
 	if toSchemaID < 0 || destID < 0 {
 		toSchemaID = utils.ToInt64(fromSchema.ID)
 		destID = utils.GetInt(record, utils.SpecialIDParam)
@@ -139,7 +139,7 @@ func (t *TriggerService) triggerData(record utils.Record, fromSchema sm.SchemaMo
 	}
 }
 
-func (t *TriggerService) GetTriggerRules(triggerID int64, fromSchema sm.SchemaModel, toSchemaID int64, record utils.Record) []map[string]interface{} {
+func (t *TriggerService) GetTriggerRules(triggerID int64, fromSchema *sm.SchemaModel, toSchemaID int64, record utils.Record) []map[string]interface{} {
 	if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTriggerCondition.Name, map[string]interface{}{
 		ds.TriggerDBField: triggerID,
 	}, false); err == nil && len(res) > 0 {
@@ -162,13 +162,13 @@ func (t *TriggerService) GetTriggerRules(triggerID int64, fromSchema sm.SchemaMo
 	return rules
 }
 
-func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fromSchema sm.SchemaModel, triggerID, toSchemaID, destID int64) []utils.Record {
+func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fromSchema *sm.SchemaModel, triggerID, toSchemaID, destID int64) []utils.Record {
 	mailings := []utils.Record{}
 	var err error
 	var toSchema sm.SchemaModel
 	dest := []map[string]interface{}{}
 	if toSchemaID < 0 || destID < 0 {
-		toSchema = fromSchema
+		toSchema = *fromSchema
 		dest = []map[string]interface{}{record}
 		toSchemaID = utils.ToInt64(fromSchema.ID)
 		destID = utils.ToInt64(record[utils.SpecialIDParam])

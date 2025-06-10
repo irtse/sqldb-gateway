@@ -50,10 +50,10 @@ func (v *ViewConvertor) TransformToView(results utils.Results, tableName string,
 	if v.Domain.IsShallowed() {
 		return v.transformShallowedView(results, tableName, isWorkflow)
 	}
-	return v.transformFullView(results, schema, isWorkflow, params)
+	return v.transformFullView(results, &schema, isWorkflow, params)
 }
 
-func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.SchemaModel, isWorkflow bool, params utils.Params) utils.Results {
+func (v *ViewConvertor) transformFullView(results utils.Results, schema *sm.SchemaModel, isWorkflow bool, params utils.Params) utils.Results {
 	schemes, id, order, _, addAction, _ := v.GetViewFields(schema.Name, false, results)
 	commentBody := map[string]interface{}{}
 	if len(results) == 1 {
@@ -116,7 +116,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 			o = append(o, or)
 		}
 	}
-	max, _ := filter.NewFilterService(v.Domain).CountMaxDataAccess(schema.Name, []string{})
+	max, _ := filter.NewFilterService(v.Domain).CountMaxDataAccess(schema, []string{})
 	view := sm.ViewModel{
 		ID:          id,
 		Name:        schema.Name,
@@ -156,8 +156,8 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema sm.Schem
 	return utils.Results{view.ToRecord()}
 }
 
-func (v *ViewConvertor) TransformMultipleSchema(results utils.Results, schema sm.SchemaModel, isWorkflow bool, params utils.Params) utils.Results {
-	max, _ := filter.NewFilterService(v.Domain).CountMaxDataAccess(schema.Name, []string{})
+func (v *ViewConvertor) TransformMultipleSchema(results utils.Results, schema *sm.SchemaModel, isWorkflow bool, params utils.Params) utils.Results {
+	max, _ := filter.NewFilterService(v.Domain).CountMaxDataAccess(schema, []string{})
 	view := sm.ViewModel{
 		Items: []sm.ViewItemModel{},
 		Max:   max,
@@ -172,7 +172,7 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 	res := utils.Results{}
 	max := int64(0)
 	if sch, err := scheme.GetSchema(tableName); err == nil {
-		max, _ = filter.NewFilterService(v.Domain).CountMaxDataAccess(sch.Name, []string{})
+		max, _ = filter.NewFilterService(v.Domain).CountMaxDataAccess(&sch, []string{})
 	}
 	var wg sync.WaitGroup
 	for _, record := range results {
@@ -196,7 +196,7 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 	return res
 }
 
-func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, schema sm.SchemaModel,
+func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, schema *sm.SchemaModel,
 	isWorkflow bool, view *sm.ViewModel, params utils.Params) {
 	const maxConcurrent = 5
 	runtime.GOMAXPROCS(maxConcurrent)
@@ -216,7 +216,7 @@ func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, schema
 				utils.GetInt(record, ds.DestTableDBField))...,
 			)
 		}
-		go v.ConvertRecordToView(index, view, channel, record, &schema, v.Domain.GetEmpty(), isWorkflow, params, createdIds)
+		go v.ConvertRecordToView(index, view, channel, record, schema, v.Domain.GetEmpty(), isWorkflow, params, createdIds)
 	}
 	for range results {
 		rec := <-channel
@@ -342,7 +342,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 			translatable = f.Translatable
 		}
 		if !utils.GetBool(record, "is_draft") {
-			ts = v.getTriggers(record, v.Domain.GetMethod(), sch, utils.GetInt(record, ds.SchemaDBField), utils.GetInt(record, ds.DestTableDBField))
+			ts = v.getTriggers(record, v.Domain.GetMethod(), &sch, utils.GetInt(record, ds.SchemaDBField), utils.GetInt(record, ds.DestTableDBField))
 		}
 		_, ok := v.Domain.GetParams().Get(utils.RootShallow)
 		if ok {
@@ -787,7 +787,7 @@ func (d *ViewConvertor) ApplyCommandRow(record utils.Record, vals map[string]int
 	}
 }
 
-func (d *ViewConvertor) getTriggers(record utils.Record, method utils.Method, fromSchema sm.SchemaModel, toSchemaID, destID int64) []sm.ManualTriggerModel {
+func (d *ViewConvertor) getTriggers(record utils.Record, method utils.Method, fromSchema *sm.SchemaModel, toSchemaID, destID int64) []sm.ManualTriggerModel {
 	if _, ok := d.Domain.GetParams().Get(utils.SpecialIDParam); method == utils.DELETE || (!ok && method == utils.SELECT) {
 		return []sm.ManualTriggerModel{}
 	}
@@ -811,7 +811,7 @@ func (d *ViewConvertor) getTriggers(record utils.Record, method utils.Method, fr
 	return mt
 }
 
-func (d *ViewConvertor) getMailTriggers(record utils.Record, fromSchema sm.SchemaModel, triggerDesc string, triggerName string, triggerID, toSchemaID, destID int64) ([]sm.ManualTriggerModel, error) {
+func (d *ViewConvertor) getMailTriggers(record utils.Record, fromSchema *sm.SchemaModel, triggerDesc string, triggerName string, triggerID, toSchemaID, destID int64) ([]sm.ManualTriggerModel, error) {
 	if sch, err := schema.GetSchema(ds.DBEmailSended.Name); err != nil {
 		return nil, err
 	} else {

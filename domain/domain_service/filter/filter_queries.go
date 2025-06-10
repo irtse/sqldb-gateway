@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	ds "sqldb-ws/domain/schema/database_resources"
+	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
 )
@@ -17,14 +18,14 @@ func (d *FilterService) GetEntityFilterQuery() string {
 		}, true, ds.EntityDBField)
 }
 
-func (d *FilterService) CountMaxDataAccess(tableName string, filter []string) (int64, string) {
+func (d *FilterService) CountMaxDataAccess(schema *sm.SchemaModel, filter []string) (int64, string) {
 	if d.Domain.GetUserID() == "" {
 		return 0, ""
 	}
-	restr, _, _, _ := d.Domain.GetSpecialized(tableName).GenerateQueryFilter(tableName, filter...)
-	fmt.Println(tableName, restr)
+	restr, _, _, _ := d.Domain.GetSpecialized(schema.Name).GenerateQueryFilter(schema.Name, filter...)
+	fmt.Println(schema.Name, restr)
 	count := int64(0)
-	res, err := d.Domain.GetDb().ClearQueryFilter().SimpleMathQuery("COUNT", tableName, []interface{}{restr}, false)
+	res, err := d.Domain.GetDb().ClearQueryFilter().SimpleMathQuery("COUNT", schema.Name, []interface{}{restr}, false)
 	if len(res) == 0 || err != nil || res[0]["result"] == nil {
 		return 0, restr
 	} else {
@@ -33,26 +34,26 @@ func (d *FilterService) CountMaxDataAccess(tableName string, filter []string) (i
 	return count, restr
 }
 
-func (d *FilterService) CountNewDataAccess(tableName string, filter []string) (int64, int64) {
+func (d *FilterService) CountNewDataAccess(schema *sm.SchemaModel, filter []string) (int64, int64) {
 	if d.Domain.GetUserID() == "" || d.Domain.GetEmpty() {
 		return 0, 0
 	}
 	newCount := int64(0)
-	count, restr := d.CountMaxDataAccess(tableName, filter)
+	count, restr := d.CountMaxDataAccess(schema, filter)
 	newFilter := map[string]interface{}{
 		"!id": d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
 			"write":  false,
 			"update": false,
 			ds.SchemaDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
 				ds.DBSchema.Name, map[string]interface{}{
-					"name": connector.Quote(tableName),
+					"name": connector.Quote(schema.Name),
 				}, false, "id"),
 			ds.UserDBField: d.Domain.GetUserID(),
 		}, false, ds.DestTableDBField),
 	}
 	filter = []string{restr}
 	filter = append(filter, connector.FormatSQLRestrictionWhereByMap("", newFilter, false))
-	if res, err := d.Domain.GetDb().ClearQueryFilter().SimpleMathQuery("COUNT", tableName, utils.ToListAnonymized(filter), false); err == nil && len(res) > 0 {
+	if res, err := d.Domain.GetDb().ClearQueryFilter().SimpleMathQuery("COUNT", schema.Name, utils.ToListAnonymized(filter), false); err == nil && len(res) > 0 {
 		newCount = utils.ToInt64(res[0]["result"])
 	}
 	return newCount, count
