@@ -36,7 +36,7 @@ func (e *ExternalResponseController) Post() {
 		}
 	}
 	d := domain.Domain(true, "", nil)
-	if res, err := d.GetDb().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
+	if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
 		"code": connector.Quote(code),
 	}, false); err == nil && len(res) > 0 {
 		emailRelated := res[0]

@@ -82,7 +82,7 @@ func (t *AbstractController) json(d utils.DomainITF, colsFunc map[string]string,
 				delete(r, c)
 			}
 			if v, ok := colsFunc[c]; ok && v != "" {
-				res, err := d.GetDb().QueryAssociativeArray("SELECT " + v + " as result FROM " + d.GetTable() + " WHERE " + d.GetDb().SQLRestriction)
+				res, err := d.GetDb().QueryAssociativeArray("SELECT " + v + " as result FROM " + d.GetTable() + " WHERE " + d.GetDb().ClearQueryFilter().SQLRestriction)
 				if err == nil && len(res) > 0 {
 					splitted := strings.Split(v, "(")
 					r["results"] = splitted[0] + ": " + utils.GetString(res[0], "result")
@@ -108,7 +108,7 @@ func (t *AbstractController) csv(d utils.DomainITF, colsFunc map[string]string, 
 	data = append(data, labs)
 	for _, c := range cols {
 		if v, ok := colsFunc[c]; ok && v != "" {
-			r, err := d.GetDb().QueryAssociativeArray("SELECT " + v + " as result FROM " + d.GetTable() + " WHERE " + d.GetDb().SQLRestriction)
+			r, err := d.GetDb().QueryAssociativeArray("SELECT " + v + " as result FROM " + d.GetTable() + " WHERE " + d.GetDb().ClearQueryFilter().SQLRestriction)
 			if err == nil && len(r) > 0 {
 				splitted := strings.Split(v, "(")
 				lastLine = append(lastLine, splitted[0]+": "+utils.GetString(r[0], "result"))
