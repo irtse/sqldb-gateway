@@ -226,6 +226,7 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 			DataPaths:     datapath,
 			ValueShallow:  shallowVals,
 			Sort:          int64(index),
+			DataRef:       d.getLinkPath(record, schema), // to redirect
 			CommentsPath:  commentPath,
 			HistoryPath:   historyPath,
 			ValueMany:     manyVals,
@@ -237,6 +238,25 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 			New:           history.GetNew(utils.GetString(record, utils.SpecialIDParam), schema.ID, d.Domain),
 		}
 	}
+}
+
+func (s *ViewConvertor) getLinkPath(record utils.Record, sch *sm.SchemaModel) string {
+	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+		utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+			ds.DestTableDBField: utils.GetString(record, utils.SpecialIDParam),
+			ds.SchemaDBField:    sch.GetID(),
+		}, false, utils.SpecialIDParam),
+		ds.RequestDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+			ds.DestTableDBField: utils.GetString(record, utils.SpecialIDParam),
+			ds.SchemaDBField:    sch.GetID(),
+		}, false, utils.SpecialIDParam),
+	}, true); err == nil && len(res) > 0 {
+		firstTaskToWrap := res[0]
+		if s, err := scheme.GetSchema(ds.DBTask.Name); err == nil {
+			return "@" + s.ID + ":" + utils.GetString(firstTaskToWrap, utils.SpecialIDParam)
+		}
+	}
+	return "@" + sch.ID + ":" + utils.GetString(record, utils.SpecialIDParam)
 }
 
 func (s *ViewConvertor) getFieldsFill(sch *sm.SchemaModel, values map[string]interface{}) map[string]interface{} {

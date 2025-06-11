@@ -4,6 +4,8 @@ import (
 	"errors"
 	"math"
 	"sqldb-ws/domain/domain_service/filter"
+	"sqldb-ws/domain/domain_service/view_convertor"
+	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
@@ -13,6 +15,31 @@ import (
 
 type TaskService struct {
 	servutils.AbstractSpecializedService
+}
+
+func (s *TaskService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
+	// TODO: here send back my passive task...
+	res := view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
+	if len(results) == 1 && s.Domain.GetMethod() == utils.UPDATE && CheckStateIsEnded(results[0]["state"]) {
+		// retrieve... tasks affected to you
+		if r, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+			ds.RequestDBField: results[0][ds.RequestDBField],
+			"is_close":        false,
+			utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+				ds.UserDBField: s.Domain.GetUserID(),
+				ds.EntityDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
+					ds.UserDBField: s.Domain.GetUserID(),
+				}, false, ds.EntityDBField),
+			}, true, utils.SpecialIDParam),
+		}, false); err == nil && len(r) > 0 {
+			if sch, err := schema.GetSchema(ds.DBTask.Name); err == nil {
+				res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(r[0], utils.SpecialIDParam))
+			}
+		} else if sch, err := schema.GetSchemaByID(utils.GetInt(results[0], ds.SchemaDBField)); err == nil {
+			res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(results[0], ds.DestTableDBField))
+		}
+	} // inner_redirection is the way to redirect any closure... to next data or data
+	return res
 }
 
 func (s *TaskService) SpecializedCreateRow(record map[string]interface{}, tableName string) {

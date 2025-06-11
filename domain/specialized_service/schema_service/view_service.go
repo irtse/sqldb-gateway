@@ -186,6 +186,7 @@ func (s *ViewService) TransformToView(record utils.Record, multiple bool, schema
 		if len(newOrder) > 0 {
 			rec["order"] = newOrder
 		}
+		// complexify to verify if a request is active about... then... to redirect on...
 		rec["link_path"] = "/" + utils.MAIN_PREFIX + "/" + fmt.Sprintf(ds.DBView.Name) + "?rows=" + utils.ToString(record[utils.SpecialIDParam])
 		if _, ok := record["group_by"]; ok { // express by each column we are foldered TODO : if not in view add it
 			field, err := schema.GetFieldByID(record.GetInt("group_by"))

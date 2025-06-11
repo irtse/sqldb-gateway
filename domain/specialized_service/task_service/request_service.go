@@ -24,6 +24,7 @@ func (s *RequestService) TransformToGenericView(results utils.Results, tableName
 		// retrieve... tasks affected to you
 		if r, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 			ds.RequestDBField: results[0][utils.SpecialIDParam],
+			"is_close":        false,
 			utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 				ds.UserDBField: s.Domain.GetUserID(),
 				ds.EntityDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
@@ -37,7 +38,7 @@ func (s *RequestService) TransformToGenericView(results utils.Results, tableName
 		} else if sch, err := schema.GetSchemaByID(utils.GetInt(results[0], ds.SchemaDBField)); err == nil {
 			res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(results[0], ds.DestTableDBField))
 		}
-	}
+	} // inner_redirection is the way to redirect any closure... to next data or data
 	return res
 }
 func (s *RequestService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
