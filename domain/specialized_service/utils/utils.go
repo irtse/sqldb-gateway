@@ -79,7 +79,9 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 					continue
 				}
 				if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
-					s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(ff.Name, rec[utils.SpecialIDParam]), utils.Record{})
+					s.Domain.GetDb().DeleteQueryWithRestriction(ff.Name, map[string]interface{}{
+						ds.RootID(s.Domain.GetTable()): rec[utils.SpecialIDParam],
+					}, false)
 					for _, m := range mm {
 						if m[utils.SpecialIDParam] != nil && m[ds.RootID(ff.Name)] == nil {
 							m[ds.RootID(ff.Name)] = m[utils.SpecialIDParam]
@@ -88,7 +90,7 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 							continue
 						}
 						m[ds.RootID(s.Domain.GetTable())] = rec[utils.SpecialIDParam]
-						s.Domain.CreateSuperCall(utils.AllParams(ff.Name), m)
+						s.Domain.GetDb().ClearQueryFilter().CreateQuery(ff.Name, m, func(s string) (string, bool) { return "", true })
 					}
 				}
 			}
@@ -98,10 +100,12 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 					continue
 				}
 				if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
-					s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(ff.Name, rec[utils.SpecialIDParam]), utils.Record{})
+					s.Domain.GetDb().DeleteQueryWithRestriction(ff.Name, map[string]interface{}{
+						ds.RootID(s.Domain.GetTable()): rec[utils.SpecialIDParam],
+					}, false)
 					for _, m := range om {
 						m[ds.RootID(s.Domain.GetTable())] = rec[utils.SpecialIDParam]
-						s.Domain.CreateSuperCall(utils.AllParams(ff.Name), m)
+						s.Domain.GetDb().ClearQueryFilter().CreateQuery(ff.Name, m, func(s string) (string, bool) { return "", true })
 					}
 				}
 			}
