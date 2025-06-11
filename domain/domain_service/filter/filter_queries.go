@@ -7,7 +7,7 @@ import (
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/infrastructure/connector"
+	connector "sqldb-ws/infrastructure/connector/db"
 	"strings"
 )
 
@@ -143,4 +143,33 @@ func (s *FilterService) ProcessViewAndOrder(viewfilterID string, schemaID string
 		}
 	}
 	return strings.Join(viewFilter, ","), strings.Join(order, ","), strings.Join(dir, ",")
+}
+
+func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []string, state string) []string {
+	if state == "all" || tableName == ds.DBView.Name {
+		return SQLrestriction
+	}
+	if state == "draft" {
+		for _, restr := range SQLrestriction {
+			restr = strings.ReplaceAll(restr, "is_draft=false", "is_draft=true")
+		}
+	} else {
+		k := utils.SpecialIDParam
+		if state == "new" {
+			k = "!" + k
+		}
+		SQLrestriction = append(SQLrestriction, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
+			k: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name,
+				map[string]interface{}{
+					"write":  false,
+					"update": false,
+					ds.SchemaDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
+						ds.DBSchema.Name, map[string]interface{}{
+							"name": connector.Quote(tableName),
+						}, false, "id"),
+					ds.UserDBField: d.Domain.GetUserID(),
+				}, false, ds.DestTableDBField),
+		}, false))
+	}
+	return SQLrestriction
 }

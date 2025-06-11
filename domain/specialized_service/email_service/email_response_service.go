@@ -9,7 +9,7 @@ import (
 	"sqldb-ws/domain/specialized_service/task_service"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	utils "sqldb-ws/domain/utils"
-	"sqldb-ws/infrastructure/connector"
+	connector "sqldb-ws/infrastructure/connector/db"
 )
 
 // DONE - ~ 200 LINES - PARTIALLY TESTED

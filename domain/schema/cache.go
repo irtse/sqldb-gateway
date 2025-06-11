@@ -5,7 +5,7 @@ import (
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
-	conn "sqldb-ws/infrastructure/connector"
+	conn "sqldb-ws/infrastructure/connector/db"
 	"strconv"
 	"strings"
 )

@@ -2,7 +2,7 @@ package utils
 
 import (
 	"net/url"
-	"sqldb-ws/infrastructure/connector"
+	connector "sqldb-ws/infrastructure/connector/db"
 	"strings"
 	"sync"
 )

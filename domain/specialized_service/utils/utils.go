@@ -12,6 +12,7 @@ import (
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/service"
 	"strings"
+	"time"
 )
 
 type AbstractSpecializedService struct {
@@ -19,6 +20,10 @@ type AbstractSpecializedService struct {
 	Domain     utils.DomainITF
 	ManyToMany map[string][]map[string]interface{}
 	OneToMany  map[string][]map[string]interface{}
+}
+
+func (s *AbstractSpecializedService) Entity() utils.SpecializedServiceInfo {
+	return nil
 }
 
 func (s *AbstractSpecializedService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
@@ -140,6 +145,11 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 	if sch, err := sch.GetSchema(tablename); err != nil {
 		return record, errors.New("no schema found"), false
 	} else {
+		currentTime := time.Now()
+		sqlFilter := "'" + currentTime.Format("2000-01-01") + "' < start_date OR "
+		sqlFilter += "'" + currentTime.Format("2000-01-01") + "' > end_date"
+		p := utils.AllParams(tablename).RootRaw()
+		s.Domain.SuperCall(p, utils.Record{}, utils.DELETE, false, sqlFilter)
 		if s.Domain.GetMethod() == utils.CREATE || s.Domain.GetMethod() == utils.UPDATE { // stock oneToMany and ManyToMany
 			for _, field := range sch.Fields {
 				if strings.ToUpper(field.Type) == sm.MANYTOMANY.String() && record[field.Name] != nil {
@@ -195,7 +205,10 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 	return record, nil, true
 }
 
-func (s *AbstractSpecializedService) SetDomain(d utils.DomainITF) { s.Domain = d }
+func (s *AbstractSpecializedService) SetDomain(d utils.DomainITF) utils.SpecializedServiceITF {
+	s.Domain = d
+	return s
+}
 
 type SpecializedService struct{ AbstractSpecializedService }
 

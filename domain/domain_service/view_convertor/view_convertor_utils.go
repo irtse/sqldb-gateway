@@ -1,7 +1,9 @@
 package view_convertor
 
 import (
+	"fmt"
 	"slices"
+	"sqldb-ws/domain/domain_service/triggers"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
@@ -17,6 +19,14 @@ func CompareOrder(schema *sm.SchemaModel, order []string, domain utils.DomainITF
 		}
 	}
 	return newOrder
+}
+
+func getRedirection(domainID string) string {
+	if triggers.HasRedirection(domainID) {
+		s, _ := triggers.GetRedirection(domainID)
+		return s
+	}
+	return ""
 }
 
 func GetOrder(schema *sm.SchemaModel, record utils.Record, values map[string]interface{}, newOrder []string, domain utils.DomainITF) ([]string, map[string]interface{}) {
@@ -68,4 +78,27 @@ func GetFilterFields(schema *sm.SchemaModel, domain utils.DomainITF) ([]map[stri
 	return domain.GetDb().SelectQueryWithRestriction(ds.SchemaFieldDBField, map[string]interface{}{
 		utils.SpecialIDParam: domain.GetDb().BuildSelectQueryWithRestriction(ds.FilterFieldDBField, m, false, ds.SchemaFieldDBField),
 	}, false)
+}
+
+func GetSharing(schemaID string, rec sm.ViewItemModel, domain utils.DomainITF) sm.ViewItemModel {
+	id := rec.Values[utils.SpecialIDParam]
+	m := map[string]interface{}{
+		ds.UserDBField:      domain.GetUserID(),
+		ds.SchemaDBField:    schemaID,
+		ds.DestTableDBField: id,
+		"read_access":       true,
+		"update_access":     true,
+		"delete_access":     true,
+	}
+	rec.Sharing = sm.SharingModel{
+		SharedWithPath: fmt.Sprintf("/%s/%s?%s=%s&%s=disable", utils.MAIN_PREFIX, ds.DBUser.Name, utils.RootRowsParam,
+			utils.ReservedParam, utils.RootScope),
+		Body: m,
+		ShallowPath: map[string]string{
+			"shared_" + ds.UserDBField: fmt.Sprintf("/%s/%s?%s=%s&%s=enable&%s=enable", utils.MAIN_PREFIX, ds.DBUser.Name,
+				utils.RootRowsParam, utils.ReservedParam, utils.RootShallow, utils.RootScope),
+		},
+		Path: fmt.Sprintf("/%s/%s?%s=%s&%s=enable", utils.MAIN_PREFIX, ds.DBShare.Name, utils.RootRowsParam, utils.ReservedParam, utils.RootShallow),
+	}
+	return rec
 }

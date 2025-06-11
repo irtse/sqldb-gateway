@@ -7,7 +7,7 @@ import (
 	"encoding/csv"
 	"slices"
 	ds "sqldb-ws/domain/schema/database_resources"
-	"sqldb-ws/infrastructure/connector"
+	connector "sqldb-ws/infrastructure/connector/db"
 	"strings"
 
 	"fmt"

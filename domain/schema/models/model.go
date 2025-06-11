@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sqldb-ws/domain/utils"
 	"strconv"
 	"strings"
@@ -261,6 +262,23 @@ type ViewModel struct { // lightest struct based on SchemaModel dedicate to view
 	Redirection  string                   `json:"redirection,omitempty"`
 	Triggers     []ManualTriggerModel     `json:"triggers,omitempty"`
 	Max          int64                    `json:"max"`
+}
+
+func NewView(id int64, name string, label string, schema *SchemaModel, max int64, triggers []ManualTriggerModel) ViewModel {
+	return ViewModel{
+		ID:          id,
+		Name:        name,
+		SchemaName:  schema.Name,
+		SchemaID:    schema.GetID(),
+		Description: fmt.Sprintf("%s data", schema.Name),
+		ActionPath:  utils.BuildPath(schema.Name, utils.ReservedParam),
+		Path:        utils.BuildPath(schema.Name, utils.ReservedParam),
+		IsWrapper:   schema.Name == "dbtask" || schema.Name == "dbrequest",
+		Label:       label,
+		Items:       []ViewItemModel{},
+		Triggers:    triggers,
+		Max:         max,
+	}
 }
 
 func (v ViewModel) ToRecord() utils.Record {

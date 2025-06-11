@@ -7,7 +7,7 @@ import (
 	"sqldb-ws/domain"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/infrastructure/connector"
+	connector "sqldb-ws/infrastructure/connector/db"
 )
 
 // Operations about login

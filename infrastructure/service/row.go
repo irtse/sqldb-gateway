@@ -2,7 +2,7 @@ package service
 
 import (
 	"errors"
-	conn "sqldb-ws/infrastructure/connector"
+	conn "sqldb-ws/infrastructure/connector/db"
 	"strings"
 )
 

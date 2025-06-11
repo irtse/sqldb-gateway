@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	conn "sqldb-ws/infrastructure/connector"
+	conn "sqldb-ws/infrastructure/connector/db"
 	"sqldb-ws/infrastructure/models"
 	"strings"
 

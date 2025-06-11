@@ -3,7 +3,7 @@ package service
 import (
 	"html/template"
 	"os"
-	conn "sqldb-ws/infrastructure/connector"
+	conn "sqldb-ws/infrastructure/connector/db"
 
 	"github.com/rs/zerolog/log"
 )

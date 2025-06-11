@@ -1,4 +1,4 @@
-package triggers
+package connector
 
 import (
 	"bytes"

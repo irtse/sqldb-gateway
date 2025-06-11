@@ -5,7 +5,7 @@ import (
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/infrastructure/connector"
+	connector "sqldb-ws/infrastructure/connector/db"
 )
 
 func NewDataAccess(schemaID int64, destIDs []string, domain utils.DomainITF) {

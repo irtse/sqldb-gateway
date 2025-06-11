@@ -10,14 +10,11 @@ import (
 	permissions "sqldb-ws/domain/domain_service/permission"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
-	sm "sqldb-ws/domain/schema/models"
 	domain "sqldb-ws/domain/specialized_service"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/infrastructure/connector"
-	conn "sqldb-ws/infrastructure/connector"
+	conn "sqldb-ws/infrastructure/connector/db"
 	infrastructure "sqldb-ws/infrastructure/service"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -83,6 +80,7 @@ func (d *SpecializedDomain) IsOwn(checkPerm bool, force bool, method utils.Metho
 	}
 	return d.Own
 }
+
 func (d *SpecializedDomain) GetDb() *conn.Database { return d.Db }
 
 func (d *SpecializedDomain) CreateSuperCall(params utils.Params, record utils.Record, args ...interface{}) (utils.Results, error) {
@@ -128,20 +126,14 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 	d.onBooleanValue(utils.RootShallow, func(b bool) { d.Shallowed = b })
 	if tablename, ok := params.Get(utils.RootTableParam); ok { // retrieve tableName in query (not optionnal)
 		d.TableName = strings.ToLower(schserv.GetTablename(tablename))
-		d.onBooleanValue(utils.RootRawView, func(b bool) {
-			if !b {
-				d.ClearDeprecatedDatas(d.TableName)
-			}
-		})
 		specializedService := domain.SpecializedService(d.TableName)
-		d.SpecializedService = specializedService
-		specializedService.SetDomain(d)
+		d.SpecializedService = specializedService.SetDomain(d)
 		d.Db = conn.Open(d.Db)
 		defer d.Db.Close()
 		if d.GetUserID() == "" && !d.AutoLoad {
 			if res, err := d.Db.SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-				"name":  connector.Quote(d.User),
-				"email": connector.Quote(d.User),
+				"name":  conn.Quote(d.User),
+				"email": conn.Quote(d.User),
 			}, true); err == nil && len(res) > 0 {
 				d.UserID = utils.GetString(res[0], utils.SpecialIDParam)
 				fmt.Println("by User: ", d.UserID)
@@ -166,7 +158,7 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 				"not authorized to " + method.String() + " " + d.Service.GetName() + " data")
 		}
 		if col, ok := params.Get(utils.RootColumnsParam); ok && d.TableName != utils.ReservedParam {
-			d.Service = infrastructure.NewTableColumnService(d.Db, d.SuperAdmin, d.User, strings.ToLower(d.TableName), specializedService, strings.ToLower(col))
+			d.Service = infrastructure.NewTableColumnService(d.Db, d.SuperAdmin, d.User, strings.ToLower(d.TableName), d.SpecializedService, strings.ToLower(col))
 		} else if d.TableName == utils.ReservedParam {
 			return utils.Results{}, errors.New("can't load table as " + utils.ReservedParam)
 		}
@@ -175,7 +167,12 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 	return utils.Results{}, errors.New("no service available")
 }
 
-func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, specializedService utils.SpecializedServiceITF, args ...interface{}) (utils.Results, error) {
+func (d *SpecializedDomain) GetRowResults(
+	rowName string,
+	record utils.Record,
+	specializedService utils.SpecializedServiceITF,
+	args ...interface{},
+) (utils.Results, error) {
 	if record["is_draft"] != nil && !utils.GetBool(record, "is_draft") {
 		d.IsDraftToPublished = true
 	}
@@ -201,11 +198,10 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 			path, err := domain_service.NewUploader(d).ApplyUpload(d.File, d.FileHandler)
 			return utils.Results{{"path": path}}, err // only apply on first ID
 		} else {
-			if p, _ := d.Params.Get(utils.RootShallow); p == "enable" {
-				if _, ok := d.Params.Get(utils.RootLimit); !ok {
-					d.Params.Set(utils.RootLimit, "10")
-				}
+			p, _ := d.Params.Get(utils.RootShallow)
+			if p == "enable" {
 				if _, ok := d.Params.Get(utils.RootOffset); !ok {
+					d.Params.Set(utils.RootLimit, "10")
 					d.Params.Set(utils.RootOffset, "0")
 				}
 			}
@@ -213,7 +209,7 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 			if err != nil {
 				return all_results, err
 			}
-			if p, _ := d.Params.Get(utils.RootRawView); p != "enable" && err == nil && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
+			if p != "enable" && err == nil && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
 				res = specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestIDParam)...)
 				d.Redirections = append(d.Redirections, d.GetRedirections(res)...)
 			}
@@ -256,14 +252,4 @@ func (d *SpecializedDomain) GetRedirections(results utils.Results) []string {
 		}
 	}
 	return reds
-}
-
-func (d *SpecializedDomain) ClearDeprecatedDatas(tableName string) {
-	if schema, err := schserv.GetSchema(tableName); err == nil && schema.HasField(sm.STARTKEY) && schema.HasField(sm.ENDKEY) {
-		currentTime := time.Now()
-		sqlFilter := "'" + currentTime.Format("2000-01-01") + "' < start_date OR "
-		sqlFilter += "'" + currentTime.Format("2000-01-01") + "' > end_date"
-		p := utils.AllParams(tableName).RootRaw()
-		d.SuperCall(p, utils.Record{}, utils.DELETE, false, sqlFilter)
-	}
 }

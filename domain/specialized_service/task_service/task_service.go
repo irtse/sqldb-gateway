@@ -7,8 +7,7 @@ import (
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/infrastructure/connector"
-	conn "sqldb-ws/infrastructure/connector"
+	conn "sqldb-ws/infrastructure/connector/db"
 	"time"
 )
 
@@ -60,7 +59,7 @@ func (s *TaskService) SpecializedUpdateRow(results []map[string]interface{}, rec
 	sqlFilter := []string{
 		"('" + currentTime.Format("2000-01-01") + "' < start_date OR '" + currentTime.Format("2000-01-01") + "' > end_date)",
 	}
-	sqlFilter = append(sqlFilter, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
+	sqlFilter = append(sqlFilter, conn.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
 		"all_tasks":    true,
 		ds.UserDBField: s.Domain.GetUserID(),
 	}, false))

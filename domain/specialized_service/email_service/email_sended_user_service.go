@@ -3,10 +3,10 @@ package email_service
 import (
 	"errors"
 	"fmt"
-	"sqldb-ws/domain/domain_service/triggers"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
+	"sqldb-ws/infrastructure/connector"
 )
 
 // DONE - ~ 200 LINES - PARTIALLY TESTED
@@ -51,7 +51,7 @@ func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interfac
 		if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
 			utils.SpecialIDParam: record[ds.EmailSendedDBField],
 		}, false); err == nil && len(rr) > 0 {
-			go triggers.SendMail(utils.GetString(res[0], "email"), emailTo, rr[0], isValid)
+			go connector.SendMail(utils.GetString(res[0], "email"), emailTo, rr[0], isValid)
 		}
 		fmt.Println("SENDING MAIL :", err)
 	} else {

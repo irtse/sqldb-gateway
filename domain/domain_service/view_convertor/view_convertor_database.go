@@ -114,7 +114,6 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 					keysOrdered = append(keysOrdered, scheme.Name)
 				}
 			}
-
 		}
 	}
 	sort.SliceStable(keysOrdered, func(i, j int) bool {

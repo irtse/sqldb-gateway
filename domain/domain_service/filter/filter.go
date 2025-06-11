@@ -8,7 +8,7 @@ import (
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/infrastructure/connector"
+	connector "sqldb-ws/infrastructure/connector/db"
 	"strings"
 )
 
@@ -240,39 +240,4 @@ func (d *FilterService) viewbyFields(schema sm.SchemaModel, domainParams utils.P
 		SQLview = append(SQLview, "id")
 	}
 	return SQLview
-}
-
-func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []string, state string) []string {
-	if state == "all" || tableName == ds.DBView.Name {
-		return SQLrestriction
-	}
-	if state == "new" {
-		SQLrestriction = append(SQLrestriction, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
-			"!" + utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name,
-				map[string]interface{}{
-					"write":  false,
-					"update": false,
-					ds.SchemaDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
-						ds.DBSchema.Name, map[string]interface{}{
-							"name": connector.Quote(tableName),
-						}, false, "id"),
-					ds.UserDBField: d.Domain.GetUserID(),
-				}, false, ds.DestTableDBField),
-		}, false))
-	} else {
-		SQLrestriction = append(SQLrestriction, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
-			utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name,
-				map[string]interface{}{
-					"write":  false,
-					"update": false,
-					ds.SchemaDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
-						ds.DBSchema.Name, map[string]interface{}{
-							"name": connector.Quote(tableName),
-						}, false, "id"),
-					ds.UserDBField: d.Domain.GetUserID(),
-				}, false, ds.DestTableDBField),
-		}, false))
-	}
-
-	return SQLrestriction
 }

@@ -3,7 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
-	"sqldb-ws/infrastructure/connector"
+	connector "sqldb-ws/infrastructure/connector/db"
 	"strings"
 )
 

@@ -4,7 +4,7 @@ import (
 	"sqldb-ws/controllers/controller"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/infrastructure/connector"
+	connector "sqldb-ws/infrastructure/connector/db"
 )
 
 type MainController struct{ controller.AbstractController }

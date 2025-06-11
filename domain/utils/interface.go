@@ -1,12 +1,12 @@
 package utils
 
 import (
-	conn "sqldb-ws/infrastructure/connector"
+	conn "sqldb-ws/infrastructure/connector/db"
 	infrastructure "sqldb-ws/infrastructure/service"
 )
 
 type SpecializedServiceITF interface {
-	SetDomain(d DomainITF)
+	SetDomain(d DomainITF) SpecializedServiceITF
 	Entity() SpecializedServiceInfo
 	TransformToGenericView(results Results, tableName string, dest_id ...string) Results
 	infrastructure.InfraSpecializedServiceItf
