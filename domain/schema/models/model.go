@@ -291,7 +291,7 @@ func (v ViewModel) ToRecord() utils.Record {
 type ViewItemModel struct {
 	IsEmpty       bool                     `json:"-"`
 	Sort          int64                    `json:"-"`
-	DataRef       string                   `json:"data_ref"`
+	DataRef       string                   `json:"data_ref,omitempty"`
 	Path          string                   `json:"link_path"`
 	DataPaths     string                   `json:"data_path"`
 	ValuePathMany map[string]string        `json:"values_path_many"`
