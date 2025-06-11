@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"slices"
 	"sort"
-	"sqldb-ws/domain/domain_service/filter"
+	"sqldb-ws/domain/domain_service/history"
 	sch "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/infrastructure/connector"
 	"strings"
 	"sync"
 )
@@ -40,47 +39,6 @@ func (d *ViewConvertor) FetchRecord(tableName string, m map[string]interface{}) 
 		return nil
 	}
 	return t
-}
-
-func (d *ViewConvertor) NewDataAccess(schemaID int64, destIDs []string, meth utils.Method) {
-	d.Domain.GetDb().ClearQueryFilter()
-	if users, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-		"name":  connector.Quote(d.Domain.GetUser()),
-		"email": connector.Quote(d.Domain.GetUser()),
-	}, true); err == nil && len(users) > 0 {
-		for _, destID := range destIDs {
-			id := utils.GetString(users[0], utils.SpecialIDParam)
-			if meth == utils.SELECT {
-				if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
-					"write":             false,
-					"update":            false,
-					ds.DestTableDBField: destID,
-					ds.SchemaDBField:    schemaID,
-					ds.UserDBField:      id,
-				}, false); err == nil && len(res) == 0 {
-					d.Domain.GetDb().CreateQuery(ds.DBDataAccess.Name,
-						utils.Record{
-							"write":             meth == utils.CREATE,
-							"update":            meth == utils.UPDATE,
-							ds.DestTableDBField: destID,
-							ds.SchemaDBField:    schemaID,
-							ds.UserDBField:      id}, func(s string) (string, bool) {
-							return "", true
-						})
-				}
-				return
-			}
-			d.Domain.GetDb().CreateQuery(ds.DBDataAccess.Name,
-				utils.Record{
-					"write":             meth == utils.CREATE,
-					"update":            meth == utils.UPDATE,
-					ds.DestTableDBField: destID,
-					ds.SchemaDBField:    schemaID,
-					ds.UserDBField:      id}, func(s string) (string, bool) {
-					return "", true
-				})
-		}
-	}
 }
 
 func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, results utils.Results) (map[string]interface{}, int64, []string, map[string]sm.FieldModel, []string, bool) {
@@ -197,7 +155,7 @@ func (d *ViewConvertor) ProcessPermissions(
 	record utils.Results) (sm.ViewFieldModel, []string) {
 	for _, meth := range []utils.Method{utils.SELECT, utils.CREATE, utils.UPDATE, utils.DELETE} {
 		if utils.DELETE == meth && len(record) == 1 {
-			createdIds := filter.NewFilterService(d.Domain).GetCreatedAccessData(schema.ID)
+			createdIds := history.GetCreatedAccessData(schema.ID, d.Domain)
 			if !IsReadonly(schema.Name, record[0], createdIds, d.Domain) {
 				additionalActions = append(additionalActions, meth.Method())
 			}
@@ -251,7 +209,6 @@ func (d *ViewConvertor) HandleRecursivePermissions(shallowField sm.ViewFieldMode
 				shallowField.DataSchema = s
 			}
 		}
-
 		if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") {
 			shallowField.Type = "link"
 		} else {

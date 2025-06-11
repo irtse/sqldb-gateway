@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"sqldb-ws/domain/domain_service/triggers"
-	"sqldb-ws/domain/domain_service/view_convertor"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
@@ -64,8 +63,4 @@ func (s *EmailSendedUserService) VerifyDataIntegrity(record map[string]interface
 		return record, errors.New("no email to send to"), false
 	}
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
-}
-
-func (s *EmailSendedUserService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
-	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 }

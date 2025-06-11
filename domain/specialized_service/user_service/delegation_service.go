@@ -1,7 +1,6 @@
 package user_service
 
 import (
-	"sqldb-ws/domain/domain_service/view_convertor"
 	ds "sqldb-ws/domain/schema/database_resources"
 	task "sqldb-ws/domain/specialized_service/task_service"
 	servutils "sqldb-ws/domain/specialized_service/utils"
@@ -21,10 +20,6 @@ func (s *DelegationService) VerifyDataIntegrity(record map[string]interface{}, t
 	} else {
 		return record, err, false
 	}
-}
-
-func (s *DelegationService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
-	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 }
 
 func (s *DelegationService) SpecializedCreateRow(record map[string]interface{}, tableName string) {

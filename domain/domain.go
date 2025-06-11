@@ -7,9 +7,7 @@ import (
 	"slices"
 
 	"sqldb-ws/domain/domain_service"
-	"sqldb-ws/domain/domain_service/filter"
 	permissions "sqldb-ws/domain/domain_service/permission"
-	"sqldb-ws/domain/domain_service/view_convertor"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -59,9 +57,9 @@ func Domain(superAdmin bool, user string, permsService *permissions.PermDomainSe
 
 func (d *SpecializedDomain) VerifyAuth(tableName string, colName string, level string, method utils.Method, args ...string) bool {
 	if len(args) > 0 {
-		return d.PermsService.LocalPermsCheck(tableName, colName, level, method, args[0], d.UserID, d.Own)
+		return d.PermsService.LocalPermsCheck(tableName, colName, level, args[0], d.Own, d)
 	} else {
-		return d.PermsService.PermsCheck(tableName, colName, level, method, d.UserID, d.Own)
+		return d.PermsService.PermsCheck(tableName, colName, level, d.Own, d)
 	}
 }
 
@@ -81,7 +79,7 @@ func (s *SpecializedDomain) HandleRecordAttributes(record utils.Record) {
 }
 func (d *SpecializedDomain) IsOwn(checkPerm bool, force bool, method utils.Method) bool {
 	if checkPerm {
-		return d.PermsService.IsOwnPermission(d.TableName, force, method, d.UserID, d.Own) && d.Own
+		return d.PermsService.IsOwnPermission(d.TableName, force, d.Own, d) && d.Own
 	}
 	return d.Own
 }
@@ -154,7 +152,7 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 		if d.Method.IsMath() {
 			d.Method = utils.SELECT
 		}
-		if !d.SuperAdmin && !d.PermsService.PermsCheck(d.TableName, "", "", d.Method, d.UserID, d.Own) && !d.AutoLoad && method != utils.DELETE {
+		if !d.SuperAdmin && !d.PermsService.PermsCheck(d.TableName, "", "", d.Own, d) && !d.AutoLoad && method != utils.DELETE {
 			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + d.TableName + " data")
 		}
 		// load the highest entity avaiable Table level.
@@ -181,54 +179,48 @@ func (d *SpecializedDomain) GetRowResults(rowName string, record utils.Record, s
 	if record["is_draft"] != nil && !utils.GetBool(record, "is_draft") {
 		d.IsDraftToPublished = true
 	}
-
-	d.Params.Add(utils.SpecialIDParam, strings.ToLower(rowName), func(_ string) bool {
-		return strings.ToLower(rowName) != utils.ReservedParam
-	})
-
-	d.Params.SimpleDelete(utils.RootRowsParam)
-	if p, _ := d.Params.Get(utils.SpecialIDParam); p == "" || p == utils.ReservedParam || p == "<nil>" {
-		d.Params.SimpleDelete(utils.SpecialIDParam)
-	} else if record != nil {
-		record[utils.SpecialIDParam], _ = d.Params.Get(utils.SpecialIDParam)
-		record[utils.SpecialIDParam], _ = url.QueryUnescape(utils.ToString(record[utils.SpecialIDParam]))
-		record[utils.SpecialIDParam] = strings.Split(utils.ToString(record[utils.SpecialIDParam]), ",")[0]
-	}
-	if d.Method == utils.DELETE && !d.CanDelete(record) {
-		return utils.Results{}, errors.New("can't delete datas")
-	}
-	d.Service = infrastructure.NewTableRowService(d.Db, d.SuperAdmin, d.User, strings.ToLower(d.TableName), specializedService)
-	if d.Method == utils.IMPORT {
-		path, err := domain_service.NewUploader(d).ApplyUpload(d.File, d.FileHandler)
-		return utils.Results{{"path": path}}, err
-	} else {
-		if p, _ := d.Params.Get(utils.RootShallow); p == "enable" {
-			if _, ok := d.Params.Get(utils.RootLimit); !ok {
-				d.Params.Set(utils.RootLimit, "10")
+	rowName, _ = url.QueryUnescape(rowName)
+	ids := strings.Split(rowName, ",")
+	all_results := utils.Results{}
+	for _, id := range ids {
+		d.Params.Add(utils.SpecialIDParam, strings.ToLower(id), func(_ string) bool {
+			return strings.ToLower(id) != utils.ReservedParam
+		})
+		d.Params.SimpleDelete(utils.RootRowsParam)
+		if p, _ := d.Params.Get(utils.SpecialIDParam); p == "" || p == utils.ReservedParam {
+			d.Params.SimpleDelete(utils.SpecialIDParam)
+		} else if record != nil {
+			record[utils.SpecialIDParam], _ = d.Params.Get(utils.SpecialIDParam)
+		}
+		if d.Method == utils.DELETE && !d.PermsService.CanDelete(d.Params.Values, record, d) {
+			fmt.Println("can't delete datas")
+			continue
+		}
+		d.Service = infrastructure.NewTableRowService(d.Db, d.SuperAdmin, d.User, strings.ToLower(d.TableName), specializedService)
+		if d.Method == utils.IMPORT {
+			path, err := domain_service.NewUploader(d).ApplyUpload(d.File, d.FileHandler)
+			return utils.Results{{"path": path}}, err // only apply on first ID
+		} else {
+			if p, _ := d.Params.Get(utils.RootShallow); p == "enable" {
+				if _, ok := d.Params.Get(utils.RootLimit); !ok {
+					d.Params.Set(utils.RootLimit, "10")
+				}
+				if _, ok := d.Params.Get(utils.RootOffset); !ok {
+					d.Params.Set(utils.RootOffset, "0")
+				}
 			}
-			if _, ok := d.Params.Get(utils.RootOffset); !ok {
-				d.Params.Set(utils.RootOffset, "0")
+			res, err := d.Invoke(record, d.Method, args...)
+			if err != nil {
+				return all_results, err
 			}
-		}
-		res, err := d.Invoke(record, d.Method, args...)
-		if p, _ := d.Params.Get(utils.RootRawView); p != "enable" && err == nil && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
-			results := specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestIDParam)...)
-			d.Redirections = d.GetRedirections(results)
-			return results, err
-		}
-
-		return res, err
-	}
-}
-
-func (d *SpecializedDomain) GetRedirections(results utils.Results) []string {
-	reds := []string{}
-	for _, res := range results {
-		if red, ok := res["redirection"]; ok && red != "" {
-			reds = append(reds, utils.GetString(res, "redirection"))
+			if p, _ := d.Params.Get(utils.RootRawView); p != "enable" && err == nil && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
+				res = specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestIDParam)...)
+				d.Redirections = append(d.Redirections, d.GetRedirections(res)...)
+			}
+			all_results = append(all_results, res...)
 		}
 	}
-	return reds
+	return all_results, nil
 }
 
 func (d *SpecializedDomain) Invoke(record utils.Record, method utils.Method, args ...interface{}) (utils.Results, error) {
@@ -256,6 +248,16 @@ func (d *SpecializedDomain) Invoke(record utils.Record, method utils.Method, arg
 	return utils.ToResult(res), err
 }
 
+func (d *SpecializedDomain) GetRedirections(results utils.Results) []string {
+	reds := []string{}
+	for _, res := range results {
+		if red, ok := res["redirection"]; ok && red != "" {
+			reds = append(reds, utils.GetString(res, "redirection"))
+		}
+	}
+	return reds
+}
+
 func (d *SpecializedDomain) ClearDeprecatedDatas(tableName string) {
 	if schema, err := schserv.GetSchema(tableName); err == nil && schema.HasField(sm.STARTKEY) && schema.HasField(sm.ENDKEY) {
 		currentTime := time.Now()
@@ -264,47 +266,4 @@ func (d *SpecializedDomain) ClearDeprecatedDatas(tableName string) {
 		p := utils.AllParams(tableName).RootRaw()
 		d.SuperCall(p, utils.Record{}, utils.DELETE, false, sqlFilter)
 	}
-}
-
-func (d *SpecializedDomain) CanDelete(record utils.Record) bool {
-	if d.SuperAdmin || d.PermsService.PermsCheck(d.TableName, "", "", d.Method, d.UserID, d.Own) || d.AutoLoad {
-		return true
-	}
-	foundDeps := map[string]string{}
-	for kp, pv := range d.GetParams().Values {
-		if strings.Contains(kp, "_id") {
-			foundDeps[kp] = pv
-		}
-	}
-	if len(foundDeps) == 0 {
-		for kp, pv := range foundDeps {
-			createdIds := []string{}
-			kp = strings.ReplaceAll(kp, "_id", "")
-			sch, err := schserv.GetSchema(kp)
-			if err == nil {
-				createdIds = filter.NewFilterService(d).GetCreatedAccessData(sch.ID)
-			} else {
-				kp = strings.ReplaceAll(kp, "db", "")
-				sch, err := schserv.GetSchema(kp)
-				if err == nil {
-					createdIds = filter.NewFilterService(d).GetCreatedAccessData(sch.ID)
-				}
-			}
-			if view_convertor.IsReadonly(kp,
-				utils.Record{utils.SpecialIDParam: pv}, createdIds, d) {
-				return false
-			}
-		}
-	} else {
-		createdIds := []string{}
-		sch, err := schserv.GetSchema(d.GetTable())
-		if err == nil {
-			createdIds = filter.NewFilterService(d).GetCreatedAccessData(sch.ID)
-		}
-		if view_convertor.IsReadonly(d.GetTable(),
-			utils.Record{utils.SpecialIDParam: record[utils.SpecialIDParam]}, createdIds, d) {
-			return false
-		}
-	}
-	return true
 }

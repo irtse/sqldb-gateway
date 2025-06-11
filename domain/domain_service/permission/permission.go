@@ -3,6 +3,8 @@ package permission
 import (
 	"encoding/json"
 	"slices"
+	"sqldb-ws/domain/domain_service/history"
+	"sqldb-ws/domain/domain_service/view_convertor"
 	"sqldb-ws/domain/schema"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -42,11 +44,8 @@ func NewPermDomainService(db *conn.Database, user string, isSuperAdmin bool, emp
 	}
 }
 
-func (p *PermDomainService) PermsBuilder(userID string) {
-	if userID == "" {
-		return
-	}
-	filterOwnPermsQueryRestriction := p.BuildFilterOwnPermsQueryRestriction(userID)
+func (p *PermDomainService) PermsBuilder(domain utils.DomainITF) {
+	filterOwnPermsQueryRestriction := p.BuildFilterOwnPermsQueryRestriction(domain)
 	datas, _ := p.db.SelectQueryWithRestriction(ds.DBPermission.Name, []interface{}{
 		connector.FormatSQLRestrictionWhereByMap("", filterOwnPermsQueryRestriction, false),
 	}, false)
@@ -61,17 +60,17 @@ func (p *PermDomainService) PermsBuilder(userID string) {
 	}
 }
 
-func (p *PermDomainService) BuildFilterOwnPermsQueryRestriction(userID string) map[string]interface{} {
+func (p *PermDomainService) BuildFilterOwnPermsQueryRestriction(domain utils.DomainITF) map[string]interface{} {
 	test := p.db.BuildSelectQueryWithRestriction(
 		ds.DBEntityUser.Name,
 		map[string]interface{}{
-			ds.DBUser.Name + "_id": userID,
+			ds.DBUser.Name + "_id": domain.GetUserID(),
 		}, true, ds.DBEntity.Name+"_id",
 	)
 	role := p.db.BuildSelectQueryWithRestriction(
 		ds.DBRoleAttribution.Name,
 		map[string]interface{}{
-			ds.DBUser.Name + "_id":   userID,
+			ds.DBUser.Name + "_id":   domain.GetUserID(),
 			ds.DBEntity.Name + "_id": test,
 		}, true, ds.DBRole.Name+"_id")
 
@@ -127,12 +126,12 @@ func (p *PermDomainService) exception(tableName string, force bool, method utils
 		(slices.Contains(ds.POSTPERMISSIONEXCEPTION, tableName) && method == utils.CREATE)
 }
 
-func (p *PermDomainService) IsOwnPermission(tableName string, force bool, method utils.Method, myUserID string, isOwn bool) bool {
-	if p.exception(tableName, !force, method, isOwn) || method != utils.SELECT {
+func (p *PermDomainService) IsOwnPermission(tableName string, force bool, isOwn bool, domain utils.DomainITF) bool {
+	if p.exception(tableName, !force, domain.GetMethod(), isOwn) || domain.GetMethod() != utils.SELECT {
 		return slices.Contains(ds.OWNPERMISSIONEXCEPTION, tableName)
 	}
 	if len(p.Perms) == 0 {
-		p.PermsBuilder(myUserID)
+		p.PermsBuilder(domain)
 	}
 	p.mutexPerms.Lock()
 	defer p.mutexPerms.Unlock()
@@ -143,18 +142,18 @@ func (p *PermDomainService) IsOwnPermission(tableName string, force bool, method
 }
 
 // can redact a view based on perms.
-func (p *PermDomainService) PermsCheck(tableName string, colName string, level string, method utils.Method, myUserID string, isOwn bool) bool {
-	return p.LocalPermsCheck(tableName, colName, level, method, "", myUserID, isOwn)
+func (p *PermDomainService) PermsCheck(tableName string, colName string, level string, isOwn bool, domain utils.DomainITF) bool {
+	return p.LocalPermsCheck(tableName, colName, level, "", isOwn, domain)
 }
-func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, level string, method utils.Method, destID string, myUserID string, isOwn bool) bool {
+func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, level string, destID string, isOwn bool, domain utils.DomainITF) bool {
 	// Super admin override or exception handling
-	if p.IsSuperAdmin || p.exception(tableName, level == "" || level == "<nil>" || level == sm.LEVELNORMAL, method, isOwn) {
+	if p.IsSuperAdmin || p.exception(tableName, level == "" || level == "<nil>" || level == sm.LEVELNORMAL, domain.GetMethod(), isOwn) {
 		return true
 	}
 
 	// Build permissions if empty
 	if len(p.Perms) == 0 {
-		p.PermsBuilder(myUserID)
+		p.PermsBuilder(domain)
 	}
 	// Retrieve permissions
 	p.mutexPerms.Lock()
@@ -166,19 +165,19 @@ func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, le
 		return false
 	}
 	accesGranted := true
-	if method == utils.SELECT && !p.hasReadAccess(level, perms.Read) {
+	if domain.GetMethod() == utils.SELECT && !p.hasReadAccess(level, perms.Read) {
 		accesGranted = false
 	}
 	// Handle UPDATE and CREATE permissions
-	if method == utils.CREATE && !perms.Create {
+	if domain.GetMethod() == utils.CREATE && !perms.Create {
 		accesGranted = false
 	}
-	if method == utils.UPDATE && !perms.Update {
-		if !p.checkUpdateCreatePermissions(tableName, destID, myUserID) {
+	if domain.GetMethod() == utils.UPDATE && !perms.Update {
+		if !p.checkUpdateCreatePermissions(tableName, destID, domain) {
 			accesGranted = p.getShare(schema, destID, "update_access", true)
 		}
 	}
-	if method == utils.DELETE && !perms.Delete {
+	if domain.GetMethod() == utils.DELETE && !perms.Delete {
 		accesGranted = p.getShare(schema, destID, "delete_access", true)
 	}
 	// Handle DELETE permissions
@@ -246,7 +245,7 @@ func (p *PermDomainService) accessLevelIndex(targetLevel string) (int, bool) {
 	return count, found
 }
 
-func (p *PermDomainService) checkUpdateCreatePermissions(tableName, destID string, myUserID string) bool {
+func (p *PermDomainService) checkUpdateCreatePermissions(tableName, destID string, domain utils.DomainITF) bool {
 	if p.Empty || destID == "" {
 		return true
 	}
@@ -257,13 +256,13 @@ func (p *PermDomainService) checkUpdateCreatePermissions(tableName, destID strin
 	test := p.db.BuildSelectQueryWithRestriction(
 		ds.DBEntityUser.Name,
 		map[string]interface{}{
-			ds.UserDBField: myUserID,
+			ds.UserDBField: domain.GetUserID(),
 		}, true, ds.EntityDBField,
 	)
 	if res, err := p.db.ClearQueryFilter().SimpleMathQuery("COUNT", ds.DBDataAccess.Name, map[string]interface{}{
 		ds.SchemaDBField:           sch.ID,
 		utils.RootDestTableIDParam: destID,
-		ds.UserDBField:             myUserID,
+		ds.UserDBField:             domain.GetUserID(),
 		"write":                    true,
 	}, true); err == nil && len(res) > 0 && res[0]["result"] != nil && utils.ToInt64(res[0]["result"]) > 0 {
 		if res, err := p.db.ClearQueryFilter().SimpleMathQuery("COUNT", ds.DBRequest.Name, map[string]interface{}{
@@ -277,7 +276,7 @@ func (p *PermDomainService) checkUpdateCreatePermissions(tableName, destID strin
 
 	res, err := p.db.SimpleMathQuery("COUNT", ds.DBTask.Name, map[string]interface{}{
 		utils.SpecialIDParam: p.db.BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-			ds.UserDBField:   myUserID,
+			ds.UserDBField:   domain.GetUserID(),
 			ds.EntityDBField: test,
 		}, true, utils.SpecialIDParam),
 		ds.SchemaDBField:           sch.ID,
@@ -285,4 +284,48 @@ func (p *PermDomainService) checkUpdateCreatePermissions(tableName, destID strin
 		"is_close":                 false,
 	}, false)
 	return err == nil && len(res) > 0 && res[0]["result"] != nil && utils.ToInt64(res[0]["result"]) > 0
+}
+
+func (d *PermDomainService) CanDelete(params map[string]string, record utils.Record, domain utils.DomainITF) bool {
+	if d.IsSuperAdmin || d.PermsCheck(
+		domain.GetTable(), "", "",
+		domain.IsOwn(false, false, utils.DELETE), domain) {
+		return true
+	}
+	foundDeps := map[string]string{}
+	for kp, pv := range params {
+		if strings.Contains(kp, "_id") {
+			foundDeps[kp] = pv
+		}
+	}
+	if len(foundDeps) == 0 {
+		for kp, pv := range foundDeps {
+			createdIds := []string{}
+			kp = strings.ReplaceAll(kp, "_id", "")
+			sch, err := schserv.GetSchema(kp)
+			if err == nil {
+				createdIds = history.GetCreatedAccessData(sch.ID, domain)
+			} else {
+				kp = strings.ReplaceAll(kp, "db", "")
+				sch, err := schserv.GetSchema(kp)
+				if err == nil {
+					createdIds = history.GetCreatedAccessData(sch.ID, domain)
+				}
+			}
+			if view_convertor.IsReadonly(kp, utils.Record{utils.SpecialIDParam: pv}, createdIds, domain) {
+				return false
+			}
+		}
+	} else {
+		createdIds := []string{}
+		sch, err := schserv.GetSchema(domain.GetTable())
+		if err == nil {
+			createdIds = history.GetCreatedAccessData(sch.ID, domain)
+		}
+		if view_convertor.IsReadonly(domain.GetTable(),
+			utils.Record{utils.SpecialIDParam: record[utils.SpecialIDParam]}, createdIds, domain) {
+			return false
+		}
+	}
+	return true
 }

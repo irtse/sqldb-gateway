@@ -1,12 +1,14 @@
 package filter
 
 import (
-	"fmt"
+	"slices"
 	"sort"
+	sch "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
+	"strings"
 )
 
 // DONE - ~ 100 LINES - NOT TESTED
@@ -16,48 +18,6 @@ func (d *FilterService) GetEntityFilterQuery() string {
 		map[string]interface{}{
 			ds.UserDBField: d.Domain.GetUserID(),
 		}, true, ds.EntityDBField)
-}
-
-func (d *FilterService) CountMaxDataAccess(schema *sm.SchemaModel, filter []string) (int64, string) {
-	if d.Domain.GetUserID() == "" {
-		return 0, ""
-	}
-	fmt.Println("there")
-	restr, _, _, _ := d.Domain.GetSpecialized(schema.Name).GenerateQueryFilter(schema.Name, filter...)
-	fmt.Println(schema.Name, restr, d.Domain.GetSpecialized(schema.Name))
-	count := int64(0)
-	res, err := d.Domain.GetDb().ClearQueryFilter().SimpleMathQuery("COUNT", schema.Name, []interface{}{restr}, false)
-	if len(res) == 0 || err != nil || res[0]["result"] == nil {
-		return 0, restr
-	} else {
-		count = utils.ToInt64(res[0]["result"])
-	}
-	return count, restr
-}
-
-func (d *FilterService) CountNewDataAccess(schema *sm.SchemaModel, filter []string) (int64, int64) {
-	if d.Domain.GetUserID() == "" || d.Domain.GetEmpty() {
-		return 0, 0
-	}
-	newCount := int64(0)
-	count, restr := d.CountMaxDataAccess(schema, filter)
-	newFilter := map[string]interface{}{
-		"!id": d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
-			"write":  false,
-			"update": false,
-			ds.SchemaDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
-				ds.DBSchema.Name, map[string]interface{}{
-					"name": connector.Quote(schema.Name),
-				}, false, "id"),
-			ds.UserDBField: d.Domain.GetUserID(),
-		}, false, ds.DestTableDBField),
-	}
-	filter = []string{restr}
-	filter = append(filter, connector.FormatSQLRestrictionWhereByMap("", newFilter, false))
-	if res, err := d.Domain.GetDb().ClearQueryFilter().SimpleMathQuery("COUNT", schema.Name, utils.ToListAnonymized(filter), false); err == nil && len(res) > 0 {
-		newCount = utils.ToInt64(res[0]["result"])
-	}
-	return newCount, count
 }
 
 func (s *FilterService) GetFilterFields(viewfilterID string, schemaID string) []map[string]interface{} {
@@ -100,4 +60,95 @@ func (s *FilterService) GetFilterIDs(filterID string, viewfilterID string, schem
 		}
 	}
 	return filtersID
+}
+
+func (s *FilterService) GetFilterForQuery(filterID string, viewfilterID string, schema sm.SchemaModel, domainParams utils.Params) (string, string, string, string, string) {
+	ids := s.GetFilterIDs(filterID, viewfilterID, schema.ID)
+	view, order, dir := s.ProcessViewAndOrder(ids[utils.RootViewFilter], schema.ID, domainParams)
+	filter := s.ProcessFilterRestriction(ids[utils.RootFilter], schema)
+	state := ""
+	if filterID != "" {
+		if fils, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilter.Name,
+			map[string]interface{}{
+				utils.SpecialIDParam: filterID,
+			}, false); err == nil && len(fils) > 0 {
+			state = utils.ToString(fils[0]["elder"]) // get elder filter
+		}
+	}
+	return filter, view, order, dir, state
+}
+
+func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.SchemaModel) string {
+	if filterID == "" {
+		return ""
+	}
+	var filter []string
+	var orFilter []string
+	restriction := map[string]interface{}{
+		ds.FilterDBField: filterID,
+	}
+	s.Domain.GetDb().ClearQueryFilter()
+	fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false)
+	if err == nil && len(fields) > 0 {
+		for _, field := range fields {
+			if f, err := schema.GetFieldByID(utils.GetInt(field, ds.SchemaFieldDBField)); err == nil {
+				if utils.GetBool(field, "is_own") && len(s.RestrictionByEntityUser(schema, orFilter, true)) > 0 {
+					if field["separator"] == "or" {
+						orFilter = append(orFilter, s.RestrictionByEntityUser(schema, orFilter, true)...)
+					} else {
+						filter = append(filter, s.RestrictionByEntityUser(schema, filter, true)...)
+					}
+				} else if connector.FormatOperatorSQLRestriction(field["operator"], field["separator"], f.Name, field["value"], f.Type) != "" {
+					if field["separator"] == "or" {
+						orFilter = append(orFilter,
+							"("+connector.FormatOperatorSQLRestriction(field["operator"], field["separator"], f.Name, field["value"], f.Type)+")")
+					} else {
+						filter = append(filter,
+							"("+connector.FormatOperatorSQLRestriction(field["operator"], field["separator"], f.Name, field["value"], f.Type)+")")
+					}
+				}
+
+			}
+		}
+	}
+	if len(orFilter) > 0 {
+		filter = append(filter, "("+strings.Join(orFilter, " OR ")+")")
+	}
+	return strings.Join(filter, " AND ")
+}
+
+func (s *FilterService) ProcessViewAndOrder(viewfilterID string, schemaID string, domainParams utils.Params) (string, string, string) {
+	var viewFilter, order, dir []string = []string{}, []string{}, []string{}
+	cols, ok := domainParams.Get(utils.RootColumnsParam)
+	fields := []sm.FieldModel{}
+	if viewfilterID != "" {
+		for _, field := range s.GetFilterFields(viewfilterID, schemaID) {
+			if f, err := sch.GetFieldByID(utils.GetInt(field, ds.RootID(ds.DBSchemaField.Name))); err == nil {
+				fields = append(fields, f)
+			}
+		}
+	}
+	sort.SliceStable(fields, func(i, j int) bool {
+		return fields[i].Index <= fields[j].Index
+	})
+	for _, field := range fields {
+		if field.Name != "id" && (!ok || cols == "" || (strings.Contains(cols, field.Name))) && !field.Hidden {
+			viewFilter = append(viewFilter, field.Name)
+			if field.Dir != "" {
+				dir = append(dir, strings.ToUpper(field.Dir))
+			} else if !slices.Contains(order, field.Name) {
+				dir = append(dir, field.Name+" ASC")
+			}
+		}
+	}
+	if p, ok := domainParams.Get(utils.RootGroupBy); ok {
+		if len(viewFilter) != 0 && !slices.Contains(viewFilter, p) {
+			viewFilter = append(viewFilter, p)
+		}
+		if !slices.Contains(order, p) {
+			order = append(order, p)
+			dir = append(dir, "ASC")
+		}
+	}
+	return strings.Join(viewFilter, ","), strings.Join(order, ","), strings.Join(dir, ",")
 }

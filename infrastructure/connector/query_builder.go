@@ -341,7 +341,7 @@ func (db *Database) BuildUpdateColumnQueries(tableName string, record map[string
 		queries = append(queries, "ALTER TABLE "+tableName+" DROP CONSTRAINT "+tableName+"_"+name+"_"+fmt.Sprintf("%v", record["constraints"])+";")
 		queries = append(queries, "ALTER TABLE "+tableName+" ADD CONSTRAINT "+tableName+"_"+name+"_"+fmt.Sprintf("%v", record["constraints"])+" "+strings.ToUpper(fmt.Sprintf("%v", record["constraints"]))+"("+name+");")
 	}
-	if strings.Contains(typ, "int") && strings.TrimSpace(fmt.Sprintf("%v", record["foreign_table"])) != "" && strings.TrimSpace(fmt.Sprintf("%v", record["foreign_table"])) != "<nil>" {
+	if strings.TrimSpace(fmt.Sprintf("%v", record["foreign_table"])) != "" && strings.TrimSpace(fmt.Sprintf("%v", record["foreign_table"])) != "<nil>" {
 		queries = append(queries, "ALTER TABLE "+tableName+" DROP CONSTRAINT fk_"+name+";")
 		queries = append(queries, "ALTER TABLE "+tableName+" ADD CONSTRAINT  fk_"+name+" FOREIGN KEY("+name+") REFERENCES "+fmt.Sprintf("%v", record["foreign_table"])+"(id) ON DELETE CASCADE;")
 	}

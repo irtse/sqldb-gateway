@@ -1,7 +1,6 @@
 package email_service
 
 import (
-	"sqldb-ws/domain/domain_service/view_convertor"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
@@ -106,8 +105,4 @@ func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, 
 		record["code"] = uuid.New()
 	}
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
-}
-
-func (s *EmailSendedService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
-	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 }

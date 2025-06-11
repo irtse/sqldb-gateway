@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"sqldb-ws/domain/domain_service/filter"
-	"sqldb-ws/domain/domain_service/view_convertor"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/specialized_service/task_service"
@@ -117,7 +116,4 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 
 func (s *EmailResponseService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
-}
-func (s *EmailResponseService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
-	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 }

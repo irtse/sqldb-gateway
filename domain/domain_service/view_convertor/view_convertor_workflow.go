@@ -149,5 +149,3 @@ func (d *ViewConvertor) populateTaskDetails(newStep *sm.WorkflowStepModel, step 
 		newStep.IsDismiss = utils.Compare(tasks[0]["is_dismiss"], "dismiss")
 	}
 }
-
-// TODO : Add hierarchical view in the workflow enrich

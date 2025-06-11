@@ -2,7 +2,6 @@ package user_service
 
 import (
 	"sqldb-ws/domain/domain_service/filter"
-	"sqldb-ws/domain/domain_service/view_convertor"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
@@ -23,9 +22,7 @@ func (s *UserService) SpecializedCreateRow(record map[string]interface{}, tableN
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
 }
 func (s *UserService) Entity() utils.SpecializedServiceInfo { return ds.DBUser }
-func (s *UserService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
-	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
-}
+
 func (s *UserService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
 	if scope, ok := s.Domain.GetParams().Get(utils.RootScope); ok && scope == "enable" && s.Domain.GetUserID() != "" {
 		innerestr = append(innerestr, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{

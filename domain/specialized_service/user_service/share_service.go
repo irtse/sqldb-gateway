@@ -9,7 +9,6 @@ import (
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
 
-	"sqldb-ws/domain/domain_service/view_convertor"
 	"sqldb-ws/infrastructure/connector"
 )
 
@@ -21,9 +20,7 @@ func (s *ShareService) SpecializedCreateRow(record map[string]interface{}, table
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
 }
 func (s *ShareService) Entity() utils.SpecializedServiceInfo { return ds.DBShare }
-func (s *ShareService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
-	return view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
-}
+
 func (s *ShareService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
 	record[ds.UserDBField] = s.Domain.GetUserID() // affected create_by
 	sch, err := schema.GetSchema(tablename)

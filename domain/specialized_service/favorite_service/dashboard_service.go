@@ -66,23 +66,6 @@ func (s *DashboardService) Write(record map[string]interface{}, tableName string
 		}
 	}
 }
-
-func (s *DashboardService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) (res utils.Results) {
-	// Should get the application of the dashboard filters. The filters are applied to the data
-	// and the data is then transformed into a generic view
-	res = utils.Results{}
-	for _, record := range results {
-		if record[utils.SpecialIDParam] != nil {
-			res = append(res, utils.Record{
-				"name":        utils.ToString(record[models.NAMEKEY]),
-				"description": utils.ToString(record["description"]),
-				"elements":    s.GetDashboardElementView(utils.ToString(record[utils.SpecialIDParam])),
-			})
-		}
-	}
-	return results
-}
-
 func (s *DashboardService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }

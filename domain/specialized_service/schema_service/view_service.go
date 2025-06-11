@@ -6,7 +6,6 @@ import (
 	"slices"
 	"sort"
 	filterserv "sqldb-ws/domain/domain_service/filter"
-	"sqldb-ws/domain/domain_service/task"
 	"sqldb-ws/domain/domain_service/view_convertor"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -162,7 +161,6 @@ func (s *ViewService) TransformToView(record utils.Record, multiple bool, schema
 			return !ok && k != "new" && !strings.Contains(k, "dest_table") && k != "id"
 		})
 		sqlFilter, view, dir := s.getFilterDetails(record, schema)
-		fmt.Println("SQLFILTER", schema.Name)
 		params.UpdateParamsWithFilters(view, dir)
 		params.EnrichCondition(dp.Values, func(k string) bool {
 			return k != utils.RootRowsParam && k != utils.SpecialIDParam && k != utils.RootTableParam
@@ -183,7 +181,11 @@ func (s *ViewService) TransformToView(record utils.Record, multiple bool, schema
 		if shal, ok := s.Domain.GetParams().Get(utils.RootShallow); (!ok || shal != "enable") && !notFound {
 			datas, rec = s.fetchData(params, sqlFilter, rec)
 		}
-		record, rec = s.processData(rec, multiple, datas, schema, record, view, params)
+		newOrder := strings.Split(view, ",")
+		record, rec, newOrder = s.processData(rec, multiple, datas, schema, record, newOrder, params)
+		if len(newOrder) > 0 {
+			rec["order"] = newOrder
+		}
 		rec["link_path"] = "/" + utils.MAIN_PREFIX + "/" + fmt.Sprintf(ds.DBView.Name) + "?rows=" + utils.ToString(record[utils.SpecialIDParam])
 		if _, ok := record["group_by"]; ok { // express by each column we are foldered TODO : if not in view add it
 			field, err := schema.GetFieldByID(record.GetInt("group_by"))
@@ -196,24 +198,6 @@ func (s *ViewService) TransformToView(record utils.Record, multiple bool, schema
 		}
 		channel <- rec
 	}
-}
-
-func (s *ViewService) getOrder(rec utils.Record, record utils.Record, values map[string]interface{}, view string) (utils.Record, utils.Record, string, map[string]interface{}) {
-	if len(task.GetViewTask(utils.GetString(record, ds.SchemaDBField), utils.ToString(record[utils.SpecialIDParam]), s.Domain.GetUserID())) > 0 {
-		vs := task.GetViewTask(utils.GetString(record, ds.SchemaDBField), utils.ToString(record[utils.SpecialIDParam]), s.Domain.GetUserID())
-		if utils.GetBool(record, "is_list") {
-			for _, fname := range vs {
-				if val, ok := utils.ToMap(rec["schema"])[fname]; ok {
-					utils.ToMap(val)["readonly"] = true
-					utils.ToMap(val)["hidden"] = true
-				}
-				values[fname] = nil
-			}
-		} else {
-			view = strings.Join(vs, ",")
-		}
-	}
-	return rec, record, view, values
 }
 
 // this filter a view only with its property
@@ -280,7 +264,7 @@ func (s *ViewService) fetchData(params utils.Params, sqlFilter string, rec utils
 }
 
 func (s *ViewService) processData(rec utils.Record, multiple bool, datas utils.Results, schema *sm.SchemaModel,
-	record utils.Record, view string, params utils.Params) (utils.Record, utils.Record) {
+	record utils.Record, newOrder []string, params utils.Params) (utils.Record, utils.Record, []string) {
 	if utils.Compare(record["is_empty"], true) {
 		datas = append(datas, utils.Record{})
 	}
@@ -294,14 +278,13 @@ func (s *ViewService) processData(rec utils.Record, multiple bool, datas utils.R
 
 		if len(treated) > 0 {
 			if !multiple {
-				rec["schema"] = s.extractSchema(utils.ToMap(treated[0]["schema"]), record, schema, params, view)
+				rec["schema"] = s.extractSchema(utils.ToMap(treated[0]["schema"]), record, schema, params, newOrder)
 			}
 			for k, v := range treated[0] {
 				if v != nil {
 					switch k {
 					case "items":
-						rec, view = s.extractItems(utils.ToList(v), k, rec, record, schema,
-							view, params, false)
+						rec, newOrder = s.extractItems(utils.ToList(v), k, rec, record, schema, params, false)
 					default:
 						if recValue, exists := rec[k]; !exists || recValue == "" {
 							rec[k] = v
@@ -311,24 +294,26 @@ func (s *ViewService) processData(rec utils.Record, multiple bool, datas utils.R
 			}
 		}
 	}
-	return record, rec
+	return record, rec, newOrder
 }
 
-func (s *ViewService) extractSchema(value map[string]interface{}, record utils.Record, schema *sm.SchemaModel, params utils.Params, view string) map[string]interface{} {
+func (s *ViewService) extractSchema(value map[string]interface{}, record utils.Record, schema *sm.SchemaModel,
+	params utils.Params, newOrder []string) map[string]interface{} {
 	newV := map[string]interface{}{}
 	for fieldName, field := range value {
 		if fieldName != ds.WorkflowDBField && schema.Name == ds.DBRequest.Name && utils.Compare(record["is_empty"], true) {
 			continue
 		}
 		col, ok := params.Get(utils.RootColumnsParam)
-		utils.ToMap(field)["active"] = !ok || col == "" || strings.Contains(view, fieldName) || strings.Contains(col, fieldName)
+		utils.ToMap(field)["active"] = !ok || col == "" || slices.Contains(newOrder, fieldName) || strings.Contains(col, fieldName)
 		newV[fieldName] = field
 	}
 	return newV
 }
 
 func (s *ViewService) extractItems(value []interface{}, key string, rec utils.Record, record utils.Record,
-	schema *sm.SchemaModel, view string, params utils.Params, main bool) (utils.Record, string) {
+	schema *sm.SchemaModel, params utils.Params, main bool) (utils.Record, []string) {
+	newOrder := []string{}
 	for _, item := range value {
 		values := utils.ToMap(item)["values"]
 		utils.ToMap(item)["schema_id"] = schema.ID
@@ -367,7 +352,7 @@ func (s *ViewService) extractItems(value []interface{}, key string, rec utils.Re
 				utils.RootRowsParam, utils.ToMap(values)[utils.SpecialIDParam])
 		}
 		rec, record, values = s.getFilter(rec, record, utils.ToMap(values), schema)
-		rec, record, view, values = s.getOrder(rec, record, utils.ToMap(values), view)
+		newOrder, values = view_convertor.GetOrder(schema, record, utils.ToMap(values), newOrder, s.Domain)
 		// here its to format by filter depending on task running about this document of viewing, if enable.
 	}
 	if rec[key] == nil {
@@ -375,5 +360,5 @@ func (s *ViewService) extractItems(value []interface{}, key string, rec utils.Re
 	} else {
 		rec[key] = append(rec[key].([]interface{}), value...)
 	}
-	return rec, view
+	return rec, newOrder
 }
