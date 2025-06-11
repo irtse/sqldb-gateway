@@ -69,41 +69,23 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 						continue
 					}
 					var body utils.Record
-					meth := utils.GetString(t, "action_on_response")
 					method := utils.SELECT
-					switch meth {
+					switch utils.GetString(t, "action_on_response") {
 					case "create":
 						method = utils.CREATE
-						if utils.GetBool(record, "got_response") {
-							if t["body_on_true_response"] == nil {
-								continue
-							} else {
-								json.Unmarshal([]byte(utils.GetString(t, "body_on_true_response")), &body)
-							}
-						} else {
-							if t["body_on_false_response"] == nil {
-								continue
-							} else {
-								json.Unmarshal([]byte(utils.GetString(t, "body_on_false_response")), &body)
-							}
-						}
 					case "update":
 						method = utils.UPDATE
-						if utils.GetBool(r, "got_response") {
-							if t["body_on_true_response"] == nil {
-								continue
-							} else {
-								json.Unmarshal([]byte(utils.GetString(t, "body_on_true_response")), &body)
-							}
-						} else {
-							if t["body_on_false_response"] == nil {
-								continue
-							} else {
-								json.Unmarshal([]byte(utils.GetString(t, "body_on_false_response")), &body)
-							}
-						}
 					case "delete":
 						method = utils.DELETE
+					}
+					if (method == utils.CREATE || method == utils.UPDATE) && utils.GetBool(record, "got_response") {
+						if t["body_on_true_response"] == nil && t["body_on_false_response"] == nil {
+							continue
+						} else if t["body_on_true_response"] == nil {
+							json.Unmarshal([]byte(utils.GetString(t, "body_on_true_response")), &body)
+						} else if t["body_on_false_response"] == nil {
+							json.Unmarshal([]byte(utils.GetString(t, "body_on_false_response")), &body)
+						}
 					}
 					if sch, err := schema.GetSchemaByID(utils.GetInt(t, ds.SchemaDBField+"_on_response")); err == nil {
 						s.Domain.Call(utils.GetRowTargetParameters(sch.Name, r[ds.DestTableDBField+"_on_response"]), body, method)

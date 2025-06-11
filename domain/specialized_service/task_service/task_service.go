@@ -12,9 +12,6 @@ import (
 	"time"
 )
 
-// this cache must be use to ... match things with things exemple : view
-
-// TODO
 type TaskService struct {
 	servutils.AbstractSpecializedService
 }
@@ -91,7 +88,6 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		if _, ok := res["is_draft"]; ok && utils.GetBool(res, "is_draft") {
 			continue
 		}
-
 		if binded, ok := res["binded_dbtask"]; ok && utils.GetBool(res, "is_close") && binded != nil {
 			s.Domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, map[string]interface{}{
 				"is_close":                    res["is_close"],
@@ -100,10 +96,11 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 				"closing_date":                res["closing_date"],
 			}, map[string]interface{}{
 				utils.SpecialIDParam: binded,
-				utils.SpecialIDParam + "_1": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-					"binded_dbtask":            binded,
-					"!" + utils.SpecialIDParam: res[utils.SpecialIDParam],
-				}, false, utils.SpecialIDParam),
+				utils.SpecialIDParam + "_1": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
+					ds.DBTask.Name, map[string]interface{}{
+						"binded_dbtask":            binded,
+						"!" + utils.SpecialIDParam: res[utils.SpecialIDParam],
+					}, false, utils.SpecialIDParam),
 			}, true)
 		}
 		requests, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
@@ -126,19 +123,11 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		switch res["state"] {
 		case "completed":
 			current_index = math.Floor(current_index + 1)
-		case "refused":
-			s.Domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBRequest.Name, utils.Record{"state": "refused"},
-				map[string]interface{}{
-					utils.SpecialIDParam: utils.GetInt(res, RequestDBField),
-				}, false)
 		case "dismiss":
 			if current_index >= 1 {
 				current_index = math.Floor(current_index - 1)
 			} else { // Dismiss will close requests.
-				s.Domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBRequest.Name, utils.Record{"state": "dismiss"},
-					map[string]interface{}{
-						utils.SpecialIDParam: utils.GetInt(res, RequestDBField),
-					}, false)
+				res["state"] = "refused"
 			} // no before task close request and task
 		}
 		schemes, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name,
@@ -164,15 +153,18 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 				newRecRequest["state"] = s
 			}
 		}
-		newRecRequest["current_index"] = current_index
-		for _, scheme := range schemes { // verify before
-			if utils.GetBool(scheme, "before_hierarchical_validation") {
-				newRecRequest["current_index"] = current_index - 0.1
-				break
+		if res["state"] == "refused" {
+			newRecRequest["state"] = res["state"]
+		} else {
+			newRecRequest["current_index"] = current_index
+			for _, scheme := range schemes { // verify before
+				if utils.GetBool(scheme, "before_hierarchical_validation") {
+					newRecRequest["current_index"] = current_index - 0.1
+					break
+				}
 			}
 		}
-		newRecRequest = SetClosureStatus(newRecRequest)
-		s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBRequest.Name, newRecRequest[utils.SpecialIDParam]).RootRaw(), newRecRequest)
+		s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBRequest.Name, newRecRequest[utils.SpecialIDParam]).RootRaw(), SetClosureStatus(newRecRequest))
 		for _, scheme := range schemes {
 			if current_index != newRecRequest.GetFloat("current_index") {
 				HandleHierarchicalVerification(s.Domain, utils.GetInt(res, ds.RequestDBField), record)

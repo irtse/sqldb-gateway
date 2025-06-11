@@ -12,14 +12,6 @@ import (
 )
 
 // DONE - ~ 100 LINES - NOT TESTED
-func (d *FilterService) GetEntityFilterQuery() string {
-	return d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
-		ds.DBEntityUser.Name,
-		map[string]interface{}{
-			ds.UserDBField: d.Domain.GetUserID(),
-		}, true, ds.EntityDBField)
-}
-
 func (s *FilterService) GetFilterFields(viewfilterID string, schemaID string) []map[string]interface{} {
 	if viewfilterID == "" {
 		return []map[string]interface{}{}

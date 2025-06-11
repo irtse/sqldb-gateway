@@ -167,7 +167,7 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 	}
 	isUser := false
 	isUser = schema.HasField(ds.UserDBField) || s.Domain.GetTable() == ds.DBUser.Name
-	if scope, ok := s.Domain.GetParams().Get(utils.RootScope); !(ok && scope == "enable" && schema.Name == ds.DBTask.Name) {
+	if scope, ok := s.Domain.GetParams().Get(utils.RootScope); !(ok && scope == "enable" && schema.Name == ds.DBTask.Name) && !(ok && scope == "disable" && schema.Name == ds.DBUser.Name) {
 		if isUser {
 			key := ds.UserDBField
 			if s.Domain.GetTable() == ds.DBUser.Name {
@@ -191,7 +191,11 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 				}
 			}
 			if s.Domain.GetUserID() != "" {
-				restrictions[key] = s.GetEntityFilterQuery()
+				restrictions[key] = s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
+					ds.DBEntityUser.Name,
+					map[string]interface{}{
+						ds.UserDBField: s.Domain.GetUserID(),
+					}, true, ds.EntityDBField)
 			}
 		}
 	}

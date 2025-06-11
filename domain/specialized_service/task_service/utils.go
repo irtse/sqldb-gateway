@@ -136,6 +136,12 @@ func createTaskAndNotify(task map[string]interface{}, domain utils.DomainITF, is
 
 func notify(task utils.Record, i int64, domain utils.DomainITF) {
 	if schema, err := schserv.GetSchema(ds.DBTask.Name); err == nil {
+		name := utils.GetString(task, "name")
+		if res, err := domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
+			utils.SpecialIDParam: i,
+		}, false); err == nil && len(res) > 0 {
+			name += " <" + utils.GetString(res[0], "name") + ">"
+		}
 		notif := utils.Record{
 			"name":              utils.GetString(task, "name"),
 			"description":       utils.GetString(task, "description"),

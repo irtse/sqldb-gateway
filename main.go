@@ -5,7 +5,6 @@ import (
 	"os"
 	"plugin"
 	domain "sqldb-ws/domain"
-	"sqldb-ws/domain/domain_service/task"
 	"sqldb-ws/domain/schema"
 	_ "sqldb-ws/routers"
 	"strings"
@@ -41,7 +40,6 @@ func main() {
 
 	fmt.Printf("%s\n", "Service in "+os.Getenv("AUTH_MODE")+" mode")
 	schema.Load(domain.Domain(true, os.Getenv("SUPERADMIN_NAME"), nil))
-	task.Load(domain.Domain(true, os.Getenv("SUPERADMIN_NAME"), nil))
 	fmt.Printf("%s\n", "Running server...")
 	if os.Getenv("PLUGINS") != "" {
 		for _, plug := range strings.Split(os.Getenv("PLUGINS"), ",") {

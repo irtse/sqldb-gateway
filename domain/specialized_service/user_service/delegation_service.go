@@ -35,6 +35,11 @@ func (s *DelegationService) SpecializedDeleteRow(results []map[string]interface{
 	s.SpecializedUpdateRow(results, map[string]interface{}{})
 }
 
+func (s *DelegationService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
+	s.Write(results, record)
+	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
+}
+
 func (s *DelegationService) Write(results []map[string]interface{}, record map[string]interface{}) {
 	if taskID := utils.GetInt(record, ds.TaskDBField); taskID >= 0 {
 		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
@@ -56,21 +61,18 @@ func (s *DelegationService) Write(results []map[string]interface{}, record map[s
 			ds.UserDBField: s.Domain.GetUserID(),
 		}, false); err == nil && len(res) > 0 {
 			for _, r := range res {
-				newTask := utils.Record{}
-				for k, v := range r {
-					newTask[k] = v
-				}
-				newTask[ds.UserDBField] = res[0]["delegated_"+ds.UserDBField]
-				newTask[ds.EntityDBField] = nil
-				newTask["binded_"+ds.TaskDBField] = r[utils.SpecialIDParam]
-				delete(r, utils.SpecialIDParam)
-				s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name), newTask)
+				go func() {
+					newTask := utils.Record{}
+					for k, v := range r {
+						newTask[k] = v
+					}
+					newTask[ds.UserDBField] = res[0]["delegated_"+ds.UserDBField]
+					newTask[ds.EntityDBField] = nil
+					newTask["binded_"+ds.TaskDBField] = r[utils.SpecialIDParam]
+					delete(r, utils.SpecialIDParam)
+					s.Domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name), newTask)
+				}()
 			}
 		}
 	}
-}
-
-func (s *DelegationService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
-	s.Write(results, record)
-	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
 }

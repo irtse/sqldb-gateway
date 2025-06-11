@@ -24,8 +24,6 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	bodySchema int64, destID int64, destOnResponse int64, fileAttached string, signature string) (utils.Record, error) {
 	var subj bytes.Buffer
 	var content bytes.Buffer
-	// SHOULD MAP AND APPLY CODE
-	fmt.Println("FILEATTACHED", fileAttached)
 	tmplSubj, err := template.New("email").Parse(subject)
 	if err == nil {
 		if err := tmplSubj.Execute(&subj, bodyToMap); err == nil {
@@ -45,7 +43,7 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 		"to_email":              utils.GetString(to, "id"), // SHOULD BE ID
 		"subject":               subject,
 		"content":               strings.ReplaceAll(strings.ReplaceAll(content.String(), "''", "'"), "''", "'"),
-		"file_attached":         "",
+		"file_attached":         fileAttached,
 		ds.EmailTemplateDBField: tplID,
 	}
 	if destOnResponse > -1 {

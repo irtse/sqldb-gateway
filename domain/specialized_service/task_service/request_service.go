@@ -56,10 +56,13 @@ func (s *RequestService) GenerateQueryFilter(tableName string, innerestr ...stri
 }
 
 func GetHierarchical(domain utils.DomainITF) ([]map[string]interface{}, error) {
-	f := filter.NewFilterService(domain)
 	return domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBHierarchy.Name, map[string]interface{}{
-		ds.UserDBField:   domain.GetUserID(),
-		ds.EntityDBField: f.GetEntityFilterQuery(),
+		ds.UserDBField: domain.GetUserID(),
+		ds.EntityDBField: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
+			ds.DBEntityUser.Name,
+			map[string]interface{}{
+				ds.UserDBField: domain.GetUserID(),
+			}, true, ds.EntityDBField),
 	}, true)
 }
 
