@@ -26,6 +26,7 @@ func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interfac
 			}, false, ds.EmailTemplateDBField,
 		),
 	}, false); err == nil && len(res) > 0 {
+		fmt.Println(res[0], utils.GetBool(res[0], "waiting_response"))
 		if utils.GetBool(res[0], "waiting_response") {
 			// should enrich with a binary response yes or no.
 			isValid = true
