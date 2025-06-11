@@ -102,12 +102,24 @@ var ArticleFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: append(publicationFields, []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: ArticleAuthorsFR.Name},
+		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: ArticleAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "yes", Required: false, Readonly: false, Index: 9},
 		{Name: "media_name", Label: "nom du journal", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 10},
 		{Name: "DOI", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 11, Translatable: false},
 		{Name: "publishing_date", Label: "date objective de publication", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 12},
 	}...),
+}
+
+var ArticleAffiliationAuthorsFR = models.SchemaModel{
+	Name:     "article_affiliation_authors",
+	Label:    "article affiliation authors",
+	Category: "publications",
+	CanOwned: true,
+	Fields: []models.FieldModel{
+		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: ArticleAuthorsFR.Name},
+		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
+		{Name: ds.RootID("article"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "article", Required: true, Index: 3},
+	},
 }
 
 var ArticleAuthorsFR = models.SchemaModel{
@@ -128,7 +140,7 @@ var ConferenceFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: ConferenceAuthorsFR.Name},
+		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: ConferenceAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "yes", Required: false, Readonly: false, Index: 9},
 		{Name: "acronym", Label: "nom de la conférence (acronyme)", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 10},
 		{Name: "name", Label: "nom de la conférence", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 11},
@@ -138,6 +150,18 @@ var ConferenceFR = models.SchemaModel{
 		{Name: "country", Label: "pays de la conférence", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 15},
 		{Name: "link", Label: "lien de la conférence", Type: models.URL.String(), Required: false, Readonly: false, Index: 16},
 	}...),
+}
+
+var ConferenceAffiliationAuthorsFR = models.SchemaModel{
+	Name:     "conference_affiliation_authors",
+	Label:    "conference affiliation authors",
+	Category: "publications",
+	CanOwned: true,
+	Fields: []models.FieldModel{
+		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: ConferenceAuthorsFR.Name},
+		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
+		{Name: ds.RootID("conference_presentation"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "conference_presentation", Required: true, Index: 3},
+	},
 }
 
 var ConferenceAuthorsFR = models.SchemaModel{
@@ -158,13 +182,25 @@ var PresentationFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: append(publicationFields, []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: PresentationAuthorsFR.Name},
+		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: PresentationAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "no", Required: false, Readonly: false, Index: 9},
 		{Name: "conference_acronym", Label: "nom de la conférence (acronyme)", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 10},
 		{Name: "conference_name", Label: "nom de la conférence", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 12},
 		{Name: "meeting_name", Label: "nom du meeting", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 12},
 		{Name: "meeting_date", Label: "date du meeting", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 13},
 	}...),
+}
+
+var PresentationAffiliationAuthorsFR = models.SchemaModel{
+	Name:     "presentation_affiliation_authors",
+	Label:    "presentation affiliation authors",
+	Category: "publications",
+	CanOwned: true,
+	Fields: []models.FieldModel{
+		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: PresentationAuthorsFR.Name},
+		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
+		{Name: ds.RootID("presentation"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "presentation", Required: true, Index: 3},
+	},
 }
 
 var PresentationAuthorsFR = models.SchemaModel{
@@ -185,7 +221,7 @@ var PosterFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: PosterAuthorsFR.Name},
+		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: PosterAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "no", Required: false, Readonly: false, Index: 9},
 		{Name: "conference_acronym", Label: "nom de la conférence (acronyme)", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 10},
 		{Name: "conference_name", Label: "nom de la conférence", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 11},
@@ -195,6 +231,18 @@ var PosterFR = models.SchemaModel{
 		{Name: "conference_country", Label: "pays de la conférence", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 15},
 		{Name: "conference_link", Label: "lien de la conférence", Type: models.URL.String(), Required: false, Readonly: false, Index: 16},
 	}...),
+}
+
+var PosterAffiliationAuthorsFR = models.SchemaModel{
+	Name:     "poster_affiliation_authors",
+	Label:    "poster affiliation authors",
+	Category: "publications",
+	CanOwned: true,
+	Fields: []models.FieldModel{
+		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: PosterAuthorsFR.Name},
+		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
+		{Name: ds.RootID("poster"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "poster", Required: true, Index: 3},
+	},
 }
 
 var PosterAuthorsFR = models.SchemaModel{
@@ -215,10 +263,22 @@ var HDRFR = models.SchemaModel{
 	Label:    "authorizations to direct research",
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: HDRAuthorsFR.Name},
+		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: HDRAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "yes", Required: false, Readonly: false, Index: 9},
 		{Name: "defense_date", Label: "date de soutenance de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 10},
 	}...),
+}
+
+var HDRAffiliationAuthorsFR = models.SchemaModel{
+	Name:     "research_authorization_affiliation_authors",
+	Label:    "research authorization affiliation authors",
+	Category: "publications",
+	CanOwned: true,
+	Fields: []models.FieldModel{
+		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: HDRAuthorsFR.Name},
+		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
+		{Name: ds.RootID("research_authorization"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "research_authorization", Required: true, Index: 3},
+	},
 }
 
 var HDRAuthorsFR = models.SchemaModel{
@@ -239,7 +299,7 @@ var ThesisFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: ThesisAuthorsFR.Name},
+		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: ThesisAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "yes", Required: false, Readonly: false, Index: 9},
 		{Name: "defense_date", Label: "date de soutenance de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 10},
 		{Name: "director_" + ds.RootID(ds.DBUser.Name), Type: models.INTEGER.String(), Required: true, ForeignTable: ds.DBUser.Name, Index: 11, Label: "directeur de thèse"},
@@ -247,6 +307,18 @@ var ThesisFR = models.SchemaModel{
 		{Name: "start_date", Label: "date de début de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 13},
 		{Name: "end_date", Label: "date de fin de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 14},
 	}...),
+}
+
+var ThesisAffiliationAuthorsFR = models.SchemaModel{
+	Name:     "thesis_affiliation_authors",
+	Label:    "thesis affiliation authors",
+	Category: "publications",
+	CanOwned: true,
+	Fields: []models.FieldModel{
+		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: ThesisAuthorsFR.Name},
+		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
+		{Name: ds.RootID("thesis"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "thesis", Required: true, Index: 3},
+	},
 }
 
 var ThesisAuthorsFR = models.SchemaModel{
@@ -267,12 +339,24 @@ var InternshipFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: InternshipAuthorsFR.Name},
+		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: InternshipAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "no", Required: false, Readonly: false, Index: 9},
 		{Name: "IRT_manager" + ds.RootID(ds.DBUser.Name), Type: models.INTEGER.String(), Required: true, ForeignTable: ds.DBUser.Name, Index: 10, Label: "responsable IRT du stage"},
 		{Name: "start_date", Label: "date de soutenance de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 11},
 		{Name: "end_date", Label: "date de end de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 12},
 	}...),
+}
+
+var InternshipAffiliationAuthorsFR = models.SchemaModel{
+	Name:     "internship_affiliation_authors",
+	Label:    "internship affiliation authors",
+	Category: "publications",
+	CanOwned: true,
+	Fields: []models.FieldModel{
+		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: InternshipAuthorsFR.Name},
+		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
+		{Name: ds.RootID("internship"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "internship", Required: true, Index: 3},
+	},
 }
 
 var InternshipAuthorsFR = models.SchemaModel{
@@ -293,11 +377,23 @@ var DemoFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: DemoAuthorsFR.Name},
+		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: DemoAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "no", Required: false, Readonly: false, Index: 9},
 		{Name: "meeting_name", Label: "nom du meeting", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 10},
 		{Name: "meeting_date", Label: "date du meeting", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 11},
 	}...),
+}
+
+var DemoAffiliationAuthorsFR = models.SchemaModel{
+	Name:     "demo_affiliation_authors",
+	Label:    "demo affiliation authors",
+	Category: "publications",
+	CanOwned: true,
+	Fields: []models.FieldModel{
+		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: DemoAuthorsFR.Name},
+		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
+		{Name: ds.RootID("demo"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "demo", Required: true, Index: 3},
+	},
 }
 
 var DemoAuthorsFR = models.SchemaModel{
@@ -318,10 +414,22 @@ var OtherPublicationFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: append(publicationFields, []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: OtherPublicationAuthorsFR.Name},
+		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: OtherPublicationAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "no", Required: false, Readonly: false, Index: 9},
 		{Name: "publishing_date", Label: "date objective de publication", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 10},
 	}...),
+}
+
+var OtherPublicationAffiliationAuthorsFR = models.SchemaModel{
+	Name:     "other_publication_affiliation_authors",
+	Label:    "other publication affiliation authors",
+	Category: "publications",
+	CanOwned: true,
+	Fields: []models.FieldModel{
+		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: OtherPublicationAuthorsFR.Name},
+		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
+		{Name: ds.RootID("other_publication"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication", Required: true, Index: 3},
+	},
 }
 
 var OtherPublicationAuthorsFR = models.SchemaModel{
