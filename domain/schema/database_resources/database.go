@@ -236,6 +236,22 @@ var DBFieldAutoFill = models.SchemaModel{
 	},
 }
 
+var DBFieldRule = models.SchemaModel{
+	Name:     RootName("field_rule"),
+	Label:    "field rules",
+	Category: "schema",
+	Fields: []models.FieldModel{
+		{Name: "value", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 0},
+		{Name: "first_own", Type: models.BOOLEAN.String(), Label: "first of our data", Required: false, Readonly: false, Default: false, Index: 1},
+		{Name: "operator", Type: models.ENUMOPERATOR.String(), Required: false, Index: 2},
+		{Name: "from_" + RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: false, Readonly: true, Label: "template to extract value modification", Index: 2},
+		{Name: "from_" + RootID(DBSchemaField.Name), Type: models.INTEGER.String(), ForeignTable: DBSchemaField.Name, Required: false, Readonly: true, Label: "field  to extract value modification", Index: 3},
+		{Name: "from_" + RootID("dest_table"), Type: models.INTEGER.String(), Required: false, Readonly: true, Label: "reference", Index: 4},
+
+		{Name: RootID(DBSchemaField.Name), Type: models.INTEGER.String(), ForeignTable: DBSchemaField.Name, Required: true, Readonly: true, Label: "field to bind rule", Index: 5},
+	},
+}
+
 // Note rules : HIERARCHY IS NOT INNER ROLE. HIERARCHY DEFINE MASTER OF AN ENTITY OR A USER. IT'S AN AUTO WATCHER ON USER ASSIGNEE TASK.
 var DBHierarchy = models.SchemaModel{
 	Name:     RootName("hierarchy"),
@@ -635,7 +651,7 @@ var ROOTTABLES = []models.SchemaModel{DBSchemaField, DBUser, DBWorkflow, DBView,
 	DBComment, DBDelegation,
 	DBConsentResponse, DBEmailTemplate,
 	DBTrigger, DBTriggerRule, DBTriggerCondition,
-	DBFieldAutoFill,
+	DBFieldAutoFill, DBFieldRule,
 	DBViewSchema,
 	DBEmailSended, DBEmailTemplate, DBEmailResponse, DBEmailSendedUser,
 }

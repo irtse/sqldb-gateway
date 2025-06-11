@@ -86,9 +86,9 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 		var m map[string]interface{}
 		b, _ = json.Marshal(shallowField)
 		err := json.Unmarshal(b, &m)
-
 		if err == nil {
-			m["autofill"] = d.getFieldFill(&schema, scheme.Name)
+			m = d.GetFieldsRules(&schema, m)
+			m["autofill"], _ = d.GetFieldInfo(&scheme, ds.DBFieldAutoFill.Name)
 			m["translatable"] = scheme.Translatable
 			m["hidden"] = scheme.Hidden
 			schemes[scheme.Name] = m
