@@ -1,6 +1,7 @@
 package user_service
 
 import (
+	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
@@ -36,7 +37,7 @@ func (s *UserService) GenerateQueryFilter(tableName string, innerestr ...string)
 				ds.UserDBField: s.Domain.GetUserID(),
 			}, true, "shared_"+ds.UserDBField),
 		}, true))
-
+		fmt.Println("SHARE", innerestr)
 	}
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }

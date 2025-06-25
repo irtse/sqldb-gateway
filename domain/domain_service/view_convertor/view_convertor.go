@@ -418,7 +418,7 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 			// field link is a many to many... such as authors
 			// link is related tableName : demo_authors
 			// f is the field from some_authors that not correspond to the schema.Name _ id : exemple demo_id -> demo
-			// lid is the link of this field for exemple : user_id
+			// lid is the link of this field for exemple : user & rootID(lid.Name) == user_id
 
 			// on veut former une requête comme suit : SELECT * FROM dbuser WHERE id IN (SELECT dbuser_id FROM demo_authors WHERE dbdemo_id = ?)
 			fmt.Println(lid.Name, link, schema.Name)
@@ -432,9 +432,13 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 					manyVals[field.Name] = append(manyVals[field.Name], r)
 				}
 			}
+			if linkTable, err := scheme.GetSchema(link); err != nil || !linkTable.HasField("name") {
+				continue
+			}
 			if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(link, map[string]interface{}{
-				ds.RootID(lid.Name):    nil,
-				ds.RootID(schema.Name): record.GetString(utils.SpecialIDParam),
+				"!name":             nil,
+				ds.RootID(lid.Name): nil, // should be nil
+				ds.RootID(link):     record.GetString(utils.SpecialIDParam),
 			}, false); err == nil {
 				for _, r := range res {
 					manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
