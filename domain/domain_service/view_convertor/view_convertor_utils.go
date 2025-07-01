@@ -18,6 +18,9 @@ func CompareOrder(schema *sm.SchemaModel, order []string, domain utils.DomainITF
 			}
 		}
 	}
+	if len(newOrder) == 0 {
+		return order
+	}
 	return newOrder
 }
 
@@ -57,7 +60,7 @@ func GetFilterFields(schema *sm.SchemaModel, domain utils.DomainITF) ([]map[stri
 		m[ds.FilterDBField+"_100"] = domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
 			ds.SchemaDBField: schema.ID,
 		}, false, "view_"+ds.FilterDBField)
-	} else {
+	} else if domain.GetUserID() != "" {
 		m[ds.FilterDBField+"_100"] = domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 			utils.SpecialIDParam: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 				ds.UserDBField: domain.GetUserID(),
@@ -75,30 +78,44 @@ func GetFilterFields(schema *sm.SchemaModel, domain utils.DomainITF) ([]map[stri
 			}, false, ds.WorkflowSchemaDBField),
 		}, false, "view_"+ds.FilterDBField)
 	}
-	return domain.GetDb().SelectQueryWithRestriction(ds.SchemaFieldDBField, map[string]interface{}{
-		utils.SpecialIDParam: domain.GetDb().BuildSelectQueryWithRestriction(ds.FilterFieldDBField, m, false, ds.SchemaFieldDBField),
+	return domain.GetDb().SelectQueryWithRestriction(ds.DBSchemaField.Name, map[string]interface{}{
+		utils.SpecialIDParam: domain.GetDb().BuildSelectQueryWithRestriction(ds.DBFilterField.Name, m, false, ds.SchemaFieldDBField),
 	}, false)
 }
 
 func GetSharing(schemaID string, rec sm.ViewItemModel, domain utils.DomainITF) sm.ViewItemModel {
 	id := rec.Values[utils.SpecialIDParam]
 	m := map[string]interface{}{
-		ds.UserDBField:      domain.GetUserID(),
-		ds.SchemaDBField:    schemaID,
-		ds.DestTableDBField: id,
-		"read_access":       true,
-		"update_access":     true,
-		"delete_access":     true,
+		ds.UserDBField: domain.GetUserID(),
+	}
+	addDate := []string{}
+	addBool := []string{"update_access", "delete_access"}
+	table := ds.DBShare.Name
+	kind := "share"
+	if domain.GetTable() == ds.DBTask.Name {
+		kind = "delegate"
+		table = ds.DBDelegation.Name
+		addDate = []string{"start_date", "end_date"}
+		addBool = []string{"all_tasks"}
+		m["all_tasks"] = true
+		m[ds.TaskDBField] = id
+	} else {
+		m["delete_access"] = true
+		m["update_access"] = true
+		m[ds.SchemaDBField] = schemaID
+		m[ds.DestTableDBField] = id
 	}
 	rec.Sharing = sm.SharingModel{
-		SharedWithPath: fmt.Sprintf("/%s/%s?%s=%s&%s=disable", utils.MAIN_PREFIX, ds.DBUser.Name, utils.RootRowsParam,
+		SharedWithPath: fmt.Sprintf("/%s/%s?%s=%s&%s=disable_"+kind, utils.MAIN_PREFIX, ds.DBUser.Name, utils.RootRowsParam,
 			utils.ReservedParam, utils.RootScope),
-		Body: m,
+		Body:            m,
+		AdditionnalDate: addDate,
+		AdditionnalBool: addBool,
 		ShallowPath: map[string]string{
-			"shared_" + ds.UserDBField: fmt.Sprintf("/%s/%s?%s=%s&%s=enable&%s=enable", utils.MAIN_PREFIX, ds.DBUser.Name,
+			kind + "d_" + ds.UserDBField: fmt.Sprintf("/%s/%s?%s=%s&%s=enable&%s=enable_"+kind, utils.MAIN_PREFIX, ds.DBUser.Name,
 				utils.RootRowsParam, utils.ReservedParam, utils.RootShallow, utils.RootScope),
 		},
-		Path: fmt.Sprintf("/%s/%s?%s=%s&%s=enable", utils.MAIN_PREFIX, ds.DBShare.Name, utils.RootRowsParam, utils.ReservedParam, utils.RootShallow),
+		Path: fmt.Sprintf("/%s/%s?%s=%s&%s=enable", utils.MAIN_PREFIX, table, utils.RootRowsParam, utils.ReservedParam, utils.RootShallow),
 	}
 	return rec
 }

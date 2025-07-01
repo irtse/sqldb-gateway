@@ -35,7 +35,7 @@ func (s *DashboardService) CreateDashboardMathOperation(elementID string, record
 		return errors.New("element id is required")
 	}
 	record[ds.DashboardElementDBField] = elementID
-	_, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBDashboardMathField.Name), record)
+	_, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBDashboardMathField.Name).RootRaw(), record)
 	return err
 }
 
@@ -44,7 +44,7 @@ func (s *DashboardService) CreateDashboardElement(dashboardID string, record map
 		return errors.New("dashboard id is required")
 	}
 	record[ds.DashboardDBField] = dashboardID
-	_, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBDashboardElement.Name), record)
+	_, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBDashboardElement.Name).RootRaw(), record)
 	return err
 }
 
@@ -121,7 +121,7 @@ func (d *DashboardService) HandleDelete(record map[string]interface{}) {
 	for _, element := range elements {
 		// delete the operator element
 		if element[utils.SpecialIDParam] != nil && element[utils.SpecialIDParam] != "" {
-			params := utils.AllParams(ds.DBDashboardElement.Name)
+			params := utils.AllParams(ds.DBDashboardElement.Name).RootRaw()
 			params.Set(ds.DashboardElementDBField, utils.ToString(element[utils.SpecialIDParam]))
 			d.Domain.DeleteSuperCall(params)
 			params = utils.AllParams(ds.DBDashboardElement.Name)

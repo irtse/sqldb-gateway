@@ -41,8 +41,11 @@ func (t *AbstractController) MySession(userId string, superAdmin bool, delete bo
 		t.SetSession(ADMIN_KEY, superAdmin)
 	}
 	// launch a 24h session timer after this session will be killed.
-	timer := time.AfterFunc(time.Hour*24, delFunc)
-	defer timer.Stop()
+	go func() {
+		timer := time.AfterFunc(time.Hour*24, delFunc)
+		defer timer.Stop()
+	}()
+
 	return token
 }
 

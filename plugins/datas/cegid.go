@@ -116,7 +116,7 @@ var ArticleAffiliationAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: ArticleAuthorsFR.Name},
+		{Name: "author", Type: models.MANYTOMANYADD.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: ArticleAuthorsFR.Name},
 		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
 		{Name: ds.RootID("article"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "article", Required: true, Index: 3},
 	},
@@ -130,7 +130,7 @@ var ArticleAuthorsFR = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
-		{Name: ds.RootID("article"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "article", Required: true, Index: 2},
+		{Name: ds.RootID("article_affiliation_authors"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "article_affiliation_authors", Required: true, Index: 2},
 	},
 }
 
@@ -158,7 +158,7 @@ var ConferenceAffiliationAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: ConferenceAuthorsFR.Name},
+		{Name: "author", Type: models.MANYTOMANYADD.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: ConferenceAuthorsFR.Name},
 		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
 		{Name: ds.RootID("conference_presentation"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "conference_presentation", Required: true, Index: 3},
 	},
@@ -172,7 +172,7 @@ var ConferenceAuthorsFR = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
-		{Name: ds.RootID("conference_presentation"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "conference_presentation", Required: true, Index: 2},
+		{Name: ds.RootID("conference_affiliation_authors"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "conference_affiliation_authors", Required: true, Index: 2},
 	},
 }
 
@@ -197,7 +197,7 @@ var PresentationAffiliationAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: PresentationAuthorsFR.Name},
+		{Name: "author", Type: models.MANYTOMANYADD.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: PresentationAuthorsFR.Name},
 		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
 		{Name: ds.RootID("presentation"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "presentation", Required: true, Index: 3},
 	},
@@ -211,7 +211,7 @@ var PresentationAuthorsFR = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
-		{Name: ds.RootID("presentation"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "presentation", Required: true, Index: 2},
+		{Name: ds.RootID("presentation_affiliation_authors"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "presentation_affiliation_authors", Required: true, Index: 2},
 	},
 }
 
@@ -239,7 +239,7 @@ var PosterAffiliationAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: PosterAuthorsFR.Name},
+		{Name: "author", Type: models.MANYTOMANYADD.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: PosterAuthorsFR.Name},
 		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
 		{Name: ds.RootID("poster"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "poster", Required: true, Index: 3},
 	},
@@ -253,7 +253,7 @@ var PosterAuthorsFR = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
-		{Name: ds.RootID("poster"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "poster", Required: true, Index: 2},
+		{Name: ds.RootID("poster_affiliation_authors"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "poster_affiliation_authors", Required: true, Index: 2},
 	},
 }
 
@@ -275,7 +275,7 @@ var HDRAffiliationAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: HDRAuthorsFR.Name},
+		{Name: "author", Type: models.MANYTOMANYADD.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: HDRAuthorsFR.Name},
 		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
 		{Name: ds.RootID("research_authorization"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "research_authorization", Required: true, Index: 3},
 	},
@@ -289,7 +289,7 @@ var HDRAuthorsFR = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
-		{Name: ds.RootID("research_authorization"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "research_authorization", Required: true, Index: 2},
+		{Name: ds.RootID("research_authorization_affiliation_authors"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "research_authorization_affiliation_authors", Required: true, Index: 2},
 	},
 }
 
@@ -315,7 +315,7 @@ var ThesisAffiliationAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: ThesisAuthorsFR.Name},
+		{Name: "author", Type: models.MANYTOMANYADD.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: ThesisAuthorsFR.Name},
 		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
 		{Name: ds.RootID("thesis"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "thesis", Required: true, Index: 3},
 	},
@@ -329,7 +329,7 @@ var ThesisAuthorsFR = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
-		{Name: ds.RootID("thesis"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "thesis", Required: true, Index: 2},
+		{Name: ds.RootID("thesis_affiliation_authors"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "thesis_affiliation_authors", Required: true, Index: 2},
 	},
 }
 
@@ -353,7 +353,7 @@ var InternshipAffiliationAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: InternshipAuthorsFR.Name},
+		{Name: "author", Type: models.MANYTOMANYADD.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: InternshipAuthorsFR.Name},
 		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
 		{Name: ds.RootID("internship"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "internship", Required: true, Index: 3},
 	},
@@ -367,7 +367,7 @@ var InternshipAuthorsFR = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
-		{Name: ds.RootID("internship"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "internship", Required: true, Index: 2},
+		{Name: ds.RootID("internship_affiliation_authors"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "internship_affiliation_authors", Required: true, Index: 2},
 	},
 }
 
@@ -390,7 +390,7 @@ var DemoAffiliationAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: DemoAuthorsFR.Name},
+		{Name: "author", Type: models.MANYTOMANYADD.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: DemoAuthorsFR.Name},
 		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
 		{Name: ds.RootID("demo"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "demo", Required: true, Index: 3},
 	},
@@ -404,7 +404,7 @@ var DemoAuthorsFR = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
-		{Name: ds.RootID("demo"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "demo", Required: true, Index: 2},
+		{Name: ds.RootID("demo_affiliation_authors"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "demo_affiliation_authors", Required: true, Index: 2},
 	},
 }
 
@@ -426,7 +426,7 @@ var OtherPublicationAffiliationAuthorsFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: []models.FieldModel{
-		{Name: "authors", Type: models.MANYTOMANY.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: OtherPublicationAuthorsFR.Name},
+		{Name: "author", Type: models.MANYTOMANYADD.String(), Required: true, Index: 1, Label: "auteurs", ForeignTable: OtherPublicationAuthorsFR.Name},
 		{Name: "affiliation", Label: "affiliation", Type: models.VARCHAR.String(), Required: true, Index: 2},
 		{Name: ds.RootID("other_publication"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication", Required: true, Index: 3},
 	},
@@ -440,7 +440,7 @@ var OtherPublicationAuthorsFR = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
 		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
-		{Name: ds.RootID("other_publication"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication", Required: true, Index: 2},
+		{Name: ds.RootID("other_publication_affiliation_authors"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication_affiliation_authors", Required: true, Index: 2},
 	},
 }
 

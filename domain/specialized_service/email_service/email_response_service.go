@@ -8,8 +8,11 @@ import (
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/specialized_service/task_service"
 	servutils "sqldb-ws/domain/specialized_service/utils"
-	utils "sqldb-ws/domain/utils"
-	connector "sqldb-ws/infrastructure/connector/db"
+	"sqldb-ws/domain/utils"
+	connector "sqldb-ws/infrastructure/connector"
+	db "sqldb-ws/infrastructure/connector/db"
+
+	"github.com/google/uuid"
 )
 
 // DONE - ~ 200 LINES - PARTIALLY TESTED
@@ -28,7 +31,7 @@ func (s *EmailResponseService) VerifyDataIntegrity(record map[string]interface{}
 		return record, errors.New("no code found"), false
 	}
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
-		"code": connector.Quote(code),
+		"code": db.Quote(code),
 	}, false); err == nil && len(res) > 0 {
 		record[ds.EmailSendedDBField] = res[0][utils.SpecialIDParam]
 	} else {
@@ -45,6 +48,7 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 		for _, r := range res {
 			if templs, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
 				utils.SpecialIDParam: utils.GetString(record, ds.EmailSendedDBField),
+				"is_response":        false,
 			}, false); err == nil {
 				for _, t := range templs {
 					if utils.GetBool(t, "generate_task") {
@@ -52,7 +56,7 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 							ds.DestTableDBField: r["mapped_with"+ds.DestTableDBField],
 							ds.SchemaDBField:    r["mapped_with"+ds.SchemaDBField],
 							"is_close":          false,
-							"name":              connector.Quote(utils.GetString(r, "code")),
+							"name":              db.Quote(utils.GetString(r, "code")),
 						}, false); err == nil {
 							for _, rec := range rr {
 								if utils.GetBool(r, "got_response") {
@@ -61,7 +65,7 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 									rec["state"] = "refused"
 								}
 								rec = task_service.SetClosureStatus(rec)
-								s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBTask.Name, rec[utils.SpecialIDParam]), rec)
+								s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBTask.Name, rec[utils.SpecialIDParam]).RootRaw(), rec)
 							}
 						}
 					}
@@ -91,6 +95,19 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 						s.Domain.Call(utils.GetRowTargetParameters(sch.Name, r[ds.DestTableDBField+"_on_response"]), body, method)
 					}
 				}
+			}
+			if templs, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
+				"is_response": true,
+			}, false); err == nil && len(templs) > 0 {
+				tmp := templs[0]
+				tmp["code"] = uuid.New()
+				tmp["content"] = tmp["template"]
+				if usr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
+					utils.SpecialIDParam: r["from_email"],
+				}, false); err == nil && len(usr) > 0 {
+					go connector.SendMail(utils.GetString(usr[0], "email"), utils.GetString(usr[0], "email"), tmp, false)
+				}
+
 			}
 		}
 	}

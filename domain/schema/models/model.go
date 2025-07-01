@@ -12,23 +12,25 @@ import (
 var SchemaRegistry = map[string]SchemaModel{}
 
 type SchemaModel struct { // lightest definition a db table
-	ID          string       `json:"id"`
-	Name        string       `json:"name"`
-	Label       string       `json:"label"`
-	IsEnum      bool         `json:"is_enum"`
-	Category    string       `json:"category"`
-	CanOwned    bool         `json:"can_owned"`
-	Description string       `json:"description"` // Special case for ownership, it's schema that can be owned by any user (like a request)
-	Fields      []FieldModel `json:"fields,omitempty"`
+	ID             string       `json:"id"`
+	Name           string       `json:"name"`
+	Label          string       `json:"label"`
+	IsEnum         bool         `json:"is_enum"`
+	Category       string       `json:"category"`
+	CanOwned       bool         `json:"can_owned"`
+	Description    string       `json:"description"` // Special case for ownership, it's schema that can be owned by any user (like a request)
+	Fields         []FieldModel `json:"fields,omitempty"`
+	ViewIDOnDelete string       `json:"redirect_view_id_on_delete"`
 }
 
 func (t SchemaModel) Map(m map[string]interface{}) *SchemaModel {
 	return &SchemaModel{
-		ID:       utils.ToString(m["id"]),
-		Name:     utils.ToString(m["name"]),
-		Label:    utils.ToString(m["label"]),
-		Category: utils.ToString(m["category"]),
-		CanOwned: utils.Compare(m["can_owned"], true),
+		ID:             utils.ToString(m["id"]),
+		Name:           utils.ToString(m["name"]),
+		Label:          utils.ToString(m["label"]),
+		Category:       utils.ToString(m["category"]),
+		CanOwned:       utils.Compare(m["can_owned"], true),
+		ViewIDOnDelete: utils.ToString(m["redirect_view_id_on_delete"]),
 	}
 }
 
@@ -264,7 +266,7 @@ type ViewModel struct { // lightest struct based on SchemaModel dedicate to view
 	Max          int64                    `json:"max"`
 }
 
-func NewView(id int64, name string, label string, schema *SchemaModel, max int64, triggers []ManualTriggerModel) ViewModel {
+func NewView(id int64, name string, label string, schema *SchemaModel, tableName string, max int64, triggers []ManualTriggerModel) ViewModel {
 	return ViewModel{
 		ID:          id,
 		Name:        name,
@@ -273,7 +275,7 @@ func NewView(id int64, name string, label string, schema *SchemaModel, max int64
 		Description: fmt.Sprintf("%s data", schema.Name),
 		ActionPath:  utils.BuildPath(schema.Name, utils.ReservedParam),
 		Path:        utils.BuildPath(schema.Name, utils.ReservedParam),
-		IsWrapper:   schema.Name == "dbtask" || schema.Name == "dbrequest",
+		IsWrapper:   tableName == "dbtask" || tableName == "dbrequest",
 		Label:       label,
 		Items:       []ViewItemModel{},
 		Triggers:    triggers,
@@ -309,10 +311,12 @@ type ViewItemModel struct {
 }
 
 type SharingModel struct {
-	Body           map[string]interface{} `json:"body"`
-	SharedWithPath string                 `json:"shared_with_path"`
-	Path           string                 `json:"share_path"`
-	ShallowPath    map[string]string      `json:"shallow_path"`
+	Body            map[string]interface{} `json:"body"`
+	SharedWithPath  string                 `json:"shared_with_path"`
+	Path            string                 `json:"share_path"`
+	ShallowPath     map[string]string      `json:"shallow_path"`
+	AdditionnalDate []string               `json:"additionnal_date"`
+	AdditionnalBool []string               `json:"additionnal_bool"`
 }
 
 type ViewFieldModel struct { // lightest struct based on FieldModel dedicate to view

@@ -128,7 +128,9 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 		d.TableName = strings.ToLower(schserv.GetTablename(tablename))
 		specializedService := domain.SpecializedService(d.TableName)
 		d.SpecializedService = specializedService.SetDomain(d)
-		d.Db = conn.Open(d.Db)
+		if d.Db == nil || d.Db.Conn == nil {
+			d.Db = conn.Open(d.Db)
+		}
 		defer d.Db.Close()
 		if d.GetUserID() == "" && !d.AutoLoad {
 			if res, err := d.Db.SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
@@ -173,13 +175,19 @@ func (d *SpecializedDomain) GetRowResults(
 	specializedService utils.SpecializedServiceITF,
 	args ...interface{},
 ) (utils.Results, error) {
-	if record["is_draft"] != nil && !utils.GetBool(record, "is_draft") {
-		d.IsDraftToPublished = true
-	}
+
 	rowName, _ = url.QueryUnescape(rowName)
 	ids := strings.Split(rowName, ",")
 	all_results := utils.Results{}
 	for _, id := range ids {
+		if record["is_draft"] != nil && !utils.GetBool(record, "is_draft") && d.Method == utils.UPDATE {
+			if rr, err := d.GetDb().SelectQueryWithRestriction(d.TableName, map[string]interface{}{
+				utils.SpecialIDParam: id,
+				"is_draft":           true,
+			}, false); err == nil && len(rr) > 0 {
+				d.IsDraftToPublished = true
+			}
+		}
 		d.Params.Add(utils.SpecialIDParam, strings.ToLower(id), func(_ string) bool {
 			return strings.ToLower(id) != utils.ReservedParam
 		})
@@ -209,6 +217,8 @@ func (d *SpecializedDomain) GetRowResults(
 			if err != nil {
 				return all_results, err
 			}
+			p, _ = d.Params.Get(utils.RootRawView)
+			fmt.Println(p, err, slices.Contains(EXCEPTION_FUNC, d.Method.Calling()))
 			if p != "enable" && err == nil && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
 				res = specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestIDParam)...)
 				d.Redirections = append(d.Redirections, d.GetRedirections(res)...)
@@ -216,6 +226,7 @@ func (d *SpecializedDomain) GetRowResults(
 			all_results = append(all_results, res...)
 		}
 	}
+	fmt.Println("closed invoke", len(all_results))
 	return all_results, nil
 }
 

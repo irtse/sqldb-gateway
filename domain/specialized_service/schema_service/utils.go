@@ -70,7 +70,7 @@ func UpdatePermissions(record utils.Record, schemaName string, readLevels []stri
 			if col, ok := record[sm.NAMEKEY]; ok {
 				rec[sm.NAMEKEY] = schemaName + ":" + utils.ToString(col) + ":" + l + ":" + role
 			}
-			domain.CreateSuperCall(utils.AllParams(ds.DBPermission.Name), rec)
+			domain.CreateSuperCall(utils.AllParams(ds.DBPermission.Name).RootRaw(), rec)
 		}
 	}
 }

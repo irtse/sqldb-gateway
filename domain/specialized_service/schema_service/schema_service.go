@@ -42,13 +42,13 @@ func (s *SchemaService) SpecializedDeleteRow(results []map[string]interface{}, t
 			return
 		}
 		s.Domain.HandleRecordAttributes(utils.Record{"is_custom": true})
-		s.Domain.DeleteSuperCall(utils.AllParams(ds.DBSchemaField.Name).Enrich(map[string]interface{}{
+		s.Domain.DeleteSuperCall(utils.AllParams(ds.DBSchemaField.Name).RootRaw().Enrich(map[string]interface{}{
 			ds.SchemaDBField: schema.ID,
 		}))
-		s.Domain.DeleteSuperCall(utils.AllParams(ds.DBPermission.Name).Enrich(map[string]interface{}{
+		s.Domain.DeleteSuperCall(utils.AllParams(ds.DBPermission.Name).RootRaw().Enrich(map[string]interface{}{
 			sm.NAMEKEY: "%" + utils.ToString(res[sm.NAMEKEY]) + "%",
 		}))
-		s.Domain.DeleteSuperCall(utils.AllParams(ds.DBView.Name).Enrich(map[string]interface{}{
+		s.Domain.DeleteSuperCall(utils.AllParams(ds.DBView.Name).RootRaw().Enrich(map[string]interface{}{
 			sm.NAMEKEY: "%" + schema.Name + "%",
 		}))
 		schserv.DeleteSchema(utils.ToString(res[sm.NAMEKEY]))
@@ -58,7 +58,7 @@ func (s *SchemaService) SpecializedDeleteRow(results []map[string]interface{}, t
 func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
 
 	schema := sm.SchemaModel{}.Deserialize(record)
-	res, err := s.Domain.CreateSuperCall(utils.GetTableTargetParameters(record[sm.NAMEKEY]), record)
+	res, err := s.Domain.CreateSuperCall(utils.GetTableTargetParameters(record[sm.NAMEKEY]).RootRaw(), record)
 	if err != nil || len(res) == 0 {
 		return
 	}
@@ -72,14 +72,14 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 			if ft, err := schserv.GetSchema(utils.GetString(r, "foreign_table")); err == nil {
 				r["link_id"] = utils.ToInt64(ft.ID)
 				delete(r, "foreign_table")
-				s.Domain.CreateSuperCall(utils.AllParams(ds.DBSchemaField.Name), r)
+				s.Domain.CreateSuperCall(utils.AllParams(ds.DBSchemaField.Name).RootRaw(), r)
 			}
 		}
 	}
 	for _, field := range s.Fields {
 		f := utils.ToMap(field)
 		f[ds.SchemaDBField] = schema.ID
-		field, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBSchemaField.Name), f)
+		field, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBSchemaField.Name).RootRaw(), f)
 		if err != nil || len(field) == 0 {
 			continue
 		}
@@ -107,7 +107,7 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 				ds.DBFilterField.Name,
 				ds.DBViewAttribution.Name,
 				ds.DBNotification.Name}, schema.Name) {
-				if w, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBWorkflow.Name),
+				if w, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBWorkflow.Name).RootRaw(),
 					NewWorkflow(
 						"create "+schema.Label,
 						"new "+schema.Label+" workflow",
@@ -124,25 +124,25 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 						ds.SchemaDBField: resquestSchema.ID,
 						"name":           "filter " + filter,
 					}
-					if f, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilter.Name), body); err == nil && len(f) > 0 {
+					if f, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilter.Name).RootRaw(), body); err == nil && len(f) > 0 {
 						body["name"] = "view " + utils.ToString(body["name"])
 						body["is_view"] = true
-						if vf, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilter.Name), body); err == nil && len(f) > 0 {
+						if vf, err := s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilter.Name).RootRaw(), body); err == nil && len(f) > 0 {
 							wf, _ := resquestSchema.GetField(ds.WorkflowDBField)
 							m := map[string]interface{}{
 								ds.FilterDBField:      vf[0][utils.SpecialIDParam],
 								ds.SchemaFieldDBField: wf.ID,
 							}
-							s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilterField.Name), m)
+							s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilterField.Name).RootRaw(), m)
 							if wfs[utils.SpecialIDParam] != nil {
 								m[ds.FilterDBField] = f[0][utils.SpecialIDParam]
 								m["value"] = wfs[utils.SpecialIDParam]
-								s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilterField.Name), m)
+								s.Domain.CreateSuperCall(utils.AllParams(ds.DBFilterField.Name).RootRaw(), m)
 								newViewSubmit := NewView("create a "+schema.Label,
 									"create "+schema.Label,
 									filter, "", resquestSchema.GetID(), index, false, true, false, false,
 									vf[0][utils.SpecialIDParam], f[0][utils.SpecialIDParam], record[utils.SpecialIDParam])
-								s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newViewSubmit)
+								s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name).RootRaw(), newViewSubmit)
 							}
 						}
 					}
@@ -150,13 +150,13 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 				newView := NewView(schema.Label, schema.Label, "View description for "+strings.ReplaceAll(strings.ReplaceAll(schema.Name, "_", " "), "db", "")+" datas.",
 					cat, schema.GetID(), index, true, false, true, false, nil, nil, nil)
 
-				s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)
+				s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name).RootRaw(), newView)
 				if schema.CanOwned {
 					r := rand.New(rand.NewSource(9999999999))
 					newView = NewView("my "+schema.Label, "my "+schema.Label,
 						"View description for my "+schema.Label+" datas.",
 						"my data", schema.GetID(), int64(r.Int()), true, false, true, true, nil, nil, nil)
-					s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name), newView)
+					s.Domain.CreateSuperCall(utils.AllParams(ds.DBView.Name).RootRaw(), newView)
 				}
 
 			}
@@ -170,7 +170,7 @@ func (s *SchemaService) SpecializedCreateRow(record map[string]interface{}, tabl
 func (s *SchemaService) SpecializedUpdateRow(datas []map[string]interface{}, record map[string]interface{}) {
 	schema, err := schserv.GetSchema(utils.ToString(record[sm.NAMEKEY]))
 	if err != nil {
-		res, err := s.Domain.UpdateSuperCall(utils.GetTableTargetParameters(record[sm.NAMEKEY]), record)
+		res, err := s.Domain.UpdateSuperCall(utils.GetTableTargetParameters(record[sm.NAMEKEY]).RootRaw(), record)
 		if err != nil || len(res) == 0 {
 			return
 		}
@@ -182,9 +182,9 @@ func (s *SchemaService) SpecializedUpdateRow(datas []map[string]interface{}, rec
 			f := utils.ToMap(field)
 			f[ds.SchemaDBField] = schema.ID
 			if schema.HasField(utils.ToString(f[sm.NAMEKEY])) {
-				s.Domain.UpdateSuperCall(utils.AllParams(ds.DBSchemaField.Name), f)
+				s.Domain.UpdateSuperCall(utils.AllParams(ds.DBSchemaField.Name).RootRaw(), f)
 			} else {
-				s.Domain.CreateSuperCall(utils.AllParams(ds.DBSchemaField.Name), f)
+				s.Domain.CreateSuperCall(utils.AllParams(ds.DBSchemaField.Name).RootRaw(), f)
 			}
 			schema = schema.SetField(f)
 		}

@@ -130,23 +130,23 @@ func (s *RequestService) SpecializedUpdateRow(results []map[string]interface{}, 
 		}
 		schema, err := schserv.GetSchema(ds.DBRequest.Name)
 		if err == nil && !utils.Compare(rec["is_meta"], true) && CheckStateIsEnded(rec["state"]) {
-			if t, err := s.Domain.SuperCall(p, utils.Record{}, utils.SELECT, false); err == nil && len(t) > 0 {
+			if t, err := s.Domain.SuperCall(p.RootRaw(), utils.Record{}, utils.SELECT, false); err == nil && len(t) > 0 {
 				return
 			}
 			p.SimpleDelete(utils.RootTableParam)
 			p.SimpleDelete(utils.RootRowsParam)
 			rec := p.Anonymized()
 			rec["link_id"] = schema.ID
-			s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name), rec)
+			s.Domain.CreateSuperCall(utils.AllParams(ds.DBNotification.Name).RootRaw(), rec)
 		}
 		if utils.Compare(rec["is_close"], true) {
 			p := utils.AllParams(ds.DBTask.Name)
 			p.Set("meta_"+ds.RequestDBField, utils.ToString(rec[utils.SpecialIDParam]))
-			res, err := s.Domain.SuperCall(p, utils.Record{}, utils.SELECT, false)
+			res, err := s.Domain.SuperCall(p.RootRaw(), utils.Record{}, utils.SELECT, false)
 			if err == nil && len(res) > 0 {
 				for _, task := range res {
 					task := SetClosureStatus(task)
-					s.Domain.UpdateSuperCall(utils.AllParams(ds.DBTask.Name), task)
+					s.Domain.UpdateSuperCall(utils.AllParams(ds.DBTask.Name).RootRaw(), task)
 				}
 			}
 		}
@@ -200,6 +200,6 @@ func (s *RequestService) handleInitialWorkflow(record map[string]interface{}) {
 	}
 
 	for _, newTask := range wfs {
-		PrepareAndCreateTask(newTask, record, s.Domain, false)
+		PrepareAndCreateTask(newTask, record, record, s.Domain, false)
 	}
 }

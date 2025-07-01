@@ -34,6 +34,14 @@ func (p Params) Set(key string, value string) {
 	p.Values[key] = value
 }
 
+func (p Params) Has(key string) bool {
+	p.Mutex.RLock()
+	defer p.Mutex.RUnlock()
+	_, ok := p.Values[key]
+
+	return ok
+}
+
 func (p Params) Get(key string) (string, bool) {
 	p.Mutex.RLock()
 	defer p.Mutex.RUnlock()

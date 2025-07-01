@@ -39,6 +39,7 @@ func (v *ViewConvertor) TransformToView(results utils.Results, tableName string,
 			ids = connector.RemoveLastChar(ids)
 		}
 		history.NewDataAccess(schema.GetID(), strings.Split(ids, ","), v.Domain)
+
 	}
 	if v.Domain.IsShallowed() {
 		return v.transformShallowedView(results, tableName, isWorkflow)
@@ -58,7 +59,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema *sm.Sche
 	}
 	max, _ := history.CountMaxDataAccess(schema, []string{}, v.Domain)
 
-	view := sm.NewView(id, schema.Name, schema.Label, schema, max, []sm.ManualTriggerModel{})
+	view := sm.NewView(id, schema.Name, schema.Label, schema, schema.Name, max, []sm.ManualTriggerModel{})
 	view.Schema = schemes
 	view.Redirection = getRedirection(v.Domain.GetDomainID())
 	view.Order = CompareOrder(schema, order, v.Domain)
@@ -66,7 +67,6 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema *sm.Sche
 	view.CommentBody = commentBody
 	view.Shortcuts = v.GetShortcuts(schema.ID, addAction)
 	view.Consents = v.getConsent(schema.ID, results)
-
 	v.ProcessResultsConcurrently(results, schema, isWorkflow, &view, params)
 	// if there is only one item in the view, we can set the view readonly to the item readonly
 	if len(view.Items) == 1 {
@@ -98,8 +98,7 @@ func (v *ViewConvertor) TransformMultipleSchema(results utils.Results, schema *s
 	return utils.Results{view.ToRecord()}
 }
 
-func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, schema *sm.SchemaModel,
-	isWorkflow bool, view *sm.ViewModel, params utils.Params) {
+func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, schema *sm.SchemaModel, isWorkflow bool, view *sm.ViewModel, params utils.Params) {
 	const maxConcurrent = 5
 	runtime.GOMAXPROCS(maxConcurrent)
 	channel := make(chan sm.ViewItemModel, len(results))
@@ -124,8 +123,8 @@ func (v *ViewConvertor) ProcessResultsConcurrently(results utils.Results, schema
 		rec := <-channel
 		if !rec.IsEmpty {
 			rec = GetSharing(schema.ID, rec, v.Domain)
-			view.Items = append(view.Items, rec)
 		}
+		view.Items = append(view.Items, rec)
 	}
 }
 
@@ -133,11 +132,18 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 	res := utils.Results{}
 	max := int64(0)
 	sch, err := scheme.GetSchema(tableName)
-	if err == nil {
+	if err != nil {
 		return res
 	}
 	max, _ = history.CountMaxDataAccess(&sch, []string{}, v.Domain)
-	scheme, id, order, _, addAction, _ := v.GetViewFields(tableName, false, utils.Results{})
+	t := tableName
+	if _, ok := v.Domain.GetParams().Get(utils.SpecialIDParam); ok && len(results) == 1 && results[0][ds.SchemaDBField] != nil {
+		if sch, err = scheme.GetSchemaByID(results[0].GetInt(ds.SchemaDBField)); err == nil {
+			t = sch.Name
+		}
+	}
+	scheme, id, order, _, addAction, _ := v.GetViewFields(t, false, utils.Results{})
+
 	for _, record := range results {
 		if _, ok := record["is_draft"]; ok && record.GetBool("is_draft") && !v.Domain.IsOwn(false, false, utils.SELECT) {
 			continue
@@ -146,21 +152,28 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 			res = append(res, record)
 			continue
 		}
-		newView := v.createShallowedViewItem(record, &sch, isWorkflow, max)
+		newView := v.createShallowedViewItem(record, tableName, &sch, max)
 		if _, ok := record["is_draft"]; ok && record.GetBool("is_draft") && !slices.Contains(addAction, "put") && v.Domain.IsOwn(false, false, utils.SELECT) {
 			addAction = append(addAction, "put")
 		}
-		newView.Schema = scheme
-		newView.SchemaID = id
 		newView.Actions = addAction
-		newView.Order = CompareOrder(&sch, order, v.Domain)
-		newView.Consents = v.getConsent(utils.ToString(id), []utils.Record{record})
+		if sch.Name != tableName {
+			newView.Schema = scheme
+			newView.SchemaID = id
+			newView.Order = CompareOrder(&sch, order, v.Domain)
+			newView.Workflow = v.EnrichWithWorkFlowView(record, sch.Name, isWorkflow)
+			newView.Consents = v.getConsent(utils.ToString(id), []utils.Record{record})
+			if !utils.GetBool(record, "is_draft") {
+				newView.Triggers = triggers.NewTrigger(v.Domain).GetViewTriggers(
+					record, v.Domain.GetMethod(), &sch, utils.GetInt(record, ds.SchemaDBField), utils.GetInt(record, ds.DestTableDBField))
+			}
+		}
 		res = append(res, newView.ToRecord())
 	}
 	return res
 }
 
-func (v *ViewConvertor) createShallowedViewItem(record utils.Record, schema *sm.SchemaModel, isWorkflow bool, max int64) sm.ViewModel {
+func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName string, schema *sm.SchemaModel, max int64) sm.ViewModel {
 	ts := []sm.ManualTriggerModel{}
 	label := record.GetString(sm.NAMEKEY)
 	if record.GetString(sm.LABELKEY) != "" {
@@ -172,14 +185,9 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, schema *sm.
 	} else if f, err := schema.GetField("name"); err == nil {
 		translatable = f.Translatable
 	}
-	if !utils.GetBool(record, "is_draft") {
-		ts = triggers.NewTrigger(v.Domain).GetViewTriggers(
-			record, v.Domain.GetMethod(), schema, utils.GetInt(record, ds.SchemaDBField), utils.GetInt(record, ds.DestTableDBField))
-	}
-	view := sm.NewView(record.GetInt(utils.SpecialIDParam), record.GetString(sm.NAMEKEY), label, schema, max, ts)
+	view := sm.NewView(record.GetInt(utils.SpecialIDParam), record.GetString(sm.NAMEKEY), label, schema, tableName, max, ts)
 	view.Path = utils.BuildPath(schema.Name, utils.ReservedParam)
 	view.Redirection = getRedirection(v.Domain.GetDomainID())
-	view.Workflow = v.EnrichWithWorkFlowView(record, schema.Name, isWorkflow)
 	view.Translatable = translatable
 	return view
 }
@@ -218,23 +226,23 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 	newOrder, vals := GetOrder(schema, record, vals, []string{}, d.Domain)
 	if len(newOrder) > 0 {
 		view.Order = newOrder
-		vals = d.GetFieldsFill(schema, vals)
-		channel <- sm.ViewItemModel{
-			Values:        vals,
-			DataPaths:     datapath,
-			ValueShallow:  shallowVals,
-			Sort:          int64(index),
-			DataRef:       d.getLinkPath(record, schema), // to redirect
-			CommentsPath:  commentPath,
-			HistoryPath:   historyPath,
-			ValueMany:     manyVals,
-			ValuePathMany: manyPathVals,
-			Readonly:      IsReadonly(schema.Name, record, createdIds, d.Domain),
-			Workflow:      d.EnrichWithWorkFlowView(record, schema.Name, isWorkflow),
-			Draft:         utils.GetBool(record, "is_draft"),
-			Synthesis:     synthesisPath,
-			New:           history.GetNew(utils.GetString(record, utils.SpecialIDParam), schema.ID, d.Domain),
-		}
+	}
+	vals = d.GetFieldsFill(schema, vals)
+	channel <- sm.ViewItemModel{
+		Values:        vals,
+		DataPaths:     datapath,
+		ValueShallow:  shallowVals,
+		Sort:          int64(index),
+		DataRef:       d.getLinkPath(record, schema), // to redirect
+		CommentsPath:  commentPath,
+		HistoryPath:   historyPath,
+		ValueMany:     manyVals,
+		ValuePathMany: manyPathVals,
+		Readonly:      IsReadonly(schema.Name, record, createdIds, d.Domain),
+		Workflow:      d.EnrichWithWorkFlowView(record, schema.Name, isWorkflow),
+		Draft:         utils.GetBool(record, "is_draft"),
+		Synthesis:     synthesisPath,
+		New:           history.GetNew(utils.GetString(record, utils.SpecialIDParam), schema.ID, d.Domain),
 	}
 }
 
@@ -344,7 +352,7 @@ func (s *ViewConvertor) getSynthesis(record utils.Record, schema *sm.SchemaModel
 		return fmt.Sprintf("/%s/%s?%s=%s&scope=enable&%s=%s",
 			utils.MAIN_PREFIX, ds.DBTask.Name,
 			utils.RootRowsParam, taskIDs,
-			utils.RootColumnsParam, "name,state,dbuser_id,dbentity_id,binded_to_email,closing_date",
+			utils.RootColumnsParam, "name,state,closing_date,dbuser_id,dbentity_id",
 		)
 	}
 	return ""
@@ -399,8 +407,8 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 	if !d.Domain.IsShallowed() {
 		l, _ := scheme.GetSchemaByID(field.GetLink())
 		for _, f := range l.Fields {
-			if field.Type == sm.ONETOMANY.String() && field.GetLink() > 0 {
-				if strings.Contains(f.Name, schema.Name) && strings.Contains(f.Name, "_id") {
+			if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(sm.ONETOMANY.String())) {
+				if strings.Contains(f.Name, schema.Name) && f.GetLink() > 0 {
 					manyPathVals[field.Name] = utils.BuildPath(
 						link, utils.ReservedParam,
 						f.Name+"="+record.GetString(utils.SpecialIDParam))
@@ -421,8 +429,8 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 			// lid is the link of this field for exemple : user & rootID(lid.Name) == user_id
 
 			// on veut former une requête comme suit : SELECT * FROM dbuser WHERE id IN (SELECT dbuser_id FROM demo_authors WHERE dbdemo_id = ?)
-			fmt.Println(lid.Name, link, schema.Name)
 			// HERE IS REGULARY MALFORMED REQUEST FOR AUTHORS
+			// SELECT * FROM article_authors WHERE id IN (SELECT id FROM article_affiliation_authors WHERE dbarticle_id=197 AND dbarticle_authors_id IS NOT NULL) pq: column "dbarticle_authors_id" does not exist
 			if res, err := d.Domain.GetDb().SelectQueryWithRestriction(lid.Name, map[string]interface{}{
 				utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(link, map[string]interface{}{
 					"!" + ds.RootID(lid.Name): nil,
@@ -432,13 +440,14 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 					manyVals[field.Name] = append(manyVals[field.Name], r)
 				}
 			}
+
 			if linkTable, err := scheme.GetSchema(link); err != nil || !linkTable.HasField("name") {
 				continue
 			}
 			if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(link, map[string]interface{}{
-				"!name":             nil,
-				ds.RootID(lid.Name): nil, // should be nil
-				ds.RootID(link):     record.GetString(utils.SpecialIDParam),
+				"!name":                nil,
+				ds.RootID(lid.Name):    nil, // should be nil
+				ds.RootID(schema.Name): record.GetString(utils.SpecialIDParam),
 			}, false); err == nil {
 				for _, r := range res {
 					manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
@@ -509,7 +518,6 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 			m[ds.WorkflowSchemaDBField] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 				utils.SpecialIDParam: record[ds.WorkflowSchemaDBField],
 			}, false, utils.SpecialIDParam)
-
 			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, m, false); err != nil || len(res) == 0 {
 				return true
 			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
@@ -519,6 +527,27 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 			m[ds.DestTableDBField] = record[utils.SpecialIDParam]
 			m[ds.SchemaDBField] = sch.ID
 			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
+				search := false
+				for k, _ := range d.GetParams().Values {
+					if sch.HasField(k) {
+						search = true
+						break
+					}
+				}
+				if !search {
+					return true
+				}
+				for _, f := range sch.Fields {
+					if f.GetLink() > 0 && !strings.Contains(f.Type, "many") {
+						if sch2, err := scheme.GetSchemaByID(f.GetLink()); err == nil {
+							for _, ff := range sch2.Fields {
+								if ff.GetLink() == sch.GetID() && strings.Contains(ff.Type, "many") {
+									return f.Readonly
+								}
+							}
+						}
+					}
+				}
 				return true
 			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
 				return false

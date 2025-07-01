@@ -146,6 +146,9 @@ func (d *Database) SetSQLRestriction(s string) {
 
 func Open(beforeDB *Database) *Database {
 	if beforeDB != nil {
+		if beforeDB.Conn != nil {
+			return beforeDB
+		}
 		beforeDB.Close()
 	}
 	db := &Database{Driver: os.Getenv("DBDRIVER")}
@@ -239,7 +242,7 @@ type DB interface {
 	BuildCreateTableQuery(name string) string
 	BuildCreateQueries(tableName string, values string, cols string, typ string) []string
 	ApplyQueryFilters(restr string, order string, limit string, views string, additionnalRestriction ...string)
-	BuildUpdateQuery(tableName string, col string, value interface{}, set string, cols []string, colValues []string, verify func(string) (string, bool)) (string, []string, []string)
+	BuildUpdateQuery(tableName string, col string, value interface{}, set string, cols []string, colValues []string, ok bool, verify func(string) (string, bool)) (string, []string, []string)
 	BuildUpdateQueryWithRestriction(tableName string, record map[string]interface{}, restrictions map[string]interface{}, isOr bool) (string, error)
 	BuildUpdateRowQuery(tableName string, record map[string]interface{}, verify func(string) (string, bool)) (string, error)
 	BuildUpdateColumnQueries(tableName string, record map[string]interface{}, verify func(string) (string, bool)) ([]string, error)

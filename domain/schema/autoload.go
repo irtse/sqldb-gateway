@@ -59,7 +59,7 @@ func InitializeTables(domainInstance utils.DomainITF, bar *progressbar.ProgressB
 	for _, table := range ds.NOAUTOLOADROOTTABLES {
 		if _, err := GetSchema(table.Name); err != nil {
 			bar.AddDetail("Creating table " + table.Name)
-			domainInstance.CreateSuperCall(utils.GetTableTargetParameters(table.Name), table.ToSchemaRecord())
+			domainInstance.CreateSuperCall(utils.GetTableTargetParameters(table.Name).RootRaw(), table.ToSchemaRecord())
 		}
 		bar.Add(1)
 	}
@@ -130,7 +130,7 @@ func CreateWorkflowView(domainInstance utils.DomainITF, schema sm.SchemaModel, b
 		"readonly":       false,
 		ds.SchemaDBField: schema.ID,
 	}
-	domainInstance.CreateSuperCall(params, newWorkflow)
+	domainInstance.CreateSuperCall(params.RootRaw(), newWorkflow)
 }
 
 func CreateRootView(domainInstance utils.DomainITF, bar *progressbar.ProgressBar) {
@@ -154,7 +154,7 @@ func CreateRootView(domainInstance utils.DomainITF, bar *progressbar.ProgressBar
 				if _, ok := mFilter["view_fields"]; ok {
 					attr = "view_fields"
 				}
-				if res, err := domainInstance.CreateSuperCall(utils.AllParams(ds.DBFilter.Name), utils.Record{
+				if res, err := domainInstance.CreateSuperCall(utils.AllParams(ds.DBFilter.Name).RootRaw(), utils.Record{
 					sm.NAMEKEY:       utils.ToString(mFilter[sm.NAMEKEY]),
 					"is_view":        attr == "view_fields",
 					ds.SchemaDBField: sch.ID,
@@ -172,7 +172,7 @@ func CreateRootView(domainInstance utils.DomainITF, bar *progressbar.ProgressBar
 								f[k] = v
 							}
 						}
-						domainInstance.CreateSuperCall(utils.AllParams(ds.DBFilterField.Name), f)
+						domainInstance.CreateSuperCall(utils.AllParams(ds.DBFilterField.Name).RootRaw(), f)
 					}
 					realView[ds.FilterDBField] = res[0][utils.SpecialIDParam]
 				}

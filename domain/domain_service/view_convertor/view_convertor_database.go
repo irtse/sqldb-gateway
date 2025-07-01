@@ -58,6 +58,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 		}
 		l.Lock()
 		if cols, ok := d.Domain.GetParams().Get(utils.RootColumnsParam); ok && cols != "" && !strings.Contains(cols, scheme.Name) {
+			l.Unlock()
 			continue
 		}
 		shallowField := sm.ViewFieldModel{

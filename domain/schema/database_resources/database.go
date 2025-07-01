@@ -22,6 +22,7 @@ var DBSchema = models.SchemaModel{
 		{Name: "fields", Type: "onetomany", ForeignTable: RootName("schema_column"), Required: false, Index: 3},
 		{Name: "can_owned", Label: "can be owned by a user", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 4},
 		{Name: "is_enum", Label: "is a name list", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 5},
+		{Name: "redirect_view_id_on_delete", Label: "redirect view id on deletion", Type: models.INTEGER.String(), Required: false, Default: false, Index: 6},
 	},
 }
 
@@ -129,6 +130,7 @@ var DBEmailTemplate = models.SchemaModel{
 		{Name: "to_map_" + RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 4},
 		{Name: "redirected_on", Type: models.VARCHAR.String(), Required: false, Index: 5},
 		{Name: "generate_task", Type: models.BOOLEAN.String(), Required: false, Index: 6},
+		{Name: "is_response", Type: models.BOOLEAN.String(), Required: false, Index: 6},
 
 		{Name: "action_on_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "action on response", Index: 7},
 		{Name: RootID(DBSchema.Name) + "_on_response", Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: false, Readonly: true, Label: "template to modify on response", Index: 8},
@@ -334,6 +336,10 @@ var DBWorkflowSchema = models.SchemaModel{
 		{Name: "readonly_not_assignee", Type: models.BOOLEAN.String(), Required: false, Default: false, Label: "readonly for not assignee", Index: 11, Hidden: true},
 		{Name: "assign_to_creator", Type: models.BOOLEAN.String(), Required: false, Default: false, Label: "assign to creator", Index: 12, Hidden: true},
 		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 12, Hidden: true},
+
+		{Name: "override_state_completed", Type: models.VARCHAR.String(), Required: false, Index: 14},
+		{Name: "override_state_dismiss", Type: models.VARCHAR.String(), Required: false, Index: 15},
+		{Name: "override_state_refused", Type: models.VARCHAR.String(), Required: false, Index: 16},
 	},
 }
 
@@ -356,6 +362,7 @@ var DBRequest = models.SchemaModel{
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Label: "created by", Index: 9},
 		{Name: "is_meta", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 10, Hidden: true},
 		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 12, Hidden: true},
+		{Name: "closing_comment", Type: models.HTML.String(), Required: false, Index: 13, Hidden: true},
 	},
 }
 
@@ -409,6 +416,11 @@ var DBTask = models.SchemaModel{
 		{Name: "meta_" + RootID(DBRequest.Name), Type: models.INTEGER.String(), ForeignTable: DBRequest.Name, Required: false, Hidden: true, Readonly: true, Label: "meta request attached", Index: 13},
 		{Name: "binded_dbtask", Type: models.INTEGER.String(), ForeignTable: "dbtask", Required: false, Readonly: true, Label: "binded task", Hidden: true, Index: 14},
 		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 12, Hidden: true},
+		{Name: "closing_comment", Type: models.HTML.String(), Required: false, Index: 13, Hidden: true},
+
+		{Name: "override_state_completed", Type: models.VARCHAR.String(), Required: false, Index: 14},
+		{Name: "override_state_dismiss", Type: models.VARCHAR.String(), Required: false, Index: 15},
+		{Name: "override_state_refused", Type: models.VARCHAR.String(), Required: false, Index: 16},
 	},
 }
 
@@ -611,7 +623,7 @@ var DBDelegation = models.SchemaModel{
 		{Name: models.STARTKEY, Type: models.TIMESTAMP.String(), Required: false, Default: "CURRENT_TIMESTAMP", Index: 2},
 		{Name: models.ENDKEY, Type: models.TIMESTAMP.String(), Required: false, Index: 3},
 		{Name: RootID(DBTask.Name), Type: models.INTEGER.String(), ForeignTable: DBTask.Name, Required: false, Index: 4, Label: "task delegated"},
-		{Name: "all", Type: models.BOOLEAN.String(), Required: false, Index: 5, Label: "delegated till end date"},
+		{Name: "all_tasks", Type: models.BOOLEAN.String(), Required: false, Index: 5, Label: "all tasks"},
 	},
 }
 

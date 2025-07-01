@@ -70,8 +70,8 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 					rec["actions"] = append(utils.ToList(rec["actions"]), "delete")
 				}
 				res = append(res, rec)
-				wg.Done()
 			}
+			wg.Done()
 		}()
 	}
 	wg.Wait()
@@ -251,7 +251,6 @@ func (s *ViewService) combineDestinations(dest_id []string) string {
 func (s *ViewService) getFilterDetails(record utils.Record, schema *models.SchemaModel) (string, string, string) {
 	filter := utils.GetString(record, ds.FilterDBField)
 	viewFilter := utils.GetString(record, ds.ViewFilterDBField)
-	fmt.Println(filter, viewFilter, schema.Name)
 	sqlFilter, view, _, dir, _ := filterserv.NewFilterService(s.Domain).GetFilterForQuery(
 		filter, viewFilter, *schema, s.Domain.GetParams())
 	return sqlFilter, view, dir

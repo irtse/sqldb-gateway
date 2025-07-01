@@ -232,7 +232,6 @@ func ImportUserHierachy() {
 						res, err := d.GetDb().CreateQuery(ds.DBEntity.Name, map[string]interface{}{
 							"name": cocName,
 						}, func(s string) (string, bool) { return "", true })
-						fmt.Println(cocName, err)
 						if err == nil {
 							d.GetDb().CreateQuery(models.CoCFR.Name, map[string]interface{}{
 								"name":           cocName,

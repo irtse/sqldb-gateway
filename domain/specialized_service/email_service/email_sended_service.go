@@ -20,6 +20,7 @@ func (s *EmailSendedService) Entity() utils.SpecializedServiceInfo { return ds.D
 func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
 		utils.SpecialIDParam: record[ds.EmailTemplateDBField],
+		"is_response":        false,
 	}, false); err == nil && len(res) > 0 {
 		if utils.GetBool(res[0], "generate_task") {
 			i := int64(-1)
@@ -39,7 +40,7 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 				}, false); err == nil && len(res) > 0 {
 					i = utils.GetInt(res[0], utils.SpecialIDParam)
 				} else {
-					if id, err := s.Domain.GetDb().CreateQuery(ds.DBRequest.Name, map[string]interface{}{
+					if id, err := s.Domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBRequest.Name, map[string]interface{}{
 						"name":              "waiting mails responses",
 						"current_index":     1,
 						"is_meta":           true,
@@ -97,8 +98,16 @@ func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, 
 	}, false); err == nil && len(res) > 0 {
 		record["code"] = uuid.New()
 	}
-	if to := utils.GetString(record, "to_email"); to != "" {
-		s.To = to
+	if len(utils.ToList(record["to_email"])) > 0 {
+		for _, usr := range utils.ToList(record["to_email"]) {
+			m := utils.ToList(usr)
+			if s.To == "" {
+				s.To = utils.GetString(utils.ToMap(m), "id")
+			} else {
+				s.To += "," + utils.GetString(utils.ToMap(m), "id")
+			}
+		}
+
 		delete(record, "to_email")
 	}
 	if record["code"] == nil || record["code"] == "" {

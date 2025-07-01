@@ -85,6 +85,7 @@ const (
 	HTML
 	LINKADD
 	MANYTOMANYADD
+	ONETOMANYADD
 )
 
 func DataTypeToEnum() string {
@@ -132,6 +133,7 @@ func DataTypeList() []string {
 		"ENUM('manual', 'auto')",
 		"HTML",
 		"LINK_ADD",
+		"MANYTOMANY_ADD",
 		"ONETOMANY_ADD",
 	}
 }

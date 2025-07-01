@@ -1,6 +1,7 @@
 package task_service
 
 import (
+	"fmt"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -18,19 +19,23 @@ var EntityDBField = ds.RootID(ds.DBEntity.Name)
 var DestTableDBField = ds.RootID("dest_table")
 var FilterDBField = ds.RootID(ds.DBFilter.Name)
 
-func ConstructNotificationTask(newTask utils.Record, request utils.Record) map[string]interface{} {
+func ConstructNotificationTask(scheme utils.Record, request utils.Record) map[string]interface{} {
 	task := map[string]interface{}{
-		sm.NAMEKEY:               newTask.GetString(sm.NAMEKEY),
-		"description":            newTask.GetString(sm.NAMEKEY),
-		"urgency":                newTask["urgency"],
-		"priority":               newTask["priority"],
-		ds.WorkflowSchemaDBField: newTask[ds.WorkflowSchemaDBField],
-		ds.UserDBField:           newTask[ds.UserDBField],
-		ds.EntityDBField:         newTask[ds.EntityDBField],
-		ds.SchemaDBField:         newTask[ds.SchemaDBField],
-		ds.DestTableDBField:      newTask[ds.DestTableDBField],
+		sm.NAMEKEY:               scheme.GetString(sm.NAMEKEY),
+		"description":            scheme.GetString(sm.NAMEKEY),
+		"urgency":                scheme["urgency"],
+		"priority":               scheme["priority"],
+		ds.WorkflowSchemaDBField: scheme[utils.SpecialIDParam],
+		ds.UserDBField:           scheme[ds.UserDBField],
+		ds.EntityDBField:         scheme[ds.EntityDBField],
+		ds.SchemaDBField:         scheme[ds.SchemaDBField],
+		ds.DestTableDBField:      scheme[ds.DestTableDBField],
 		ds.RequestDBField:        request[utils.SpecialIDParam],
-		"send_mail_to":           newTask["send_mail_to"],
+		"send_mail_to":           scheme["send_mail_to"],
+
+		"override_state_completed": scheme["override_state_completed"],
+		"override_state_dismiss":   scheme["override_state_dismiss"],
+		"override_state_refused":   scheme["override_state_refused"],
 	}
 	return task
 }
@@ -81,9 +86,9 @@ func CreateNewDataFromTask(schema sm.SchemaModel, newTask utils.Record, record u
 		}
 	}
 
-	if i, err := domain.GetDb().CreateQuery(schema.Name, r, func(s string) (string, bool) {
-		return "", true
-	}); err == nil {
+	if i, err := domain.GetDb().ClearQueryFilter().CreateQuery(schema.Name, r, func(s string) (string, bool) { return "", true }); err == nil {
+		r[utils.SpecialIDParam] = i
+
 		newTask[ds.DestTableDBField] = i
 		domain.GetDb().CreateQuery(ds.DBDataAccess.Name, map[string]interface{}{
 			ds.SchemaDBField:    schema.ID,
@@ -98,17 +103,16 @@ func CreateNewDataFromTask(schema sm.SchemaModel, newTask utils.Record, record u
 	return newTask
 }
 
-func PrepareAndCreateTask(scheme utils.Record, record map[string]interface{}, domain utils.DomainITF, fromTask bool) map[string]interface{} {
-	newTask := ConstructNotificationTask(scheme, record)
-	newTask[ds.WorkflowSchemaDBField] = newTask[utils.SpecialIDParam]
+func PrepareAndCreateTask(scheme utils.Record, request map[string]interface{}, record map[string]interface{}, domain utils.DomainITF, fromTask bool) map[string]interface{} {
+	newTask := ConstructNotificationTask(scheme, request)
+	fmt.Println("TASK", newTask)
 	delete(newTask, utils.SpecialIDParam)
-	newTask[ds.RequestDBField] = record[utils.SpecialIDParam]
 	if utils.GetBool(scheme, "assign_to_creator") {
 		newTask[ds.UserDBField] = domain.GetUserID()
 	}
-	if utils.GetString(newTask, ds.SchemaDBField) == utils.GetString(record, ds.SchemaDBField) {
-		newTask[ds.SchemaDBField] = record[ds.SchemaDBField]
-		newTask[ds.DestTableDBField] = record[ds.DestTableDBField]
+	if utils.GetString(newTask, ds.SchemaDBField) == utils.GetString(request, ds.SchemaDBField) {
+		newTask[ds.SchemaDBField] = request[ds.SchemaDBField]
+		newTask[ds.DestTableDBField] = request[ds.DestTableDBField]
 	} else if schema, err := schserv.GetSchemaByID(utils.GetInt(newTask, ds.SchemaDBField)); err == nil {
 		newTask = CreateNewDataFromTask(schema, newTask, record, domain)
 	}
@@ -116,7 +120,7 @@ func PrepareAndCreateTask(scheme utils.Record, record map[string]interface{}, do
 	if id, ok := scheme["wrapped_"+ds.WorkflowDBField]; ok && id != nil && isMeta {
 		createMetaRequest(newTask, id, domain)
 	}
-	shouldCreate := utils.GetString(record, "nexts") == utils.ReservedParam || isMeta
+	shouldCreate := utils.GetString(record, "nexts") == utils.ReservedParam || utils.GetString(record, "nexts") == "" || isMeta
 	if shouldCreate {
 		createTaskAndNotify(newTask, domain, fromTask)
 	}
@@ -127,6 +131,7 @@ func createTaskAndNotify(task map[string]interface{}, domain utils.DomainITF, is
 	i, err := domain.GetDb().CreateQuery(ds.DBTask.Name, task, func(s string) (string, bool) {
 		return "", true
 	})
+	fmt.Println("TASK2", i, err)
 	if err != nil {
 		return
 	}
@@ -150,7 +155,7 @@ func notify(task utils.Record, i int64, domain utils.DomainITF) {
 			ds.DestTableDBField: i,
 		}
 		notif["link_id"] = schema.ID
-		domain.GetDb().CreateQuery(ds.DBNotification.Name, notif, func(s string) (string, bool) {
+		domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBNotification.Name, notif, func(s string) (string, bool) {
 			return "", true
 		})
 	}
@@ -183,10 +188,48 @@ func CreateDelegated(record utils.Record, domain utils.DomainITF) {
 		for _, delegated := range dels {
 			record["binded_dbtask"] = record[utils.SpecialIDParam]
 			record[ds.UserDBField] = delegated["delegated_"+ds.UserDBField]
-			domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name), record)
+			domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBTask.Name, record, func(s string) (string, bool) { return "", true })
 		}
 		delete(record, "binded_dbtask")
 		record[ds.UserDBField] = tmpUser
+	}
+}
+
+func UpdateDelegated(task utils.Record, domain utils.DomainITF) {
+	currentTime := time.Now()
+	sqlFilter := []string{
+		"('" + currentTime.Format("2000-01-01") + "' < start_date OR '" + currentTime.Format("2000-01-01") + "' > end_date)",
+	}
+	// THERE should implement if ours... or i'm a delegated
+	sqlFilter = append(sqlFilter, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
+		utils.SpecialIDParam: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDelegation.Name, map[string]interface{}{
+			ds.UserDBField: task[ds.UserDBField],
+			ds.UserDBField + "_1": domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
+				ds.EntityDBField: task[ds.EntityDBField],
+			}, false, ds.UserDBField),
+			"delegated_" + ds.UserDBField: task[ds.UserDBField],
+			"delegated_" + ds.UserDBField + "_1": domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
+				ds.EntityDBField: task[ds.EntityDBField],
+			}, false, ds.UserDBField),
+		}, true, utils.SpecialIDParam),
+		"all_tasks": true,
+	}, false))
+	mTask := map[string]interface{}{
+		ds.UserDBField:        domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false, ds.UserDBField),
+		ds.UserDBField + "_1": domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false, "delegated_"+ds.UserDBField),
+	}
+	if tasks, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, mTask, true); err == nil && len(tasks) > 0 {
+		for _, t := range tasks {
+			t["state"] = task["state"]
+			t["is_close"] = task["is_close"]
+			t["nexts"] = task["nexts"]
+			t["closing_date"] = task["closing_date"]
+			t["closing_by"] = task["closing_by"]
+			t["closing_comment"] = task["closing_comment"]
+			domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, t, map[string]interface{}{
+				utils.SpecialIDParam: task["binded_dbtask"],
+			}, true)
+		}
 	}
 }
 

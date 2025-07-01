@@ -10,7 +10,6 @@ import (
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
 	conn "sqldb-ws/infrastructure/connector/db"
-	"time"
 )
 
 type TaskService struct {
@@ -59,9 +58,9 @@ func (s *TaskService) VerifyDataIntegrity(record map[string]interface{}, tablena
 		}
 	case utils.UPDATE:
 		// check if task is already closed
-		if elder, _ := s.Domain.SuperCall(utils.GetRowTargetParameters(ds.DBTask.Name, record[utils.SpecialIDParam]),
-			utils.Record{}, utils.SELECT, false); len(elder) > 0 && CheckStateIsEnded(utils.ToString(elder[0]["state"])) {
-			return record, errors.New("task is already closed, cannot change its state"), false
+		if elder, _ := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{utils.SpecialIDParam: record[utils.SpecialIDParam]},
+			false); len(elder) > 0 && CheckStateIsEnded(utils.ToString(elder[0]["state"])) {
+			return record, errors.New("task is already closed, you cannot change its state"), false
 		}
 		record = SetClosureStatus(record) // check if task is already progressing
 		if rec, err, ok := servutils.CheckAutoLoad(tablename, record, s.Domain); ok {
@@ -82,29 +81,6 @@ func (s *TaskService) SpecializedDeleteRow(results []map[string]interface{}, tab
 }
 
 func (s *TaskService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
-	currentTime := time.Now()
-	sqlFilter := []string{
-		"('" + currentTime.Format("2000-01-01") + "' < start_date OR '" + currentTime.Format("2000-01-01") + "' > end_date)",
-	}
-	sqlFilter = append(sqlFilter, conn.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
-		"all_tasks":    true,
-		ds.UserDBField: s.Domain.GetUserID(),
-	}, false))
-	if dels, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false); err == nil && len(dels) > 0 {
-		for _, delegated := range dels {
-			for _, r := range results {
-				tmpUser := utils.GetInt(r, ds.UserDBField)
-				tmpID := utils.GetInt(r, utils.SpecialIDParam)
-				delete(r, utils.SpecialIDParam)
-				r["binded_dbtask"] = tmpID
-				r[ds.UserDBField] = delegated["delegated_"+ds.UserDBField]
-				s.Domain.UpdateSuperCall(utils.AllParams(ds.DBTask.Name), r)
-				delete(r, "binded_dbtask")
-				r[utils.SpecialIDParam] = tmpID
-				r[ds.UserDBField] = tmpUser
-			}
-		}
-	}
 	s.Write(results, record)
 	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
 }
@@ -114,6 +90,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		if _, ok := res["is_draft"]; ok && utils.GetBool(res, "is_draft") {
 			continue
 		}
+		UpdateDelegated(res, s.Domain)
 		if binded, ok := res["binded_dbtask"]; ok && utils.GetBool(res, "is_close") && binded != nil {
 			s.Domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, map[string]interface{}{
 				"is_close":                    res["is_close"],
@@ -190,12 +167,17 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 				}
 			}
 		}
+		newRecRequest = SetClosureStatus(newRecRequest)
+		if utils.GetString(res, "closing_comment") != "" && CheckStateIsEnded(newRecRequest) {
+			newRecRequest["closing_comment"] = utils.GetString(res, "closing_comment")
+		}
 		s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBRequest.Name, newRecRequest[utils.SpecialIDParam]).RootRaw(), SetClosureStatus(newRecRequest))
+
 		for _, scheme := range schemes {
 			if current_index != newRecRequest.GetFloat("current_index") {
-				HandleHierarchicalVerification(s.Domain, utils.GetInt(res, ds.RequestDBField), record)
+				HandleHierarchicalVerification(s.Domain, utils.GetInt(res, ds.RequestDBField), res)
 			} else {
-				PrepareAndCreateTask(scheme, record, s.Domain, true)
+				PrepareAndCreateTask(scheme, newRecRequest, res, s.Domain, true)
 			}
 		}
 	}

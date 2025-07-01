@@ -43,7 +43,7 @@ func (e *ExternalResponseController) Post() {
 		body[ds.EmailSendedDBField] = emailRelated[utils.SpecialIDParam]
 		if _, err := d.CreateSuperCall(utils.AllParams(ds.DBEmailResponse.Name).Enrich(map[string]interface{}{
 			"code": code,
-		}), body); err != nil {
+		}).RootRaw(), body); err != nil {
 			e.Response(utils.Results{}, err, "", "")
 			return
 		}

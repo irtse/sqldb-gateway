@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
+	"strconv"
 	"strings"
 )
 
@@ -34,8 +35,8 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		name = name + " as main "
 		q = db.BuildSelectQueryWithRestriction(name, restrictions, isOr)
 	}
-	if strings.Contains(q, "shared_dbuser_id") {
-		fmt.Println(name, q)
+	if strings.Contains(name, "dbuser") && strings.Contains(q, "dbshare") {
+		fmt.Println("consent", q)
 	}
 	res, err := db.QueryAssociativeArray(q)
 	return res, err
@@ -91,12 +92,24 @@ func (db *Database) CreateQuery(name string, record map[string]interface{}, veri
 	var columns, values []string = []string{}, []string{}
 
 	for key, element := range record {
-		_, columns, values = db.BuildUpdateQuery(name, key, element, "", columns, values, verify)
+		_, columns, values = db.BuildUpdateQuery(name, key, element, "", columns, values, false, verify)
 	}
 	for _, query := range db.BuildCreateQueries(name, strings.Join(values, ","), strings.Join(columns, ","), "") {
 		if db.GetDriver() == PostgresDriver {
 			i, err := db.QueryRow(query)
 			if err != nil && strings.Contains(err.Error(), "unique") {
+				if strings.Contains(err.Error(), "pkey") {
+					if res, err := db.QueryAssociativeArray(
+						db.BuildSelectQueryWithRestriction(name, map[string]interface{}{}, false, "MAX(id) as max"),
+					); err == nil && len(res) > 0 && res[0]["max"] != nil {
+						if id, err := strconv.Atoi(fmt.Sprintf("%v", res[0]["max"])); err == nil {
+							record["id"] = id + 1
+						}
+						return db.CreateQuery(name, record, verify)
+					} else {
+						return i, err
+					}
+				}
 				splitted := strings.Split(err.Error(), "\"")
 				if len(splitted) > 1 {
 					constraint := splitted[1]
@@ -131,6 +144,7 @@ func (db *Database) UpdateQuery(name string, record map[string]interface{}, rest
 		db = Open(db)
 		defer db.Close()
 	}
+
 	q, err := db.BuildUpdateQueryWithRestriction(name, record, restriction, isOr)
 	if strings.Contains(q, "main.") {
 		name = name + " as main "

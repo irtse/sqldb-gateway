@@ -15,7 +15,7 @@ func (db *Database) BuildDeleteQueryWithRestriction(name string, restrictions ma
 	}
 
 	query := fmt.Sprintf("DELETE FROM %s", name)
-	if t := FormatSQLRestrictionWhereByMap("", restrictions, isOr); t != "" {
+	if t := FormatSQLRestrictionWhereByMap(db.SQLRestriction, restrictions, isOr); t != "" {
 		query += " WHERE " + t
 	}
 	query = db.applyOrderAndLimit(query)
@@ -89,7 +89,7 @@ func (db *Database) BuildSelectQueryWithRestriction(name string, restrictions in
 		query = query[0 : len(query)-5]
 	}
 	query = db.applyOrderAndLimit(query)
-	return query
+	return strings.ReplaceAll(query, "WHERE  ", "")
 }
 
 func (db *Database) BuildMathQuery(algo string, name string, naming ...string) string {
@@ -188,7 +188,7 @@ func (db *Database) BuildCreateQueries(tableName string, values string, cols str
 	}
 	queries := []string{}
 	if typ != "" {
-		if typ == "" || typ == "<nil>" || cols == "" || cols == "<nil>" || cols == "id" {
+		if typ == "" || typ == "<nil>" || cols == "" || cols == "<nil>" {
 			return queries
 		}
 		if strings.Contains(strings.ToLower(typ), "enum") && db.Driver == PostgresDriver {
@@ -250,12 +250,12 @@ func (db *Database) ApplyQueryFilters(restr string, order string, limit string, 
 }
 
 func (db *Database) BuildUpdateQuery(tablename string, col string, value interface{}, set string,
-	cols []string, colValues []string, verify func(string) (string, bool)) (string, []string, []string) {
+	cols []string, colValues []string, isUpdate bool, verify func(string) (string, bool)) (string, []string, []string) {
 	if db == nil || db.Conn == nil {
 		db = Open(db)
 		defer db.Close()
 	}
-	if col == "id" && fmt.Sprintf("%v", value) != "0" && fmt.Sprintf("%v", value) != "" {
+	if col == "id" && fmt.Sprintf("%v", value) != "0" && fmt.Sprintf("%v", value) != "" && isUpdate {
 		db.SQLRestriction = "id=" + fmt.Sprintf("%v", value) + " "
 	}
 	if typ, ok := verify(col); ok && (!slices.Contains([]string{"NULL", "null", "'null'", ""}, FormatForSQL(strings.Split(typ, ":")[0], value)) || typ == "") {
@@ -285,7 +285,7 @@ func (db *Database) BuildUpdateQueryWithRestriction(tableName string, record map
 	}
 	set := ""
 	for key, element := range record {
-		set, _, _ = db.BuildUpdateQuery(tableName, key, element, set, []string{}, []string{}, func(s string) (string, bool) { return "", true })
+		set, _, _ = db.BuildUpdateQuery(tableName, key, element, set, []string{}, []string{}, true, func(s string) (string, bool) { return "", true })
 	}
 	set = RemoveLastChar(set)
 	if set == "" {
@@ -308,7 +308,7 @@ func (db *Database) BuildUpdateRowQuery(tableName string, record map[string]inte
 	}
 	set := ""
 	for key, element := range record {
-		set, _, _ = db.BuildUpdateQuery(tableName, key, element, set, []string{}, []string{}, verify)
+		set, _, _ = db.BuildUpdateQuery(tableName, key, element, set, []string{}, []string{}, true, verify)
 	}
 	set = RemoveLastChar(set)
 	if set == "" {
