@@ -126,7 +126,6 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 								utils.GetString(tmp, "subject"), utils.GetString(tmp, "template"),
 								dest, s.Domain, utils.GetInt(tmp, utils.SpecialIDParam),
 								utils.ToInt64(sch.ID), -1, -1, "", "")
-							fmt.Println("rec", rec, err)
 							if err == nil {
 								go connector.SendMail(
 									utils.GetString(usr[0], "email"), utils.GetString(usr[0], "email"), rec, false)

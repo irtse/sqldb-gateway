@@ -165,6 +165,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 				to,
 			}, body.Bytes())
 	} else {
+		fmt.Println(smtpHost+":"+smtpPort, from, to, string(body.Bytes()))
 		err = smtp.SendMail(smtpHost+":"+smtpPort, nil, from,
 			[]string{
 				from,
