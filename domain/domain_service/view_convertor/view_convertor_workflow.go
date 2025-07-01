@@ -1,6 +1,7 @@
 package view_convertor
 
 import (
+	"fmt"
 	"slices"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -9,6 +10,7 @@ import (
 )
 
 func (d *ViewConvertor) EnrichWithWorkFlowView(record utils.Record, tableName string, isWorkflow bool) *sm.WorkflowModel {
+	fmt.Println(isWorkflow, tableName)
 	if !isWorkflow {
 		return nil
 	}
@@ -30,13 +32,16 @@ func (d *ViewConvertor) EnrichWithWorkFlowView(record utils.Record, tableName st
 		}
 	case ds.DBTask.Name:
 		if workflow, id, requestID, nexts = d.handleTaskWorkflow(record); id == "" {
+			fmt.Println(workflow, id, requestID, "sqd")
 			return nil
 		}
 	default:
+		fmt.Println("DEFAULT")
 		return nil
 	}
 
 	if id == "" || id == "<nil>" {
+		fmt.Println("id == <nil>")
 		return nil
 	}
 
