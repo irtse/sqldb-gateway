@@ -107,7 +107,6 @@ func (db *Database) CreateQuery(name string, record map[string]interface{}, veri
 						}
 						return db.CreateQuery(name, record, verify)
 					} else {
-						fmt.Println("CREATE", err)
 						return i, err
 					}
 				}
@@ -117,6 +116,8 @@ func (db *Database) CreateQuery(name string, record map[string]interface{}, veri
 					field := strings.ReplaceAll(strings.ReplaceAll(constraint, name+"_", ""), "_unique", "")
 					return i, errors.New("we found a <" + field + "> already existing, it should be unique !")
 				}
+			} else if err != nil {
+				fmt.Println("CREATE", err)
 			}
 			return i, err
 		} else if db.GetDriver() == MySQLDriver {
