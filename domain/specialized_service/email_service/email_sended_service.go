@@ -81,17 +81,6 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 		}
 	}
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
-	if s.To != "" {
-		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-			utils.SpecialIDParam: s.To,
-		}, false); err == nil && len(res) > 0 {
-			s.Domain.CreateSuperCall(utils.AllParams(ds.DBEmailSendedUser.Name).RootRaw(), map[string]interface{}{
-				"name":                utils.GetString(res[0], "email"),
-				ds.UserDBField:        s.To,
-				ds.EmailSendedDBField: record[utils.SpecialIDParam],
-			}, func(s string) (string, bool) { return "", true })
-		}
-	}
 }
 
 func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
@@ -100,18 +89,6 @@ func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, 
 		"code": connector.Quote(utils.GetString(record, "code")),
 	}, false); err == nil && len(res) > 0 {
 		record["code"] = uuid.New()
-	}
-	if len(utils.ToList(record["to_email"])) > 0 {
-		for _, usr := range utils.ToList(record["to_email"]) {
-			m := utils.ToList(usr)
-			if s.To == "" {
-				s.To = utils.GetString(utils.ToMap(m), "id")
-			} else {
-				s.To += "," + utils.GetString(utils.ToMap(m), "id")
-			}
-		}
-
-		delete(record, "to_email")
 	}
 	if record["code"] == nil || record["code"] == "" {
 		record["code"] = uuid.New()
