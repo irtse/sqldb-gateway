@@ -152,7 +152,7 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 			res = append(res, record)
 			continue
 		}
-		newView := v.createShallowedViewItem(record, tableName, &sch, max)
+		newView := v.createShallowedViewItem(record, tableName, &sch, max, isWorkflow)
 		if _, ok := record["is_draft"]; ok && record.GetBool("is_draft") && !slices.Contains(addAction, "put") && v.Domain.IsOwn(false, false, utils.SELECT) {
 			addAction = append(addAction, "put")
 		}
@@ -161,7 +161,6 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 			newView.Schema = scheme
 			newView.SchemaID = id
 			newView.Order = CompareOrder(&sch, order, v.Domain)
-			newView.Workflow = v.EnrichWithWorkFlowView(record, sch.Name, isWorkflow)
 			newView.Consents = v.getConsent(utils.ToString(id), []utils.Record{record})
 			if !utils.GetBool(record, "is_draft") {
 				newView.Triggers = triggers.NewTrigger(v.Domain).GetViewTriggers(
@@ -173,7 +172,7 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 	return res
 }
 
-func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName string, schema *sm.SchemaModel, max int64) sm.ViewModel {
+func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName string, schema *sm.SchemaModel, max int64, isWorkflow bool) sm.ViewModel {
 	ts := []sm.ManualTriggerModel{}
 	label := record.GetString(sm.NAMEKEY)
 	if record.GetString(sm.LABELKEY) != "" {
@@ -189,6 +188,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 	view.Path = utils.BuildPath(schema.Name, utils.ReservedParam)
 	view.Redirection = getRedirection(v.Domain.GetDomainID())
 	view.Translatable = translatable
+	view.Workflow = v.EnrichWithWorkFlowView(record, schema.Name, isWorkflow)
 	return view
 }
 
