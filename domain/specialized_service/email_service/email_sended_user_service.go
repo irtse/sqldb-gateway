@@ -6,7 +6,8 @@ import (
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
-	"sqldb-ws/infrastructure/connector"
+	conn "sqldb-ws/infrastructure/connector"
+	connector "sqldb-ws/infrastructure/connector/db"
 )
 
 // DONE - ~ 200 LINES - PARTIALLY TESTED
@@ -41,7 +42,7 @@ func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interfac
 		}
 	} else if record["name"] != nil {
 		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-			"name": record["name"],
+			"name": connector.Quote(utils.GetString(record, "name")),
 		}, false); err == nil && len(res) > 0 {
 			emailTo = utils.GetString(res[0], "email")
 		}
@@ -52,7 +53,7 @@ func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interfac
 		if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
 			utils.SpecialIDParam: record[ds.EmailSendedDBField],
 		}, false); err == nil && len(rr) > 0 {
-			go connector.SendMail(utils.GetString(res[0], "email"), emailTo, rr[0], isValid)
+			go conn.SendMail(utils.GetString(res[0], "email"), emailTo, rr[0], isValid)
 		}
 		fmt.Println("SENDING MAIL :", err)
 	} else {
