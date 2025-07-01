@@ -188,7 +188,7 @@ func (v *ViewConvertor) createShallowedViewItem(record utils.Record, tableName s
 	view.Path = utils.BuildPath(schema.Name, utils.ReservedParam)
 	view.Redirection = getRedirection(v.Domain.GetDomainID())
 	view.Translatable = translatable
-	view.Workflow = v.EnrichWithWorkFlowView(record, schema.Name, isWorkflow)
+	view.Workflow = v.EnrichWithWorkFlowView(record, v.Domain.GetTable(), isWorkflow)
 	return view
 }
 
