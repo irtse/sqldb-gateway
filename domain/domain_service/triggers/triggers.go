@@ -1,7 +1,6 @@
 package triggers
 
 import (
-	"fmt"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -134,7 +133,6 @@ func (t *TriggerService) triggerData(record utils.Record, fromSchema *sm.SchemaM
 
 	rules := t.GetTriggerRules(triggerID, fromSchema, toSchemaID, record)
 	for _, r := range rules {
-		fmt.Println("rule", r)
 		if toSchemaID != utils.GetInt(r, "to_"+ds.SchemaDBField) {
 			continue
 		}
