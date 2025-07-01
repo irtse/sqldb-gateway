@@ -70,8 +70,11 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	body.WriteString(fmt.Sprintf("To: %s\r\n", to))
 	body.WriteString("Subject: " + utils.GetString(mail, "subject") + "\r\n")
 	body.WriteString("MIME-Version: 1.0\r\n")
-	body.WriteString("Content-Type: multipart/mixed; boundary=\"" + boundary + "\"\r\n")
-	body.WriteString("\r\n--" + boundary + "\r\n")
+	if isValidButton {
+		body.WriteString("Content-Type: multipart/mixed; boundary=\"" + boundary + "\"\r\n")
+		body.WriteString("\r\n--" + boundary + "\r\n")
+	}
+
 	body.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", altboundary))
 	body.WriteString("\r\n")
 	// Partie texte
@@ -153,8 +156,9 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			}
 		}
 	}
-
-	body.WriteString("--" + boundary + "--\n")
+	if isValidButton {
+		body.WriteString("--" + boundary + "--\r\n")
+	}
 	// Charger le template HTML
 	var err error
 	if pwd != "" {
