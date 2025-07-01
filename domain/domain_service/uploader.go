@@ -49,13 +49,13 @@ func (u *Uploader) ApplyUpload(file multipart.File, handler *multipart.FileHeade
 							}
 						}
 					}
-					if err := u.Domain.GetDb().UpdateQuery(sch.Name, map[string]interface{}{
+					/*if err := u.Domain.GetDb().UpdateQuery(sch.Name, map[string]interface{}{
 						columnName: strings.Join(paths, ","),
 					}, map[string]interface{}{
 						utils.SpecialIDParam: id,
 					}, false); err != nil {
 						return "", err
-					}
+					}*/
 				}
 
 			}
