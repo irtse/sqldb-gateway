@@ -35,7 +35,7 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		name = name + " as main "
 		q = db.BuildSelectQueryWithRestriction(name, restrictions, isOr)
 	}
-	if strings.Contains(name, "dbuser") && strings.Contains(q, "dbshare") {
+	if strings.Contains(name, "dbtriggers_rule") {
 		fmt.Println("consent", q)
 	}
 	res, err := db.QueryAssociativeArray(q)
