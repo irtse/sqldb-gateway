@@ -19,8 +19,9 @@ func (s *EmailSendedService) Entity() utils.SpecializedServiceInfo { return ds.D
 
 func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
-		utils.SpecialIDParam: record[ds.EmailTemplateDBField],
-		"is_response":        false,
+		utils.SpecialIDParam:  record[ds.EmailTemplateDBField],
+		"is_response_valid":   false,
+		"is_response_refused": false,
 	}, false); err == nil && len(res) > 0 {
 		if utils.GetBool(res[0], "generate_task") {
 			i := int64(-1)
