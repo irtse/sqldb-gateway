@@ -20,13 +20,14 @@ func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interfac
 	isValid := false
 	emailTo := ""
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
+		"is_response_valid":   false,
+		"is_response_refused": false,
 		utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
 			ds.DBEmailSended.Name, map[string]interface{}{
 				utils.SpecialIDParam: record[ds.EmailSendedDBField],
 			}, false, ds.EmailTemplateDBField,
 		),
 	}, false); err == nil && len(res) > 0 {
-		fmt.Println(res[0], utils.GetBool(res[0], "waiting_response"))
 		if utils.GetBool(res[0], "waiting_response") {
 			// should enrich with a binary response yes or no.
 			isValid = true
