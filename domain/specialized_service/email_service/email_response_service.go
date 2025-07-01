@@ -11,8 +11,6 @@ import (
 	"sqldb-ws/domain/utils"
 	connector "sqldb-ws/infrastructure/connector"
 	db "sqldb-ws/infrastructure/connector/db"
-
-	"github.com/google/uuid"
 )
 
 // DONE - ~ 200 LINES - PARTIALLY TESTED
@@ -47,8 +45,9 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 	}, false); err == nil {
 		for _, r := range res {
 			if templs, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
-				utils.SpecialIDParam: utils.GetString(record, ds.EmailSendedDBField),
-				"is_response":        false,
+				utils.SpecialIDParam:  utils.GetString(record, ds.EmailSendedDBField),
+				"is_response_valid":   false,
+				"is_response_refused": false,
 			}, false); err == nil {
 				for _, t := range templs {
 					if utils.GetBool(t, "generate_task") {
@@ -96,18 +95,29 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 					}
 				}
 			}
+			var key = "is_response_valid"
+			if utils.GetBool(record, "got_response") {
+				key = "is_response_refused"
+			}
 			if templs, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
-				"is_response": true,
+				key: true,
 			}, false); err == nil && len(templs) > 0 {
 				tmp := templs[0]
-				tmp["code"] = uuid.New()
-				tmp["content"] = tmp["template"]
 				if usr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 					utils.SpecialIDParam: r["from_email"],
 				}, false); err == nil && len(usr) > 0 {
-					go connector.SendMail(utils.GetString(usr[0], "email"), utils.GetString(usr[0], "email"), tmp, false)
+					sch, _ := schema.GetSchema(ds.DBEmailResponse.Name)
+					rec, err := connector.ForgeMail(usr[0], usr[0],
+						utils.GetString(tmp, "subject"), utils.GetString(tmp, "template"),
+						map[string]interface{}{
+							"from_email": utils.GetString(usr[0], "email"),
+						}, s.Domain, utils.GetInt(tmp, utils.SpecialIDParam),
+						utils.ToInt64(sch.ID), -1, -1, "", "")
+					if err == nil {
+						go connector.SendMail(
+							utils.GetString(usr[0], "email"), utils.GetString(usr[0], "email"), rec, false)
+					}
 				}
-
 			}
 		}
 	}

@@ -130,7 +130,8 @@ var DBEmailTemplate = models.SchemaModel{
 		{Name: "to_map_" + RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 4},
 		{Name: "redirected_on", Type: models.VARCHAR.String(), Required: false, Index: 5},
 		{Name: "generate_task", Type: models.BOOLEAN.String(), Required: false, Index: 6},
-		{Name: "is_response", Type: models.BOOLEAN.String(), Required: false, Index: 6},
+		{Name: "is_response_valid", Type: models.BOOLEAN.String(), Required: false, Index: 6},
+		{Name: "is_response_refused", Type: models.BOOLEAN.String(), Required: false, Index: 6},
 
 		{Name: "action_on_response", Type: models.VARCHAR.String(), Required: false, Readonly: true, Label: "action on response", Index: 7},
 		{Name: RootID(DBSchema.Name) + "_on_response", Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: false, Readonly: true, Label: "template to modify on response", Index: 8},
