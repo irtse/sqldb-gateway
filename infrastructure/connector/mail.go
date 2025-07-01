@@ -70,11 +70,8 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	body.WriteString(fmt.Sprintf("To: %s\r\n", to))
 	body.WriteString("Subject: " + utils.GetString(mail, "subject") + "\r\n")
 	body.WriteString("MIME-Version: 1.0\r\n")
-	if isValidButton {
-		body.WriteString("Content-Type: multipart/mixed; boundary=\"" + boundary + "\"\r\n")
-		body.WriteString("\r\n--" + boundary + "\r\n")
-	}
-
+	body.WriteString("Content-Type: multipart/mixed; boundary=\"" + boundary + "\"\r\n")
+	body.WriteString("\r\n--" + boundary + "\r\n")
 	body.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", altboundary))
 	body.WriteString("\r\n")
 	// Partie texte
@@ -82,13 +79,11 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	body.WriteString("Content-Type: text/html; charset=\"utf-8\"\r\n")
 	body.WriteString("Content-Transfer-Encoding: 7bit\r\n\r\n")
 	body.WriteString("<html>")
-	if isValidButton {
-		body.WriteString(`
-			<head>
-				<meta charset="UTF-8">
-			</head>
-		`)
-	}
+	body.WriteString(`
+		<head>
+			<meta charset="UTF-8">
+		</head>
+	`)
 	body.WriteString("<body style=\"margin:0; padding:0; font-family:Arial, sans-serif;\">")
 
 	body.WriteString(utils.GetString(mail, "content"))
@@ -156,9 +151,8 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 			}
 		}
 	}
-	if isValidButton {
-		body.WriteString("--" + boundary + "--\r\n")
-	}
+
+	body.WriteString("--" + boundary + "--\n")
 	// Charger le template HTML
 	var err error
 	if pwd != "" {
