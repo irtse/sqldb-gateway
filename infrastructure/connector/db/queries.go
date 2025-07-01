@@ -162,7 +162,6 @@ func (db *Database) UpdateQuery(name string, record map[string]interface{}, rest
 			return errors.New("we found a <" + field + "> already existing, it should be unique !")
 		}
 	}
-	fmt.Println("UPDATE", q, err)
 	return err
 }
 
