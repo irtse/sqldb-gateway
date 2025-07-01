@@ -107,6 +107,7 @@ func (db *Database) CreateQuery(name string, record map[string]interface{}, veri
 						}
 						return db.CreateQuery(name, record, verify)
 					} else {
+						fmt.Println("CREATE", err)
 						return i, err
 					}
 				}
