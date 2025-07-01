@@ -64,6 +64,7 @@ func (s *AbstractSpecializedService) TransformToGenericView(results utils.Result
 
 func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]interface{}, tablename string) {
 	if sch, err := sch.GetSchema(tablename); err == nil {
+		fmt.Println("MANYMANY", s.ManyToMany)
 		for schemaName, mm := range s.ManyToMany {
 			field, err := sch.GetField(schemaName)
 			if err != nil {

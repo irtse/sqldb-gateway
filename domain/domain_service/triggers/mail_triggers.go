@@ -90,8 +90,8 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 		return mailings
 	}
 	rules := t.GetTriggerRules(triggerID, fromSchema, mailSchema.GetID(), record)
+	fmt.Println("rule", rules, len(rules))
 	for _, r := range rules {
-		fmt.Println("rule", r)
 		mailID := r["value"]
 		if mailID == nil {
 			continue
