@@ -208,7 +208,7 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 			}
 		}
 	}
-	fmt.Println("mailings")
+	fmt.Println("mailings", mailings)
 	return mailings
 }
 
