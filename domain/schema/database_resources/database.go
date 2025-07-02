@@ -422,6 +422,8 @@ var DBTask = models.SchemaModel{
 		{Name: "override_state_completed", Type: models.VARCHAR.String(), Required: false, Index: 14},
 		{Name: "override_state_dismiss", Type: models.VARCHAR.String(), Required: false, Index: 15},
 		{Name: "override_state_refused", Type: models.VARCHAR.String(), Required: false, Index: 16},
+
+		{Name: "opening_date", Type: models.TIMESTAMP.String(), Required: false, Readonly: true, Index: 7},
 	},
 }
 

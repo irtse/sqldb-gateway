@@ -352,7 +352,7 @@ func (s *ViewConvertor) getSynthesis(record utils.Record, schema *sm.SchemaModel
 		return fmt.Sprintf("/%s/%s?%s=%s&scope=enable&%s=%s",
 			utils.MAIN_PREFIX, ds.DBTask.Name,
 			utils.RootRowsParam, taskIDs,
-			utils.RootColumnsParam, "name,state,closing_date,dbuser_id,dbentity_id",
+			utils.RootColumnsParam, "name,state,opening_date,closing_date,dbuser_id,dbentity_id",
 		)
 	}
 	return ""

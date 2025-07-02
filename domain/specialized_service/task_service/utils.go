@@ -32,6 +32,7 @@ func ConstructNotificationTask(scheme utils.Record, request utils.Record) map[st
 		ds.DestTableDBField:      scheme[ds.DestTableDBField],
 		ds.RequestDBField:        request[utils.SpecialIDParam],
 		"send_mail_to":           scheme["send_mail_to"],
+		"opening_date":           time.Now(),
 
 		"override_state_completed": scheme["override_state_completed"],
 		"override_state_dismiss":   scheme["override_state_dismiss"],
