@@ -64,11 +64,17 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.Sche
 		for _, field := range fields {
 			if utils.GetBool(field, "is_task_concerned") {
 				filter = append(filter, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
-					"!0": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+					"!0": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+						"is_close":          false,
 						ds.SchemaDBField:    schema.ID,
 						ds.DestTableDBField: "main.id",
 					}, false, "COUNT(id)"),
-				}, false))
+					"!0_1": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+						"is_close":          false,
+						ds.SchemaDBField:    schema.ID,
+						ds.DestTableDBField: "main.id",
+					}, false, "COUNT(id)"),
+				}, true))
 				fmt.Println("FILTER", filter)
 			}
 			if f, err := schema.GetFieldByID(utils.GetInt(field, ds.SchemaFieldDBField)); err == nil {
