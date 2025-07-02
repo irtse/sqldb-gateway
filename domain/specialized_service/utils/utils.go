@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/triggers"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -53,7 +52,6 @@ func (s *AbstractSpecializedService) TransformToGenericView(results utils.Result
 				if ss, err := sch.GetSchema(ds.DBTask.Name); err == nil {
 					for _, tt := range t {
 						tt["inner_redirection"] = utils.BuildPath(ss.ID, utils.GetString(rr[0], utils.SpecialIDParam))
-						fmt.Println(tt["inner_redirection"])
 					}
 				}
 			}
@@ -64,7 +62,6 @@ func (s *AbstractSpecializedService) TransformToGenericView(results utils.Result
 
 func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]interface{}, tablename string) {
 	if sch, err := sch.GetSchema(tablename); err == nil {
-		fmt.Println("MANYMANY", s.ManyToMany)
 		for schemaName, mm := range s.ManyToMany {
 			field, err := sch.GetField(schemaName)
 			if err != nil {
@@ -180,7 +177,6 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 						ds.DestTableDBField: rec[utils.SpecialIDParam],
 						ds.SchemaDBField:    sche.ID,
 					})
-					fmt.Println(err)
 				}
 			}
 		}
@@ -207,7 +203,6 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 			s.ManyToMany = map[string][]map[string]interface{}{}
 			s.OneToMany = map[string][]map[string]interface{}{}
 			for _, field := range sch.Fields {
-				fmt.Println(field.Type, field.Name, record[field.Name])
 				if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(sm.MANYTOMANY.String())) && record[field.Name] != nil {
 					if s.ManyToMany[field.Name] == nil {
 						s.ManyToMany[field.Name] = []map[string]interface{}{}
@@ -298,11 +293,8 @@ func (s *SpecializedService) TransformToGenericView(results utils.Results, table
 				if ss, err := sch.GetSchema(ds.DBTask.Name); err == nil {
 					for _, tt := range t {
 						tt["inner_redirection"] = utils.BuildPath(ss.ID, utils.GetString(rr[0], utils.SpecialIDParam))
-						fmt.Println(tt["inner_redirection"])
 					}
 				}
-			} else {
-				fmt.Println(rr, err)
 			}
 		}
 	}

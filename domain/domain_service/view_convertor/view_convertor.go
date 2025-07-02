@@ -521,12 +521,17 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, m, false); err != nil || len(res) == 0 {
 				return true
 			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
+				fmt.Println("UPTHERE2", tableName)
 				return false
 			}
 		} else {
 			m[ds.DestTableDBField] = record[utils.SpecialIDParam]
 			m[ds.SchemaDBField] = sch.ID
 			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
+				m["is_close"] = true
+				if rr, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(rr) > 0 {
+					return true
+				}
 				for k, _ := range d.GetParams().Values {
 					if sch.HasField(k) {
 						return true
@@ -545,6 +550,7 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 				}
 				return true
 			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
+				fmt.Println("UPTHERE", tableName)
 				return false
 			}
 		}
