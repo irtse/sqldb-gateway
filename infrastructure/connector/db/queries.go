@@ -20,7 +20,6 @@ func (db *Database) DeleteQueryWithRestriction(name string, restrictions map[str
 		q = db.BuildDeleteQueryWithRestriction(name, restrictions, isOr)
 	}
 	if !strings.Contains(q, "id=") {
-		fmt.Println(q)
 		return errors.New("can't delete with a related or id specified")
 	}
 	return db.Query(q)
@@ -37,9 +36,6 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		q = db.BuildSelectQueryWithRestriction(name, restrictions, isOr)
 	}
 	res, err := db.QueryAssociativeArray(q)
-	if len(res) == 0 {
-		fmt.Println("consent", q)
-	}
 	return res, err
 }
 
