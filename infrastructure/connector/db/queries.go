@@ -36,7 +36,7 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		name = name + " as main "
 		q = db.BuildSelectQueryWithRestriction(name, restrictions, isOr)
 	}
-	if strings.Contains(name, "dbtriggers_rule") {
+	if strings.Contains(name, "poster") {
 		fmt.Println("consent", q)
 	}
 	res, err := db.QueryAssociativeArray(q)
@@ -174,14 +174,12 @@ func (db *Database) DeleteQuery(name string, colName string) error {
 
 	q := db.BuildDeleteQuery(name, colName)
 	if !strings.Contains(q, "id=") {
-		fmt.Println(q)
 		return errors.New("can't delete with a related or id specified")
 	}
 	if strings.Contains(q, "main.") {
 		name = name + " as main "
 		q = db.BuildDeleteQuery(name, colName)
 	}
-	fmt.Println(db.BuildDeleteQuery(name, colName))
 	return db.Query(db.BuildDeleteQuery(name, colName))
 }
 
