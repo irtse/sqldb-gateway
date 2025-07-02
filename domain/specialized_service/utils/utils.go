@@ -247,16 +247,20 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 			}
 		}
 		if _, ok := record["is_draft"]; ok && !utils.GetBool(record, "is_draft") {
-			if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBConsentResponse.Name, map[string]interface{}{
-				ds.ConsentDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
-					ds.SchemaDBField: sch.ID,
-					"optionnal":      false,
-				}, false, "id"),
-				ds.DestTableDBField: record[utils.SpecialIDParam],
-				ds.SchemaDBField:    sch.ID,
-				"is_consenting":     true,
-			}, false); err == nil && len(res) == 0 {
-				return record, errors.New("should consent"), false
+			if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
+				ds.SchemaDBField: sch.ID,
+				"optionnal":      false,
+			}, false); err == nil {
+				for _, r := range res {
+					if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBConsentResponse.Name, map[string]interface{}{
+						ds.ConsentDBField:   r[utils.SpecialIDParam],
+						ds.DestTableDBField: record[utils.SpecialIDParam],
+						ds.SchemaDBField:    sch.ID,
+						"is_consenting":     true,
+					}, false); err == nil && len(rr) == 0 {
+						return record, errors.New("should consent"), false
+					}
+				}
 			}
 		}
 	}
