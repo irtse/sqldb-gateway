@@ -526,14 +526,12 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 		} else {
 			m[ds.DestTableDBField] = record[utils.SpecialIDParam]
 			m[ds.SchemaDBField] = sch.ID
-			m["is_close"] = true
 			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
 				for k, _ := range d.GetParams().Values {
 					if sch.HasField(k) {
 						return true
 					}
 				}
-
 				for _, f := range sch.Fields {
 					if f.GetLink() > 0 && !strings.Contains(f.Type, "many") {
 						if sch2, err := scheme.GetSchemaByID(f.GetLink()); err == nil {
