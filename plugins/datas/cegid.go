@@ -432,6 +432,16 @@ var OtherPublicationAffiliationAuthorsFR = models.SchemaModel{
 	},
 }
 
+var ProofreadingStatus = models.SchemaModel{
+	Name:     "proofreading_status",
+	Label:    "proofreading status",
+	Category: "publications",
+	CanOwned: true,
+	Fields: []models.FieldModel{
+		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
+	},
+}
+
 var OtherPublicationAuthorsFR = models.SchemaModel{
 	Name:     "other_publication_authors",
 	Label:    "other publication authors",
