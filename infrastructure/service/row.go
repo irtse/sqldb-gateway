@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	conn "sqldb-ws/infrastructure/connector/db"
 	"strings"
 )
@@ -75,7 +76,12 @@ func (t *TableRowService) Create(record map[string]interface{}) ([]map[string]in
 	if r, err, forceChange := t.SpecializedService.VerifyDataIntegrity(record, t.Name); err != nil {
 		return nil, err
 	} else if forceChange {
+		if record["id"] == nil && r["id"] != nil {
+			return t.Update(record, "id="+fmt.Sprintf("%v", r["id"]))
+		}
 		record = r
+	} else if record["id"] == nil && r["id"] != nil {
+		return t.Update(record, "id="+fmt.Sprintf("%v", r["id"]))
 	}
 	t.EmptyCol.Name = t.Name
 	verify := t.EmptyCol.Verify

@@ -33,6 +33,12 @@ func (s *EmailResponseService) VerifyDataIntegrity(record map[string]interface{}
 		"code": db.Quote(code),
 	}, false); err == nil && len(res) > 0 {
 		record[ds.EmailSendedDBField] = res[0][utils.SpecialIDParam]
+		if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailResponse.Name, map[string]interface{}{
+			ds.EmailSendedDBField: res[0][utils.SpecialIDParam],
+		}, false); err == nil && len(rr) > 0 {
+			record[utils.SpecialIDParam] = rr[0][utils.SpecialIDParam]
+			s.Domain.GetParams().Set(utils.SpecialIDParam, utils.GetString(rr[0], utils.SpecialIDParam))
+		}
 	} else {
 		return record, errors.New("no related found"), false
 	}
