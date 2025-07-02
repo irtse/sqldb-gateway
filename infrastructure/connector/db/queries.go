@@ -171,10 +171,12 @@ func (db *Database) DeleteQuery(name string, colName string) error {
 		db = Open(db)
 		defer db.Close()
 	}
-	if !strings.Contains(db.BuildDeleteQuery(name, colName), "id=") {
+
+	q := db.BuildDeleteQuery(name, colName)
+	if !strings.Contains(q, "id=") {
+		fmt.Println(q)
 		return errors.New("can't delete with a related or id specified")
 	}
-	q := db.BuildDeleteQuery(name, colName)
 	if strings.Contains(q, "main.") {
 		name = name + " as main "
 		q = db.BuildDeleteQuery(name, colName)
