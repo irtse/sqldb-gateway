@@ -252,8 +252,10 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 					ds.SchemaDBField: sch.ID,
 					"optionnal":      false,
 				}, false, "id"),
-				"is_consenting": false,
-			}, false); err == nil && len(res) > 0 {
+				ds.DestTableDBField: record[utils.SpecialIDParam],
+				ds.SchemaDBField:    sch.ID,
+				"is_consenting":     true,
+			}, false); err == nil && len(res) == 0 {
 				return record, errors.New("should consent"), false
 			}
 		}
