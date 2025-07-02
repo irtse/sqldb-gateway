@@ -527,12 +527,6 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 			m[ds.DestTableDBField] = record[utils.SpecialIDParam]
 			m[ds.SchemaDBField] = sch.ID
 			m["is_close"] = true
-			fmt.Println("THA", tableName)
-			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err == nil && len(res) > 0 {
-				fmt.Println("THA2", tableName)
-				return true
-			}
-			m["is_close"] = false
 			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
 				for k, _ := range d.GetParams().Values {
 					if sch.HasField(k) {

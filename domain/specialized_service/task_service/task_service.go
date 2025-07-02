@@ -2,6 +2,7 @@ package task_service
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -171,7 +172,8 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		if utils.GetString(res, "closing_comment") != "" && CheckStateIsEnded(newRecRequest) {
 			newRecRequest["closing_comment"] = utils.GetString(res, "closing_comment")
 		}
-		s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBRequest.Name, newRecRequest[utils.SpecialIDParam]).RootRaw(), SetClosureStatus(newRecRequest))
+		fmt.Println(ds.DBRequest.Name, newRecRequest)
+		s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBRequest.Name, newRecRequest[utils.SpecialIDParam]).RootRaw(), newRecRequest)
 
 		for _, scheme := range schemes {
 			if current_index != newRecRequest.GetFloat("current_index") {
