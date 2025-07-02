@@ -36,10 +36,10 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		name = name + " as main "
 		q = db.BuildSelectQueryWithRestriction(name, restrictions, isOr)
 	}
-	if strings.Contains(name, "poster") {
+	res, err := db.QueryAssociativeArray(q)
+	if len(res) == 0 {
 		fmt.Println("consent", q)
 	}
-	res, err := db.QueryAssociativeArray(q)
 	return res, err
 }
 
