@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	sch "sqldb-ws/domain/schema"
@@ -90,6 +91,7 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.Sche
 						ds.DestTableDBField: "main.id",
 					}, false, "COUNT(id)"),
 				}, false))
+				fmt.Println("FILTER", filter)
 			}
 			if f, err := schema.GetFieldByID(utils.GetInt(field, ds.SchemaFieldDBField)); err == nil {
 				if utils.GetBool(field, "is_own") && len(s.RestrictionByEntityUser(schema, orFilter, true)) > 0 {
