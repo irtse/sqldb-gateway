@@ -166,6 +166,7 @@ func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []
 		for _, restr := range SQLrestriction {
 			restr = strings.ReplaceAll(restr, "is_draft=false", "is_draft=true")
 		}
+		fmt.Println(state, SQLrestriction)
 	} else {
 		k := utils.SpecialIDParam
 		if state == "new" {
