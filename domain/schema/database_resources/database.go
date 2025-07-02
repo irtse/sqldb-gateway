@@ -471,7 +471,8 @@ var DBFilterField = models.SchemaModel{
 		{Name: "index", Type: models.INTEGER.String(), Required: false, Default: 1, Index: 5},
 		{Name: "width", Type: models.DECIMAL.String(), Required: false, Index: 6},
 		{Name: "is_own", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 7},
-		{Name: RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Index: 8},
+		{Name: "is_task_concerned", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 8},
+		{Name: RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Index: 9},
 	},
 }
 
