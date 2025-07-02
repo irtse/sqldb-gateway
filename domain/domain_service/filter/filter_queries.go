@@ -34,19 +34,15 @@ func (s *FilterService) GetFilterFields(viewfilterID string, schemaID string) []
 }
 
 func (s *FilterService) GetFilterIDs(filterID string, viewfilterID string, schemaID string) map[string]string {
-	params := utils.AllParams(ds.DBFilter.Name).Enrich(map[string]interface{}{
-		ds.RootID(ds.DBSchema.Name): schemaID,
-	})
 	filtersID := map[string]string{utils.RootFilter: filterID, utils.RootViewFilter: viewfilterID}
 	for _, v := range filtersID {
 		if p, ok := s.Domain.GetParams().Get(v); ok && p != "" {
-			params.Set(ds.FilterDBField, p)
 			restriction := map[string]interface{}{
 				utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
 					ds.SchemaDBField: schemaID,
 					ds.SchemaDBField: nil,
+					ds.FilterDBField: p,
 				}, true, utils.SpecialIDParam),
-				ds.FilterDBField: p,
 			}
 			restriction["is_view"] = v == utils.RootViewFilter
 			if fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(
