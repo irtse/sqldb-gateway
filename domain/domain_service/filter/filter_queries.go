@@ -33,31 +33,9 @@ func (s *FilterService) GetFilterFields(viewfilterID string, schemaID string) []
 	return []map[string]interface{}{}
 }
 
-func (s *FilterService) GetFilterIDs(filterID string, viewfilterID string, schemaID string) map[string]string {
-	filtersID := map[string]string{utils.RootFilter: filterID, utils.RootViewFilter: viewfilterID}
-	for _, v := range filtersID {
-		if p, ok := s.Domain.GetParams().Get(v); ok && p != "" {
-			restriction := map[string]interface{}{
-				utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
-					ds.SchemaDBField: schemaID,
-					ds.SchemaDBField: nil,
-					ds.FilterDBField: p,
-				}, true, utils.SpecialIDParam),
-			}
-			restriction["is_view"] = v == utils.RootViewFilter
-			if fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(
-				ds.DBFilterField.Name, restriction, false); err == nil && len(fields) > 0 {
-				filtersID[v] = p
-			}
-		}
-	}
-	return filtersID
-}
-
 func (s *FilterService) GetFilterForQuery(filterID string, viewfilterID string, schema sm.SchemaModel, domainParams utils.Params) (string, string, string, string, string) {
-	ids := s.GetFilterIDs(filterID, viewfilterID, schema.ID)
-	view, order, dir := s.ProcessViewAndOrder(ids[utils.RootViewFilter], schema.ID, domainParams)
-	filter := s.ProcessFilterRestriction(ids[utils.RootFilter], schema)
+	view, order, dir := s.ProcessViewAndOrder(viewfilterID, schema.ID, domainParams)
+	filter := s.ProcessFilterRestriction(filterID, schema)
 	state := ""
 	if filterID != "" {
 		if fils, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilter.Name,
@@ -80,7 +58,8 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.Sche
 		ds.FilterDBField: filterID,
 	}
 	s.Domain.GetDb().ClearQueryFilter()
-	fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false)
+	fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, true)
+	fmt.Println("FIELDss", len(fields))
 	if err == nil && len(fields) > 0 {
 		for _, field := range fields {
 			if utils.GetBool(field, "is_task_concerned") {
