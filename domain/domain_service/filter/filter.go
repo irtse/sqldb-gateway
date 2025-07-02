@@ -65,12 +65,13 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 		state = s
 	}
 	SQLrestriction = append(SQLrestriction, later...)
-	if state != "" {
-		SQLrestriction = f.LifeCycleRestriction(tableName, SQLrestriction, state)
-	}
 	if len(SQLview) > 0 {
 		SQLview = append(SQLview, "is_draft")
 	}
+	if state != "" {
+		SQLrestriction = f.LifeCycleRestriction(tableName, SQLrestriction, state)
+	}
+
 	return strings.Join(SQLrestriction, " AND "), strings.Join(SQLOrder, ","), SQLLimit, strings.Join(SQLview, ",")
 }
 
