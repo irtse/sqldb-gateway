@@ -85,7 +85,6 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.Sche
 	}
 	s.Domain.GetDb().ClearQueryFilter()
 	fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, false)
-	fmt.Println(fields, restriction)
 	if err == nil && len(fields) > 0 {
 		for _, field := range fields {
 			if utils.GetBool(field, "is_task_concerned") {
