@@ -246,7 +246,7 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 				}
 			}
 		}
-		if _, ok := record["is_draft"]; ok && !utils.GetBool(record, "is_draft") {
+		/*if _, ok := record["is_draft"]; ok && !utils.GetBool(record, "is_draft") {
 			if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
 				ds.SchemaDBField: sch.ID,
 				"optionnal":      false,
@@ -262,7 +262,7 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 					}
 				}
 			}
-		}
+		}*/
 	}
 	return record, nil, true
 }
