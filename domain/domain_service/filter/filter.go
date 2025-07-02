@@ -128,7 +128,7 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 				}
 			}
 			if connector.FormatSQLRestrictionWhereByMap(
-				"", map[string]interface{}{ds.SchemaDBField: enum}, false) != "" {
+				"", map[string]interface{}{ds.SchemaDBField: enum}, false) != "" && len(enum) != 0 {
 				restr = append(restr, connector.FormatSQLRestrictionWhereByMap(
 					"", map[string]interface{}{ds.SchemaDBField: enum}, false))
 			}
