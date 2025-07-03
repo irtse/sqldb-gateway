@@ -1,6 +1,7 @@
 package triggers
 
 import (
+	"fmt"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -58,8 +59,10 @@ func (t *TriggerService) Trigger(fromSchema *sm.SchemaModel, record utils.Record
 		return
 	}
 	if res, err := t.GetTriggers("auto", method, fromSchema.ID); err == nil {
-		for _, r := range res {
+		fmt.Println("FOUND TRIGGERS", len(res), fromSchema.Name)
+		for i, r := range res {
 			typ := utils.GetString(r, "type")
+			fmt.Println("START TRIGGER", i, typ, r)
 			switch typ {
 			case "mail":
 				t.triggerMail(record, fromSchema,
