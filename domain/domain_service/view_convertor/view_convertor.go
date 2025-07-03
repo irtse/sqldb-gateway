@@ -316,9 +316,13 @@ func (s *ViewConvertor) getSynthesis(record utils.Record, schema *sm.SchemaModel
 			for _, r := range res {
 				is = append(is, utils.GetString(r, utils.SpecialIDParam))
 			}
+			if !slices.Contains(is, utils.GetString(record, utils.SpecialIDParam)) {
+				is = append(is, utils.GetString(record, utils.SpecialIDParam))
+			}
 			if len(is) > 0 {
 				taskIDs = strings.Join(is, ",")
 			}
+
 		}
 	} else if schema.Name == ds.DBRequest.Name {
 		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
