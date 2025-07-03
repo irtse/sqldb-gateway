@@ -136,6 +136,7 @@ func (t *TriggerService) triggerData(record utils.Record, fromSchema *sm.SchemaM
 	// PROBLEM WE CAN'T DECOLERATE and action on not a sub data of it. (not a problem for now)
 
 	rules := t.GetTriggerRules(triggerID, fromSchema, toSchemaID, record)
+	fmt.Println("triggerData rules", rules)
 	for _, r := range rules {
 		if toSchemaID != utils.GetInt(r, "to_"+ds.SchemaDBField) {
 			fmt.Println("UPDATE DATA FAILED PAF", toSchemaID, utils.GetInt(r, "to_"+ds.SchemaDBField))
