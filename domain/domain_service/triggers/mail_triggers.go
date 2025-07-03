@@ -71,7 +71,7 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 			}, false); err == nil {
 				dest = d
 				if len(dest) > 0 {
-					dest[0]["closing_by"] = t.Domain.GetDb()
+					dest[0]["closing_by"] = t.Domain.GetUser()
 					dest[0]["closing_comment"] = record["closing_comment"]
 				}
 			}
