@@ -15,15 +15,15 @@ import (
 
 type TaskService struct {
 	servutils.AbstractSpecializedService
+	Redirect bool
 }
 
 func (s *TaskService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
 	// TODO: here send back my passive task...
-	fmt.Println("RESULTS", results, s.Domain.GetMethod())
-	isMeth := s.Domain.GetMethod() == utils.UPDATE
+	fmt.Println("RESULTS", results, s.Redirect)
 	res := view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
-	fmt.Println("RESULTS", len(res), len(results) == 1, isMeth, utils.GetBool(results[0], "is_close"))
-	if len(results) == 1 && isMeth && utils.GetBool(results[0], "is_close") {
+	fmt.Println("RESULTS", len(res), len(results) == 1, s.Redirect, utils.GetBool(results[0], "is_close"))
+	if len(results) == 1 && s.Redirect && utils.GetBool(results[0], "is_close") {
 		fmt.Println("inner_redirection FOR TASK")
 		// retrieve... tasks affected to you
 		if r, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
@@ -91,6 +91,7 @@ func (s *TaskService) SpecializedDeleteRow(results []map[string]interface{}, tab
 
 func (s *TaskService) SpecializedUpdateRow(results []map[string]interface{}, record map[string]interface{}) {
 	s.Write(results, record)
+	s.Redirect = true
 	s.AbstractSpecializedService.SpecializedUpdateRow(results, record)
 }
 
