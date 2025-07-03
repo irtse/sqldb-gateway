@@ -195,6 +195,7 @@ func CreateDelegated(record utils.Record, id int64, domain utils.DomainITF) {
 }
 
 func UpdateDelegated(task utils.Record, domain utils.DomainITF) {
+	fmt.Println("UPDATE DELEGATED", task)
 	id := task[utils.SpecialIDParam]
 	if task["binded_dbtask"] != nil {
 		id := task["binded_dbtask"]
@@ -209,7 +210,8 @@ func UpdateDelegated(task utils.Record, domain utils.DomainITF) {
 			utils.SpecialIDParam: id,
 		}, true)
 	}
-	domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, map[string]interface{}{
+	fmt.Println("UPDATE DELEGATED UPTHERE")
+	err := domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, map[string]interface{}{
 		"state":           task["state"],
 		"is_close":        task["is_close"],
 		"nexts":           task["nexts"],
@@ -218,7 +220,8 @@ func UpdateDelegated(task utils.Record, domain utils.DomainITF) {
 		"closing_comment": task["closing_comment"],
 	}, map[string]interface{}{
 		"binded_dbtask": id,
-	}, true)
+	}, false)
+	fmt.Println("UPDATE DELEGATED ERR", err)
 }
 
 func HandleHierarchicalVerification(domain utils.DomainITF, requestID int64, record map[string]interface{}) map[string]interface{} {

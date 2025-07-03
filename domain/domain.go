@@ -180,6 +180,9 @@ func (d *SpecializedDomain) GetRowResults(
 	ids := strings.Split(rowName, ",")
 	all_results := utils.Results{}
 	for _, id := range ids {
+		if id == "" {
+			continue
+		}
 		if record["is_draft"] != nil && !utils.GetBool(record, "is_draft") && d.Method == utils.UPDATE {
 			if rr, err := d.GetDb().SelectQueryWithRestriction(d.TableName, map[string]interface{}{
 				utils.SpecialIDParam: id,

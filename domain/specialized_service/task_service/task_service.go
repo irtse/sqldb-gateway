@@ -91,21 +91,6 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 			continue
 		}
 		UpdateDelegated(res, s.Domain)
-		if binded, ok := res["binded_dbtask"]; ok && utils.GetBool(res, "is_close") && binded != nil {
-			s.Domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, map[string]interface{}{
-				"is_close":                    res["is_close"],
-				"state":                       res["state"],
-				"closing_by" + ds.UserDBField: utils.GetInt(res, ds.UserDBField),
-				"closing_date":                res["closing_date"],
-			}, map[string]interface{}{
-				utils.SpecialIDParam: binded,
-				utils.SpecialIDParam + "_1": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
-					ds.DBTask.Name, map[string]interface{}{
-						"binded_dbtask":            binded,
-						"!" + utils.SpecialIDParam: res[utils.SpecialIDParam],
-					}, false, utils.SpecialIDParam),
-			}, true)
-		}
 		requests, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 			utils.SpecialIDParam: utils.GetInt(res, RequestDBField),
 		}, false)
