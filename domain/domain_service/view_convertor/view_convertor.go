@@ -489,12 +489,13 @@ func (d *ViewConvertor) ApplyCommandRow(record utils.Record, vals map[string]int
 // BUG
 func IsReadonly(tableName string, record utils.Record, createdIds []string, d utils.DomainITF) bool {
 	if d.GetEmpty() || utils.GetBool(record, "is_draft") {
+		fmt.Println(d.GetEmpty(), utils.GetBool(record, "is_draft"))
 		return false
 	}
 	readonly := true
 	for _, meth := range []utils.Method{utils.CREATE, utils.UPDATE} {
-		if d.VerifyAuth(tableName, "", "", meth, record.GetString(utils.SpecialIDParam)) {
-			if (meth == utils.CREATE && d.GetEmpty()) || meth == utils.UPDATE {
+		if (meth == utils.CREATE && d.GetEmpty()) || meth == utils.UPDATE {
+			if d.VerifyAuth(tableName, "", "", meth, record.GetString(utils.SpecialIDParam)) {
 				readonly = false
 				break
 			}
@@ -556,5 +557,6 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 			}
 		}
 	}
+	fmt.Println("UPTHERE3", readonly)
 	return readonly || record["state"] == "completed" || record["state"] == "dismiss" || record["state"] == "refused" || record["state"] == "canceled"
 }
