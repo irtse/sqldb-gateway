@@ -59,10 +59,8 @@ func (t *TriggerService) Trigger(fromSchema *sm.SchemaModel, record utils.Record
 		return
 	}
 	if res, err := t.GetTriggers("auto", method, fromSchema.ID); err == nil {
-		fmt.Println("FOUND TRIGGERS", len(res), fromSchema.Name)
-		for i, r := range res {
+		for _, r := range res {
 			typ := utils.GetString(r, "type")
-			fmt.Println("START TRIGGER", i, typ, r)
 			switch typ {
 			case "mail":
 				t.triggerMail(record, fromSchema,

@@ -77,13 +77,11 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 	if len(dest) > 0 {
 		if toUsers = t.handleOverrideEmailTo(record, dest[0]); len(toUsers) == 0 {
 			if mode == "auto" {
-				fmt.Println("FAIL HERE", record, dest[0])
 				return mailings
 			}
 		}
 	} else if toUsers = t.handleOverrideEmailTo(record, map[string]interface{}{}); len(toUsers) == 0 {
 		if mode == "auto" {
-			fmt.Println("FAIL HERE", record)
 			return mailings
 		}
 	}
@@ -92,7 +90,6 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 		return mailings
 	}
 	rules := t.GetTriggerRules(triggerID, fromSchema, mailSchema.GetID(), record)
-	fmt.Println("rule", fromSchema.Name, mailSchema.Name, len(rules))
 	for _, r := range rules {
 		mailID := r["value"]
 		if mailID == nil {
