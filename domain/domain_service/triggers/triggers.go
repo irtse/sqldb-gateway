@@ -128,6 +128,7 @@ func (t *TriggerService) triggerMail(record utils.Record, fromSchema *sm.SchemaM
 }
 
 func (t *TriggerService) triggerData(record utils.Record, fromSchema *sm.SchemaModel, triggerID, toSchemaID, destID int64) {
+	fmt.Println("triggerData", triggerID, toSchemaID, destID)
 	if toSchemaID < 0 || destID < 0 {
 		toSchemaID = utils.ToInt64(fromSchema.ID)
 		destID = utils.GetInt(record, utils.SpecialIDParam)
