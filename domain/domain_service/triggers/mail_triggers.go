@@ -57,7 +57,7 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 	var err error
 	var toSchema sm.SchemaModel
 	dest := []map[string]interface{}{}
-	fmt.Println("record omg WHAT ???? ", fromSchema.Name, record)
+	fmt.Println("record omg WHAT ???? ", fromSchema.Name, record, toSchemaID, destID)
 	if toSchemaID < 0 || destID < 0 {
 		toSchema = *fromSchema
 		dest = []map[string]interface{}{record}
@@ -70,6 +70,10 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 				utils.SpecialIDParam: destID,
 			}, false); err == nil {
 				dest = d
+				if len(dest) > 0 {
+					dest[0]["closing_by"] = record["closing_by"]
+					dest[0]["closing_comment"] = record["closing_comment"]
+				}
 			}
 		}
 	}
@@ -133,8 +137,6 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 		signature := utils.GetString(mail, "signature")
 		if len(toUsers) == 0 {
 			if len(dest) > 0 {
-				dest[0]["closing_by"] = record["closing_by"]
-				dest[0]["closing_comment"] = record["closing_comment"]
 				fmt.Println(dest[0], record)
 				if m, err := connector.ForgeMail(
 					usfrom[0],
@@ -176,8 +178,6 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 				if fmt.Sprintf("%v", toSchemaID) == utils.GetString(mail, ds.SchemaDBField+"_on_response") {
 					destOnResponse = utils.GetInt(dest[0], utils.SpecialIDParam)
 				}
-				dest[0]["closing_by"] = record["closing_by"]
-				dest[0]["closing_comment"] = record["closing_comment"]
 				if m, err := connector.ForgeMail(
 					usfrom[0],
 					to, // always keep a copy
