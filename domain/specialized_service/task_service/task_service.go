@@ -21,6 +21,7 @@ func (s *TaskService) TransformToGenericView(results utils.Results, tableName st
 	// TODO: here send back my passive task...
 	fmt.Println("RESULTS", results)
 	res := view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
+	fmt.Println("RESULTS", len(res), len(results) == 1, s.Domain.GetMethod() == utils.UPDATE, utils.GetBool(results[0], "is_close"))
 	if len(results) == 1 && s.Domain.GetMethod() == utils.UPDATE && utils.GetBool(results[0], "is_close") {
 		fmt.Println("inner_redirection FOR TASK")
 		// retrieve... tasks affected to you
