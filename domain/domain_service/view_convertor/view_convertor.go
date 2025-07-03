@@ -309,9 +309,9 @@ func (s *ViewConvertor) getSynthesis(record utils.Record, schema *sm.SchemaModel
 				ds.EntityDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
 					ds.UserDBField: s.Domain.GetUserID(),
 				}, false, ds.EntityDBField),
-			}, false, utils.SpecialIDParam),
+			}, true, utils.SpecialIDParam),
 			ds.RequestDBField: record[ds.RequestDBField],
-		}, false); err == nil && len(res) > 0 {
+		}, false); err == nil {
 			is := []string{}
 			for _, r := range res {
 				is = append(is, utils.GetString(r, utils.SpecialIDParam))
