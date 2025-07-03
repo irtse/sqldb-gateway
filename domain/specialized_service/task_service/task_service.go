@@ -20,9 +20,10 @@ type TaskService struct {
 func (s *TaskService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
 	// TODO: here send back my passive task...
 	fmt.Println("RESULTS", results, s.Domain.GetMethod())
+	isMeth := s.Domain.GetMethod() == utils.UPDATE
 	res := view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
-	fmt.Println("RESULTS", len(res), len(results) == 1, s.Domain.GetMethod() == utils.UPDATE, utils.GetBool(results[0], "is_close"))
-	if len(results) == 1 && s.Domain.GetMethod() == utils.UPDATE && utils.GetBool(results[0], "is_close") {
+	fmt.Println("RESULTS", len(res), len(results) == 1, isMeth, utils.GetBool(results[0], "is_close"))
+	if len(results) == 1 && isMeth && utils.GetBool(results[0], "is_close") {
 		fmt.Println("inner_redirection FOR TASK")
 		// retrieve... tasks affected to you
 		if r, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
