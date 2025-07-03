@@ -486,6 +486,7 @@ func (d *ViewConvertor) ApplyCommandRow(record utils.Record, vals map[string]int
 	}
 }
 
+// BUG
 func IsReadonly(tableName string, record utils.Record, createdIds []string, d utils.DomainITF) bool {
 	if d.GetEmpty() || utils.GetBool(record, "is_draft") {
 		return false
