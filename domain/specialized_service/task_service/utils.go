@@ -189,7 +189,7 @@ func CreateDelegated(record utils.Record, id int64, domain utils.DomainITF) {
 			newRec[ds.UserDBField] = delegated["delegated_"+ds.UserDBField]
 			delete(newRec, utils.SpecialIDParam)
 			fmt.Println("CREATE DELEGATED", newRec)
-			domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBTask.Name, record, func(s string) (string, bool) { return "", true })
+			domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBTask.Name, newRec, func(s string) (string, bool) { return "", true })
 		}
 	}
 }
