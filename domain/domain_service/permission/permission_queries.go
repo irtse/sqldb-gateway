@@ -12,26 +12,6 @@ import (
 	"strings"
 )
 
-func (p *PermDomainService) BuildFilterOwnPermsQueryRestriction(domain utils.DomainITF) map[string]interface{} {
-	return map[string]interface{}{
-		utils.SpecialIDParam: p.db.BuildSelectQueryWithRestriction(
-			ds.DBRolePermission.Name,
-			map[string]interface{}{
-				ds.DBRole.Name + "_id": p.db.BuildSelectQueryWithRestriction(
-					ds.DBRoleAttribution.Name,
-					map[string]interface{}{
-						ds.DBUser.Name + "_id": domain.GetUserID(),
-						ds.DBEntity.Name + "_id": p.db.BuildSelectQueryWithRestriction(
-							ds.DBEntityUser.Name,
-							map[string]interface{}{
-								ds.DBUser.Name + "_id": domain.GetUserID(),
-							}, true, ds.DBEntity.Name+"_id",
-						),
-					}, true, ds.DBRole.Name+"_id"),
-			}, false, ds.DBPermission.Name+"_id"),
-	}
-}
-
 func (p *PermDomainService) IsShared(schema sm.SchemaModel, destID string, key string, val bool) bool {
 	if destID == "" {
 		return false

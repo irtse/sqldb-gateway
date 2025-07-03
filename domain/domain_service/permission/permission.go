@@ -42,7 +42,23 @@ func NewPermDomainService(db *conn.Database, user string, isSuperAdmin bool, emp
 
 func (p *PermDomainService) PermsBuilder(domain utils.DomainITF) {
 	datas, _ := p.db.SelectQueryWithRestriction(ds.DBPermission.Name, []interface{}{
-		conn.FormatSQLRestrictionWhereByMap("", p.BuildFilterOwnPermsQueryRestriction(domain), false),
+		conn.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
+			utils.SpecialIDParam: p.db.BuildSelectQueryWithRestriction(
+				ds.DBRolePermission.Name,
+				map[string]interface{}{
+					ds.DBRole.Name + "_id": p.db.BuildSelectQueryWithRestriction(
+						ds.DBRoleAttribution.Name,
+						map[string]interface{}{
+							ds.DBUser.Name + "_id": domain.GetUserID(),
+							ds.DBEntity.Name + "_id": p.db.BuildSelectQueryWithRestriction(
+								ds.DBEntityUser.Name,
+								map[string]interface{}{
+									ds.DBUser.Name + "_id": domain.GetUserID(),
+								}, true, ds.DBEntity.Name+"_id",
+							),
+						}, true, ds.DBRole.Name+"_id"),
+				}, false, ds.DBPermission.Name+"_id"),
+		}, false),
 	}, false)
 	if len(datas) == 0 {
 		return

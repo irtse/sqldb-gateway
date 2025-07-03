@@ -80,8 +80,6 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 				return mailings
 			}
 		}
-		dest[0]["closing_by"] = record["closing_by"]
-		dest[0]["closing_comment"] = record["closing_comment"]
 	} else if toUsers = t.handleOverrideEmailTo(record, map[string]interface{}{}); len(toUsers) == 0 {
 		if mode == "auto" {
 			return mailings
@@ -134,6 +132,9 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 		signature := utils.GetString(mail, "signature")
 		if len(toUsers) == 0 {
 			if len(dest) > 0 {
+				dest[0]["closing_by"] = record["closing_by"]
+				dest[0]["closing_comment"] = record["closing_comment"]
+				fmt.Println(dest[0], record)
 				if m, err := connector.ForgeMail(
 					usfrom[0],
 					utils.Record{}, // always keep a copy
@@ -174,6 +175,8 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 				if fmt.Sprintf("%v", toSchemaID) == utils.GetString(mail, ds.SchemaDBField+"_on_response") {
 					destOnResponse = utils.GetInt(dest[0], utils.SpecialIDParam)
 				}
+				dest[0]["closing_by"] = record["closing_by"]
+				dest[0]["closing_comment"] = record["closing_comment"]
 				if m, err := connector.ForgeMail(
 					usfrom[0],
 					to, // always keep a copy
