@@ -56,12 +56,12 @@ func SetClosureStatus(res map[string]interface{}) map[string]interface{} {
 	return res
 }
 
-func CreateNewDataFromTask(schema sm.SchemaModel, newTask utils.Record, record utils.Record, domain utils.DomainITF) utils.Record {
+func CreateNewDataFromTask(schema sm.SchemaModel, newTask utils.Record, record utils.Record, request utils.Record, domain utils.DomainITF) utils.Record {
 	r := utils.Record{"is_draft": true}
 	if schema.HasField("name") {
-		if schema, err := schserv.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err == nil {
+		if schema, err := schserv.GetSchemaByID(utils.GetInt(request, ds.SchemaDBField)); err == nil {
 			if res, err := domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
-				utils.SpecialIDParam: record[ds.DestTableDBField],
+				utils.SpecialIDParam: request[ds.DestTableDBField],
 			}, false); err == nil && len(res) > 0 {
 				r[sm.NAMEKEY] = utils.GetString(res[0], "name")
 			}
@@ -71,8 +71,8 @@ func CreateNewDataFromTask(schema sm.SchemaModel, newTask utils.Record, record u
 	}
 	if schema.HasField(ds.DestTableDBField) && schema.HasField(ds.SchemaDBField) {
 		// get workflow source schema + dest ID
-		r[ds.DestTableDBField] = record[ds.DestTableDBField]
-		r[ds.SchemaDBField] = record[ds.SchemaDBField]
+		r[ds.DestTableDBField] = request[ds.DestTableDBField]
+		r[ds.SchemaDBField] = request[ds.SchemaDBField]
 	}
 	if schema.HasField(ds.UserDBField) {
 		r[ds.UserDBField] = record[ds.UserDBField]
@@ -81,8 +81,8 @@ func CreateNewDataFromTask(schema sm.SchemaModel, newTask utils.Record, record u
 		r[ds.EntityDBField] = record[ds.EntityDBField]
 	}
 	for _, f := range schema.Fields {
-		if f.GetLink() == record[ds.SchemaDBField] {
-			r[f.Name] = record[ds.DestTableDBField]
+		if f.GetLink() == request[ds.SchemaDBField] {
+			r[f.Name] = request[ds.DestTableDBField]
 		}
 	}
 
@@ -113,7 +113,7 @@ func PrepareAndCreateTask(scheme utils.Record, request map[string]interface{}, r
 		newTask[ds.SchemaDBField] = request[ds.SchemaDBField]
 		newTask[ds.DestTableDBField] = request[ds.DestTableDBField]
 	} else if schema, err := schserv.GetSchemaByID(utils.GetInt(newTask, ds.SchemaDBField)); err == nil {
-		newTask = CreateNewDataFromTask(schema, newTask, record, domain)
+		newTask = CreateNewDataFromTask(schema, newTask, record, request, domain)
 	}
 	isMeta := strings.Contains(utils.GetString(record, "nexts"), utils.GetString(scheme, "wrapped_"+ds.WorkflowDBField)) && utils.GetString(scheme, "wrapped_"+ds.WorkflowDBField) != "" || !fromTask
 	if id, ok := scheme["wrapped_"+ds.WorkflowDBField]; ok && id != nil && isMeta {
