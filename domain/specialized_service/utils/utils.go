@@ -161,7 +161,7 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 					}
 				}
 			}
-			triggers.NewTrigger(s.Domain).Trigger(&sche, record, utils.UPDATE)
+			triggers.NewTrigger(s.Domain).Trigger(&sche, rec, utils.UPDATE)
 			if s.Domain.GetTable() == ds.DBRequest.Name || s.Domain.GetTable() == ds.DBTask.Name {
 				continue
 			}
