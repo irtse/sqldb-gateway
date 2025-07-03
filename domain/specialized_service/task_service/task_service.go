@@ -19,6 +19,7 @@ type TaskService struct {
 
 func (s *TaskService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
 	// TODO: here send back my passive task...
+	fmt.Println("RESULTS", results)
 	res := view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 	if len(results) == 1 && s.Domain.GetMethod() == utils.UPDATE && CheckStateIsEnded(results[0]["state"]) {
 		fmt.Println("inner_redirection FOR TASK")

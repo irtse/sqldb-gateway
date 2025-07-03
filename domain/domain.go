@@ -221,7 +221,6 @@ func (d *SpecializedDomain) GetRowResults(
 				return all_results, err
 			}
 			p, _ = d.Params.Get(utils.RootRawView)
-			fmt.Println(p, err, slices.Contains(EXCEPTION_FUNC, d.Method.Calling()))
 			if p != "enable" && err == nil && !d.IsSuperCall() && !slices.Contains(EXCEPTION_FUNC, d.Method.Calling()) {
 				res = specializedService.TransformToGenericView(res, d.TableName, d.Params.GetAsArgs(utils.RootDestIDParam)...)
 				d.Redirections = append(d.Redirections, d.GetRedirections(res)...)
@@ -229,7 +228,6 @@ func (d *SpecializedDomain) GetRowResults(
 			all_results = append(all_results, res...)
 		}
 	}
-	fmt.Println("closed invoke", len(all_results))
 	return all_results, nil
 }
 

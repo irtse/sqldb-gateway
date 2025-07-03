@@ -3,7 +3,6 @@ package email_service
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
@@ -106,27 +105,22 @@ func (s *EmailResponseService) SpecializedCreateRow(record map[string]interface{
 			if !utils.GetBool(record, "got_response") {
 				key = "is_response_refused"
 			}
-			fmt.Println(key)
 			if templs, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
 				key: true,
 			}, false); err == nil && len(templs) > 0 {
 				tmp := templs[0]
-				fmt.Println("tmp", tmp)
 				if usr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 					utils.SpecialIDParam: r["from_email"],
 				}, false); err == nil && len(usr) > 0 {
-					fmt.Println("usr", usr)
 					schMapped, _ := schema.GetSchemaByID(utils.GetInt(r, "mapped_withdbschema_id"))
 					if dests, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schMapped.Name, map[string]interface{}{
 						utils.SpecialIDParam: r["mapped_withdbdest_table_id"],
 					}, false); err == nil && len(dests) > 0 {
-						fmt.Println("dests", dests)
 						sch, _ := schema.GetSchema(ds.DBEmailResponse.Name)
 						dest := dests[0]
 						if emailUser, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSendedUser.Name, map[string]interface{}{
 							ds.EmailSendedDBField: r[utils.SpecialIDParam],
 						}, false); err == nil && len(emailUser) > 0 {
-							fmt.Println("emailUser", emailUser)
 							dest["from_email"] = utils.GetString(emailUser[0], "name")
 							rec, err := connector.ForgeMail(usr[0], usr[0],
 								utils.GetString(tmp, "subject"), utils.GetString(tmp, "template"),

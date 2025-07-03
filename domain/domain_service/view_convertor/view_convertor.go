@@ -312,7 +312,6 @@ func (s *ViewConvertor) getSynthesis(record utils.Record, schema *sm.SchemaModel
 			}, true, utils.SpecialIDParam),
 			ds.RequestDBField: record[ds.RequestDBField],
 		}, false); err == nil {
-			fmt.Println("RES", res)
 			is := []string{}
 			for _, r := range res {
 				is = append(is, utils.GetString(r, utils.SpecialIDParam))
@@ -324,8 +323,6 @@ func (s *ViewConvertor) getSynthesis(record utils.Record, schema *sm.SchemaModel
 				taskIDs = strings.Join(is, ",")
 			}
 
-		} else {
-			fmt.Println("RES ERR", res, err)
 		}
 	} else if schema.Name == ds.DBRequest.Name {
 		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
@@ -502,7 +499,6 @@ func (d *ViewConvertor) ApplyCommandRow(record utils.Record, vals map[string]int
 // BUG
 func IsReadonly(tableName string, record utils.Record, createdIds []string, d utils.DomainITF) bool {
 	if d.GetEmpty() || utils.GetBool(record, "is_draft") {
-		fmt.Println(d.GetEmpty(), utils.GetBool(record, "is_draft"))
 		return false
 	}
 	readonly := true
@@ -536,7 +532,6 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, m, false); err != nil || len(res) == 0 {
 				return true
 			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
-				fmt.Println("UPTHERE2", tableName)
 				return false
 			}
 		} else {
@@ -565,11 +560,9 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 				}
 				return true
 			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
-				fmt.Println("UPTHERE", tableName)
 				return false
 			}
 		}
 	}
-	fmt.Println("UPTHERE3", readonly)
 	return readonly || record["state"] == "completed" || record["state"] == "dismiss" || record["state"] == "refused" || record["state"] == "canceled"
 }

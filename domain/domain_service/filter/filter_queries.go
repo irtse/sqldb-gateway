@@ -1,7 +1,6 @@
 package filter
 
 import (
-	"fmt"
 	"slices"
 	"sort"
 	sch "sqldb-ws/domain/schema"
@@ -59,7 +58,6 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.Sche
 	}
 	s.Domain.GetDb().ClearQueryFilter()
 	fields, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, restriction, true)
-	fmt.Println("FIELDss", len(fields))
 	if err == nil && len(fields) > 0 {
 		for _, field := range fields {
 			if utils.GetBool(field, "is_task_concerned") {
@@ -75,7 +73,6 @@ func (s *FilterService) ProcessFilterRestriction(filterID string, schema sm.Sche
 						ds.DestTableDBField: "main.id",
 					}, false, "COUNT(id)"),
 				}, true))
-				fmt.Println("FILTER", filter)
 			}
 			if f, err := schema.GetFieldByID(utils.GetInt(field, ds.SchemaFieldDBField)); err == nil {
 				if utils.GetBool(field, "is_own") && len(s.RestrictionByEntityUser(schema, orFilter, true)) > 0 {
@@ -147,7 +144,6 @@ func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []
 		for _, restr := range SQLrestriction {
 			restr = strings.ReplaceAll(restr, "is_draft=false", "is_draft=true")
 		}
-		fmt.Println(state, SQLrestriction)
 	} else {
 		k := utils.SpecialIDParam
 		if state == "new" {

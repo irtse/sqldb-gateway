@@ -1,7 +1,6 @@
 package task_service
 
 import (
-	"fmt"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -188,14 +187,12 @@ func CreateDelegated(record utils.Record, id int64, domain utils.DomainITF) {
 			newRec["binded_dbtask"] = id
 			newRec[ds.UserDBField] = delegated["delegated_"+ds.UserDBField]
 			delete(newRec, utils.SpecialIDParam)
-			fmt.Println("CREATE DELEGATED", newRec)
 			domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBTask.Name, newRec, func(s string) (string, bool) { return "", true })
 		}
 	}
 }
 
 func UpdateDelegated(task utils.Record, domain utils.DomainITF) {
-	fmt.Println("UPDATE DELEGATED", task)
 	m := map[string]interface{}{
 		"state": task["state"],
 	}
@@ -221,11 +218,9 @@ func UpdateDelegated(task utils.Record, domain utils.DomainITF) {
 			utils.SpecialIDParam: id,
 		}, true)
 	}
-	fmt.Println("UPDATE DELEGATED UPTHERE")
-	err := domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, m, map[string]interface{}{
+	domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, m, map[string]interface{}{
 		"binded_dbtask": id,
 	}, false)
-	fmt.Println("UPDATE DELEGATED ERR", err)
 }
 
 func HandleHierarchicalVerification(domain utils.DomainITF, requestID int64, record map[string]interface{}) map[string]interface{} {
