@@ -42,7 +42,7 @@ func (s *TaskService) TransformToGenericView(results utils.Results, tableName st
 }
 
 func (s *TaskService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
-	CreateDelegated(record, s.Domain)
+	CreateDelegated(record, utils.GetInt(record, utils.SpecialIDParam), s.Domain)
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
 }
 func (s *TaskService) Entity() utils.SpecializedServiceInfo { return ds.DBTask }

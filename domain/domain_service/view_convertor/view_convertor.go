@@ -304,6 +304,12 @@ func (s *ViewConvertor) getSynthesis(record utils.Record, schema *sm.SchemaModel
 	taskIDs := ""
 	if schema.Name == ds.DBTask.Name {
 		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+			utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+				ds.UserDBField: s.Domain.GetUserID(),
+				ds.EntityDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
+					ds.UserDBField: s.Domain.GetUserID(),
+				}, false, ds.EntityDBField),
+			}, false, utils.SpecialIDParam),
 			ds.RequestDBField: record[ds.RequestDBField],
 		}, false); err == nil && len(res) > 0 {
 			is := []string{}

@@ -133,7 +133,7 @@ func createTaskAndNotify(task map[string]interface{}, domain utils.DomainITF, is
 	if err != nil {
 		return
 	}
-	CreateDelegated(task, domain)
+	CreateDelegated(task, i, domain)
 	notify(task, i, domain)
 }
 
@@ -171,7 +171,7 @@ func createMetaRequest(task map[string]interface{}, id interface{}, domain utils
 	})
 }
 
-func CreateDelegated(record utils.Record, domain utils.DomainITF) {
+func CreateDelegated(record utils.Record, id int64, domain utils.DomainITF) {
 	currentTime := time.Now()
 	sqlFilter := []string{
 		"('" + currentTime.Format("2000-01-01") + "' < start_date OR '" + currentTime.Format("2000-01-01") + "' > end_date)",
@@ -182,53 +182,41 @@ func CreateDelegated(record utils.Record, domain utils.DomainITF) {
 	}, false))
 	if dels, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(
 		ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false); err == nil && len(dels) > 0 {
-		tmpUser := utils.GetInt(record, ds.UserDBField)
+		newRec := record.Copy()
 		for _, delegated := range dels {
-			record["binded_dbtask"] = record[utils.SpecialIDParam]
-			record[ds.UserDBField] = delegated["delegated_"+ds.UserDBField]
+			newRec["binded_dbtask"] = id
+			newRec[ds.UserDBField] = delegated["delegated_"+ds.UserDBField]
+			delete(newRec, utils.SpecialIDParam)
 			domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBTask.Name, record, func(s string) (string, bool) { return "", true })
 		}
-		delete(record, "binded_dbtask")
-		record[ds.UserDBField] = tmpUser
 	}
 }
 
 func UpdateDelegated(task utils.Record, domain utils.DomainITF) {
-	currentTime := time.Now()
-	sqlFilter := []string{
-		"('" + currentTime.Format("2000-01-01") + "' < start_date OR '" + currentTime.Format("2000-01-01") + "' > end_date)",
+	id := task[utils.SpecialIDParam]
+	if task["binded_dbtask"] != nil {
+		id := task["binded_dbtask"]
+		domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, map[string]interface{}{
+			"state":           task["state"],
+			"is_close":        task["is_close"],
+			"nexts":           task["nexts"],
+			"closing_date":    task["closing_date"],
+			"closing_by":      task["closing_by"],
+			"closing_comment": task["closing_comment"],
+		}, map[string]interface{}{
+			utils.SpecialIDParam: id,
+		}, true)
 	}
-	// THERE should implement if ours... or i'm a delegated
-	sqlFilter = append(sqlFilter, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
-		utils.SpecialIDParam: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDelegation.Name, map[string]interface{}{
-			ds.UserDBField: task[ds.UserDBField],
-			ds.UserDBField + "_1": domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
-				ds.EntityDBField: task[ds.EntityDBField],
-			}, false, ds.UserDBField),
-			"delegated_" + ds.UserDBField: task[ds.UserDBField],
-			"delegated_" + ds.UserDBField + "_1": domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
-				ds.EntityDBField: task[ds.EntityDBField],
-			}, false, ds.UserDBField),
-		}, true, utils.SpecialIDParam),
-		"all_tasks": true,
-	}, false))
-	mTask := map[string]interface{}{
-		ds.UserDBField:        domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false, ds.UserDBField),
-		ds.UserDBField + "_1": domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false, "delegated_"+ds.UserDBField),
-	}
-	if tasks, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, mTask, true); err == nil && len(tasks) > 0 {
-		for _, t := range tasks {
-			t["state"] = task["state"]
-			t["is_close"] = task["is_close"]
-			t["nexts"] = task["nexts"]
-			t["closing_date"] = task["closing_date"]
-			t["closing_by"] = task["closing_by"]
-			t["closing_comment"] = task["closing_comment"]
-			domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, t, map[string]interface{}{
-				utils.SpecialIDParam: task["binded_dbtask"],
-			}, true)
-		}
-	}
+	domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, map[string]interface{}{
+		"state":           task["state"],
+		"is_close":        task["is_close"],
+		"nexts":           task["nexts"],
+		"closing_date":    task["closing_date"],
+		"closing_by":      task["closing_by"],
+		"closing_comment": task["closing_comment"],
+	}, map[string]interface{}{
+		"binded_dbtask": id,
+	}, true)
 }
 
 func HandleHierarchicalVerification(domain utils.DomainITF, requestID int64, record map[string]interface{}) map[string]interface{} {
@@ -254,7 +242,7 @@ func CreateHierarchicalTask(domain utils.DomainITF, requestID int64, record, hie
 	if i, err := domain.GetDb().CreateQuery(ds.DBTask.Name, newTask, func(s string) (string, bool) {
 		return "", true
 	}); err == nil {
-		CreateDelegated(newTask, domain)
+		CreateDelegated(newTask, i, domain)
 		notify(newTask, i, domain)
 	}
 }

@@ -32,11 +32,9 @@ func (d *ViewConvertor) EnrichWithWorkFlowView(record utils.Record, tableName st
 		}
 	case ds.DBTask.Name:
 		if workflow, id, requestID, nexts = d.handleTaskWorkflow(record); id == "" {
-			fmt.Println(workflow, id, requestID, "sqd")
 			return nil
 		}
 	default:
-		fmt.Println("DEFAULT")
 		return nil
 	}
 
@@ -145,6 +143,13 @@ func (d *ViewConvertor) populateWorkflowSteps(workflow *sm.WorkflowModel, id str
 
 func (d *ViewConvertor) populateTaskDetails(newStep *sm.WorkflowStepModel, step map[string]interface{}, requestID string) {
 	tasks := d.FetchRecord(ds.DBTask.Name, map[string]interface{}{
+		utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+			ds.UserDBField: d.Domain.GetUserID(),
+			ds.EntityDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name,
+				map[string]interface{}{
+					ds.UserDBField: d.Domain.GetUserID(),
+				}, false, ds.EntityDBField),
+		}, false, utils.SpecialIDParam),
 		ds.RequestDBField:        requestID,
 		ds.WorkflowSchemaDBField: utils.GetInt(step, utils.SpecialIDParam),
 	})
