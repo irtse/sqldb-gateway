@@ -85,7 +85,12 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
 		"code": connector.Quote(utils.GetString(record, "code")),
-	}, false); err == nil && len(res) > 0 {
+	}, true); err == nil && len(res) > 0 {
+		record["code"] = uuid.New()
+	}
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
+		"code": connector.Quote(utils.GetString(record, "code")),
+	}, true); err == nil && len(res) > 0 {
 		record["code"] = uuid.New()
 	}
 	if record["code"] == nil || record["code"] == "" {

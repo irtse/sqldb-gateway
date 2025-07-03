@@ -1,7 +1,6 @@
 package triggers
 
 import (
-	"fmt"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -166,11 +165,9 @@ func (t *TriggerService) GetTriggerRules(triggerID int64, fromSchema *sm.SchemaM
 	}, false); err == nil && len(res) > 0 {
 		for _, cond := range res {
 			if cond[ds.SchemaFieldDBField] == nil && utils.GetString(record, utils.SpecialIDParam) != utils.GetString(cond, "value") {
-				fmt.Println("can't get this rules because ", cond[ds.SchemaFieldDBField], utils.GetString(record, utils.SpecialIDParam), utils.GetString(cond, "value"))
 				return []map[string]interface{}{}
 			}
 			if f, err := fromSchema.GetFieldByID(utils.GetInt(cond, ds.SchemaFieldDBField)); err != nil || utils.GetString(record, f.Name) != utils.GetString(cond, "value") {
-				fmt.Println("can't get this rules because 2 : ", f.Name, record, utils.GetString(record, f.Name), utils.GetString(cond, "value"))
 				return []map[string]interface{}{}
 			}
 		}

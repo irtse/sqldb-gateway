@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/triggers"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -65,7 +64,6 @@ func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]inte
 	if sch, err := sch.GetSchema(tablename); err == nil {
 		for schemaName, mm := range s.ManyToMany {
 			field, err := sch.GetField(schemaName)
-			fmt.Println("SCH", schemaName, err, field.GetLink())
 			if err != nil {
 				continue
 			}
@@ -88,7 +86,6 @@ func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]inte
 						continue
 					}
 					m[ds.RootID(tablename)] = record[utils.SpecialIDParam]
-					fmt.Println("MMM", m)
 					s.Domain.CreateSuperCall(utils.AllParams(ff.Name).RootRaw(), m)
 				}
 			}
@@ -212,7 +209,6 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 					}
 					for _, mm := range utils.ToList(record[field.Name]) {
 						s.ManyToMany[field.Name] = append(s.ManyToMany[field.Name], utils.ToMap(mm))
-						fmt.Println(field.Name, s.ManyToMany[field.Name], mm)
 					}
 					delete(record, field.Name)
 				} else if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(sm.ONETOMANY.String())) && record[field.Name] != nil {
