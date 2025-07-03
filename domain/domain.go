@@ -201,7 +201,7 @@ func (d *SpecializedDomain) GetRowResults(
 			record[utils.SpecialIDParam], _ = d.Params.Get(utils.SpecialIDParam)
 		}
 		fmt.Println(d.Params.Get(utils.SpecialIDParam))
-		if id, _ := d.Params.Get(utils.SpecialIDParam); d.Method == utils.DELETE && (!d.PermsService.CanDelete(d.Params.Values, record, d) || id == "") {
+		if id, _ := d.Params.Get(utils.SpecialIDParam); d.Method == utils.DELETE && (!d.PermsService.CanDelete(d.Params.Values, record, d) || (id == "" && !d.IsSuperAdmin())) {
 			fmt.Println("can't delete datas")
 			continue
 		}
