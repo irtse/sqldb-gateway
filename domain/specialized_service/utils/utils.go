@@ -65,6 +65,7 @@ func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]inte
 	if sch, err := sch.GetSchema(tablename); err == nil {
 		for schemaName, mm := range s.ManyToMany {
 			field, err := sch.GetField(schemaName)
+			fmt.Println("SCH", schemaName, err, field.GetLink())
 			if err != nil {
 				continue
 			}
@@ -87,6 +88,7 @@ func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]inte
 						continue
 					}
 					m[ds.RootID(tablename)] = record[utils.SpecialIDParam]
+					fmt.Println("MMM", m)
 					s.Domain.CreateSuperCall(utils.AllParams(ff.Name).RootRaw(), m)
 				}
 			}
@@ -204,13 +206,13 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 			s.ManyToMany = map[string][]map[string]interface{}{}
 			s.OneToMany = map[string][]map[string]interface{}{}
 			for _, field := range sch.Fields {
-				fmt.Println(field.Name, field.Type, record[field.Name])
 				if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(sm.MANYTOMANY.String())) && record[field.Name] != nil {
 					if s.ManyToMany[field.Name] == nil {
 						s.ManyToMany[field.Name] = []map[string]interface{}{}
 					}
 					for _, mm := range utils.ToList(record[field.Name]) {
 						s.ManyToMany[field.Name] = append(s.ManyToMany[field.Name], utils.ToMap(mm))
+						fmt.Println(field.Name, s.ManyToMany[field.Name], mm)
 					}
 					delete(record, field.Name)
 				} else if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(sm.ONETOMANY.String())) && record[field.Name] != nil {
