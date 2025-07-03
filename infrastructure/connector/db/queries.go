@@ -19,6 +19,7 @@ func (db *Database) DeleteQueryWithRestriction(name string, restrictions map[str
 		name = name + " as main "
 		q = db.BuildDeleteQueryWithRestriction(name, restrictions, isOr)
 	}
+	fmt.Println("DEL", q)
 	return db.Query(q)
 }
 
@@ -170,7 +171,8 @@ func (db *Database) DeleteQuery(name string, colName string) error {
 		name = name + " as main "
 		q = db.BuildDeleteQuery(name, colName)
 	}
-	return db.Query(db.BuildDeleteQuery(name, colName))
+	fmt.Println("DELETE", q)
+	return db.Query(q)
 }
 
 /*
