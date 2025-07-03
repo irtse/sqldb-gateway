@@ -183,8 +183,8 @@ func CreateDelegated(record utils.Record, id int64, domain utils.DomainITF) {
 	}, false))
 	if dels, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(
 		ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false); err == nil && len(dels) > 0 {
-		newRec := record.Copy()
 		for _, delegated := range dels {
+			newRec := record.Copy()
 			newRec["binded_dbtask"] = id
 			newRec[ds.UserDBField] = delegated["delegated_"+ds.UserDBField]
 			delete(newRec, utils.SpecialIDParam)
