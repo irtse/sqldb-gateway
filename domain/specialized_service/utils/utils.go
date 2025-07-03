@@ -315,19 +315,18 @@ func (s *SpecializedService) SpecializedDeleteRow(results []map[string]interface
 					ds.SchemaDBField:    sch.ID,
 					ds.DestTableDBField: utils.GetInt(r, utils.SpecialIDParam),
 				}, false); err == nil {
-					for _, r := range res {
-						s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(sch.Name, r[utils.SpecialIDParam]))
+					for _, rrr := range res {
+						s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(sch.Name, rrr[utils.SpecialIDParam]))
 					}
 				}
 			}
-			ss, _ := schema.GetSchema(tableName)
 			for _, f := range sch.Fields {
-				if utils.ToString(f.GetLink()) == ss.ID {
+				if utils.ToString(f.GetLink()) == sch.ID {
 					if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name, map[string]interface{}{
 						f.Name: r[utils.SpecialIDParam],
 					}, false); err == nil {
-						for _, r := range res {
-							s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(sch.Name, r[utils.SpecialIDParam]))
+						for _, rrr := range res {
+							s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(sch.Name, rrr[utils.SpecialIDParam]))
 						}
 					}
 				}
