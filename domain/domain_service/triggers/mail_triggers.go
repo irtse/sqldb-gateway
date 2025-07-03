@@ -80,6 +80,8 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 				return mailings
 			}
 		}
+		dest[0]["closing_by"] = record["closing_by"]
+		dest[0]["closing_comment"] = record["closing_comment"]
 	} else if toUsers = t.handleOverrideEmailTo(record, map[string]interface{}{}); len(toUsers) == 0 {
 		if mode == "auto" {
 			return mailings
