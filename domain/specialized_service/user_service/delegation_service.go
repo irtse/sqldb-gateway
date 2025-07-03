@@ -10,18 +10,21 @@ import (
 
 type DelegationService struct {
 	servutils.AbstractSpecializedService
+	SchemaID string
+	DestID   string
 }
 
 func (s *DelegationService) Entity() utils.SpecializedServiceInfo { return ds.DBDelegation }
 
 func (s *DelegationService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
+	s.SchemaID = utils.GetString(record, ds.SchemaDBField)
+	s.DestID = utils.GetString(record, ds.DestTableDBField)
+
+	delete(record, ds.SchemaDBField)
+	delete(record, ds.DestTableDBField)
+
 	record[ds.UserDBField] = s.Domain.GetUserID() // affected create_by
-	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBDelegation.Name, map[string]interface{}{
-		ds.SchemaDBField:              record[ds.SchemaDBField],
-		ds.DestTableDBField:           record[ds.DestTableDBField],
-		ds.UserDBField:                record[ds.UserDBField],
-		"delegated_" + ds.UserDBField: record["delegated_"+ds.UserDBField],
-	}, false); err == nil && len(res) > 0 {
+	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBDelegation.Name, record, false); err == nil && len(res) > 0 {
 		return map[string]interface{}{}, errors.New("can't add a delegated to an already delegated user"), false
 	}
 
@@ -42,8 +45,8 @@ func (s *DelegationService) SpecializedDeleteRow(results []map[string]interface{
 		share := map[string]interface{}{
 			"shared_" + ds.UserDBField: res["delegated_"+ds.UserDBField],
 			ds.UserDBField:             res[ds.UserDBField],
-			ds.SchemaDBField:           res[ds.SchemaDBField],
-			ds.DestTableDBField:        res[ds.DestTableDBField],
+			ds.SchemaDBField:           s.SchemaID,
+			ds.DestTableDBField:        s.DestID,
 		}
 		s.Domain.GetDb().DeleteQueryWithRestriction(ds.DBShare.Name, share, false)
 		res["state"] = "completed"
@@ -62,8 +65,8 @@ func (s *DelegationService) Write(results []map[string]interface{}, record map[s
 		share := map[string]interface{}{
 			"shared_" + ds.UserDBField: rr["delegated_"+ds.UserDBField],
 			ds.UserDBField:             rr[ds.UserDBField],
-			ds.SchemaDBField:           rr[ds.SchemaDBField],
-			ds.DestTableDBField:        rr[ds.DestTableDBField],
+			ds.SchemaDBField:           s.SchemaID,
+			ds.DestTableDBField:        s.DestID,
 		}
 		s.Domain.GetDb().DeleteQueryWithRestriction(ds.DBShare.Name, share, false)
 		share["start_date"] = rr["start_date"]
