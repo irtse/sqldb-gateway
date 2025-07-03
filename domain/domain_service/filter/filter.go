@@ -63,7 +63,7 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 	}
 	if f.Domain.GetMethod() != utils.DELETE {
 		SQLrestriction = f.RestrictionByEntityUser(schema, SQLrestriction, false) // admin can see all on admin view
-	} else if id, _ := f.Domain.GetParams().Get(utils.SpecialIDParam); id == "" {
+	} else if id, _ := domainParams.Get(utils.SpecialIDParam); id == "" {
 		SQLrestriction = append(SQLrestriction, "id="+id)
 	}
 	if s, ok := domainParams.Get(utils.RootFilterNewState); ok && s != "" {
