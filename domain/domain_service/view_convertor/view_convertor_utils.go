@@ -86,7 +86,9 @@ func GetFilterFields(schema *sm.SchemaModel, domain utils.DomainITF) ([]map[stri
 func GetSharing(schemaID string, rec sm.ViewItemModel, domain utils.DomainITF) sm.ViewItemModel {
 	id := rec.Values[utils.SpecialIDParam]
 	m := map[string]interface{}{
-		ds.UserDBField: domain.GetUserID(),
+		ds.UserDBField:      domain.GetUserID(),
+		ds.SchemaDBField:    schemaID,
+		ds.DestTableDBField: id,
 	}
 	addDate := []string{}
 	addBool := []string{"update_access", "delete_access"}
