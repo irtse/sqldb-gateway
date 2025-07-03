@@ -105,7 +105,6 @@ func (t *TriggerService) ParseMails(toSplit string) []map[string]interface{} {
 
 // send_mail_to should be on request + task
 func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface{}) []map[string]interface{} {
-	fmt.Println(dest)
 	if record["send_mail_to"] != nil { // it's a particular default field that detect overriding {
 		return t.ParseMails(utils.GetString(record, "send_mail_to"))
 	} else if dest["send_mail_to"] != nil {
@@ -127,7 +126,6 @@ func (t *TriggerService) triggerMail(record utils.Record, fromSchema *sm.SchemaM
 }
 
 func (t *TriggerService) triggerData(record utils.Record, fromSchema *sm.SchemaModel, triggerID, toSchemaID, destID int64) {
-	fmt.Println("triggerData", triggerID, toSchemaID, destID)
 	if toSchemaID < 0 || destID < 0 {
 		toSchemaID = utils.ToInt64(fromSchema.ID)
 		destID = utils.GetInt(record, utils.SpecialIDParam)
@@ -135,22 +133,18 @@ func (t *TriggerService) triggerData(record utils.Record, fromSchema *sm.SchemaM
 	// PROBLEM WE CAN'T DECOLERATE and action on not a sub data of it. (not a problem for now)
 
 	rules := t.GetTriggerRules(triggerID, fromSchema, toSchemaID, record)
-	fmt.Println("triggerData rules", rules)
 	for _, r := range rules {
 		if toSchemaID != utils.GetInt(r, "to_"+ds.SchemaDBField) {
-			fmt.Println("UPDATE DATA FAILED PAF", toSchemaID, utils.GetInt(r, "to_"+ds.SchemaDBField))
 			continue
 		}
 
 		toSchema, err := schema.GetSchemaByID(toSchemaID)
 		if err != nil {
-			fmt.Println("UPDATE DATA FAILED rac", toSchemaID, err)
 			continue
 		}
 
 		field, err := toSchema.GetFieldByID(utils.GetInt(r, "to_"+ds.SchemaFieldDBField))
 		if err != nil {
-			fmt.Println("UPDATE DATA FAILED rac", field.Name, err)
 			continue
 		}
 
@@ -158,11 +152,6 @@ func (t *TriggerService) triggerData(record utils.Record, fromSchema *sm.SchemaM
 		if value == "" {
 			value = utils.GetString(record, field.Name)
 		}
-		fmt.Println("UPDATE DATA", map[string]interface{}{
-			field.Name: value,
-		}, map[string]interface{}{
-			utils.SpecialIDParam: destID,
-		}, toSchema.Name)
 		t.Domain.GetDb().ClearQueryFilter().UpdateQuery(toSchema.Name, map[string]interface{}{
 			field.Name: value,
 		}, map[string]interface{}{
