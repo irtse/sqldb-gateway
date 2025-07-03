@@ -106,13 +106,18 @@ func (s *PublicationActService) Entity() utils.SpecializedServiceInfo { return m
 
 func (s *PublicationActService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
 	ok := record["major_conference"]
+	isNotFound := true
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(models.MajorConference.Name, map[string]interface{}{}, false); err == nil && len(res) > 0 {
 		for _, r := range res {
 			if strings.Contains(strings.ToUpper(utils.GetString(record, "major_conference_name")), strings.ToUpper(utils.GetString(r, "name"))) {
 				ok = "yes"
+				isNotFound = false
 				break
 			}
 		}
+	}
+	if isNotFound {
+		ok = "no"
 	}
 	record["major_conference"] = ok
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
