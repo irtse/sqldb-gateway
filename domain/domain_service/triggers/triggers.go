@@ -137,16 +137,19 @@ func (t *TriggerService) triggerData(record utils.Record, fromSchema *sm.SchemaM
 	rules := t.GetTriggerRules(triggerID, fromSchema, toSchemaID, record)
 	for _, r := range rules {
 		if toSchemaID != utils.GetInt(r, "to_"+ds.SchemaDBField) {
+			fmt.Println("UPDATE DATA FAILED PAF", toSchemaID, utils.GetInt(r, "to_"+ds.SchemaDBField))
 			continue
 		}
 
 		toSchema, err := schema.GetSchemaByID(toSchemaID)
 		if err != nil {
+			fmt.Println("UPDATE DATA FAILED rac", toSchemaID, err)
 			continue
 		}
 
 		field, err := toSchema.GetFieldByID(utils.GetInt(r, "to_"+ds.SchemaFieldDBField))
 		if err != nil {
+			fmt.Println("UPDATE DATA FAILED rac", field.Name, err)
 			continue
 		}
 
