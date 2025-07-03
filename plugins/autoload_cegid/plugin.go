@@ -4,7 +4,6 @@
 package main
 
 import (
-	"errors"
 	"sqldb-ws/domain/domain_service/filter"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -106,13 +105,16 @@ type PublicationActService struct {
 func (s *PublicationActService) Entity() utils.SpecializedServiceInfo { return models.PublicationActFR }
 
 func (s *PublicationActService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
-	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(models.MajorConference.Name, map[string]interface{}{}, false); err == nil {
+	ok := record["major_conference"]
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(models.MajorConference.Name, map[string]interface{}{}, false); err == nil && len(res) > 0 {
 		for _, r := range res {
-			if !strings.Contains(strings.ToUpper(utils.GetString(record, "major_conference")), strings.ToUpper(utils.GetString(r, "name"))) {
-				return record, errors.New(utils.GetString(record, "major_conference") + " is not a major conference."), true
+			if strings.Contains(strings.ToUpper(utils.GetString(record, "major_conference_name")), strings.ToUpper(utils.GetString(r, "name"))) {
+				ok = "yes"
+				break
 			}
 		}
 	}
+	record["major_conference"] = ok
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
 

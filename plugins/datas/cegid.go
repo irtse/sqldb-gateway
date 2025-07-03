@@ -71,10 +71,11 @@ var PublicationActFR = models.SchemaModel{
 			Index: 0, Label: "téléchargement de la publication finalisée"},
 		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: 2},
 		{Name: "major_conference", Label: "la conférence visée est-elle incontournable dans ton domaine scientifique ?", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: 3},
-		{Name: "published", Label: "la publication est elle publiée dans un journal du premier quartile de ta discipline scientifique", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: 3},
-		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 5, Hidden: true},
-		{Name: ds.UserDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: false, Index: 6, Label: "user with hierarchy"},
-		{Name: ds.EntityDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: false, Index: 7, Label: "entity with hierarchy"},
+		{Name: "major_conference_name", Label: "nom de la conférence", Type: models.VARCHAR.String(), Required: false, Default: false, Readonly: false, Index: 4},
+		{Name: "published", Label: "la publication est elle publiée dans un journal du premier quartile de ta discipline scientifique", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: 5},
+		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 6, Hidden: true},
+		{Name: ds.UserDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: false, Index: 7, Label: "user with hierarchy"},
+		{Name: ds.EntityDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: false, Index: 8, Label: "entity with hierarchy"},
 	},
 }
 
