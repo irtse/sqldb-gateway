@@ -96,9 +96,6 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, onUpload
 	if err != nil {
 		return "", "", err
 	}
-	/*if field.Name == "dbdest_table_id" {
-		return field.Type, "", errors.New("can't proceed a publication")
-	}*/
 	if strings.Contains(field.Type, "upload") {
 		if strings.Contains(field.Type, "upload_str") {
 			onUpload(field.Name, search)

@@ -196,29 +196,33 @@ func CreateDelegated(record utils.Record, id int64, domain utils.DomainITF) {
 
 func UpdateDelegated(task utils.Record, domain utils.DomainITF) {
 	fmt.Println("UPDATE DELEGATED", task)
+	m := map[string]interface{}{
+		"state": task["state"],
+	}
+	if task["closing_by"] != nil && task["closing_by"] != "" {
+		m["closing_by"] = task["closing_by"]
+	}
+	if task["closing_comment"] != nil && task["closing_comment"] != "" {
+		m["closing_comment"] = task["closing_comment"]
+	}
+	if task["closing_date"] != nil && task["closing_date"] != "" {
+		m["closing_date"] = task["closing_date"]
+	}
+	if task["nexts"] != nil && task["nexts"] != "" {
+		m["nexts"] = task["nexts"]
+	}
+	if task["is_close"] != nil && task["is_close"] != "" {
+		m["is_close"] = task["is_close"]
+	}
 	id := task[utils.SpecialIDParam]
 	if task["binded_dbtask"] != nil {
 		id := task["binded_dbtask"]
-		domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, map[string]interface{}{
-			"state":           task["state"],
-			"is_close":        task["is_close"],
-			"nexts":           task["nexts"],
-			"closing_date":    task["closing_date"],
-			"closing_by":      task["closing_by"],
-			"closing_comment": task["closing_comment"],
-		}, map[string]interface{}{
+		domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, m, map[string]interface{}{
 			utils.SpecialIDParam: id,
 		}, true)
 	}
 	fmt.Println("UPDATE DELEGATED UPTHERE")
-	err := domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, map[string]interface{}{
-		"state":           task["state"],
-		"is_close":        task["is_close"],
-		"nexts":           task["nexts"],
-		"closing_date":    task["closing_date"],
-		"closing_by":      task["closing_by"],
-		"closing_comment": task["closing_comment"],
-	}, map[string]interface{}{
+	err := domain.GetDb().ClearQueryFilter().UpdateQuery(ds.DBTask.Name, m, map[string]interface{}{
 		"binded_dbtask": id,
 	}, false)
 	fmt.Println("UPDATE DELEGATED ERR", err)
