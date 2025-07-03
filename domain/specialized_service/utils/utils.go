@@ -307,6 +307,9 @@ func (s *SpecializedService) GenerateQueryFilter(tableName string, innerestr ...
 func (s *SpecializedService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {
 	for _, sch := range models.SchemaRegistry {
 		for _, r := range results {
+			if tableName != sch.Name {
+				continue
+			}
 			/*if r[ds.SchemaDBField] != nil && r[ds.DestTableDBField] != nil {
 				go s.Domain.DeleteSuperCall(utils.AllParams(sch.Name).Enrich(map[string]interface{}{
 					ds.SchemaDBField:    r[ds.SchemaDBField],
@@ -319,6 +322,17 @@ func (s *SpecializedService) SpecializedDeleteRow(results []map[string]interface
 					ds.DestTableDBField: utils.GetInt(r, utils.SpecialIDParam),
 				}, false)
 			}
+			sc, err := schema.GetSchema(tableName)
+			if err == nil {
+				for _, f := range sch.Fields {
+					if sc.ID == utils.ToString(f.GetLink()) {
+						s.Domain.GetDb().ClearQueryFilter().DeleteQueryWithRestriction(sch.Name, map[string]interface{}{
+							f.Name: utils.GetInt(r, utils.SpecialIDParam),
+						}, false)
+					}
+				}
+			}
+
 		}
 	}
 }
