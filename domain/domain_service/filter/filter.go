@@ -63,7 +63,7 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 	}
 	if f.Domain.GetMethod() != utils.DELETE {
 		SQLrestriction = f.RestrictionByEntityUser(schema, SQLrestriction, false) // admin can see all on admin view
-	} else {
+	} else if id, _ := f.Domain.GetParams().Get(utils.SpecialIDParam); id == "" {
 		id, _ := f.Domain.GetParams().Get(utils.SpecialIDParam)
 		SQLrestriction = append(SQLrestriction, "id="+id)
 	}
@@ -117,29 +117,32 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 				alterRestr = append(alterRestr, "("+newSTR+")")
 			}
 		}
-		newRestr := []string{}
-		for _, alt := range alterRestr {
-			if alt != "" {
-				newRestr = append(newRestr, alt)
-			}
-		}
-		restr = append(newRestr, restr...)
-		if schema.HasField(ds.SchemaDBField) && !d.Domain.IsSuperAdmin() {
-			except := []string{ds.DBRequest.Name, ds.DBTask.Name, ds.DBDelegation.Name}
-			enum := []string{}
-			for _, s := range sm.SchemaRegistry {
-				notOK := !d.Domain.IsSuperAdmin() && ds.IsRootDB(s.Name) && !slices.Contains(except, s.Name)
-				notOK2 := !d.Domain.VerifyAuth(s.Name, "", sm.LEVELNORMAL, utils.SELECT)
-				if !notOK && !notOK2 {
-					enum = append(enum, utils.ToString(s.ID))
+		if d.Domain.GetMethod() != utils.DELETE {
+			newRestr := []string{}
+			for _, alt := range alterRestr {
+				if alt != "" {
+					newRestr = append(newRestr, alt)
 				}
 			}
-			if connector.FormatSQLRestrictionWhereByMap(
-				"", map[string]interface{}{ds.SchemaDBField: enum}, false) != "" && len(enum) != 0 {
-				restr = append(restr, connector.FormatSQLRestrictionWhereByMap(
-					"", map[string]interface{}{ds.SchemaDBField: enum}, false))
-			}
+			restr = append(newRestr, restr...)
 
+			if schema.HasField(ds.SchemaDBField) && !d.Domain.IsSuperAdmin() {
+				except := []string{ds.DBRequest.Name, ds.DBTask.Name, ds.DBDelegation.Name}
+				enum := []string{}
+				for _, s := range sm.SchemaRegistry {
+					notOK := !d.Domain.IsSuperAdmin() && ds.IsRootDB(s.Name) && !slices.Contains(except, s.Name)
+					notOK2 := !d.Domain.VerifyAuth(s.Name, "", sm.LEVELNORMAL, utils.SELECT)
+					if !notOK && !notOK2 {
+						enum = append(enum, utils.ToString(s.ID))
+					}
+				}
+				if connector.FormatSQLRestrictionWhereByMap(
+					"", map[string]interface{}{ds.SchemaDBField: enum}, false) != "" && len(enum) != 0 {
+					restr = append(restr, connector.FormatSQLRestrictionWhereByMap(
+						"", map[string]interface{}{ds.SchemaDBField: enum}, false))
+				}
+
+			}
 		}
 	}
 	if strings.Trim(connector.FormatSQLRestrictionWhereByMap("", restriction, false), " ") != "" {
