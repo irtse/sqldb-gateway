@@ -107,6 +107,7 @@ func (t *TriggerService) ParseMails(toSplit string) []map[string]interface{} {
 
 // send_mail_to should be on request + task
 func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface{}) []map[string]interface{} {
+	fmt.Println(dest)
 	if record["send_mail_to"] != nil { // it's a particular default field that detect overriding {
 		return t.ParseMails(utils.GetString(record, "send_mail_to"))
 	} else if dest["send_mail_to"] != nil {
@@ -178,9 +179,11 @@ func (t *TriggerService) GetTriggerRules(triggerID int64, fromSchema *sm.SchemaM
 	}, false); err == nil && len(res) > 0 {
 		for _, cond := range res {
 			if cond[ds.SchemaFieldDBField] == nil && utils.GetString(record, utils.SpecialIDParam) != utils.GetString(cond, "value") {
+				fmt.Println("can't get this rules because ", cond[ds.SchemaFieldDBField], utils.GetString(record, utils.SpecialIDParam), utils.GetString(cond, "value"))
 				return []map[string]interface{}{}
 			}
 			if f, err := fromSchema.GetFieldByID(utils.GetInt(cond, ds.SchemaFieldDBField)); err != nil || utils.GetString(record, f.Name) != utils.GetString(cond, "value") {
+				fmt.Println("can't get this rules because 2 : ", utils.GetString(record, f.Name), utils.GetString(cond, "value"))
 				return []map[string]interface{}{}
 			}
 		}
