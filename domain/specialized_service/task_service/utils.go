@@ -1,6 +1,7 @@
 package task_service
 
 import (
+	"fmt"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -187,6 +188,7 @@ func CreateDelegated(record utils.Record, id int64, domain utils.DomainITF) {
 			newRec["binded_dbtask"] = id
 			newRec[ds.UserDBField] = delegated["delegated_"+ds.UserDBField]
 			delete(newRec, utils.SpecialIDParam)
+			fmt.Println("CREATE DELEGATED", newRec)
 			domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBTask.Name, record, func(s string) (string, bool) { return "", true })
 		}
 	}

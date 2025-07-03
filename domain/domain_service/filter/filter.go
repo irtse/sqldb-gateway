@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"net/url"
 	"slices"
 	"sqldb-ws/domain/domain_service/history"
@@ -103,6 +104,7 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 		for key, val := range domainParams.Values {
 			typ, foreign, err := schema.GetTypeAndLinkForField(key, val, f)
 			if err != nil && key != utils.SpecialIDParam {
+				fmt.Println(typ, foreign, err)
 				continue
 			}
 			newSTR := ""
