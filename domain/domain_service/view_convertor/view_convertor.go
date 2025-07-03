@@ -312,6 +312,7 @@ func (s *ViewConvertor) getSynthesis(record utils.Record, schema *sm.SchemaModel
 			}, true, utils.SpecialIDParam),
 			ds.RequestDBField: record[ds.RequestDBField],
 		}, false); err == nil {
+			fmt.Println("RES", res)
 			is := []string{}
 			for _, r := range res {
 				is = append(is, utils.GetString(r, utils.SpecialIDParam))
@@ -323,6 +324,8 @@ func (s *ViewConvertor) getSynthesis(record utils.Record, schema *sm.SchemaModel
 				taskIDs = strings.Join(is, ",")
 			}
 
+		} else {
+			fmt.Println("RES ERR", res, err)
 		}
 	} else if schema.Name == ds.DBRequest.Name {
 		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
