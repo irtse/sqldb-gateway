@@ -2,6 +2,7 @@ package task_service
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -20,6 +21,7 @@ func (s *TaskService) TransformToGenericView(results utils.Results, tableName st
 	// TODO: here send back my passive task...
 	res := view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())
 	if len(results) == 1 && s.Domain.GetMethod() == utils.UPDATE && CheckStateIsEnded(results[0]["state"]) {
+		fmt.Println("inner_redirection FOR TASK")
 		// retrieve... tasks affected to you
 		if r, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 			ds.RequestDBField: results[0][ds.RequestDBField],
@@ -31,11 +33,15 @@ func (s *TaskService) TransformToGenericView(results utils.Results, tableName st
 				}, false, ds.EntityDBField),
 			}, true, utils.SpecialIDParam),
 		}, false); err == nil && len(r) > 0 {
+			fmt.Println("TAS>K", r)
 			if sch, err := schema.GetSchema(ds.DBTask.Name); err == nil {
 				res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(r[0], utils.SpecialIDParam))
 			}
-		} else if sch, err := schema.GetSchemaByID(utils.GetInt(results[0], ds.SchemaDBField)); err == nil {
-			res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(results[0], ds.DestTableDBField))
+		} else {
+			fmt.Println("TAS>K ERR", r, err)
+			if sch, err := schema.GetSchemaByID(utils.GetInt(results[0], ds.SchemaDBField)); err == nil {
+				res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(results[0], ds.DestTableDBField))
+			}
 		}
 	} // inner_redirection is the way to redirect any closure... to next data or data
 	return res
