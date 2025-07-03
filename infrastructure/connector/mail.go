@@ -38,13 +38,12 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 	if err := tmpl.Execute(&content, bodyToMap); err != nil {
 		return utils.Record{}, err
 	}
-	too := map[string]interface{}{}
-	for k, v := range to {
-		too[k] = v
-	}
 	m := utils.Record{
-		"from_email":            utils.GetString(from, "id"),
-		"to_email":              []interface{}{too}, // SHOULD BE ID
+		"from_email": utils.GetString(from, "id"),
+		"to_email": []interface{}{map[string]interface{}{
+			utils.SpecialIDParam: to[utils.SpecialIDParam],
+			"name":               to["name"],
+		}}, // SHOULD BE ID
 		"subject":               subject,
 		"content":               strings.ReplaceAll(strings.ReplaceAll(content.String(), "''", "'"), "''", "'"),
 		"file_attached":         fileAttached,
