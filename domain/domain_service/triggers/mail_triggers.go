@@ -57,6 +57,7 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 	var err error
 	var toSchema sm.SchemaModel
 	dest := []map[string]interface{}{}
+	fmt.Println("record omg WHAT ???? ", fromSchema.Name, record)
 	if toSchemaID < 0 || destID < 0 {
 		toSchema = *fromSchema
 		dest = []map[string]interface{}{record}
