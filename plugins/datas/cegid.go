@@ -442,6 +442,16 @@ var ProofreadingStatus = models.SchemaModel{
 	},
 }
 
+var MajorConference = models.SchemaModel{
+	Name:     "major_conference",
+	Label:    "major conference",
+	Category: "publications",
+	CanOwned: true,
+	Fields: []models.FieldModel{
+		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
+	},
+}
+
 var OtherPublicationAuthorsFR = models.SchemaModel{
 	Name:     "other_publication_authors",
 	Label:    "other publication authors",
