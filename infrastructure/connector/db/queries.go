@@ -19,9 +19,6 @@ func (db *Database) DeleteQueryWithRestriction(name string, restrictions map[str
 		name = name + " as main "
 		q = db.BuildDeleteQueryWithRestriction(name, restrictions, isOr)
 	}
-	if !strings.Contains(q, "id=") {
-		return errors.New("can't delete with a related or id specified")
-	}
 	return db.Query(q)
 }
 
@@ -169,9 +166,6 @@ func (db *Database) DeleteQuery(name string, colName string) error {
 	}
 
 	q := db.BuildDeleteQuery(name, colName)
-	if !strings.Contains(q, "id=") {
-		return errors.New("can't delete with a related or id specified")
-	}
 	if strings.Contains(q, "main.") {
 		name = name + " as main "
 		q = db.BuildDeleteQuery(name, colName)
