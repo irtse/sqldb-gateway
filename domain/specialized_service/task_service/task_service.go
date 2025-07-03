@@ -165,7 +165,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 			}
 		}
 		newRecRequest = SetClosureStatus(newRecRequest)
-		if utils.GetString(res, "closing_comment") != "" && CheckStateIsEnded(newRecRequest) {
+		if utils.GetString(res, "closing_comment") != "" && CheckStateIsEnded(newRecRequest["state"]) {
 			newRecRequest["closing_comment"] = utils.GetString(res, "closing_comment")
 		}
 		s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBRequest.Name, newRecRequest[utils.SpecialIDParam]).RootRaw(), newRecRequest)
