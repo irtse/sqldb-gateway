@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"net/url"
 	"slices"
 	"sqldb-ws/domain/domain_service/history"
@@ -65,7 +66,10 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 		SQLrestriction = f.RestrictionByEntityUser(schema, SQLrestriction, false) // admin can see all on admin view
 	} else if id, _ := domainParams.Get(utils.SpecialIDParam); id != "" {
 		SQLrestriction = append(SQLrestriction, "id="+id)
+	} else if id, _ := f.Domain.GetParams().Get(utils.SpecialIDParam); id != "" {
+		SQLrestriction = append(SQLrestriction, "id="+id)
 	}
+	fmt.Println(SQLrestriction)
 	if s, ok := domainParams.Get(utils.RootFilterNewState); ok && s != "" {
 		state = s
 	}
