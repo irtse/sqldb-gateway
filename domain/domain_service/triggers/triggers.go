@@ -183,7 +183,7 @@ func (t *TriggerService) GetTriggerRules(triggerID int64, fromSchema *sm.SchemaM
 				return []map[string]interface{}{}
 			}
 			if f, err := fromSchema.GetFieldByID(utils.GetInt(cond, ds.SchemaFieldDBField)); err != nil || utils.GetString(record, f.Name) != utils.GetString(cond, "value") {
-				fmt.Println("can't get this rules because 2 : ", f.Name, utils.GetString(record, f.Name), utils.GetString(cond, "value"))
+				fmt.Println("can't get this rules because 2 : ", f.Name, record, utils.GetString(record, f.Name), utils.GetString(cond, "value"))
 				return []map[string]interface{}{}
 			}
 		}
