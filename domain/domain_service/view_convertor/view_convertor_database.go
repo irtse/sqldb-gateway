@@ -112,8 +112,8 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 						}, false, ds.WorkflowSchemaDBField),
 					}, false, "view_"+ds.FilterDBField),
 				}, false); err == nil && len(res) > 0 {
-					fmt.Println(len(res), scheme.Name, err)
 					keysOrdered = append(keysOrdered, scheme.Name)
+					fmt.Println(len(res), scheme.Name, keysOrdered)
 				}
 			}
 		}

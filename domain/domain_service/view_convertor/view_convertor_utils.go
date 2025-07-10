@@ -37,6 +37,7 @@ func GetOrder(schema *sm.SchemaModel, record utils.Record, values map[string]int
 	if res, err := GetFilterFields(schema, domain); err == nil && len(res) > 0 {
 		if utils.GetBool(record, "is_list") {
 			for _, r := range res {
+				fmt.Println("GetFilterFields2", len(res), r)
 				if val, err := schema.GetField(utils.GetString(r, "name")); err == nil {
 					utils.ToMap(val)["readonly"] = true
 					utils.ToMap(val)["hidden"] = true
