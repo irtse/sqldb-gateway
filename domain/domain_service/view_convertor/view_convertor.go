@@ -584,12 +584,15 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 			}
 		} else {
 			m[ds.DestTableDBField] = record[utils.SpecialIDParam]
-			m[ds.SchemaDBField] = sch.ID
+			if record[ds.DestTableDBField] != nil {
+				m[ds.DestTableDBField] = record[ds.DestTableDBField]
+			}
 			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
 				m["is_close"] = true
 				if rr, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(rr) > 0 {
 					return true
 				}
+				// REWORK THE PART OF PARAMS LATER
 				for k, _ := range d.GetParams().Values {
 					if sch.HasField(k) {
 						return false

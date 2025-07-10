@@ -193,7 +193,7 @@ func MakeSqlItem(alterRestr string, typ string, foreignName string, key string, 
 	} else if strings.Contains(sql, "%") {
 		alterRestr += "LOWER(" + key + "::text) LIKE LOWER(" + sql + ")"
 	} else {
-		if strings.Contains(sql, "'") {
+		if strings.Contains(sql, "'") && !strings.Contains(typ, "enum") {
 			alterRestr += "LOWER(" + key + ") " + operator + " LOWER(" + sql + ")"
 		} else {
 			alterRestr += key + " " + operator + " " + sql
@@ -290,17 +290,10 @@ func FormatSQLRestrictionWhereByMap(SQLrestriction string, restrictions map[stri
 				r = strings.ReplaceAll(fmt.Sprintf("%v", r), "!DELETE", "DELETE")
 				SQLrestriction += k2 + " NOT IN (" + fmt.Sprintf("%v", r) + ")"
 			} else if reflect.TypeOf(r).Kind() == reflect.Slice {
-				arr := r.([]string)
-				for _, a := range arr {
-					if strings.Contains(a, "'") {
-						a = "LOWER(" + a + ")"
-						k2 = "LOWER(" + k2 + ")"
-					}
-				}
 				if not {
-					SQLrestriction += k2 + " NOT IN (" + strings.Join(arr, ",") + ")"
+					SQLrestriction += k2 + " NOT IN (" + strings.Join(r.([]string), ",") + ")"
 				} else {
-					SQLrestriction += k2 + " IN (" + strings.Join(arr, ",") + ")"
+					SQLrestriction += k2 + " IN (" + strings.Join(r.([]string), ",") + ")"
 				}
 			} else if strings.Contains(fmt.Sprintf("%v", r), "SELECT") {
 				SQLrestriction += k2 + " IN (" + fmt.Sprintf("%v", r) + ")"
