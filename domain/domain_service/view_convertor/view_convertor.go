@@ -275,11 +275,14 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 	if !s.Domain.GetEmpty() && len(results) != 1 {
 		return []map[string]interface{}{}
 	}
+	key := "on_create"
+	if s.Domain.GetMethod() == utils.UPDATE {
+		key = "on_update"
+	}
 	if consents, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
 		ds.SchemaDBField: schemaID,
 		utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
-			"on_create": s.Domain.GetMethod() == utils.CREATE,
-			"on_update": s.Domain.GetMethod() == utils.UPDATE,
+			key: true,
 		}, true, utils.SpecialIDParam),
 	}, false); err == nil && len(consents) > 0 {
 		if len(results) > 0 {
