@@ -125,7 +125,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		}
 		beforeSchemes, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name,
 			map[string]interface{}{
-				utils.SpecialIDParam: res[utils.SpecialIDParam],
+				utils.SpecialIDParam: res[ds.WorkflowSchemaDBField],
 			}, false)
 		isOptionnal := false
 		if len(beforeSchemes) > 0 && err == nil {

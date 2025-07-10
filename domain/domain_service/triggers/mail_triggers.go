@@ -78,12 +78,12 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 	}
 	var toUsers []map[string]interface{}
 	if len(dest) > 0 {
-		if toUsers = t.handleOverrideEmailTo(record, dest[0], toSchema, mode, triggerID); len(toUsers) == 0 {
+		if toUsers = t.handleOverrideEmailTo(record, dest[0], toSchema, triggerID); len(toUsers) == 0 {
 			if mode == "auto" {
 				return mailings
 			}
 		}
-	} else if toUsers = t.handleOverrideEmailTo(record, map[string]interface{}{}, toSchema, mode, triggerID); len(toUsers) == 0 {
+	} else if toUsers = t.handleOverrideEmailTo(record, map[string]interface{}{}, toSchema, triggerID); len(toUsers) == 0 {
 		if mode == "auto" {
 			return mailings
 		}

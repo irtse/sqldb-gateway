@@ -104,11 +104,9 @@ func (t *TriggerService) ParseMails(toSplit string) []map[string]interface{} {
 	return []map[string]interface{}{}
 }
 
-func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface{}, destSchema models.SchemaModel, mode string, triggerID int64) []map[string]interface{} {
+func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface{}, destSchema models.SchemaModel, triggerID int64) []map[string]interface{} {
+	fmt.Println("TRIGGERS handleOverrideEmailTo", triggerID)
 	userIDS := []string{}
-	if mode != "mail" {
-		return []map[string]interface{}{}
-	}
 	if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTriggerDestination.Name, map[string]interface{}{
 		ds.TriggerDBField: triggerID,
 	}, false); err == nil {
