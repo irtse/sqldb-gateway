@@ -64,6 +64,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema *sm.Sche
 	view.Schema = schemes
 	view.Redirection = getRedirection(v.Domain.GetDomainID())
 	view.Order = CompareOrder(schema, order, v.Domain)
+	fmt.Println("ORDAer", view.Order)
 	view.Actions = addAction
 	view.CommentBody = commentBody
 	view.Shortcuts = v.GetShortcuts(schema.ID, addAction)
@@ -162,6 +163,7 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 			newView.Schema = scheme
 			newView.SchemaID = id
 			newView.Order = CompareOrder(&sch, order, v.Domain)
+			fmt.Println("ORDDA", newView.Order)
 			newView.Consents = v.getConsent(utils.ToString(id), []utils.Record{record})
 			if !utils.GetBool(record, "is_draft") {
 				newView.Triggers = triggers.NewTrigger(v.Domain).GetViewTriggers(
@@ -250,7 +252,7 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 func (s *ViewConvertor) getLinkPath(record utils.Record, sch *sm.SchemaModel) string {
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 		"is_close": false,
-		utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+		ds.RequestDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 			ds.DestTableDBField: utils.GetString(record, utils.SpecialIDParam),
 			ds.SchemaDBField:    sch.GetID(),
 		}, false, utils.SpecialIDParam),
