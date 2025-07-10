@@ -149,12 +149,19 @@ func notify(task utils.Record, i int64, domain utils.DomainITF) {
 		}
 		notif := utils.Record{
 			"name":              utils.GetString(task, "name"),
-			"description":       utils.GetString(task, "description"),
+			"description":       utils.GetString(task, "name"),
 			ds.UserDBField:      task[ds.UserDBField],
 			ds.EntityDBField:    task[ds.EntityDBField],
 			ds.DestTableDBField: i,
 		}
 		notif["link_id"] = schema.ID
+		if schema, err := schserv.GetSchemaByID(utils.GetInt(task, ds.SchemaDBField)); err == nil {
+			if res, err := domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
+				utils.SpecialIDParam: task[ds.DestTableDBField],
+			}, false); err == nil && len(res) > 0 {
+				notif[sm.NAMEKEY] = utils.GetString(res[0], "name")
+			}
+		}
 		domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBNotification.Name, notif, func(s string) (string, bool) {
 			return "", true
 		})
