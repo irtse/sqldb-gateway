@@ -188,7 +188,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 			if current_index != newRecRequest.GetFloat("current_index") {
 				HandleHierarchicalVerification(s.Domain, requests[0], res)
 			} else {
-				PrepareAndCreateTask(scheme, newRecRequest, res, s.Domain, true)
+				PrepareAndCreateTask(scheme, requests[0], res, s.Domain, true)
 			}
 		}
 	}
