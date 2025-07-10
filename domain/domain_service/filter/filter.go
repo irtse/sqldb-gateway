@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"net/url"
 	"slices"
 	"sqldb-ws/domain/domain_service/history"
@@ -30,6 +31,7 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 	var SQLLimit string
 
 	restr, view, order, dir, state := f.GetFilterForQuery("", "", schema, domainParams)
+	fmt.Println("ORDER 2", order)
 	if restr != "" && !f.Domain.IsSuperCall() {
 		SQLrestriction = append(SQLrestriction, restr)
 	}

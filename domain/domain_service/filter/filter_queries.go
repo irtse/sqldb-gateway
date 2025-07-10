@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	sch "sqldb-ws/domain/schema"
@@ -34,6 +35,7 @@ func (s *FilterService) GetFilterFields(viewfilterID string, schemaID string) []
 
 func (s *FilterService) GetFilterForQuery(filterID string, viewfilterID string, schema sm.SchemaModel, domainParams utils.Params) (string, string, string, string, string) {
 	view, order, dir := s.ProcessViewAndOrder(viewfilterID, schema.ID, domainParams)
+	fmt.Println("ORDER", order)
 	filter := s.ProcessFilterRestriction(filterID, schema)
 	state := ""
 	if filterID != "" {
