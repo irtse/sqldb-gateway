@@ -112,18 +112,22 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 	if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTriggerDestination.Name, map[string]interface{}{
 		ds.TriggerDBField: triggerID,
 	}, false); err == nil {
+		fmt.Println("TRIGGERS", len(res))
 		for _, userDest := range res {
 			if utils.GetBool(userDest, "is_own") && userDest["from_"+ds.SchemaDBField] == nil {
+				fmt.Println("OWN!")
 				// wait no... should send to creator
 				if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
 					ds.DestTableDBField: dest[utils.SpecialIDParam],
 					ds.SchemaDBField:    destSchema.ID,
 				}, false); err == nil {
+					fmt.Println("OWN", res)
 					for _, r := range res {
 						userIDS = append(userIDS, utils.GetString(r, ds.UserDBField))
 					}
 				}
 			} else if userDest["from_"+ds.SchemaDBField] != nil {
+				fmt.Println("ds.SchemaDBField", userDest)
 				sch, err := schema.GetSchemaByID(utils.GetInt(userDest, "from_"+ds.SchemaDBField))
 				if err == nil {
 					continue
@@ -143,6 +147,7 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 					key = f.Name
 					if userDest["value"] != nil {
 						v = fmt.Sprintf("%v", userDest["value"])
+						fmt.Println("VALUE", v)
 						if strings.Contains(f.Type, "char") {
 							v = conn.Quote(v)
 						}
@@ -162,9 +167,11 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 				if v == "" {
 					continue
 				}
+				fmt.Println("HEY", sch.Name, key, v)
 				if usr, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name, map[string]interface{}{
 					key: v,
 				}, false); err == nil {
+					fmt.Println("FOUND", res)
 					for _, u := range usr {
 						if userDest["from_compare_"+ds.SchemaFieldDBField] != nil {
 							ff, err := sch.GetFieldByID(utils.GetInt(userDest, "from_compare_"+ds.SchemaFieldDBField))
@@ -180,7 +187,7 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 			}
 		}
 	}
-	fmt.Println(userIDS)
+	fmt.Println("userIDS", userIDS)
 	if len(userIDS) > 0 {
 		if usto, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 			utils.SpecialIDParam: userIDS,

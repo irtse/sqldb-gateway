@@ -39,6 +39,7 @@ var DBSchemaField = models.SchemaModel{
 		{Name: "placeholder", Type: models.VARCHAR.String(), Required: false, Index: 4},
 		{Name: "default_value", Type: models.BIGVARCHAR.String(), Required: false, Index: 5, Label: "default"},
 		{Name: "index", Type: models.INTEGER.String(), Required: true, Default: 1, Index: 6},
+		{Name: "in_resume", Type: models.VARCHAR.String(), Required: false, Index: 6},
 		{Name: "readonly", Type: models.BOOLEAN.String(), Required: true, Index: 7},
 		{Name: "required", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 8},
 		{Name: "read_level", Type: models.ENUMLEVEL.String(), Required: false, Default: models.LEVELNORMAL, Index: 9},
