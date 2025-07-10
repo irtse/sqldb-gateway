@@ -85,6 +85,8 @@ var ArticleFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false,
+			Index: -20, Label: "la production a-t-elle fait l'objet d'un award ?"},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: -10, Label: "téléchargement de la publication finalisée"},
 		{Name: "effective_publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
@@ -128,6 +130,8 @@ var ConferenceFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false,
+			Index: -20, Label: "la production a-t-elle fait l'objet d'un award ?"},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: -10, Label: "téléchargement de la publication finalisée"},
 		{Name: "effective_publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
@@ -176,6 +180,8 @@ var PresentationFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false,
+			Index: -20, Label: "la production a-t-elle fait l'objet d'un award ?"},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: -10, Label: "téléchargement de la publication finalisée"},
 		{Name: "effective_publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
@@ -219,6 +225,8 @@ var PosterFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false,
+			Index: -20, Label: "la production a-t-elle fait l'objet d'un award ?"},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: -10, Label: "téléchargement de la publication finalisée"},
 		{Name: "effective_publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
@@ -265,6 +273,8 @@ var HDRFR = models.SchemaModel{
 	Label:    "authorizations to direct research",
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false,
+			Index: -20, Label: "la production a-t-elle fait l'objet d'un award ?"},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: -10, Label: "téléchargement de la publication finalisée"},
 		{Name: "effective_publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
@@ -305,6 +315,8 @@ var ThesisFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false,
+			Index: -20, Label: "la production a-t-elle fait l'objet d'un award ?"},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: -10, Label: "téléchargement de la publication finalisée"},
 		{Name: "effective_publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
@@ -349,6 +361,8 @@ var InternshipFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false,
+			Index: -20, Label: "la production a-t-elle fait l'objet d'un award ?"},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: -10, Label: "téléchargement de la publication finalisée"},
 		{Name: "effective_publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
@@ -391,6 +405,8 @@ var DemoFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false,
+			Index: -20, Label: "la production a-t-elle fait l'objet d'un award ?"},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: -10, Label: "téléchargement de la publication finalisée"},
 		{Name: "effective_publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
@@ -432,6 +448,8 @@ var OtherPublicationFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false,
+			Index: -20, Label: "la production a-t-elle fait l'objet d'un award ?"},
 		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
 			Index: -10, Label: "téléchargement de la publication finalisée"},
 		{Name: "effective_publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
@@ -457,6 +475,18 @@ var OtherPublicationAffiliationAuthorsFR = models.SchemaModel{
 	},
 }
 
+var OtherPublicationAuthorsFR = models.SchemaModel{
+	Name:     "other_publication_authors",
+	Label:    "other publication authors",
+	Category: "publications",
+	CanOwned: true,
+	Fields: []models.FieldModel{
+		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
+		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
+		{Name: ds.RootID("other_publication_affiliation_authors"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication_affiliation_authors", Required: true, Index: 2},
+	},
+}
+
 var ProofreadingStatus = models.SchemaModel{
 	Name:     "proofreading_status",
 	Label:    "proofreading status",
@@ -474,35 +504,5 @@ var MajorConference = models.SchemaModel{
 	CanOwned: true,
 	Fields: []models.FieldModel{
 		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
-	},
-}
-
-var OtherPublicationAuthorsFR = models.SchemaModel{
-	Name:     "other_publication_authors",
-	Label:    "other publication authors",
-	Category: "publications",
-	CanOwned: true,
-	Fields: []models.FieldModel{
-		{Name: "name", Label: "name", Type: models.VARCHAR.String(), Required: true, Index: 1},
-		{Name: ds.RootID(ds.DBUser.Name), Label: "related user", Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: true, Index: 1},
-		{Name: ds.RootID("other_publication_affiliation_authors"), Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication_affiliation_authors", Required: true, Index: 2},
-	},
-}
-
-var PublicationAwardFR = models.SchemaModel{
-	Name:     "publication_award",
-	Label:    "award_publication",
-	Category: "publications",
-	IsEnum:   true,
-	Fields: []models.FieldModel{
-		{Name: "name", Type: models.VARCHAR.String(), Required: true, Index: -1},
-		{Name: "is_awarded", Type: models.ENUMBOOLEAN.String(), Required: false, Default: "no",
-			Index: 1, Label: "la production a-t-elle fait l'objet d'un award ?"},
-		{Name: "awarded_by", Type: models.VARCHAR.String(), Required: false,
-			Index: 2, Label: "la production a été primée par"},
-		{Name: ds.DestTableDBField, Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication", Required: true, Index: 4, Readonly: true},
-		{Name: ds.SchemaDBField, Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication", Required: true, Index: 4, Readonly: true},
-		{Name: ds.UserDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: false, Index: 5, Label: "user with hierarchy"},
-		{Name: ds.EntityDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: false, Index: 6, Label: "entity with hierarchy"},
 	},
 }

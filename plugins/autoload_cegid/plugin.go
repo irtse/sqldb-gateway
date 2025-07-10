@@ -37,7 +37,6 @@ func Autoload() []sm.SchemaModel {
 		models.PresentationAffiliationAuthorsFR.Name,
 		models.ThesisAuthorsFR.Name,
 		models.ThesisAffiliationAuthorsFR.Name,
-		models.PublicationAwardFR.Name,
 		models.ArticleFR.Name, models.OtherPublicationFR.Name,
 		models.DemoFR.Name, models.InternshipFR.Name, models.ThesisFR.Name, models.HDRFR.Name,
 		models.PosterFR.Name, models.PresentationFR.Name, models.ConferenceFR.Name,
@@ -64,11 +63,10 @@ func Autoload() []sm.SchemaModel {
 
 		models.ArticleFR.Name,
 		models.OtherPublicationFR.Name,
-		models.PublicationAwardFR.Name,
 		models.DemoFR.Name, models.InternshipFR.Name, models.ThesisFR.Name, models.HDRFR.Name,
 		models.PosterFR.Name, models.PresentationFR.Name, models.ConferenceFR.Name,
 	}...)
-	service.SERVICES = append(service.SERVICES, []utils.SpecializedServiceITF{&PublicationService{}, &PosterService{}, &ConferenceService{}}...)
+	service.SERVICES = append(service.SERVICES, []utils.SpecializedServiceITF{&PublicationService{}, &PosterService{}, &ConferenceService{}, &PresentationService{}}...)
 	return []sm.SchemaModel{models.CoCFR, models.ProjectFR, models.Axis, models.MajorConference,
 		models.OtherPublicationFR, models.DemoFR, models.InternshipFR, models.ThesisFR, models.HDRFR,
 		models.PosterFR, models.PresentationFR, models.ConferenceFR,
@@ -92,7 +90,6 @@ func Autoload() []sm.SchemaModel {
 		models.PresentationAffiliationAuthorsFR,
 		models.ThesisAuthorsFR,
 		models.ThesisAffiliationAuthorsFR,
-		models.PublicationAwardFR,
 	}
 }
 
@@ -153,6 +150,35 @@ func (s *PosterService) VerifyDataIntegrity(record map[string]interface{}, table
 }
 
 func (s *PosterService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
+	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
+}
+
+type PresentationService struct {
+	servutils.AbstractSpecializedService
+}
+
+func (s *PresentationService) Entity() utils.SpecializedServiceInfo { return models.PresentationFR }
+
+func (s *PresentationService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
+	ok := record["major_conference"]
+	isNotFound := true
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(models.MajorConference.Name, map[string]interface{}{}, false); err == nil && len(res) > 0 {
+		for _, r := range res {
+			if strings.Contains(strings.ToUpper(utils.GetString(record, "conference_name")), strings.ToUpper(utils.GetString(r, "name"))) {
+				ok = "yes"
+				isNotFound = false
+				break
+			}
+		}
+	}
+	if isNotFound {
+		ok = "no"
+	}
+	record["major_conference"] = ok
+	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
+}
+
+func (s *PresentationService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }
 

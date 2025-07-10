@@ -18,7 +18,7 @@ var EntityDBField = ds.RootID(ds.DBEntity.Name)
 var DestTableDBField = ds.RootID("dest_table")
 var FilterDBField = ds.RootID(ds.DBFilter.Name)
 
-func ConstructNotificationTask(scheme utils.Record, request utils.Record) map[string]interface{} {
+func ConstructNotificationTask(scheme utils.Record, request utils.Record, domain utils.DomainITF) map[string]interface{} {
 	task := map[string]interface{}{
 		sm.NAMEKEY:               scheme.GetString(sm.NAMEKEY),
 		"description":            scheme.GetString(sm.NAMEKEY),
@@ -35,6 +35,9 @@ func ConstructNotificationTask(scheme utils.Record, request utils.Record) map[st
 		"override_state_completed": scheme["override_state_completed"],
 		"override_state_dismiss":   scheme["override_state_dismiss"],
 		"override_state_refused":   scheme["override_state_refused"],
+	}
+	if utils.GetBool(scheme, "assign_to_creator") {
+		task[ds.UserDBField] = domain.GetUserID()
 	}
 	return task
 }
@@ -103,7 +106,7 @@ func CreateNewDataFromTask(schema sm.SchemaModel, newTask utils.Record, record u
 }
 
 func PrepareAndCreateTask(scheme utils.Record, request map[string]interface{}, record map[string]interface{}, domain utils.DomainITF, fromTask bool) map[string]interface{} {
-	newTask := ConstructNotificationTask(scheme, request)
+	newTask := ConstructNotificationTask(scheme, request, domain)
 	delete(newTask, utils.SpecialIDParam)
 	if utils.GetBool(scheme, "assign_to_creator") {
 		newTask[ds.UserDBField] = domain.GetUserID()
