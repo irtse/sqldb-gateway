@@ -45,9 +45,6 @@ func GetOrder(schema *sm.SchemaModel, record utils.Record, values map[string]int
 				}
 				values[utils.GetString(r, "name")] = nil
 			}
-		} else {
-			fmt.Println("GetFilterFields2", newOrder, utils.GetString(res[0], "name"), len(res))
-			newOrder = append(newOrder, utils.GetString(res[0], "name"))
 		}
 	}
 	return newOrder, values
