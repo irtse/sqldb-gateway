@@ -13,12 +13,12 @@ func CompareOrder(schema *sm.SchemaModel, order []string, domain utils.DomainITF
 	newOrder := []string{}
 	if res, err := GetFilterFields(schema, domain); err == nil && len(res) > 0 {
 		for _, ord := range res {
-			fmt.Println("GetFilterFields", len(res), ord)
 			if len(order) == 0 || !slices.Contains(order, utils.GetString(ord, "name")) {
 				newOrder = append(newOrder, utils.GetString(ord, "name"))
 			}
 		}
 	}
+	fmt.Println("GetFilterFields", newOrder, len(newOrder), len(order))
 	if len(newOrder) == 0 {
 		return order
 	}
