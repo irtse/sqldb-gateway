@@ -265,17 +265,10 @@ func (s *ViewConvertor) getLinkPath(record utils.Record, sch *sm.SchemaModel) st
 			return "@" + s.ID + ":" + utils.GetString(firstTaskToWrap, utils.SpecialIDParam)
 		}
 	} else if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
-		"is_close": true,
-		utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
-			ds.DestTableDBField: utils.GetString(record, utils.SpecialIDParam),
-			ds.SchemaDBField:    sch.GetID(),
-		}, false, utils.SpecialIDParam),
-		utils.SpecialIDParam + "_1": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
-			ds.UserDBField: s.Domain.GetUserID(),
-			ds.EntityDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
-				ds.UserDBField: s.Domain.GetUserID(),
-			}, false, ds.EntityDBField),
-		}, true, utils.SpecialIDParam),
+		"is_close":          true,
+		ds.DestTableDBField: utils.GetString(record, utils.SpecialIDParam),
+		ds.SchemaDBField:    sch.GetID(),
+		ds.UserDBField:      s.Domain.GetUserID(),
 	}, false); err == nil && len(res) > 0 {
 		firstTaskToWrap := res[0]
 		if s, err := scheme.GetSchema(ds.DBRequest.Name); err == nil {
