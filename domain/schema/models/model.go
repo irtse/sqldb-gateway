@@ -187,7 +187,6 @@ type FieldModel struct { // definition a db table columns
 }
 
 func (t FieldModel) Map(m map[string]interface{}) *FieldModel {
-	fmt.Println(m["in_resume"])
 	return &FieldModel{
 		ID:           utils.ToString(m["id"]),
 		Name:         utils.ToString(m["name"]),

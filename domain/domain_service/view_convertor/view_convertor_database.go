@@ -113,7 +113,6 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 					}, false, "view_"+ds.FilterDBField),
 				}, false); err == nil && len(res) > 0 {
 					keysOrdered = append(keysOrdered, scheme.Name)
-					fmt.Println(len(res), scheme.Name, keysOrdered)
 				}
 			}
 		}

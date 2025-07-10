@@ -13,13 +13,11 @@ func CompareOrder(schema *sm.SchemaModel, order []string, domain utils.DomainITF
 	newOrder := []string{}
 	if res, err := GetFilterFields(schema, domain); err == nil && len(res) > 0 {
 		for _, ord := range res {
-			fmt.Println(order, utils.GetString(ord, "name"))
 			if len(order) == 0 || slices.Contains(order, utils.GetString(ord, "name")) {
 				newOrder = append(newOrder, utils.GetString(ord, "name"))
 			}
 		}
 	}
-	fmt.Println("GetFilterFields", newOrder, len(newOrder), len(order))
 	if len(newOrder) == 0 {
 		return order
 	}
@@ -38,7 +36,6 @@ func GetOrder(schema *sm.SchemaModel, record utils.Record, values map[string]int
 	if res, err := GetFilterFields(schema, domain); err == nil && len(res) > 0 {
 		if utils.GetBool(record, "is_list") {
 			for _, r := range res {
-				fmt.Println("GetFilterFields2", len(res), r)
 				if val, err := schema.GetField(utils.GetString(r, "name")); err == nil {
 					utils.ToMap(val)["readonly"] = true
 					utils.ToMap(val)["hidden"] = true
