@@ -68,7 +68,7 @@ func Autoload() []sm.SchemaModel {
 		models.DemoFR.Name, models.InternshipFR.Name, models.ThesisFR.Name, models.HDRFR.Name,
 		models.PosterFR.Name, models.PresentationFR.Name, models.ConferenceFR.Name,
 	}...)
-	service.SERVICES = append(service.SERVICES, []utils.SpecializedServiceITF{&PublicationService{}, &ArticleService{}, &ConferenceService{}}...)
+	service.SERVICES = append(service.SERVICES, []utils.SpecializedServiceITF{&PublicationService{}, &PosterService{}, &ConferenceService{}}...)
 	return []sm.SchemaModel{models.CoCFR, models.ProjectFR, models.Axis, models.MajorConference,
 		models.OtherPublicationFR, models.DemoFR, models.InternshipFR, models.ThesisFR, models.HDRFR,
 		models.PosterFR, models.PresentationFR, models.ConferenceFR,
@@ -127,18 +127,18 @@ func (s *PublicationService) GenerateQueryFilter(tableName string, innerestr ...
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }
 
-type ArticleService struct {
+type PosterService struct {
 	servutils.AbstractSpecializedService
 }
 
-func (s *ArticleService) Entity() utils.SpecializedServiceInfo { return models.ArticleFR }
+func (s *PosterService) Entity() utils.SpecializedServiceInfo { return models.PosterFR }
 
-func (s *ArticleService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
+func (s *PosterService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
 	ok := record["major_conference"]
 	isNotFound := true
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(models.MajorConference.Name, map[string]interface{}{}, false); err == nil && len(res) > 0 {
 		for _, r := range res {
-			if strings.Contains(strings.ToUpper(utils.GetString(record, "major_conference_name")), strings.ToUpper(utils.GetString(r, "name"))) {
+			if strings.Contains(strings.ToUpper(utils.GetString(record, "conference_name")), strings.ToUpper(utils.GetString(r, "name"))) {
 				ok = "yes"
 				isNotFound = false
 				break
@@ -152,7 +152,7 @@ func (s *ArticleService) VerifyDataIntegrity(record map[string]interface{}, tabl
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
 
-func (s *ArticleService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
+func (s *PosterService) GenerateQueryFilter(tableName string, innerestr ...string) (string, string, string, string) {
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }
 
