@@ -227,6 +227,7 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 
 	d.ApplyCommandRow(record, vals, params)
 	newOrder, vals := GetOrder(schema, record, vals, []string{}, d.Domain)
+	fmt.Println("ORDAer 2", view.Order, newOrder)
 	if len(newOrder) > 0 {
 		view.Order = newOrder
 	}
@@ -252,10 +253,16 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 func (s *ViewConvertor) getLinkPath(record utils.Record, sch *sm.SchemaModel) string {
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 		"is_close": false,
-		ds.RequestDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
-			ds.DestTableDBField: utils.GetString(record, utils.SpecialIDParam),
-			ds.SchemaDBField:    sch.GetID(),
-		}, false, utils.SpecialIDParam),
+		utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+			ds.RequestDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+				ds.DestTableDBField: utils.GetString(record, utils.SpecialIDParam),
+				ds.SchemaDBField:    sch.GetID(),
+			}, false, utils.SpecialIDParam),
+			utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+				ds.DestTableDBField: utils.GetString(record, utils.SpecialIDParam),
+				ds.SchemaDBField:    sch.GetID(),
+			}, false, utils.SpecialIDParam),
+		}, true, utils.SpecialIDParam),
 		utils.SpecialIDParam + "_1": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 			ds.UserDBField: s.Domain.GetUserID(),
 			ds.EntityDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
