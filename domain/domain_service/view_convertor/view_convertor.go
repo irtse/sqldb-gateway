@@ -277,16 +277,22 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 	}
 	if consents, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
 		ds.SchemaDBField: schemaID,
+		utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{
+			"on_create": s.Domain.GetMethod() == utils.CREATE,
+			"on_update": s.Domain.GetMethod() == utils.UPDATE,
+		}, true, utils.SpecialIDParam),
 	}, false); err == nil && len(consents) > 0 {
 		if len(results) > 0 {
-			if consentsResp, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(
-				ds.DBConsentResponse.Name,
-				map[string]interface{}{
-					ds.SchemaDBField:    schemaID,
-					ds.DestTableDBField: results[0][utils.SpecialIDParam],
-					ds.ConsentDBField:   utils.GetString(consents[0], utils.SpecialIDParam),
-				}, false); err == nil && len(consentsResp) > 0 {
-				return []map[string]interface{}{}
+			for _, c := range consents {
+				if consentsResp, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(
+					ds.DBConsentResponse.Name,
+					map[string]interface{}{
+						ds.SchemaDBField:    schemaID,
+						ds.DestTableDBField: results[0][utils.SpecialIDParam],
+						ds.ConsentDBField:   utils.GetString(c, utils.SpecialIDParam),
+					}, false); err == nil && len(consentsResp) > 0 {
+					return []map[string]interface{}{}
+				}
 			}
 		}
 		cst := []map[string]interface{}{}

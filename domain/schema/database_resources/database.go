@@ -398,7 +398,9 @@ var DBConsent = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Constraint: "unique", Type: models.VARCHAR.String(), Required: true, Readonly: true, Index: 0},
 		{Name: "optionnal", Type: models.BOOLEAN.String(), Required: true, Default: false, Index: 1},
-		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 2},
+		{Name: "on_create", Type: models.BOOLEAN.String(), Required: true, Default: true, Index: 2},
+		{Name: "on_update", Type: models.BOOLEAN.String(), Required: true, Default: true, Index: 3},
+		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 4},
 	},
 }
 
