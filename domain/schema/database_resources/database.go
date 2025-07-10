@@ -186,7 +186,6 @@ var DBEmailList = models.SchemaModel{
 	Category: "email",
 	Fields: []models.FieldModel{
 		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 0},
-		{Name: RootID(DBEmailTemplate.Name), Type: models.INTEGER.String(), ForeignTable: DBEmailSended.Name, Required: true, Readonly: true, Index: 1},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: false, Index: 2},
 	},
 }

@@ -114,7 +114,15 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 	}, false); err == nil {
 		for _, userDest := range res {
 			if utils.GetBool(userDest, "is_own") && userDest["from_"+ds.SchemaDBField] == nil {
-				userIDS = append(userIDS, t.Domain.GetUserID())
+				// wait no... should send to creator
+				if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
+					ds.DestTableDBField: dest[utils.SpecialIDParam],
+					ds.SchemaDBField:    destSchema.ID,
+				}, false); err == nil {
+					for _, r := range res {
+						userIDS = append(userIDS, utils.GetString(r, ds.UserDBField))
+					}
+				}
 			} else if userDest["from_"+ds.SchemaDBField] != nil {
 				sch, err := schema.GetSchemaByID(utils.GetInt(userDest, "from_"+ds.SchemaDBField))
 				if err == nil {
