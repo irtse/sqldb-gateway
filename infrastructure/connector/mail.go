@@ -10,8 +10,12 @@ import (
 	"sqldb-ws/domain/utils"
 	"strings"
 	"text/template"
+	"unicode"
 
 	"github.com/google/uuid"
+	"golang.org/x/text/runes"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 )
 
 type EmailData struct {
@@ -71,7 +75,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	// En-têtes MIME
 	body.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	body.WriteString(fmt.Sprintf("To: %s\r\n", to))
-	body.WriteString("Subject: " + strings.ReplaceAll(strings.ReplaceAll(utils.GetString(mail, "subject"), "é", "e"), "é", "e") + "\r\n")
+	body.WriteString("Subject: " + RemoveAccents(utils.GetString(mail, "subject")) + "\r\n")
 	body.WriteString("MIME-Version: 1.0\r\n")
 	body.WriteString("Content-Type: multipart/mixed; boundary=\"" + boundary + "\"\r\n")
 	body.WriteString("\r\n--" + boundary + "\r\n")
@@ -179,4 +183,11 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	}
 	fmt.Println("EMAIL SEND")
 	return nil
+}
+
+// RemoveAccents transforms é → e, à → a, ç → c, etc.
+func RemoveAccents(input string) string {
+	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+	result, _, _ := transform.String(t, input)
+	return result
 }
