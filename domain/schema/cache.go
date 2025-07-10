@@ -2,6 +2,7 @@ package schema
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/schema/models"
@@ -171,8 +172,9 @@ func ValidateBySchema(data utils.Record, tableName string, method utils.Method, 
 				"!view_" + ds.FilterDBField: nil,
 			}, false, "view_"+ds.FilterDBField),
 		}, false); err == nil && len(fields) > 0 {
+			fmt.Println("FIELDS", len(fields))
 			for _, f := range fields {
-				if field, err := GetSchemaByID(utils.GetInt(f, ds.SchemaFieldDBField)); err == nil {
+				if field, err := schema.GetFieldByID(utils.GetInt(f, ds.SchemaFieldDBField)); err == nil {
 					order = append(order, field.Name)
 				}
 			}
@@ -190,7 +192,7 @@ func ValidateBySchema(data utils.Record, tableName string, method utils.Method, 
 			}, false, "view_"+ds.FilterDBField),
 		}, false); err == nil && len(fields) > 0 {
 			for _, f := range fields {
-				if field, err := GetSchemaByID(utils.GetInt(f, ds.SchemaFieldDBField)); err == nil {
+				if field, err := schema.GetFieldByID(utils.GetInt(f, ds.SchemaFieldDBField)); err == nil {
 					order = append(order, field.Name)
 				}
 			}
