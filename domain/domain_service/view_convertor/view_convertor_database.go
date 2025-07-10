@@ -70,7 +70,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 		b, _ := json.Marshal(scheme)
 		json.Unmarshal(b, &shallowField)
 
-		if scheme.Name == utils.RootDestTableIDParam {
+		if scheme.Name == utils.RootDestTableIDParam && !strings.Contains(utils.TransformType(scheme.Type), "link") {
 			shallowField.Type = "link"
 		} else {
 			shallowField.Type = utils.TransformType(scheme.Type)
@@ -126,7 +126,7 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 
 func (d *ViewConvertor) ProcessLinkedSchema(shallowField *sm.ViewFieldModel, scheme sm.FieldModel, tableName string, s sm.SchemaModel) {
 	schema, _ := sch.GetSchemaByID(scheme.GetLink())
-	if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") {
+	if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") && !strings.Contains(scheme.Type, "link") {
 		shallowField.Type = "link"
 	} else {
 		shallowField.Type = utils.TransformType(scheme.Type)
@@ -209,7 +209,7 @@ func (d *ViewConvertor) HandleRecursivePermissions(shallowField sm.ViewFieldMode
 				shallowField.DataSchema = s
 			}
 		}
-		if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") {
+		if !strings.Contains(shallowField.Type, "enum") && !strings.Contains(shallowField.Type, "many") && !strings.Contains(scheme.Type, "link") {
 			shallowField.Type = "link"
 		} else {
 			shallowField.Type = utils.TransformType(scheme.Type)

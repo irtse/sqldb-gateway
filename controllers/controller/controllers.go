@@ -7,8 +7,6 @@ import (
 	"sqldb-ws/domain/utils"
 	"strings"
 
-	ds "sqldb-ws/domain/schema/database_resources"
-
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/matthewhartstonge/argon2"
 	"github.com/rs/zerolog/log"
@@ -107,9 +105,6 @@ func (t *AbstractController) Params() (map[string]string, map[string]string) {
 			log.Error().Msg(err.Error())
 		}
 		params["password"] = string(hash)
-	}
-	if t, ok := params[utils.RootTableParam]; !ok || t == ds.DBView.Name {
-		delete(params, utils.RootExport)
 	}
 	if _, ok := params[utils.RootExport]; ok {
 		params[utils.RootRawView] = ""

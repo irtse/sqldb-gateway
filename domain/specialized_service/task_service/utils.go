@@ -30,7 +30,6 @@ func ConstructNotificationTask(scheme utils.Record, request utils.Record) map[st
 		ds.SchemaDBField:         scheme[ds.SchemaDBField],
 		ds.DestTableDBField:      scheme[ds.DestTableDBField],
 		ds.RequestDBField:        request[utils.SpecialIDParam],
-		"send_mail_to":           scheme["send_mail_to"],
 		"opening_date":           time.Now().Format(time.RFC3339),
 
 		"override_state_completed": scheme["override_state_completed"],
@@ -121,19 +120,19 @@ func PrepareAndCreateTask(scheme utils.Record, request map[string]interface{}, r
 	}
 	shouldCreate := utils.GetString(record, "nexts") == utils.ReservedParam || utils.GetString(record, "nexts") == "" || isMeta
 	if shouldCreate {
-		createTaskAndNotify(newTask, domain, fromTask)
+		createTaskAndNotify(newTask, request, domain, fromTask)
 	}
 	return newTask
 }
 
-func createTaskAndNotify(task map[string]interface{}, domain utils.DomainITF, isTask bool) {
+func createTaskAndNotify(task map[string]interface{}, request map[string]interface{}, domain utils.DomainITF, isTask bool) {
 	i, err := domain.GetDb().CreateQuery(ds.DBTask.Name, task, func(s string) (string, bool) {
 		return "", true
 	})
 	if err != nil {
 		return
 	}
-	CreateDelegated(task, i, domain)
+	CreateDelegated(task, request, i, domain)
 	notify(task, i, domain)
 }
 
@@ -171,28 +170,60 @@ func createMetaRequest(task map[string]interface{}, id interface{}, domain utils
 	})
 }
 
-func CreateDelegated(record utils.Record, id int64, domain utils.DomainITF) {
+func CreateDelegated(record utils.Record, request utils.Record, id int64, domain utils.DomainITF) {
 	currentTime := time.Now()
 	sqlFilter := []string{
 		"('" + currentTime.Format("2000-01-01") + "' < start_date OR '" + currentTime.Format("2000-01-01") + "' > end_date)",
 	}
 	sqlFilter = append(sqlFilter, connector.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
-		"all_tasks":    true,
-		ds.UserDBField: domain.GetUserID(),
+		"all_tasks": true,
+		utils.SpecialIDParam: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBDelegation.Name, map[string]interface{}{
+			ds.UserDBField: domain.GetUserID(),
+		}, true, utils.SpecialIDParam),
 	}, false))
 	if dels, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(
 		ds.DBDelegation.Name, utils.ToListAnonymized(sqlFilter), false); err == nil && len(dels) > 0 {
 		for _, delegated := range dels {
 			newRec := record.Copy()
 			newRec["binded_dbtask"] = id
+			k1 := "delegated_" + ds.UserDBField
+			k2 := ds.UserDBField
+
+			ks1 := "shared_" + ds.UserDBField
+			ks2 := ds.UserDBField
 			newRec[ds.UserDBField] = delegated["delegated_"+ds.UserDBField]
 			delete(newRec, utils.SpecialIDParam)
-			domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBTask.Name, newRec, func(s string) (string, bool) { return "", true })
+			domain.CreateSuperCall(utils.AllParams(ds.DBTask.Name), newRec, func(s string) (string, bool) { return "", true })
+			share := map[string]interface{}{
+				ks1:                  delegated[k1],
+				ks2:                  delegated[k2],
+				ds.SchemaDBField:     record[ds.SchemaDBField],
+				ds.DestTableDBField:  record[ds.DestTableDBField],
+				ds.DelegationDBField: delegated[utils.SpecialIDParam],
+				"delete_access":      delegated["delete_access"],
+			}
+
+			if res, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBShare.Name, share, false); err == nil && len(res) == 0 {
+				share["start_date"] = delegated["start_date"]
+				share["end_date"] = delegated["end_date"]
+				domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBShare.Name, share, func(s string) (string, bool) { return "", true })
+			}
+			if request[ds.DestTableDBField] != share[ds.DestTableDBField] && request[ds.SchemaDBField] != share[ds.SchemaDBField] {
+				delete(share, "start_date")
+				delete(share, "end_date")
+				share[ds.SchemaDBField] = request[ds.SchemaDBField]
+				share[ds.DestTableDBField] = request[ds.DestTableDBField]
+				if res, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBShare.Name, share, false); err == nil && len(res) == 0 {
+					share["start_date"] = delegated["start_date"]
+					share["end_date"] = delegated["end_date"]
+					domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBShare.Name, share, func(s string) (string, bool) { return "", true })
+				}
+			}
 		}
 	}
 }
 
-func UpdateDelegated(task utils.Record, domain utils.DomainITF) {
+func UpdateDelegated(task utils.Record, request utils.Record, domain utils.DomainITF) {
 	m := map[string]interface{}{
 		"state": task["state"],
 	}
@@ -223,20 +254,20 @@ func UpdateDelegated(task utils.Record, domain utils.DomainITF) {
 	}, false)
 }
 
-func HandleHierarchicalVerification(domain utils.DomainITF, requestID int64, record map[string]interface{}) map[string]interface{} {
+func HandleHierarchicalVerification(domain utils.DomainITF, request utils.Record, record map[string]interface{}) map[string]interface{} {
 	if hierarchy, err := GetHierarchical(domain); err == nil {
 		for _, hierarch := range hierarchy {
-			CreateHierarchicalTask(domain, requestID, record, hierarch)
+			CreateHierarchicalTask(domain, request, record, hierarch)
 		}
 	}
 	return record
 }
 
-func CreateHierarchicalTask(domain utils.DomainITF, requestID int64, record, hierarch map[string]interface{}) {
+func CreateHierarchicalTask(domain utils.DomainITF, request utils.Record, record, hierarch map[string]interface{}) {
 	newTask := utils.Record{
 		ds.SchemaDBField:    record[ds.SchemaDBField],
 		ds.DestTableDBField: record[ds.DestTableDBField],
-		ds.RequestDBField:   requestID,
+		ds.RequestDBField:   request[utils.SpecialIDParam],
 		ds.UserDBField:      hierarch["parent_"+ds.UserDBField],
 		"description":       "hierarchical verification expected by the system.",
 		"urgency":           "normal",
@@ -246,7 +277,7 @@ func CreateHierarchicalTask(domain utils.DomainITF, requestID int64, record, hie
 	if i, err := domain.GetDb().CreateQuery(ds.DBTask.Name, newTask, func(s string) (string, bool) {
 		return "", true
 	}); err == nil {
-		CreateDelegated(newTask, i, domain)
+		CreateDelegated(newTask, request, i, domain)
 		notify(newTask, i, domain)
 	}
 }

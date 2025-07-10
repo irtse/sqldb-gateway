@@ -57,7 +57,6 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 	var err error
 	var toSchema sm.SchemaModel
 	dest := []map[string]interface{}{}
-	fmt.Println("record omg WHAT ???? ", fromSchema.Name, record, toSchemaID, destID)
 	if toSchemaID < 0 || destID < 0 {
 		toSchema = *fromSchema
 		dest = []map[string]interface{}{record}
@@ -72,24 +71,24 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 				dest = d
 				if len(dest) > 0 {
 					dest[0]["closing_by"] = t.Domain.GetUser()
-					dest[0]["closing_comment"] = record["closing_comment"]
+					dest[0]["closing_comment"] = "\"" + utils.GetString(record, "closing_comment") + "\""
 				}
 			}
 		}
 	}
-
 	var toUsers []map[string]interface{}
 	if len(dest) > 0 {
-		if toUsers = t.handleOverrideEmailTo(record, dest[0]); len(toUsers) == 0 {
+		if toUsers = t.handleOverrideEmailTo(record, dest[0], toSchema, mode, triggerID); len(toUsers) == 0 {
 			if mode == "auto" {
 				return mailings
 			}
 		}
-	} else if toUsers = t.handleOverrideEmailTo(record, map[string]interface{}{}); len(toUsers) == 0 {
+	} else if toUsers = t.handleOverrideEmailTo(record, map[string]interface{}{}, toSchema, mode, triggerID); len(toUsers) == 0 {
 		if mode == "auto" {
 			return mailings
 		}
 	}
+	fmt.Println("ToUSERS", toUsers)
 	mailSchema, err := schema.GetSchema(ds.DBEmailTemplate.Name)
 	if err != nil {
 		return mailings
@@ -137,7 +136,6 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 		signature := utils.GetString(mail, "signature")
 		if len(toUsers) == 0 {
 			if len(dest) > 0 {
-				fmt.Println(dest[0], record)
 				if m, err := connector.ForgeMail(
 					usfrom[0],
 					utils.Record{}, // always keep a copy

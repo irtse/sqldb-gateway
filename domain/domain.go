@@ -54,9 +54,9 @@ func Domain(superAdmin bool, user string, permsService *permissions.PermDomainSe
 
 func (d *SpecializedDomain) VerifyAuth(tableName string, colName string, level string, method utils.Method, args ...string) bool {
 	if len(args) > 0 {
-		return d.PermsService.LocalPermsCheck(tableName, colName, level, args[0], d.Own, d)
+		return d.PermsService.LocalPermsCheck(tableName, colName, level, args[0], d.Own, method, d)
 	} else {
-		return d.PermsService.PermsCheck(tableName, colName, level, d.Own, d)
+		return d.PermsService.PermsCheck(tableName, colName, level, d.Own, method, d)
 	}
 }
 
@@ -146,7 +146,7 @@ func (d *SpecializedDomain) call(params utils.Params, record utils.Record, metho
 		if d.Method.IsMath() {
 			d.Method = utils.SELECT
 		}
-		if !d.SuperAdmin && !d.PermsService.PermsCheck(d.TableName, "", "", d.Own, d) && !d.AutoLoad && method != utils.DELETE {
+		if !d.SuperAdmin && !d.PermsService.PermsCheck(d.TableName, "", "", d.Own, d.Method, d) && !d.AutoLoad && method != utils.DELETE {
 			return utils.Results{}, errors.New("not authorized to " + method.String() + " " + d.TableName + " data")
 		}
 		// load the highest entity avaiable Table level.

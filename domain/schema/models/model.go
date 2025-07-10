@@ -251,6 +251,7 @@ type ViewModel struct { // lightest struct based on SchemaModel dedicate to view
 	Items        []ViewItemModel          `json:"items"`
 	Actions      []string                 `json:"actions"`
 	ActionPath   string                   `json:"action_path"`
+	ExportPath   string                   `json:"export_path"`
 	Readonly     bool                     `json:"readonly"`
 	Workflow     *WorkflowModel           `json:"workflow"`
 	IsWrapper    bool                     `json:"is_wrapper"`
@@ -271,6 +272,7 @@ func NewView(id int64, name string, label string, schema *SchemaModel, tableName
 		SchemaID:    schema.GetID(),
 		Description: fmt.Sprintf("%s data", schema.Name),
 		ActionPath:  utils.BuildPath(schema.Name, utils.ReservedParam),
+		ExportPath:  utils.BuildPath(schema.Name, utils.ReservedParam),
 		Path:        utils.BuildPath(schema.Name, utils.ReservedParam),
 		IsWrapper:   tableName == "dbtask" || tableName == "dbrequest",
 		Label:       label,
@@ -336,6 +338,7 @@ type ViewFieldModel struct { // lightest struct based on FieldModel dedicate to 
 type WorkflowModel struct { // lightest struct based on SchemaModel dedicate to view
 	ID             string                         `json:"id"`
 	IsDismiss      bool                           `json:"is_dismiss"`
+	IsDismissable  bool                           `json:"is_dismissable"`
 	Current        string                         `json:"current"`
 	Position       string                         `json:"position"`
 	IsClose        bool                           `json:"is_close"`

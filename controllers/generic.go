@@ -1,10 +1,13 @@
 package controllers
 
 import (
+	"net/http"
+	"os"
 	"sqldb-ws/controllers/controller"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/utils"
 	connector "sqldb-ws/infrastructure/connector/db"
+	"strings"
 )
 
 type MainController struct{ controller.AbstractController }
@@ -26,6 +29,44 @@ func (l *MainController) Main() {
 			"indexable": true,
 		}).Values
 	l.SafeCall(utils.SELECT)
+}
+
+// @Title /
+// @Description Download call
+// @Param	path		path 	string	true		"Name of the table"
+// @Success 200 {string} success !
+// @Failure 403 user does not exist
+// @router /download/:path [get]
+func (l *MainController) Download() {
+	// Get the filename from the query string
+	filePath := l.GetString(":path")
+	if !strings.Contains(filePath, "/mnt/files/") {
+		filePath = "/mnt/files/" + filePath
+	}
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		l.Ctx.Output.SetStatus(http.StatusNotFound)
+		l.Ctx.Output.Body([]byte("File not found"))
+		return
+	}
+	defer file.Close()
+
+	// Get file info
+	stat, err := file.Stat()
+	if err != nil {
+		l.Ctx.Output.SetStatus(http.StatusInternalServerError)
+		l.Ctx.Output.Body([]byte("Unable to get file info"))
+		return
+	}
+
+	// Set headers for file download
+	l.Ctx.Output.Header("Content-Disposition", "attachment; filename="+stat.Name())
+	l.Ctx.Output.Header("Content-Type", "application/octet-stream")
+	l.Ctx.Output.Header("Content-Length", string(rune(stat.Size())))
+
+	// Serve the file
+	http.ServeFile(l.Ctx.ResponseWriter, l.Ctx.Request, filePath)
 }
 
 // @Title Post data in table

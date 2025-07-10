@@ -94,7 +94,6 @@ func (s *RequestService) VerifyDataIntegrity(record map[string]interface{}, tabl
 		} else {
 			record["name"] = wf[0][sm.NAMEKEY]
 			record[ds.SchemaDBField] = wf[0][ds.SchemaDBField]
-			record["send_mail_to"] = wf[0]["send_mail_to"]
 		}
 
 	} else if s.Domain.GetMethod() == utils.UPDATE {
@@ -172,7 +171,7 @@ func (s *RequestService) Write(record utils.Record, tableName string) {
 		}
 		if found {
 			record["current_index"] = 0.9
-			record = HandleHierarchicalVerification(s.Domain, utils.GetInt(record, utils.SpecialIDParam), record)
+			record = HandleHierarchicalVerification(s.Domain, record, record)
 		} else {
 			record["current_index"] = 1
 		}

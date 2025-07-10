@@ -72,7 +72,7 @@ func (p *PermDomainService) checkUpdateCreatePermissions(tableName, destID strin
 func (d *PermDomainService) CanDelete(params map[string]string, record utils.Record, domain utils.DomainITF) bool {
 	if d.IsSuperAdmin || d.PermsCheck(
 		domain.GetTable(), "", "",
-		domain.IsOwn(false, false, utils.DELETE), domain) {
+		domain.IsOwn(false, false, utils.DELETE), utils.DELETE, domain) {
 		return true
 	}
 	foundDeps := map[string]string{}

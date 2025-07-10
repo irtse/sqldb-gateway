@@ -51,7 +51,7 @@ func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablen
 	}
 	delete(record, "foreign_table")
 	if !slices.Contains(ds.NOAUTOLOADROOTTABLESSTR, tablename) {
-		if rec, err := sch.ValidateBySchema(record, tablename, s.Domain.GetMethod(), s.Domain.VerifyAuth); err != nil {
+		if rec, err := sch.ValidateBySchema(record, tablename, s.Domain.GetMethod(), s.Domain, s.Domain.VerifyAuth); err != nil {
 
 			return s.SpecializedService.VerifyDataIntegrity(rec, tablename)
 		}

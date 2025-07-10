@@ -124,7 +124,7 @@ func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(st
 				operator = " LIKE "
 			} else if strings.Contains(or, "<>") {
 				keyVal = strings.Split(or, "<>")
-				operator = "<>"
+				operator = "!="
 			} else if strings.Contains(or, "<:") {
 				keyVal = strings.Split(or, "<:")
 				operator = "<="
@@ -178,22 +178,26 @@ func MakeSqlItem(alterRestr string, typ string, foreignName string, key string, 
 	}
 	if foreignName != "" {
 		if strings.Contains(sql, "%") {
-			alterRestr += key + " IN (SELECT id FROM " + foreignName + " WHERE name::text LIKE " + sql + " OR id::text LIKE " + sql + ")"
+			alterRestr += key + " IN (SELECT id FROM " + foreignName + " WHERE LOWER(name::text) LIKE LOWER(" + sql + ") OR LOWER(id::text) LIKE LOWER(" + sql + "))"
 		} else {
 			if strings.Contains(sql, "'") {
 				if strings.Contains(sql, "NULL") {
 					alterRestr += key + " IN (SELECT id FROM " + foreignName + " WHERE name IS " + sql + ")"
 				} else {
-					alterRestr += key + " IN (SELECT id FROM " + foreignName + " WHERE name = " + sql + ")"
+					alterRestr += key + " IN (SELECT id FROM " + foreignName + " WHERE LOWER(name) = LOWER(" + sql + "))"
 				}
 			} else {
 				alterRestr += key + " IN (SELECT id FROM " + foreignName + " WHERE id " + operator + " " + sql + ")"
 			}
 		}
 	} else if strings.Contains(sql, "%") {
-		alterRestr += key + "::text LIKE " + sql
+		alterRestr += "LOWER(" + key + "::text) LIKE LOWER(" + sql + ")"
 	} else {
-		alterRestr += key + " " + operator + " " + sql
+		if strings.Contains(sql, "'") {
+			alterRestr += "LOWER(" + key + ") " + operator + " LOWER(" + sql + ")"
+		} else {
+			alterRestr += key + " " + operator + " " + sql
+		}
 	}
 	return alterRestr
 }
@@ -219,7 +223,7 @@ func FormatOperatorSQLRestriction(operator interface{}, separator interface{}, n
 		filter += " " + fmt.Sprintf("%v", separator) + " "
 	}
 	if fmt.Sprintf("%v", operator) == "LIKE" {
-		filter += name + "::text " + fmt.Sprintf("%v", operator) + " '%" + fmt.Sprintf("%v", value) + "%'"
+		filter += "LOWER(" + name + "::text) " + fmt.Sprintf("%v", operator) + " LOWER('%" + fmt.Sprintf("%v", value) + "%')"
 	} else {
 		filter += name + " " + fmt.Sprintf("%v", operator) + " " + FormatForSQL(typ, value)
 	}
@@ -286,18 +290,32 @@ func FormatSQLRestrictionWhereByMap(SQLrestriction string, restrictions map[stri
 				r = strings.ReplaceAll(fmt.Sprintf("%v", r), "!DELETE", "DELETE")
 				SQLrestriction += k2 + " NOT IN (" + fmt.Sprintf("%v", r) + ")"
 			} else if reflect.TypeOf(r).Kind() == reflect.Slice {
+				arr := r.([]string)
+				for _, a := range arr {
+					if strings.Contains(a, "'") {
+						a = "LOWER(" + a + ")"
+						k2 = "LOWER(" + k2 + ")"
+					}
+				}
 				if not {
-					SQLrestriction += k2 + " NOT IN (" + strings.Join(r.([]string), ",") + ")"
+					SQLrestriction += k2 + " NOT IN (" + strings.Join(arr, ",") + ")"
 				} else {
-					SQLrestriction += k2 + " IN (" + strings.Join(r.([]string), ",") + ")"
+					SQLrestriction += k2 + " IN (" + strings.Join(arr, ",") + ")"
 				}
 			} else if strings.Contains(fmt.Sprintf("%v", r), "SELECT") {
 				SQLrestriction += k2 + " IN (" + fmt.Sprintf("%v", r) + ")"
 			} else {
+				if strings.Contains(k2, "'") {
+					k2 = "LOWER(" + k2 + ")"
+				}
+				str := fmt.Sprintf("%v", r)
+				if strings.Contains(k2, "'") {
+					str = "LOWER(" + k2 + ")"
+				}
 				if not {
-					SQLrestriction += k2 + "!=" + fmt.Sprintf("%v", r)
+					SQLrestriction += k2 + "!=" + str
 				} else {
-					SQLrestriction += k2 + "=" + fmt.Sprintf("%v", r)
+					SQLrestriction += k2 + "=" + str
 				}
 
 			}

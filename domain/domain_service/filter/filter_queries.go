@@ -142,8 +142,12 @@ func (d *FilterService) LifeCycleRestriction(tableName string, SQLrestriction []
 	}
 	if state == "draft" {
 		for _, restr := range SQLrestriction {
-			restr = strings.ReplaceAll(restr, "is_draft=false", "is_draft=true")
+			restr = strings.ReplaceAll(restr, "is_draft=false OR", "")
+			restr = strings.ReplaceAll(restr, "is_draft=false AND", "")
+			restr = strings.ReplaceAll(restr, "AND is_draft=false", "")
+			restr = strings.ReplaceAll(restr, "OR is_draft=false", "")
 		}
+		SQLrestriction = append(SQLrestriction, "is_draft=true")
 	} else {
 		k := utils.SpecialIDParam
 		if state == "new" {

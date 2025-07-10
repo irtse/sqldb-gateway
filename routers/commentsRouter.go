@@ -106,4 +106,13 @@ func init() {
             Filters: nil,
             Params: nil})
 
+    beego.GlobalControllerRouter["sqldb-ws/controllers:MainController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:MainController"],
+        beego.ControllerComments{
+            Method: "Download",
+            Router: `/download/:path`,
+            AllowHTTPMethods: []string{"get"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
 }

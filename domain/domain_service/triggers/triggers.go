@@ -1,8 +1,10 @@
 package triggers
 
 import (
+	"fmt"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
+	"sqldb-ws/domain/schema/models"
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
 	conn "sqldb-ws/infrastructure/connector/db"
@@ -102,17 +104,80 @@ func (t *TriggerService) ParseMails(toSplit string) []map[string]interface{} {
 	return []map[string]interface{}{}
 }
 
-// send_mail_to should be on request + task
-func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface{}) []map[string]interface{} {
-	if record["send_mail_to"] != nil { // it's a particular default field that detect overriding {
-		return t.ParseMails(utils.GetString(record, "send_mail_to"))
-	} else if dest["send_mail_to"] != nil {
-		return t.ParseMails(utils.GetString(dest, "send_mail_to"))
-	} else if userID, ok := record[ds.UserDBField]; ok {
+func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface{}, destSchema models.SchemaModel, mode string, triggerID int64) []map[string]interface{} {
+	userIDS := []string{}
+	if mode != "mail" {
+		return []map[string]interface{}{}
+	}
+	if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTriggerDestination.Name, map[string]interface{}{
+		ds.TriggerDBField: triggerID,
+	}, false); err == nil {
+		for _, userDest := range res {
+			if utils.GetBool(userDest, "is_own") && userDest["from_"+ds.SchemaDBField] == nil {
+				userIDS = append(userIDS, t.Domain.GetUserID())
+			} else if userDest["from_"+ds.SchemaDBField] != nil {
+				sch, err := schema.GetSchemaByID(utils.GetInt(userDest, "from_"+ds.SchemaDBField))
+				if err == nil {
+					continue
+				}
+				key := "id"
+				var v string
+				if utils.GetBool(userDest, "is_own") {
+					key = ds.UserDBField
+					v = t.Domain.GetUserID()
+				} else if userDest["from_"+ds.SchemaFieldDBField] == nil {
+					continue
+				} else {
+					f, err := sch.GetFieldByID(utils.GetInt(userDest, "from_"+ds.SchemaFieldDBField))
+					if err == nil {
+						continue
+					}
+					key = f.Name
+					if userDest["value"] != nil {
+						v = fmt.Sprintf("%v", userDest["value"])
+						if strings.Contains(f.Type, "char") {
+							v = conn.Quote(v)
+						}
+					} else if f.GetLink() > 0 {
+						if f.GetLink() == destSchema.GetID() {
+							v = utils.GetString(dest, utils.SpecialIDParam)
+						} else {
+							for _, ff := range destSchema.Fields {
+								if f.GetLink() == ff.GetLink() {
+									v = utils.GetString(dest, ff.Name)
+									break
+								}
+							}
+						}
+					}
+				}
+				if v == "" {
+					continue
+				}
+				if usr, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name, map[string]interface{}{
+					key: v,
+				}, false); err == nil {
+					for _, u := range usr {
+						if userDest["from_compare_"+ds.SchemaFieldDBField] != nil {
+							ff, err := sch.GetFieldByID(utils.GetInt(userDest, "from_compare_"+ds.SchemaFieldDBField))
+							if err == nil {
+								continue
+							}
+							userIDS = append(userIDS, utils.GetString(u, ff.Name))
+						} else {
+							userIDS = append(userIDS, ds.UserDBField)
+						}
+					}
+				}
+			}
+		}
+	}
+	fmt.Println(userIDS)
+	if len(userIDS) > 0 {
 		if usto, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-			utils.SpecialIDParam: userID,
-		}, false); err == nil && len(usto) > 0 {
-			return []map[string]interface{}{usto[0]}
+			utils.SpecialIDParam: userIDS,
+		}, false); err == nil {
+			return usto
 		}
 	}
 	return []map[string]interface{}{}

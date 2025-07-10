@@ -247,12 +247,18 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 }
 
 func (s *ViewConvertor) getLinkPath(record utils.Record, sch *sm.SchemaModel) string {
-	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-		utils.SpecialIDParam: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+		utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 			ds.DestTableDBField: utils.GetString(record, utils.SpecialIDParam),
 			ds.SchemaDBField:    sch.GetID(),
 		}, false, utils.SpecialIDParam),
-		ds.RequestDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+		utils.SpecialIDParam + "_1": s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+			ds.UserDBField: s.Domain.GetUserID(),
+			ds.EntityDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEntityUser.Name, map[string]interface{}{
+				ds.UserDBField: s.Domain.GetUserID(),
+			}, false, ds.EntityDBField),
+		}, true, utils.SpecialIDParam),
+		ds.RequestDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 			ds.DestTableDBField: utils.GetString(record, utils.SpecialIDParam),
 			ds.SchemaDBField:    sch.GetID(),
 		}, false, utils.SpecialIDParam),
@@ -422,6 +428,32 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 					manyPathVals[field.Name] = utils.BuildPath(
 						link, utils.ReservedParam,
 						f.Name+"="+record.GetString(utils.SpecialIDParam))
+					if l.HasField("name") {
+						if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(l.Name, map[string]interface{}{
+							ds.RootID(schema.Name): record[utils.SpecialIDParam],
+						}, false); err == nil {
+							if _, ok := manyVals[field.Name]; !ok {
+								manyVals[field.Name] = utils.Results{}
+							}
+							for _, r := range res {
+								manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
+							}
+						}
+					}
+					if sch, err := scheme.GetSchemaByID(f.GetLink()); err == nil && sch.HasField("name") {
+						if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name, map[string]interface{}{
+							utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(l.Name, map[string]interface{}{
+								ds.RootID(schema.Name): record[utils.SpecialIDParam],
+							}, false, f.Name),
+						}, false); err == nil {
+							if _, ok := manyVals[field.Name]; !ok {
+								manyVals[field.Name] = utils.Results{}
+							}
+							for _, r := range res {
+								manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
+							}
+						}
+					}
 					break
 				}
 				continue

@@ -41,6 +41,9 @@ func NewPermDomainService(db *conn.Database, user string, isSuperAdmin bool, emp
 }
 
 func (p *PermDomainService) PermsBuilder(domain utils.DomainITF) {
+	if domain.GetUserID() == "" {
+		return
+	}
 	datas, _ := p.db.SelectQueryWithRestriction(ds.DBPermission.Name, []interface{}{
 		conn.FormatSQLRestrictionWhereByMap("", map[string]interface{}{
 			utils.SpecialIDParam: p.db.BuildSelectQueryWithRestriction(
@@ -129,12 +132,12 @@ func (p *PermDomainService) IsOwnPermission(tableName string, force bool, isOwn 
 }
 
 // can redact a view based on perms.
-func (p *PermDomainService) PermsCheck(tableName string, colName string, level string, isOwn bool, domain utils.DomainITF) bool {
-	return p.LocalPermsCheck(tableName, colName, level, "", isOwn, domain)
+func (p *PermDomainService) PermsCheck(tableName string, colName string, level string, isOwn bool, method utils.Method, domain utils.DomainITF) bool {
+	return p.LocalPermsCheck(tableName, colName, level, "", isOwn, method, domain)
 }
-func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, level string, destID string, isOwn bool, domain utils.DomainITF) bool {
+func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, level string, destID string, isOwn bool, method utils.Method, domain utils.DomainITF) bool {
 	// Super admin override or exception handling
-	if p.IsSuperAdmin || p.exception(tableName, level == "" || level == "<nil>" || level == sm.LEVELNORMAL, domain.GetMethod(), isOwn) {
+	if p.IsSuperAdmin || p.exception(tableName, level == "" || level == "<nil>" || level == sm.LEVELNORMAL, method, isOwn) {
 		return true
 	}
 
@@ -152,19 +155,19 @@ func (p *PermDomainService) LocalPermsCheck(tableName string, colName string, le
 		return false
 	}
 	accesGranted := true
-	if domain.GetMethod() == utils.SELECT && !p.hasReadAccess(level, perms.Read) {
+	if method == utils.SELECT && !p.hasReadAccess(level, perms.Read) {
 		accesGranted = false
 	}
 	// Handle UPDATE and CREATE permissions
-	if domain.GetMethod() == utils.CREATE && !perms.Create {
+	if method == utils.CREATE && !perms.Create {
 		accesGranted = false
 	}
-	if domain.GetMethod() == utils.UPDATE && !perms.Update {
+	if method == utils.UPDATE && !perms.Update {
 		if !p.checkUpdateCreatePermissions(tableName, destID, domain) {
 			accesGranted = p.IsShared(schema, destID, "update_access", true)
 		}
 	}
-	if domain.GetMethod() == utils.DELETE && !perms.Delete {
+	if method == utils.DELETE && !perms.Delete {
 		accesGranted = p.IsShared(schema, destID, "delete_access", true)
 	}
 	// Handle DELETE permissions

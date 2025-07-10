@@ -43,10 +43,7 @@ func (s *DelegationService) SpecializedCreateRow(record map[string]interface{}, 
 func (s *DelegationService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {
 	for i, res := range results {
 		share := map[string]interface{}{
-			"shared_" + ds.UserDBField: res["delegated_"+ds.UserDBField],
-			ds.UserDBField:             res[ds.UserDBField],
-			ds.SchemaDBField:           s.SchemaID,
-			ds.DestTableDBField:        s.DestID,
+			"binded_to_delegation": res[utils.SpecialIDParam],
 		}
 		s.Domain.GetDb().DeleteQueryWithRestriction(ds.DBShare.Name, share, false)
 		res["state"] = "completed"
@@ -62,17 +59,6 @@ func (s *DelegationService) SpecializedUpdateRow(results []map[string]interface{
 
 func (s *DelegationService) Write(results []map[string]interface{}, record map[string]interface{}) {
 	for _, rr := range results {
-		share := map[string]interface{}{
-			"shared_" + ds.UserDBField: rr["delegated_"+ds.UserDBField],
-			ds.UserDBField:             rr[ds.UserDBField],
-			ds.SchemaDBField:           s.SchemaID,
-			ds.DestTableDBField:        s.DestID,
-		}
-		s.Domain.GetDb().DeleteQueryWithRestriction(ds.DBShare.Name, share, false)
-		share["start_date"] = rr["start_date"]
-		share["end_date"] = rr["end_date"]
-		share["delete_access"] = rr["delete_access"]
-		s.Domain.CreateSuperCall(utils.AllParams(ds.DBShare.Name), share)
 		if taskID := utils.GetInt(rr, ds.TaskDBField); taskID >= 0 {
 			if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 				"is_close":           false,

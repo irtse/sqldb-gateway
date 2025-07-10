@@ -2,6 +2,7 @@ package schema
 
 import (
 	"errors"
+	"slices"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
@@ -152,7 +153,7 @@ func GetSchemaByID(id int64) (models.SchemaModel, error) {
 	return models.GetSchemaByID(id)
 }
 
-func ValidateBySchema(data utils.Record, tableName string, method utils.Method,
+func ValidateBySchema(data utils.Record, tableName string, method utils.Method, domain utils.DomainITF,
 	check func(string, string, string, utils.Method, ...string) bool) (utils.Record, error) {
 	if method == utils.DELETE || method == utils.SELECT {
 		return data, nil
@@ -161,8 +162,46 @@ func ValidateBySchema(data utils.Record, tableName string, method utils.Method,
 	if err != nil {
 		return data, errors.New("no schema corresponding to reference")
 	}
+	order := []string{}
+	if method == utils.CREATE {
+		// test wf
+		if fields, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+			ds.FilterDBField: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
+				ds.SchemaDBField:            schema.ID,
+				"!view_" + ds.FilterDBField: nil,
+			}, false, "view_"+ds.FilterDBField),
+		}, false); err == nil && len(fields) > 0 {
+			for _, f := range fields {
+				if field, err := GetSchemaByID(utils.GetInt(f, ds.SchemaFieldDBField)); err == nil {
+					order = append(order, field.Name)
+				}
+			}
+		}
+	} else if method == utils.UPDATE {
+		// test : wfsch
+		if fields, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+			ds.FilterDBField: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+				utils.SpecialIDParam: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+					"is_close":          false,
+					ds.DestTableDBField: data[utils.SpecialIDParam],
+					ds.SchemaDBField:    schema.ID,
+				}, false, ds.WorkflowSchemaDBField),
+				"!view_" + ds.FilterDBField: nil,
+			}, false, "view_"+ds.FilterDBField),
+		}, false); err == nil && len(fields) > 0 {
+			for _, f := range fields {
+				if field, err := GetSchemaByID(utils.GetInt(f, ds.SchemaFieldDBField)); err == nil {
+					order = append(order, field.Name)
+				}
+			}
+		}
+	}
+
 	newData := utils.Record{}
 	for _, field := range schema.Fields {
+		if len(order) > 0 && !slices.Contains(order, field.Name) {
+			continue
+		}
 		if field.Required && field.Default == nil && method != utils.UPDATE {
 			if strings.Contains(field.Type, "many") || strings.Contains(field.Type, "upload") {
 				continue

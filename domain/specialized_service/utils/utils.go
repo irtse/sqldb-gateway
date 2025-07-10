@@ -12,6 +12,7 @@ import (
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/service"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -69,21 +70,21 @@ func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]inte
 			}
 			if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
 				for _, m := range mm {
-					if m[utils.SpecialIDParam] != nil && m[ds.RootID(ff.Name)] == nil {
-						if ff.HasField(ds.RootID(ff.Name)) {
+					if ff.HasField(ds.RootID(ff.Name)) {
+						if m[utils.SpecialIDParam] != nil {
 							m[ds.RootID(ff.Name)] = m[utils.SpecialIDParam]
-							delete(m, utils.SpecialIDParam)
-						} else {
-							for _, fff := range ff.Fields {
-								if !strings.Contains(fff.Name, ff.Name) && fff.GetLink() > 0 {
+						}
+						delete(m, utils.SpecialIDParam)
+					} else {
+						for _, fff := range ff.Fields {
+							if !strings.Contains(fff.Name, ff.Name) && fff.GetLink() > 0 {
+								if m[utils.SpecialIDParam] != nil {
 									m[fff.Name] = m[utils.SpecialIDParam]
-									delete(m, utils.SpecialIDParam)
-									break
 								}
+								delete(m, utils.SpecialIDParam)
+								break
 							}
 						}
-					} else if m[utils.SpecialIDParam] == nil && m[ds.RootID(ff.Name)] == nil {
-						continue
 					}
 					m[ds.RootID(tablename)] = record[utils.SpecialIDParam]
 					s.Domain.CreateSuperCall(utils.AllParams(ff.Name).RootRaw(), m)
@@ -112,13 +113,14 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 
 		for _, rec := range res {
 			for _, field := range sche.Fields {
-				if field.GetLink() == 0 {
-					continue
-				}
 				if sch2, err := sch.GetSchemaByID(field.GetLink()); err == nil && strings.Contains(strings.ToUpper(field.Type), "MANY") {
-					s.Domain.DeleteSuperCall(utils.AllParams(sch2.Name).Enrich(map[string]interface{}{
+					if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch2.Name, map[string]interface{}{
 						ds.RootID(s.Domain.GetTable()): rec[utils.SpecialIDParam],
-					}).RootRaw())
+					}, false); err == nil {
+						for _, r := range res {
+							s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(sch2.Name, utils.GetString(r, utils.SpecialIDParam)).RootRaw())
+						}
+					}
 				}
 			}
 			for schemaName, mm := range s.ManyToMany {
@@ -128,21 +130,21 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 				}
 				if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
 					for _, m := range mm {
-						if m[utils.SpecialIDParam] != nil && m[ds.RootID(ff.Name)] == nil {
-							if ff.HasField(ds.RootID(ff.Name)) {
+						if ff.HasField(ds.RootID(ff.Name)) {
+							if m[utils.SpecialIDParam] != nil {
 								m[ds.RootID(ff.Name)] = m[utils.SpecialIDParam]
-								delete(m, utils.SpecialIDParam)
-							} else {
-								for _, fff := range ff.Fields {
-									if !strings.Contains(fff.Name, ff.Name) && fff.GetLink() > 0 {
+							}
+							delete(m, utils.SpecialIDParam)
+						} else {
+							for _, fff := range ff.Fields {
+								if !strings.Contains(fff.Name, ff.Name) && fff.GetLink() > 0 {
+									if m[utils.SpecialIDParam] != nil {
 										m[fff.Name] = m[utils.SpecialIDParam]
-										delete(m, utils.SpecialIDParam)
-										break
 									}
+									delete(m, utils.SpecialIDParam)
+									break
 								}
 							}
-						} else if m[utils.SpecialIDParam] == nil && m[ds.RootID(ff.Name)] == nil {
-							continue
 						}
 						m[ds.RootID(s.Domain.GetTable())] = record[utils.SpecialIDParam]
 						s.Domain.CreateSuperCall(utils.AllParams(ff.Name).RootRaw(), m)
@@ -203,7 +205,19 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 			s.ManyToMany = map[string][]map[string]interface{}{}
 			s.OneToMany = map[string][]map[string]interface{}{}
 			for _, field := range sch.Fields {
-				if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(sm.MANYTOMANY.String())) && record[field.Name] != nil {
+				if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(sm.LINKADD.String())) && record[field.Name] != nil {
+					if i, err := strconv.Atoi(utils.GetString(record, field.Name)); err == nil && i != 0 {
+						continue
+					}
+					if sch, err := schema.GetSchemaByID(field.GetLink()); err == nil {
+						if i, err := s.Domain.GetDb().ClearQueryFilter().CreateQuery(sch.Name, map[string]interface{}{
+							"name": utils.GetString(record, field.Name),
+						}, func(s string) (string, bool) { return "", true }); err == nil {
+							record[field.Name] = i
+						}
+					}
+
+				} else if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(sm.MANYTOMANY.String())) && record[field.Name] != nil {
 					if s.ManyToMany[field.Name] == nil {
 						s.ManyToMany[field.Name] = []map[string]interface{}{}
 					}
@@ -287,7 +301,6 @@ func (s *SpecializedService) TransformToGenericView(results utils.Results, table
 				ds.RequestDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 					ds.DestTableDBField: results[0][utils.SpecialIDParam],
 					ds.SchemaDBField:    scheme.ID,
-					"is_close":          false,
 				}, false, utils.SpecialIDParam),
 			}, false); err == nil && len(rr) > 0 {
 				if ss, err := sch.GetSchema(ds.DBTask.Name); err == nil {
@@ -337,7 +350,7 @@ func (s *SpecializedService) SpecializedDeleteRow(results []map[string]interface
 
 func CheckAutoLoad(tablename string, record utils.Record, domain utils.DomainITF) (utils.Record, error, bool) {
 	if domain.GetMethod() != utils.DELETE {
-		rec, err := sch.ValidateBySchema(record, tablename, domain.GetMethod(), domain.VerifyAuth)
+		rec, err := sch.ValidateBySchema(record, tablename, domain.GetMethod(), domain, domain.VerifyAuth)
 		return rec, err, err == nil
 	}
 	return record, nil, false

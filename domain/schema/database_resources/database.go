@@ -180,6 +180,17 @@ var DBEmailResponse = models.SchemaModel{
 	},
 }
 
+var DBEmailList = models.SchemaModel{
+	Name:     RootName("email_list"),
+	Label:    "email listing",
+	Category: "email",
+	Fields: []models.FieldModel{
+		{Name: models.NAMEKEY, Type: models.VARCHAR.String(), Required: false, Readonly: true, Index: 0},
+		{Name: RootID(DBEmailTemplate.Name), Type: models.INTEGER.String(), ForeignTable: DBEmailSended.Name, Required: true, Readonly: true, Index: 1},
+		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Readonly: false, Index: 2},
+	},
+}
+
 var DBTrigger = models.SchemaModel{
 	Name:     RootName("triggers"),
 	Label:    "triggers",
@@ -203,6 +214,21 @@ var DBTriggerCondition = models.SchemaModel{
 		{Name: "value", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 0},
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template to check condition", Index: 5},
 		{Name: RootID(DBSchemaField.Name), Type: models.INTEGER.String(), ForeignTable: DBSchemaField.Name, Required: true, Readonly: true, Label: "field to check condition", Index: 6},
+		{Name: RootID(DBTrigger.Name), Type: models.INTEGER.String(), ForeignTable: DBTrigger.Name, Required: true, Readonly: true, Label: "related trigger", Index: 6},
+	},
+}
+
+var DBTriggerDestination = models.SchemaModel{
+	Name:     RootName("triggers_destination"),
+	Label:    "triggers destinations",
+	Category: "trigger",
+	Fields: []models.FieldModel{
+		{Name: "value", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 0},
+		{Name: "is_own", Type: models.BOOLEAN.String(), Required: false, Readonly: false, Index: 1},
+		{Name: "from_" + RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: false, Readonly: true, Label: "template to extract value modification", Index: 2},
+		{Name: "from_" + RootID(DBSchemaField.Name), Type: models.INTEGER.String(), ForeignTable: DBSchemaField.Name, Required: false, Readonly: true, Label: "field  to extract value modification", Index: 3},
+		{Name: "from_compare_" + RootID(DBSchemaField.Name), Type: models.INTEGER.String(), ForeignTable: DBSchemaField.Name, Required: false, Readonly: true, Label: "field  to extract value modification", Index: 3},
+
 		{Name: RootID(DBTrigger.Name), Type: models.INTEGER.String(), ForeignTable: DBTrigger.Name, Required: true, Readonly: true, Label: "related trigger", Index: 6},
 	},
 }
@@ -309,7 +335,6 @@ var DBWorkflow = models.SchemaModel{
 		{Name: RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template entry", Index: 3},
 		{Name: "steps", Type: "onetomany", ForeignTable: RootName("workflow_schema"), Required: false, Index: 4},
 		{Name: "view_" + RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Label: "filter to apply on step", Index: 5, Hidden: true},
-		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 12, Hidden: true},
 	},
 }
 
@@ -336,7 +361,6 @@ var DBWorkflowSchema = models.SchemaModel{
 		{Name: "view_" + RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Label: "filter to apply on step", Index: 10, Hidden: true},
 		{Name: "readonly_not_assignee", Type: models.BOOLEAN.String(), Required: false, Default: false, Label: "readonly for not assignee", Index: 11, Hidden: true},
 		{Name: "assign_to_creator", Type: models.BOOLEAN.String(), Required: false, Default: false, Label: "assign to creator", Index: 12, Hidden: true},
-		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 12, Hidden: true},
 
 		{Name: "override_state_completed", Type: models.VARCHAR.String(), Required: false, Index: 14},
 		{Name: "override_state_dismiss", Type: models.VARCHAR.String(), Required: false, Index: 15},
@@ -362,7 +386,6 @@ var DBRequest = models.SchemaModel{
 		{Name: RootID(DBWorkflow.Name), Type: models.INTEGER.String(), ForeignTable: DBWorkflow.Name, Required: false, Label: "request type", Index: 8},
 		{Name: RootID(DBUser.Name), Type: models.INTEGER.String(), ForeignTable: DBUser.Name, Required: false, Label: "created by", Index: 9},
 		{Name: "is_meta", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 10, Hidden: true},
-		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 12, Hidden: true},
 		{Name: "closing_comment", Type: models.HTML.String(), Required: false, Index: 13, Hidden: true},
 	},
 }
@@ -416,7 +439,6 @@ var DBTask = models.SchemaModel{
 		{Name: "nexts", Type: models.BIGVARCHAR.String(), Required: false, Default: "all", Hidden: true, Index: 12},
 		{Name: "meta_" + RootID(DBRequest.Name), Type: models.INTEGER.String(), ForeignTable: DBRequest.Name, Required: false, Hidden: true, Readonly: true, Label: "meta request attached", Index: 13},
 		{Name: "binded_dbtask", Type: models.INTEGER.String(), ForeignTable: "dbtask", Required: false, Readonly: true, Label: "binded task", Hidden: true, Index: 14},
-		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 12, Hidden: true},
 		{Name: "closing_comment", Type: models.HTML.String(), Required: false, Index: 13, Hidden: true},
 
 		{Name: "override_state_completed", Type: models.VARCHAR.String(), Required: false, Index: 14},
@@ -646,6 +668,7 @@ var DBShare = models.SchemaModel{
 		{Name: "read_access", Type: models.BOOLEAN.String(), Required: false, Default: true, Index: 6, Label: "read access"},
 		{Name: "update_access", Type: models.BOOLEAN.String(), Required: false, Default: true, Index: 7, Label: "update access"},
 		{Name: "delete_access", Type: models.BOOLEAN.String(), Required: false, Default: true, Index: 9, Label: "delete access"},
+		{Name: RootID(DBDelegation.Name), Type: models.INTEGER.String(), Required: false, ForeignTable: DBDelegation.Name, Index: 10},
 	},
 } // TODO PERMISSION
 
@@ -666,10 +689,10 @@ var ROOTTABLES = []models.SchemaModel{DBSchemaField, DBUser, DBWorkflow, DBView,
 	DBDashboard, // DBDashboardElement, DBDashboardMathField, DBDashboardLabel,
 	DBComment, DBDelegation,
 	DBConsentResponse, DBEmailTemplate,
-	DBTrigger, DBTriggerRule, DBTriggerCondition,
+	DBTrigger, DBTriggerRule, DBTriggerCondition, DBTriggerDestination,
 	DBFieldAutoFill, DBFieldRule,
 	DBViewSchema,
-	DBEmailSended, DBEmailTemplate, DBEmailResponse, DBEmailSendedUser,
+	DBEmailSended, DBEmailTemplate, DBEmailResponse, DBEmailSendedUser, DBEmailList,
 }
 
 var NOAUTOLOADROOTTABLES = []models.SchemaModel{DBSchema, DBSchemaField, DBPermission, DBView, DBWorkflow}
@@ -716,3 +739,4 @@ var TriggerDBField = RootID(DBTrigger.Name)
 var EmailTemplateDBField = RootID(DBEmailTemplate.Name)
 var EmailSendedDBField = RootID(DBEmailSended.Name)
 var TriggerRuleDBField = RootID(DBTriggerRule.Name)
+var DelegationDBField = RootID(DBDelegation.Name)

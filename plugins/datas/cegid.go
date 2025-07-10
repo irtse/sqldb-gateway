@@ -60,24 +60,6 @@ var PublicationStatusFR = models.SchemaModel{
 		{Name: "name", Label: "nom", Type: models.VARCHAR.String(), Constraint: "unique", Required: true, Readonly: false, Index: 0},
 	},
 }
-var PublicationActFR = models.SchemaModel{
-	Name:     "publication_act",
-	Label:    "publication_act act article",
-	Category: "domain",
-	CanOwned: true,
-	Fields: []models.FieldModel{
-		{Name: "name", Type: models.VARCHAR.String(), Required: true, Index: -1},
-		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
-			Index: 0, Label: "téléchargement de la publication finalisée"},
-		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: 2},
-		{Name: "major_conference", Label: "la conférence visée est-elle incontournable dans ton domaine scientifique ?", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: 3},
-		{Name: "major_conference_name", Label: "nom de la conférence", Type: models.VARCHAR.String(), Required: false, Default: false, Readonly: false, Index: 4},
-		{Name: "published", Label: "la publication est elle publiée dans un journal du premier quartile de ta discipline scientifique", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: 5},
-		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 6, Hidden: true},
-		{Name: ds.UserDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: false, Index: 7, Label: "user with hierarchy"},
-		{Name: ds.EntityDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBEntity.Name, Required: false, Index: 8, Label: "entity with hierarchy"},
-	},
-}
 
 var publicationFields = []models.FieldModel{
 	{Name: "name", Label: "intitulé de la publication",
@@ -103,6 +85,11 @@ var ArticleFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
+			Index: -10, Label: "téléchargement de la publication finalisée"},
+		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
+		{Name: "published", Label: "la publication est elle publiée dans un journal du premier quartile de ta discipline scientifique", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: -6},
+
 		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: ArticleAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "yes", Required: false, Readonly: false, Index: 9},
 		{Name: "media_name", Label: "nom du journal", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 10},
@@ -141,6 +128,12 @@ var ConferenceFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
+			Index: -10, Label: "téléchargement de la publication finalisée"},
+		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
+		{Name: "major_conference", Label: "la conférence visée est-elle incontournable dans ton domaine scientifique ?", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: -8},
+		{Name: "major_conference_name", Label: "nom de la conférence", Type: models.VARCHAR.String(), Required: false, Default: false, Readonly: false, Index: -7},
+
 		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: ConferenceAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "yes", Required: false, Readonly: false, Index: 9},
 		{Name: "acronym", Label: "nom de la conférence (acronyme)", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 10},
@@ -183,6 +176,10 @@ var PresentationFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
+			Index: -10, Label: "téléchargement de la publication finalisée"},
+		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
+
 		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: PresentationAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "no", Required: false, Readonly: false, Index: 9},
 		{Name: "conference_acronym", Label: "nom de la conférence (acronyme)", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 10},
@@ -222,12 +219,17 @@ var PosterFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
+			Index: -10, Label: "téléchargement de la publication finalisée"},
+		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
+		{Name: "major_conference", Label: "la conférence visée est-elle incontournable dans ton domaine scientifique ?", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: -8},
+		{Name: "major_conference_name", Label: "nom de la conférence", Type: models.VARCHAR.String(), Required: false, Default: false, Readonly: false, Index: -7},
+
 		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: PosterAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "no", Required: false, Readonly: false, Index: 9},
 		{Name: "conference_acronym", Label: "nom de la conférence (acronyme)", Type: models.VARCHAR.String(), Required: true, Readonly: false, Index: 10},
 		{Name: "conference_name", Label: "nom de la conférence", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 11},
 		{Name: "conference_start_date", Label: "date objective de publication", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 12},
-		{Name: "conference_end_date", Label: "date objective de fin de publication", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 13},
 		{Name: "conference_city", Label: "ville de la conférence", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 14},
 		{Name: "conference_country", Label: "pays de la conférence", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 15},
 		{Name: "conference_link", Label: "lien de la conférence", Type: models.URL.String(), Required: false, Readonly: false, Index: 16},
@@ -264,6 +266,10 @@ var HDRFR = models.SchemaModel{
 	Label:    "authorizations to direct research",
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
+			Index: -10, Label: "téléchargement de la publication finalisée"},
+		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
+
 		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: HDRAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "yes", Required: false, Readonly: false, Index: 9},
 		{Name: "defense_date", Label: "date de soutenance de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 10},
@@ -300,6 +306,10 @@ var ThesisFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
+			Index: -10, Label: "téléchargement de la publication finalisée"},
+		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
+
 		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: ThesisAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "yes", Required: false, Readonly: false, Index: 9},
 		{Name: "defense_date", Label: "date de soutenance de thèse", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 10},
@@ -340,6 +350,10 @@ var InternshipFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
+			Index: -10, Label: "téléchargement de la publication finalisée"},
+		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
+
 		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: InternshipAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "no", Required: false, Readonly: false, Index: 9},
 		{Name: "IRT_manager" + ds.RootID(ds.DBUser.Name), Type: models.INTEGER.String(), Required: true, ForeignTable: ds.DBUser.Name, Index: 10, Label: "responsable IRT du stage"},
@@ -378,6 +392,10 @@ var DemoFR = models.SchemaModel{
 	CanOwned: true,
 	Category: "publications",
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
+			Index: -10, Label: "téléchargement de la publication finalisée"},
+		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
+
 		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: DemoAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "no", Required: false, Readonly: false, Index: 9},
 		{Name: "meeting_name", Label: "nom du meeting", Type: models.VARCHAR.String(), Required: false, Readonly: false, Index: 10},
@@ -415,6 +433,13 @@ var OtherPublicationFR = models.SchemaModel{
 	Category: "publications",
 	CanOwned: true,
 	Fields: append(publicationFields, []models.FieldModel{
+		{Name: "finalized_publication", Type: models.UPLOAD_STR.String(), Required: true,
+			Index: -10, Label: "téléchargement de la publication finalisée"},
+		{Name: "publishing_date", Label: "date effective de publication", Type: models.TIMESTAMP.String(), Required: true, Readonly: false, Index: -9},
+		{Name: "major_conference", Label: "la conférence visée est-elle incontournable dans ton domaine scientifique ?", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: -8},
+		{Name: "major_conference_name", Label: "nom de la conférence", Type: models.VARCHAR.String(), Required: false, Default: false, Readonly: false, Index: -7},
+		{Name: "published", Label: "la publication est elle publiée dans un journal du premier quartile de ta discipline scientifique", Type: models.ENUMBOOLEAN.String(), Required: false, Default: false, Readonly: false, Index: -6},
+
 		{Name: "authors", Type: models.ONETOMANY.String(), Required: true, Index: 8, Label: "auteurs", ForeignTable: OtherPublicationAffiliationAuthorsFR.Name},
 		{Name: "reread", Label: "documents scientifiques relus par des pairs externes IRT et sélectionnés selon un process structuré", Type: models.ENUMBOOLEAN.String(), Default: "no", Required: false, Readonly: false, Index: 9},
 		{Name: "publishing_date", Label: "date objective de publication", Type: models.TIMESTAMP.String(), Required: false, Readonly: false, Index: 10},
@@ -476,7 +501,6 @@ var PublicationAwardFR = models.SchemaModel{
 			Index: 1, Label: "la production a-t-elle fait l'objet d'un award ?"},
 		{Name: "awarded_by", Type: models.VARCHAR.String(), Required: false,
 			Index: 2, Label: "la production a été primée par"},
-		{Name: "send_mail_to", Type: models.TEXT.String(), Required: false, Index: 3, Hidden: true},
 		{Name: ds.DestTableDBField, Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication", Required: true, Index: 4, Readonly: true},
 		{Name: ds.SchemaDBField, Label: "related publication", Type: models.INTEGER.String(), ForeignTable: "other_publication", Required: true, Index: 4, Readonly: true},
 		{Name: ds.UserDBField, Type: models.INTEGER.String(), ForeignTable: ds.DBUser.Name, Required: false, Index: 5, Label: "user with hierarchy"},

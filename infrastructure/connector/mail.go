@@ -44,7 +44,7 @@ func ForgeMail(from utils.Record, to utils.Record, subject string, tpl string,
 			utils.SpecialIDParam: to[utils.SpecialIDParam],
 			"name":               to["name"],
 		}}, // SHOULD BE ID
-		"subject":               subject,
+		"subject":               strings.ReplaceAll(strings.ReplaceAll(subject, "é", "e"), "é", "e"),
 		"content":               strings.ReplaceAll(strings.ReplaceAll(content.String(), "''", "'"), "''", "'"),
 		"file_attached":         fileAttached,
 		ds.EmailTemplateDBField: tplID,
@@ -71,7 +71,7 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 	// En-têtes MIME
 	body.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	body.WriteString(fmt.Sprintf("To: %s\r\n", to))
-	body.WriteString("Subject: " + utils.GetString(mail, "subject") + "\r\n")
+	body.WriteString("Subject: " + strings.ReplaceAll(strings.ReplaceAll(utils.GetString(mail, "subject"), "é", "e"), "é", "e") + "\r\n")
 	body.WriteString("MIME-Version: 1.0\r\n")
 	body.WriteString("Content-Type: multipart/mixed; boundary=\"" + boundary + "\"\r\n")
 	body.WriteString("\r\n--" + boundary + "\r\n")

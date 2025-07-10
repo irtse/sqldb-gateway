@@ -36,8 +36,8 @@ func (s *TaskService) TransformToGenericView(results utils.Results, tableName st
 				res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(r[0], utils.SpecialIDParam))
 			}
 		} else {
-			if sch, err := schema.GetSchemaByID(utils.GetInt(results[0], ds.SchemaDBField)); err == nil {
-				res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(results[0], ds.DestTableDBField))
+			if sch, err := schema.GetSchema(ds.DBTask.Name); err == nil {
+				res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(results[0], utils.SpecialIDParam))
 			}
 		}
 	} // inner_redirection is the way to redirect any closure... to next data or data
@@ -45,7 +45,11 @@ func (s *TaskService) TransformToGenericView(results utils.Results, tableName st
 }
 
 func (s *TaskService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
-	CreateDelegated(record, utils.GetInt(record, utils.SpecialIDParam), s.Domain)
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+		utils.SpecialIDParam: record[ds.RequestDBField],
+	}, false); err == nil && len(res) > 0 {
+		CreateDelegated(record, res[0], utils.GetInt(record, utils.SpecialIDParam), s.Domain)
+	}
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
 }
 func (s *TaskService) Entity() utils.SpecializedServiceInfo { return ds.DBTask }
@@ -94,13 +98,14 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		if _, ok := res["is_draft"]; ok && utils.GetBool(res, "is_draft") {
 			continue
 		}
-		UpdateDelegated(res, s.Domain)
 		requests, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 			utils.SpecialIDParam: utils.GetInt(res, RequestDBField),
 		}, false)
 		if err != nil || len(requests) == 0 {
 			continue
 		}
+		UpdateDelegated(res, requests[0], s.Domain)
+
 		order := requests[0]["current_index"]
 		if otherPendingTasks, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name,
 			map[string]interface{}{ // delete all notif
@@ -118,16 +123,25 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 			}, false); err == nil && len(otherPendingTasks) > 0 {
 			continue
 		}
-
+		beforeSchemes, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name,
+			map[string]interface{}{
+				utils.SpecialIDParam: res[utils.SpecialIDParam],
+			}, false)
+		isOptionnal := false
+		if len(beforeSchemes) > 0 && err == nil {
+			isOptionnal = utils.GetBool(beforeSchemes[0], "optionnal")
+		}
 		current_index := utils.ToFloat64(order)
 		switch res["state"] {
 		case "completed":
 			current_index = math.Floor(current_index + 1)
 		case "dismiss":
-			if current_index >= 1 {
-				current_index = math.Floor(current_index - 1)
-			} else { // Dismiss will close requests.
-				res["state"] = "refused"
+			if !isOptionnal {
+				if current_index >= 1 {
+					current_index = math.Floor(current_index - 1)
+				} else { // Dismiss will close requests.
+					res["state"] = "refused"
+				}
 			} // no before task close request and task
 		}
 		schemes, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflowSchema.Name,
@@ -153,7 +167,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 				newRecRequest["state"] = s
 			}
 		}
-		if res["state"] == "refused" {
+		if res["state"] == "refused" && !isOptionnal {
 			newRecRequest["state"] = res["state"]
 		} else {
 			newRecRequest["current_index"] = current_index
@@ -172,7 +186,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 
 		for _, scheme := range schemes {
 			if current_index != newRecRequest.GetFloat("current_index") {
-				HandleHierarchicalVerification(s.Domain, utils.GetInt(res, ds.RequestDBField), res)
+				HandleHierarchicalVerification(s.Domain, requests[0], res)
 			} else {
 				PrepareAndCreateTask(scheme, newRecRequest, res, s.Domain, true)
 			}
