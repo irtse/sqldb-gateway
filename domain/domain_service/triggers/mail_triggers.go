@@ -71,7 +71,10 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 				dest = d
 				if len(dest) > 0 {
 					dest[0]["closing_by"] = t.Domain.GetUser()
-					dest[0]["closing_comment"] = "\"" + utils.GetString(record, "closing_comment") + "\""
+					dest[0]["closing_comment"] = utils.GetString(record, "closing_comment")
+					if len(utils.GetString(dest[0], "closing_comment")) > 0 {
+						dest[0]["closing_comment"] = "\"" + utils.GetString(record, "closing_comment") + "\""
+					}
 				}
 			}
 		}
