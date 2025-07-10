@@ -177,7 +177,7 @@ type FieldModel struct { // definition a db table columns
 	Dir          string      `json:"dir"`
 	Link         string      `json:"link_id"`
 	ForeignTable string      `json:"-"` // Special case for foreign key
-	InResume     string      `json:"in_resume"`
+	InResume     string      `json:"in_resume,omitempty"`
 	Constraint   string      `json:"constraints"` // Special case for constraint on field
 	Required     bool        `json:"required"`
 	Hidden       bool        `json:"hidden"`
@@ -187,6 +187,7 @@ type FieldModel struct { // definition a db table columns
 }
 
 func (t FieldModel) Map(m map[string]interface{}) *FieldModel {
+	fmt.Println(m["in_resume"])
 	return &FieldModel{
 		ID:           utils.ToString(m["id"]),
 		Name:         utils.ToString(m["name"]),
@@ -196,6 +197,7 @@ func (t FieldModel) Map(m map[string]interface{}) *FieldModel {
 		Index:        utils.ToInt64(m["index"]),
 		Placeholder:  utils.ToString(m["placeholder"]),
 		Default:      m["default_value"],
+		InResume:     utils.ToString(m["in_resume"]),
 		Level:        utils.ToString(m["read_level"]),
 		Readonly:     utils.Compare(m["readonly"], true),
 		Link:         utils.ToString(m["link_id"]),
@@ -328,6 +330,7 @@ type ViewFieldModel struct { // lightest struct based on FieldModel dedicate to 
 	Default      interface{}            `json:"default_value"`
 	Required     bool                   `json:"required"`
 	Readonly     bool                   `json:"readonly"`
+	InResume     string                 `json:"in_resume,omitempty"`
 	LinkPath     string                 `json:"values_path"`
 	ActionPath   string                 `json:"action_path"`
 	Actions      []string               `json:"actions"`
