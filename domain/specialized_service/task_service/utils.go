@@ -1,6 +1,7 @@
 package task_service
 
 import (
+	"fmt"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -111,6 +112,7 @@ func PrepareAndCreateTask(scheme utils.Record, request map[string]interface{}, r
 	if utils.GetBool(scheme, "assign_to_creator") {
 		newTask[ds.UserDBField] = domain.GetUserID()
 	}
+	fmt.Println(utils.GetString(newTask, ds.SchemaDBField), utils.GetString(request, ds.SchemaDBField), request)
 	if utils.GetString(newTask, ds.SchemaDBField) == utils.GetString(request, ds.SchemaDBField) {
 		newTask[ds.SchemaDBField] = request[ds.SchemaDBField]
 		newTask[ds.DestTableDBField] = request[ds.DestTableDBField]
