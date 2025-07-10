@@ -592,7 +592,7 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 				}
 				for k, _ := range d.GetParams().Values {
 					if sch.HasField(k) {
-						return true
+						return false
 					}
 				}
 				for _, f := range sch.Fields {
