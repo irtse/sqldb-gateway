@@ -60,9 +60,8 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema *sm.Sche
 	max, _ := history.CountMaxDataAccess(schema, []string{}, v.Domain)
 
 	view := sm.NewView(id, schema.Name, schema.Label, schema, schema.Name, max, []sm.ManualTriggerModel{})
-	view.Schema = schemes
 	view.Redirection = getRedirection(v.Domain.GetDomainID())
-	view.Order = CompareOrder(schema, order, v.Domain)
+	view.Order, view.Schema = CompareOrder(schema, order, schemes, v.Domain)
 	view.Actions = addAction
 	view.CommentBody = commentBody
 	view.Shortcuts = v.GetShortcuts(schema.ID, addAction)
@@ -157,9 +156,8 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 		}
 		newView.Actions = addAction
 		if sch.Name != tableName {
-			newView.Schema = scheme
 			newView.SchemaID = id
-			newView.Order = CompareOrder(&sch, order, v.Domain)
+			newView.Order, newView.Schema = CompareOrder(&sch, order, scheme, v.Domain)
 			newView.Consents = v.getConsent(utils.ToString(id), []utils.Record{record})
 			if !utils.GetBool(record, "is_draft") {
 				newView.Triggers = triggers.NewTrigger(v.Domain).GetViewTriggers(

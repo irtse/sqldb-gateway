@@ -102,7 +102,7 @@ func GetFieldInInjection(injection string, searchField string) (string, string) 
 	return "", ""
 }
 
-func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(string, string, func(string, string)) (string, string, error), special func(string, string)) string {
+func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(string, string, string, func(string, string)) (string, string, string, string, string, error), special func(string, string)) string {
 	alterRestr := ""
 	injection = SQLInjectionProtector(injection)
 	ands := strings.Split(injection, "+")
@@ -114,37 +114,13 @@ func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(st
 		}
 		orRestr := ""
 		for _, or := range ors {
-			operator := "~"
-			keyVal := []string{}
-			if strings.Contains(or, "<>~") {
-				keyVal = strings.Split(or, "<>~")
-				operator = " NOT LIKE "
-			} else if strings.Contains(or, "~") {
-				keyVal = strings.Split(or, "~")
-				operator = " LIKE "
-			} else if strings.Contains(or, "<>") {
-				keyVal = strings.Split(or, "<>")
-				operator = "!="
-			} else if strings.Contains(or, "<:") {
-				keyVal = strings.Split(or, "<:")
-				operator = "<="
-			} else if strings.Contains(or, ">:") {
-				keyVal = strings.Split(or, ">:")
-				operator = ">="
-			} else if strings.Contains(or, ":") {
-				keyVal = strings.Split(or, ":")
-				operator = "="
-			} else if strings.Contains(or, "<") {
-				keyVal = strings.Split(or, "<")
-				operator = "<"
-			} else if strings.Contains(or, ">") {
-				keyVal = strings.Split(or, ">")
-				operator = ">"
-			}
+			keyVal, operator := Compare(or)
 			if len(keyVal) != 2 {
 				continue
 			}
-			typ, link, err := getTypeAndLink(keyVal[0], keyVal[1], special)
+			var err error
+			var typ, link string
+			keyVal[0], keyVal[1], operator, typ, link, err = getTypeAndLink(keyVal[0], keyVal[1], operator, special)
 			if err != nil && keyVal[0] != "id" {
 				continue
 			}
@@ -165,6 +141,37 @@ func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(st
 	alterRestr = strings.ReplaceAll(strings.ReplaceAll(alterRestr, " OR  OR ", ""), " AND  AND ", "")
 	alterRestr = strings.ReplaceAll(alterRestr, "()", "")
 	return alterRestr
+}
+
+func Compare(or string) ([]string, string) {
+	operator := "~"
+	keyVal := []string{}
+	if strings.Contains(or, "<>~") {
+		keyVal = strings.Split(or, "<>~")
+		operator = " NOT LIKE "
+	} else if strings.Contains(or, "~") {
+		keyVal = strings.Split(or, "~")
+		operator = " LIKE "
+	} else if strings.Contains(or, "<>") {
+		keyVal = strings.Split(or, "<>")
+		operator = "!="
+	} else if strings.Contains(or, "<:") {
+		keyVal = strings.Split(or, "<:")
+		operator = "<="
+	} else if strings.Contains(or, ">:") {
+		keyVal = strings.Split(or, ">:")
+		operator = ">="
+	} else if strings.Contains(or, ":") {
+		keyVal = strings.Split(or, ":")
+		operator = "="
+	} else if strings.Contains(or, "<") {
+		keyVal = strings.Split(or, "<")
+		operator = "<"
+	} else if strings.Contains(or, ">") {
+		keyVal = strings.Split(or, ">")
+		operator = ">"
+	}
+	return keyVal, operator
 }
 
 func MakeSqlItem(alterRestr string, typ string, foreignName string, key string, or string, operator string) string {
@@ -190,10 +197,10 @@ func MakeSqlItem(alterRestr string, typ string, foreignName string, key string, 
 				alterRestr += key + " IN (SELECT id FROM " + foreignName + " WHERE id " + operator + " " + sql + ")"
 			}
 		}
-	} else if strings.Contains(sql, "%") {
+	} else if strings.Contains(sql, "%") && !strings.Contains(typ, "many") {
 		alterRestr += "LOWER(" + key + "::text) LIKE LOWER(" + sql + ")"
 	} else {
-		if strings.Contains(sql, "'") && !strings.Contains(typ, "enum") {
+		if strings.Contains(sql, "'") && !strings.Contains(typ, "enum") && !strings.Contains(typ, "many") {
 			alterRestr += "LOWER(" + key + ") " + operator + " LOWER(" + sql + ")"
 		} else {
 			alterRestr += key + " " + operator + " " + sql

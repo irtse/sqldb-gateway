@@ -91,24 +91,46 @@ func GetSchemaByID(id int64) (SchemaModel, error) {
 	return SchemaModel{}, errors.New("no schema corresponding to reference id")
 }
 
-func (t SchemaModel) GetTypeAndLinkForField(name string, search string, onUpload func(string, string)) (string, string, error) {
-	field, err := t.GetField(name)
+func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator string, onUpload func(string, string)) (string, string, string, string, string, error) {
+	field, err := t.GetField(strings.Split(name, ".")[0])
 	if err != nil {
-		return "", "", err
+		return name, search, operator, "", "", err
 	}
 	if strings.Contains(field.Type, "upload") {
 		if strings.Contains(field.Type, "upload_str") {
 			onUpload(field.Name, search)
 		}
-		return field.Type, "", errors.New("can't proceed a publication")
+		return name, search, operator, field.Type, "", errors.New("can't proceed a publication")
 	}
 	foreign, err := GetSchemaByID(field.GetLink())
 	if err != nil {
-		return field.Type, "", nil
+		return name, search, operator, field.Type, "", nil
+	}
+	if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(MANYTOMANY.String())) {
+		if sch, err := GetSchemaByID(field.GetLink()); err == nil {
+			for _, f := range sch.Fields {
+				if f.GetLink() > 0 && t.GetID() != f.GetLink() {
+					return field.Name, "(SELECT id FROM " + sch.Name + " WHERE " + f.Name + " " + operator + " " + search + " )", "IN", "manytomany", "", err
+				}
+			}
+		}
+		return name, search, operator, field.Type, foreign.Name, errors.New("can't filter many to many on this " + name + " field with value " + search)
+	}
+	if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(ONETOMANY.String())) {
+		if strings.Contains(name, ".") {
+			subKey := strings.Join(strings.Split(name, ".")[1:], ".")
+			if sch, err := GetSchemaByID(field.GetLink()); err == nil {
+				if subKey, search, operator, _, _, err := sch.GetTypeAndLinkForField(subKey, search, operator, onUpload); err == nil {
+					return field.Name, "(SELECT id FROM " + sch.Name + " WHERE " + strings.Split(subKey, ".")[0] + " " + operator + " " + search + ")", "IN", "onetomany", "", err
+				}
+			}
+		}
+		return name, search, operator, field.Type, foreign.Name, errors.New("can't filter one to many on this " + name + " field with value " + search)
 	}
 
-	return field.Type, foreign.Name, nil
+	return name, search, operator, field.Type, foreign.Name, nil
 }
+
 func (t SchemaModel) GetField(name string) (FieldModel, error) {
 	for _, field := range t.Fields {
 		if field.Name == name {
@@ -176,6 +198,7 @@ type FieldModel struct { // definition a db table columns
 	Readonly     bool        `json:"readonly"`
 	Dir          string      `json:"dir"`
 	Link         string      `json:"link_id"`
+	Subsection   string      `json:"subsection"`
 	ForeignTable string      `json:"-"` // Special case for foreign key
 	InResume     string      `json:"in_resume,omitempty"`
 	Constraint   string      `json:"constraints"` // Special case for constraint on field
@@ -195,6 +218,7 @@ func (t FieldModel) Map(m map[string]interface{}) *FieldModel {
 		Type:         utils.ToString(m["type"]),
 		Index:        utils.ToInt64(m["index"]),
 		Placeholder:  utils.ToString(m["placeholder"]),
+		Subsection:   utils.ToString(m["subsection"]),
 		Default:      m["default_value"],
 		InResume:     utils.ToString(m["in_resume"]),
 		Level:        utils.ToString(m["read_level"]),
@@ -335,6 +359,7 @@ type ViewFieldModel struct { // lightest struct based on FieldModel dedicate to 
 	Actions      []string               `json:"actions"`
 	DataSchemaID int64                  `json:"data_schema_id"`
 	DataSchema   map[string]interface{} `json:"data_schema"`
+	Subsection   string                 `json:"subsection"`
 	Active       bool                   `json:"active"`
 }
 

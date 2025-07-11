@@ -9,19 +9,23 @@ import (
 	"sqldb-ws/domain/utils"
 )
 
-func CompareOrder(schema *sm.SchemaModel, order []string, domain utils.DomainITF) []string {
+func CompareOrder(schema *sm.SchemaModel, order []string, schemes map[string]interface{}, domain utils.DomainITF) ([]string, map[string]interface{}) {
 	newOrder := []string{}
 	if res, err := GetFilterFields(schema, domain); err == nil && len(res) > 0 {
 		for _, ord := range res {
 			if len(order) == 0 || slices.Contains(order, utils.GetString(ord, "name")) {
+				fmt.Println("TEST", utils.GetBool(ord, "force_not_readonly"))
+				if utils.GetBool(ord, "force_not_readonly") {
+					schemes[utils.GetString(ord, "name")].(map[string]interface{})["force_not_readonly"] = true
+				}
 				newOrder = append(newOrder, utils.GetString(ord, "name"))
 			}
 		}
 	}
 	if len(newOrder) == 0 {
-		return order
+		return order, schemes
 	}
-	return newOrder
+	return newOrder, schemes
 }
 
 func getRedirection(domainID string) string {
@@ -76,9 +80,18 @@ func GetFilterFields(schema *sm.SchemaModel, domain utils.DomainITF) ([]map[stri
 			}, false, ds.WorkflowSchemaDBField),
 		}, false, "view_"+ds.FilterDBField)
 	}
-	return domain.GetDb().SelectQueryWithRestriction(ds.DBSchemaField.Name, map[string]interface{}{
-		utils.SpecialIDParam: domain.GetDb().BuildSelectQueryWithRestriction(ds.DBFilterField.Name, m, false, ds.SchemaFieldDBField),
-	}, false)
+	field := []map[string]interface{}{}
+	if res, err := domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, m, false); err == nil {
+		for _, r := range res {
+			if rr, err := domain.GetDb().SelectQueryWithRestriction(ds.DBSchemaField.Name, map[string]interface{}{
+				utils.SpecialIDParam: r[ds.SchemaFieldDBField],
+			}, false); err == nil && len(rr) > 0 {
+				rr[0]["force_not_readonly"] = r["force_not_readonly"]
+				field = append(field, rr[0])
+			}
+		}
+	}
+	return field, nil
 }
 
 func GetSharing(schemaID string, rec sm.ViewItemModel, domain utils.DomainITF) sm.ViewItemModel {

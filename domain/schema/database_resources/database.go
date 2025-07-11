@@ -40,6 +40,7 @@ var DBSchemaField = models.SchemaModel{
 		{Name: "default_value", Type: models.BIGVARCHAR.String(), Required: false, Index: 5, Label: "default"},
 		{Name: "index", Type: models.INTEGER.String(), Required: true, Default: 1, Index: 6},
 		{Name: "in_resume", Type: models.VARCHAR.String(), Required: false, Index: 6},
+		{Name: "subsection", Type: models.VARCHAR.String(), Required: false, Index: 6},
 		{Name: "readonly", Type: models.BOOLEAN.String(), Required: true, Index: 7},
 		{Name: "required", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 8},
 		{Name: "read_level", Type: models.ENUMLEVEL.String(), Required: false, Default: models.LEVELNORMAL, Index: 9},
@@ -495,6 +496,9 @@ var DBFilterField = models.SchemaModel{
 		{Name: "index", Type: models.INTEGER.String(), Required: false, Default: 1, Index: 5},
 		{Name: "width", Type: models.DECIMAL.String(), Required: false, Index: 6},
 		{Name: "is_own", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 7},
+
+		{Name: "force_not_readonly", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 7},
+
 		{Name: "is_task_concerned", Type: models.BOOLEAN.String(), Required: false, Default: false, Index: 8},
 		{Name: RootID(DBFilter.Name), Type: models.INTEGER.String(), ForeignTable: DBFilter.Name, Required: false, Index: 9},
 	},

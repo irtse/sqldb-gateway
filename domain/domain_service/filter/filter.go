@@ -101,7 +101,7 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 			}
 		}
 		for key, val := range domainParams.Values {
-			typ, foreign, err := schema.GetTypeAndLinkForField(key, val, f)
+			key, val, _, typ, foreign, err := schema.GetTypeAndLinkForField(key, val, "", f)
 			if err != nil && key != utils.SpecialIDParam {
 				continue
 			}
