@@ -9,6 +9,7 @@ import (
 	"sort"
 	"sqldb-ws/domain/domain_service/history"
 	"sqldb-ws/domain/domain_service/triggers"
+	"sqldb-ws/domain/schema"
 	scheme "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -581,14 +582,12 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 						ds.UserDBField: d.GetUserID(),
 					}, true, ds.EntityDBField),
 				ds.UserDBField: d.GetUserID(),
-			}, true, ds.RequestDBField)
-			m[utils.SpecialIDParam] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-				utils.SpecialIDParam: record[utils.SpecialIDParam],
-			}, true, ds.RequestDBField)
-			m[ds.WorkflowDBField] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+			}, true, utils.SpecialIDParam)
+			m[utils.SpecialIDParam] = record[utils.SpecialIDParam]
+			m[ds.WorkflowSchemaDBField] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 				utils.SpecialIDParam: record[ds.WorkflowSchemaDBField],
-			}, false, ds.WorkflowDBField)
-			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
+			}, false, utils.SpecialIDParam)
+			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, m, false); err != nil || len(res) == 0 {
 				return true
 			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
 				return false
@@ -597,9 +596,12 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 			m[ds.DestTableDBField] = record[utils.SpecialIDParam]
 			if record[ds.DestTableDBField] != nil {
 				m[ds.DestTableDBField] = record[ds.DestTableDBField]
+			} else if sch, err := schema.GetSchema(tableName); err == nil {
+				m[ds.SchemaDBField] = sch.ID
 			}
 			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
 				m["is_close"] = true
+				fmt.Println("map", m)
 				if rr, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(rr) > 0 {
 					return true
 				}
