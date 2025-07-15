@@ -9,9 +9,9 @@ import (
 	"sqldb-ws/domain/utils"
 )
 
-func CompareOrder(schema *sm.SchemaModel, order []string, schemes map[string]interface{}, domain utils.DomainITF) ([]string, map[string]interface{}) {
+func CompareOrder(schema *sm.SchemaModel, order []string, schemes map[string]interface{}, results []utils.Record, domain utils.DomainITF) ([]string, map[string]interface{}) {
 	newOrder := []string{}
-	if res, err := GetFilterFields(schema, domain); err == nil && len(res) > 0 {
+	if res, err := GetFilterFields(schema, results, domain); err == nil && len(res) > 0 {
 		for _, ord := range res {
 			if len(order) == 0 || slices.Contains(order, utils.GetString(ord, "name")) {
 				if utils.GetBool(ord, "force_not_readonly") {
@@ -38,7 +38,7 @@ func getRedirection(domainID string) string {
 }
 
 func GetOrder(schema *sm.SchemaModel, record utils.Record, values map[string]interface{}, newOrder []string, domain utils.DomainITF) ([]string, map[string]interface{}) {
-	if res, err := GetFilterFields(schema, domain); err == nil && len(res) > 0 {
+	if res, err := GetFilterFields(schema, []utils.Record{record}, domain); err == nil && len(res) > 0 {
 		if utils.GetBool(record, "is_list") {
 			for _, r := range res {
 				if val, err := schema.GetField(utils.GetString(r, "name")); err == nil {
@@ -52,7 +52,7 @@ func GetOrder(schema *sm.SchemaModel, record utils.Record, values map[string]int
 	return newOrder, values
 }
 
-func GetFilterFields(schema *sm.SchemaModel, domain utils.DomainITF) ([]map[string]interface{}, error) {
+func GetFilterFields(schema *sm.SchemaModel, results []utils.Record, domain utils.DomainITF) ([]map[string]interface{}, error) {
 	m := map[string]interface{}{
 		ds.FilterDBField: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBFilter.Name, map[string]interface{}{
 			"is_view":              true,
@@ -74,12 +74,23 @@ func GetFilterFields(schema *sm.SchemaModel, domain utils.DomainITF) ([]map[stri
 					}, true, ds.EntityDBField),
 			}, true, ds.WorkflowSchemaDBField),
 		}, false, "view_"+ds.FilterDBField)
-		m[ds.FilterDBField+"_101"] = domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
-			utils.SpecialIDParam: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-				ds.SchemaDBField: schema.ID,
-				"is_close":       false,
-			}, false, ds.WorkflowSchemaDBField),
-		}, false, "view_"+ds.FilterDBField)
+		if len(results) == 1 {
+			m[ds.FilterDBField+"_101"] = domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+				utils.SpecialIDParam: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+					ds.SchemaDBField:    schema.ID,
+					ds.DestTableDBField: results[0][utils.SpecialIDParam],
+					"is_close":          false,
+				}, false, ds.WorkflowSchemaDBField),
+			}, false, "view_"+ds.FilterDBField)
+		} else {
+			m[ds.FilterDBField+"_101"] = domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+				utils.SpecialIDParam: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+					ds.SchemaDBField: schema.ID,
+					"is_close":       false,
+				}, false, ds.WorkflowSchemaDBField),
+			}, false, "view_"+ds.FilterDBField)
+		}
+
 	}
 	field := []map[string]interface{}{}
 	if res, err := domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, m, false); err == nil {

@@ -61,7 +61,7 @@ func (v *ViewConvertor) transformFullView(results utils.Results, schema *sm.Sche
 
 	view := sm.NewView(id, schema.Name, schema.Label, schema, schema.Name, max, []sm.ManualTriggerModel{})
 	view.Redirection = getRedirection(v.Domain.GetDomainID())
-	view.Order, view.Schema = CompareOrder(schema, order, schemes, v.Domain)
+	view.Order, view.Schema = CompareOrder(schema, order, schemes, results, v.Domain)
 	sort.SliceStable(view.Order, func(i, j int) bool {
 		return utils.ToInt64(utils.ToMap(schemes[view.Order[i]])["index"]) <= utils.ToInt64(utils.ToMap(schemes[view.Order[j]])["index"])
 	})
@@ -160,7 +160,7 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 		newView.Actions = addAction
 		if sch.Name != tableName {
 			newView.SchemaID = id
-			newView.Order, newView.Schema = CompareOrder(&sch, order, scheme, v.Domain)
+			newView.Order, newView.Schema = CompareOrder(&sch, order, scheme, results, v.Domain)
 			sort.SliceStable(newView.Order, func(i, j int) bool {
 				return utils.ToInt64(utils.ToMap(newView.Schema[newView.Order[i]])["index"]) <= utils.ToInt64(utils.ToMap(newView.Schema[newView.Order[j]])["index"])
 			})
