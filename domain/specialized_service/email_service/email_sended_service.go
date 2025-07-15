@@ -5,6 +5,7 @@ import (
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
 	connector "sqldb-ws/infrastructure/connector/db"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -12,7 +13,7 @@ import (
 // DONE - ~ 200 LINES - PARTIALLY TESTED
 type EmailSendedService struct {
 	servutils.AbstractSpecializedService
-	To string
+	To []string
 }
 
 func (s *EmailSendedService) Entity() utils.SpecializedServiceInfo { return ds.DBEmailSended }
@@ -79,6 +80,24 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 			}
 		}
 	}
+	for _, to := range s.To {
+		if strings.Contains(to, "@") {
+			s.Domain.CreateSuperCall(utils.AllParams(ds.DBEmailSendedUser.Name).RootRaw(), map[string]interface{}{
+				"name":                to,
+				ds.EmailSendedDBField: record[utils.SpecialIDParam],
+			})
+		} else if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
+			"name": to,
+		}, false); err == nil && len(res) > 0 {
+			for _, r := range res {
+				s.Domain.CreateSuperCall(utils.AllParams(ds.DBEmailSendedUser.Name).RootRaw(), map[string]interface{}{
+					"name":                to,
+					ds.UserDBField:        r[utils.SpecialIDParam],
+					ds.EmailSendedDBField: record[utils.SpecialIDParam],
+				})
+			}
+		}
+	}
 	s.AbstractSpecializedService.SpecializedCreateRow(record, tableName)
 }
 
@@ -96,5 +115,11 @@ func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, 
 	if record["code"] == nil || record["code"] == "" {
 		record["code"] = uuid.New()
 	}
+	if record["to_email"] != nil {
+		for _, e := range utils.ToList(record["to_email"]) {
+			s.To = append(s.To, utils.ToString(utils.ToMap(e)["name"]))
+		}
+	}
+	delete(record, "to_email")
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
