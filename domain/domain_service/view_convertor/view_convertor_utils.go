@@ -14,11 +14,12 @@ func CompareOrder(schema *sm.SchemaModel, order []string, schemes map[string]int
 	if res, err := GetFilterFields(schema, domain); err == nil && len(res) > 0 {
 		for _, ord := range res {
 			if len(order) == 0 || slices.Contains(order, utils.GetString(ord, "name")) {
-				fmt.Println("TEST", utils.GetBool(ord, "force_not_readonly"))
 				if utils.GetBool(ord, "force_not_readonly") {
 					schemes[utils.GetString(ord, "name")].(map[string]interface{})["force_not_readonly"] = true
 				}
-				newOrder = append(newOrder, utils.GetString(ord, "name"))
+				if !slices.Contains(newOrder, utils.GetString(ord, "name")) {
+					newOrder = append(newOrder, utils.GetString(ord, "name"))
+				}
 			}
 		}
 	}
