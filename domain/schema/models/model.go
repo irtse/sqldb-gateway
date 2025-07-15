@@ -95,6 +95,7 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 	field, err := t.GetField(strings.Split(name, ".")[0])
 	fmt.Println(field.Name, err)
 	if err != nil {
+		fmt.Println("qsdqcqsc", t.Name, name, search, operator, "", "", err)
 		return name, search, operator, "", "", err
 	}
 	if strings.Contains(field.Type, "upload") {
@@ -105,6 +106,7 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 	}
 	foreign, err := GetSchemaByID(field.GetLink())
 	if err != nil {
+		fmt.Println("zoom", t.Name, name, search, operator, "", nil)
 		return name, search, operator, field.Type, "", nil
 	}
 	if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(MANYTOMANY.String())) {
