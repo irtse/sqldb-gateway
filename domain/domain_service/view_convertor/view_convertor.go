@@ -574,23 +574,46 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 			ds.UserDBField: d.GetUserID(),
 		}
 		if tableName == ds.DBTask.Name {
-			delete(m, ds.UserDBField)
-			m[utils.SpecialIDParam+"_1"] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-				ds.EntityDBField: d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
-					ds.DBEntityUser.Name,
-					map[string]interface{}{
-						ds.UserDBField: d.GetUserID(),
-					}, true, ds.EntityDBField),
-				ds.UserDBField: d.GetUserID(),
-			}, true, utils.SpecialIDParam)
-			m[utils.SpecialIDParam] = record[utils.SpecialIDParam]
-			m[ds.WorkflowSchemaDBField] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
-				utils.SpecialIDParam: record[ds.WorkflowSchemaDBField],
-			}, false, utils.SpecialIDParam)
-			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, m, false); err != nil || len(res) == 0 {
-				return true
-			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
-				return false
+			if d.GetMethod() == utils.DELETE {
+				delete(m, ds.UserDBField)
+				m[utils.SpecialIDParam+"_1"] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+					ds.EntityDBField: d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
+						ds.DBEntityUser.Name,
+						map[string]interface{}{
+							ds.UserDBField: d.GetUserID(),
+						}, true, ds.EntityDBField),
+					ds.UserDBField: d.GetUserID(),
+				}, true, ds.RequestDBField)
+				m[utils.SpecialIDParam] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+					utils.SpecialIDParam: record[utils.SpecialIDParam],
+				}, true, ds.RequestDBField)
+				m[ds.WorkflowDBField] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+					utils.SpecialIDParam: record[ds.WorkflowSchemaDBField],
+				}, false, ds.WorkflowDBField)
+				if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
+					return true
+				} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
+					return false
+				}
+			} else {
+				delete(m, ds.UserDBField)
+				m[utils.SpecialIDParam+"_1"] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+					ds.EntityDBField: d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(
+						ds.DBEntityUser.Name,
+						map[string]interface{}{
+							ds.UserDBField: d.GetUserID(),
+						}, true, ds.EntityDBField),
+					ds.UserDBField: d.GetUserID(),
+				}, true, utils.SpecialIDParam)
+				m[utils.SpecialIDParam] = record[utils.SpecialIDParam]
+				m[ds.WorkflowSchemaDBField] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+					utils.SpecialIDParam: record[ds.WorkflowSchemaDBField],
+				}, false, utils.SpecialIDParam)
+				if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, m, false); err != nil || len(res) == 0 {
+					return true
+				} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
+					return false
+				}
 			}
 		} else {
 			m[ds.DestTableDBField] = record[utils.SpecialIDParam]
@@ -601,7 +624,7 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 			}
 			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
 				m["is_close"] = true
-				fmt.Println("map", m)
+				fmt.Println("map", res, m)
 				if rr, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(rr) > 0 {
 					return true
 				}
