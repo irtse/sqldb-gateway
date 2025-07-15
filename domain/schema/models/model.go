@@ -93,6 +93,7 @@ func GetSchemaByID(id int64) (SchemaModel, error) {
 
 func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator string, onUpload func(string, string)) (string, string, string, string, string, error) {
 	field, err := t.GetField(strings.Split(name, ".")[0])
+	fmt.Println(field.Name, err)
 	if err != nil {
 		return name, search, operator, "", "", err
 	}
@@ -115,8 +116,7 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 			}
 		}
 		return name, search, operator, field.Type, foreign.Name, errors.New("can't filter many to many on this " + name + " field with value " + search)
-	}
-	if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(ONETOMANY.String())) {
+	} else if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(ONETOMANY.String())) {
 		if strings.Contains(name, ".") {
 			subKey := strings.Join(strings.Split(name, ".")[1:], ".")
 			if sch, err := GetSchemaByID(field.GetLink()); err == nil {
@@ -127,7 +127,7 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 		}
 		return name, search, operator, field.Type, foreign.Name, errors.New("can't filter one to many on this " + name + " field with value " + search)
 	}
-
+	fmt.Println(name, search, operator, field.Type, foreign.Name)
 	return name, search, operator, field.Type, foreign.Name, nil
 }
 
