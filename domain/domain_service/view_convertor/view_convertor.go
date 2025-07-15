@@ -581,12 +581,14 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 						ds.UserDBField: d.GetUserID(),
 					}, true, ds.EntityDBField),
 				ds.UserDBField: d.GetUserID(),
-			}, true, utils.SpecialIDParam)
-			m[utils.SpecialIDParam] = record[utils.SpecialIDParam]
+			}, true, ds.RequestDBField)
+			m[utils.SpecialIDParam] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+				utils.SpecialIDParam: record[utils.SpecialIDParam],
+			}, true, ds.RequestDBField)
 			m[ds.WorkflowSchemaDBField] = d.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 				utils.SpecialIDParam: record[ds.WorkflowSchemaDBField],
 			}, false, utils.SpecialIDParam)
-			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, m, false); err != nil || len(res) == 0 {
+			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
 				return true
 			} else if slices.Contains(createdIds, record.GetString(utils.SpecialIDParam)) {
 				return false

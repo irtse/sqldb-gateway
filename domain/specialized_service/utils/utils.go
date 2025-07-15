@@ -295,7 +295,9 @@ func (s *SpecializedService) TransformToGenericView(results utils.Results, table
 		}
 		if s.Domain.GetMethod() == utils.DELETE && scheme.ViewIDOnDelete != "" {
 			for _, tt := range t {
-				tt["inner_redirection"] = utils.BuildPath(ds.DBView.Name, scheme.ViewIDOnDelete)
+				if sch, err := schema.GetSchema(ds.DBView.Name); err == nil {
+					tt["inner_redirection"] = utils.BuildPath(sch.ID, scheme.ViewIDOnDelete)
+				}
 			}
 		}
 		if s.Domain.GetIsDraftToPublished() && len(results) == 1 {
