@@ -1,6 +1,7 @@
 package email_service
 
 import (
+	"fmt"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
@@ -81,6 +82,7 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 		}
 	}
 	for _, to := range s.To {
+		fmt.Println("TO", to)
 		if strings.Contains(to, "@") {
 			s.Domain.CreateSuperCall(utils.AllParams(ds.DBEmailSendedUser.Name).RootRaw(), map[string]interface{}{
 				"name":                to,
@@ -120,6 +122,7 @@ func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, 
 			s.To = append(s.To, utils.ToString(utils.ToMap(e)["name"]))
 		}
 	}
+	fmt.Println("TO", s.To)
 	delete(record, "to_email")
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
