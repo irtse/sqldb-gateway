@@ -7,7 +7,6 @@ import (
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
 	conn "sqldb-ws/infrastructure/connector"
-	connector "sqldb-ws/infrastructure/connector/db"
 )
 
 // DONE - ~ 200 LINES - PARTIALLY TESTED
@@ -41,11 +40,7 @@ func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interfac
 			emailTo = utils.GetString(res[0], "email")
 		}
 	} else if record["name"] != nil {
-		if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-			"name": connector.Quote(utils.GetString(record, "name")),
-		}, false); err == nil && len(res) > 0 {
-			emailTo = utils.GetString(res[0], "email")
-		}
+		emailTo = utils.GetString(record, "name")
 	}
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 		utils.SpecialIDParam: s.Domain.GetUserID(),
