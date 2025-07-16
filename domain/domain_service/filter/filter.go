@@ -79,6 +79,7 @@ func (f *FilterService) GetQueryFilter(tableName string, domainParams utils.Para
 	if state != "" {
 		SQLrestriction = f.LifeCycleRestriction(tableName, SQLrestriction, state)
 	}
+	fmt.Println("LINE", tableName, SQLrestriction)
 	return strings.Join(SQLrestriction, " AND "), strings.Join(SQLOrder, ","), SQLLimit, strings.Join(SQLview, ",")
 }
 
@@ -99,7 +100,6 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 		if line, ok := domainParams.Get(utils.RootFilterLine); ok {
 			if connector.FormatSQLRestrictionWhereInjection(line, schema.GetTypeAndLinkForField, f) != "" && tableName != ds.DBView.Name {
 				alterRestr = append(alterRestr, connector.FormatSQLRestrictionWhereInjection(line, schema.GetTypeAndLinkForField, f))
-				fmt.Println("LINE", line, alterRestr)
 			}
 		}
 		for key, val := range domainParams.Values {
@@ -150,6 +150,7 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 	if strings.Trim(connector.FormatSQLRestrictionWhereByMap("", restriction, false), " ") != "" {
 		restr = append(restr, strings.Trim(connector.FormatSQLRestrictionWhereByMap("", restriction, false), " "))
 	}
+	fmt.Println("LINE2", restr)
 	return restr
 }
 
