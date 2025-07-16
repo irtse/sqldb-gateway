@@ -146,7 +146,6 @@ func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(st
 func Compare(or string) ([]string, string) {
 	operator := "~"
 	keyVal := []string{}
-	fmt.Println(or, strings.Contains(or, "<>~"))
 	if strings.Contains(or, "<>~") {
 		keyVal = strings.Split(or, "<>~")
 		operator = " NOT LIKE "
@@ -172,7 +171,6 @@ func Compare(or string) ([]string, string) {
 		keyVal = strings.Split(or, ">")
 		operator = ">"
 	}
-	fmt.Println(keyVal, operator)
 	return keyVal, operator
 }
 
@@ -204,7 +202,11 @@ func MakeSqlItem(alterRestr string, typ string, foreignName string, key string, 
 			}
 		}
 	} else if strings.Contains(sql, "%") && !strings.Contains(typ, "many") {
-		alterRestr += "LOWER(" + key + "::text) LIKE LOWER(" + sql + ")"
+		no := "LIKE"
+		if strings.Contains(operator, "NOT") || strings.Contains(operator, "!") {
+			no = "NOT LIKE"
+		}
+		alterRestr += "LOWER(" + key + "::text) " + no + " LOWER(" + sql + ")"
 	} else {
 		if strings.Contains(sql, "'") && !strings.Contains(typ, "enum") && !strings.Contains(typ, "many") {
 			alterRestr += "LOWER(" + key + ") " + operator + " LOWER(" + sql + ")"
