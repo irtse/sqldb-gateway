@@ -172,6 +172,7 @@ func Compare(or string) ([]string, string) {
 		keyVal = strings.Split(or, ">")
 		operator = ">"
 	}
+	fmt.Println(keyVal, operator)
 	return keyVal, operator
 }
 
