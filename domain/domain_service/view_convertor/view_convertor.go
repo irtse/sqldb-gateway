@@ -467,6 +467,9 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 							}
 						}
 					}
+					if f.GetLink() == schema.GetID() {
+						continue
+					}
 					if sch, err := scheme.GetSchemaByID(f.GetLink()); err == nil && sch.HasField("name") {
 						if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name, map[string]interface{}{
 							utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(l.Name, map[string]interface{}{
