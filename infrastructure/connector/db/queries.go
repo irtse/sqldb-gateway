@@ -34,9 +34,6 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 	}
 
 	res, err := db.QueryAssociativeArray(q)
-	if name == "dbfilter_field" {
-		fmt.Println("TEST", len(res), q, err)
-	}
 	return res, err
 }
 
