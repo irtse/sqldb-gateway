@@ -146,6 +146,7 @@ func FormatSQLRestrictionWhereInjection(injection string, getTypeAndLink func(st
 func Compare(or string) ([]string, string) {
 	operator := "~"
 	keyVal := []string{}
+	fmt.Println(or)
 	if strings.Contains(or, "<>~") {
 		keyVal = strings.Split(or, "<>~")
 		operator = " NOT LIKE "
