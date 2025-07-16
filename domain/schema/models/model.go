@@ -93,7 +93,7 @@ func GetSchemaByID(id int64) (SchemaModel, error) {
 
 func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator string, onUpload func(string, string)) (string, string, string, string, string, error) {
 	field, err := t.GetField(strings.Split(name, ".")[0])
-	fmt.Println(field.Name, err)
+	fmt.Println(name, field.Name, err)
 	if err != nil {
 		fmt.Println("qsdqcqsc", t.Name, name, search, operator, "", "", err)
 		return name, search, operator, "", "", err
