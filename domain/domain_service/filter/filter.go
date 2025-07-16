@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"net/url"
 	"slices"
 	"sqldb-ws/domain/domain_service/history"
@@ -95,12 +96,16 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 				d.Domain.AddDetectFileToSearchIn(str, search)
 			}
 		}
-		if line, ok := domainParams.Get(utils.RootFilterLine); ok && tableName != ds.DBView.Name {
-			if connector.FormatSQLRestrictionWhereInjection(line, schema.GetTypeAndLinkForField, f) != "" {
+		if line, ok := domainParams.Get(utils.RootFilterLine); ok {
+			fmt.Println("LINE", line, tableName)
+			if connector.FormatSQLRestrictionWhereInjection(line, schema.GetTypeAndLinkForField, f) != "" && tableName != ds.DBView.Name {
 				alterRestr = append(alterRestr, connector.FormatSQLRestrictionWhereInjection(line, schema.GetTypeAndLinkForField, f))
 			}
 		}
 		for key, val := range domainParams.Values {
+			if slices.Contains(utils.RootParams, key) {
+				continue
+			}
 			key, val, _, typ, foreign, err := schema.GetTypeAndLinkForField(key, val, "", f)
 			if err != nil && key != utils.SpecialIDParam {
 				continue
