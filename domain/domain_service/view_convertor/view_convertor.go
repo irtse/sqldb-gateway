@@ -472,10 +472,11 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 				if f.GetLink() == schema.GetID() || f.GetLink() == 0 {
 					continue
 				}
-				if sch, err := scheme.GetSchemaByID(f.GetLink()); err == nil && sch.HasField("name") {
+				if sch, err := scheme.GetSchemaByID(f.GetLink()); err == nil {
 					if strings.Contains(strings.ToLower(f.Type), "many") {
 						if sch2, err := scheme.GetSchemaByID(f.GetLink()); err == nil {
 							for _, ff := range sch2.Fields {
+								fmt.Println(ff.Name, ff.GetLink(), f.GetLink(), schema.GetID())
 								if ff.GetLink() == 0 || ff.GetLink() == f.GetLink() || ff.GetLink() == schema.GetID() {
 									continue
 								}
@@ -494,6 +495,10 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 								}
 							}
 						}
+						continue
+					}
+					if !sch.HasField("name") {
+						continue
 					}
 					if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name, map[string]interface{}{
 						utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(l.Name, map[string]interface{}{
