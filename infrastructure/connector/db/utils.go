@@ -379,7 +379,7 @@ func FormatForSQL(datatype string, value interface{}) string {
 	if len(strval) == 0 {
 		return ""
 	}
-	if strval == "NULL" || strval == "NOT NULL" {
+	if strval == "NULL" || strval == "NOT NULL" || strings.Contains(strval, "SELECT") {
 		return strval
 	}
 	for _, typ := range SpecialTypes {
