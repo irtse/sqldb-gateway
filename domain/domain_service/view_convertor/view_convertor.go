@@ -477,17 +477,17 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 						if sch2, err := scheme.GetSchemaByID(f.GetLink()); err == nil {
 							for _, ff := range sch2.Fields {
 								fmt.Println(ff.Name, sch.Name, l.Name, ff.Name, f.Name, ff.GetLink(), f.GetLink())
-								if ff.GetLink() == 0 || ff.GetLink() == f.GetLink() || ff.GetLink() == schema.GetID() {
+								if ff.GetLink() < 0 || ff.GetLink() == f.GetLink() || ff.GetLink() == schema.GetID() {
 									continue
 								}
-								if sch3, err := scheme.GetSchemaByID(f.GetLink()); err == nil && sch.HasField("name") {
+								if sch3, err := scheme.GetSchemaByID(ff.GetLink()); err == nil && sch.HasField("name") {
 									if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch3.Name, map[string]interface{}{
 										utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(sch.Name, map[string]interface{}{
-											utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(l.Name, map[string]interface{}{
+											"db" + sch.Name + "_id": d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(l.Name, map[string]interface{}{
 												ds.RootID(schema.Name): record[utils.SpecialIDParam],
 												"!name":                nil,
-											}, false, f.Name),
-										}, false, ff.Name)}, false); err == nil {
+											}, false, ff.Name),
+										}, false, "id")}, false); err == nil {
 										for _, r := range res {
 											fmt.Println("MANY3", manyVals[field.Name], utils.GetString(r, "name"))
 											manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
