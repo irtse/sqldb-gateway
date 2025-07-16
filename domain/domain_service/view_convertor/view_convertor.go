@@ -601,7 +601,6 @@ func IsReadonly(tableName string, record utils.Record, createdIds []string, d ut
 			}
 			if res, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(res) == 0 {
 				m["is_close"] = true
-				fmt.Println("map", res, m)
 				if rr, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, m, false); err != nil || len(rr) > 0 {
 					return true
 				}
