@@ -124,7 +124,14 @@ func (t *AbstractController) csv(d utils.DomainITF, colsFunc map[string]string, 
 				row = append(row, "")
 				continue
 			}
-			row = append(row, utils.ToString(r[c]))
+			v := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(
+				utils.ToString(r[c]), "(completed)", ""), "(pending)", ""), "(refused)", ""), "(dismiss)", ""), "(progressing)", "")
+			row = append(row, v)
+			if v == "true" {
+				v = "yes"
+			} else if v == "false" {
+				v = "no"
+			}
 		}
 		data = append(data, row)
 	}

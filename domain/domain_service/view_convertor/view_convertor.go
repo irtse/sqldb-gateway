@@ -489,7 +489,6 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 											}, false, "id"),
 										}, false, ff.Name)}, false); err == nil {
 										for _, r := range res {
-											fmt.Println("MANY3", manyVals[field.Name], utils.GetString(r, "name"))
 											manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
 										}
 									}
