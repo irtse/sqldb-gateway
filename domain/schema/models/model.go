@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sqldb-ws/domain/utils"
+	db "sqldb-ws/infrastructure/connector/db"
 	"strconv"
 	"strings"
 )
@@ -108,19 +109,36 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 	}
 	if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(MANYTOMANY.String())) {
 		if sch, err := GetSchemaByID(field.GetLink()); err == nil {
+			var key = ""
 			for _, f := range sch.Fields {
-				if f.GetLink() > 0 && t.GetID() != f.GetLink() {
-					return "id", "(SELECT db" + t.Name + "_id FROM " + sch.Name + " WHERE " + f.Name + " " + operator + " " + search + " )", "IN", "manytomany", "", err
+				if f.GetLink() > 0 && t.GetID() == f.GetLink() {
+					key = f.Name
 				}
 			}
+			if key != "" {
+				for _, f := range sch.Fields {
+					if f.GetLink() > 0 && t.GetID() != f.GetLink() {
+						return "id", "(SELECT " + key + " FROM " + sch.Name + " WHERE " + db.MakeSqlItem("", field.Type, foreign.Name, f.Name, search, operator) + " )", "IN", "manytomany", "", err
+					}
+				}
+			}
+
 		}
 		return name, search, operator, field.Type, foreign.Name, errors.New("can't filter many to many on this " + name + " field with value " + search)
 	} else if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(ONETOMANY.String())) {
 		if strings.Contains(name, ".") {
 			subKey := strings.Join(strings.Split(name, ".")[1:], ".")
 			if sch, err := GetSchemaByID(field.GetLink()); err == nil {
-				if subKey, search, operator, _, _, err := sch.GetTypeAndLinkForField(subKey, search, operator, onUpload); err == nil {
-					return "id", "(SELECT  db" + t.Name + "_id FROM " + sch.Name + " WHERE " + strings.Split(subKey, ".")[0] + " " + operator + " " + search + ")", "IN", "onetomany", "", err
+				var key = ""
+				for _, f := range sch.Fields {
+					if f.GetLink() > 0 && t.GetID() == f.GetLink() {
+						key = f.Name
+					}
+				}
+				if key != "" {
+					if subKey, search, operator, _, _, err := sch.GetTypeAndLinkForField(subKey, search, operator, onUpload); err == nil {
+						return "id", "(SELECT  " + key + " FROM " + sch.Name + " WHERE " + db.MakeSqlItem("", field.Type, foreign.Name, strings.Split(subKey, ".")[0], search, operator) + ")", "IN", "onetomany", "", err
+					}
 				}
 			}
 		}
