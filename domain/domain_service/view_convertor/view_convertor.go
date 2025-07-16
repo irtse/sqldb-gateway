@@ -470,7 +470,7 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 					}
 				}
 				fmt.Println(f.Name, f.GetLink(), schema.Name)
-				if f.GetLink() == schema.GetID() {
+				if f.GetLink() == schema.GetID() || f.GetLink() == 0 {
 					continue
 				}
 				if sch, err := scheme.GetSchemaByID(f.GetLink()); err == nil && sch.HasField("name") {
