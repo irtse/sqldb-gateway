@@ -466,7 +466,7 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 							}
 						}
 					}
-					fmt.Println(f.Name, f.GetLink(), schema.GetID(), schema.Name)
+					fmt.Println(f.Name, f.GetLink(), schema.Name)
 					if f.GetLink() == schema.GetID() {
 						continue
 					}
@@ -485,7 +485,6 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 							}
 						}
 					}
-					break
 				}
 				continue
 			}
