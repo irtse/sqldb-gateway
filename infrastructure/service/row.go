@@ -150,7 +150,6 @@ func (t *TableRowService) setupFilter(record map[string]interface{}, verify bool
 		}
 	}
 	restr, order, limit, view := t.SpecializedService.GenerateQueryFilter(t.Table.Name, restriction...)
-	fmt.Println("setupFilter", t.Table.Name, restr)
 	if write {
 		t.DB.ClearQueryFilter().ApplyQueryFilters(restr, "", "", view)
 	} else {

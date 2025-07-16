@@ -218,7 +218,6 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 			shallowVals = s
 		}
 		shallowVals, manyVals, manyPathVals = d.HandleLinkField(record, field, schema, isEmpty, shallowVals, manyVals, manyPathVals)
-		fmt.Println("manyVals", manyVals)
 		if isEmpty {
 			vals[field.Name] = nil
 		} else if v, ok := record[field.Name]; ok {
