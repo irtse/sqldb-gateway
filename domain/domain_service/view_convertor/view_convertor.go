@@ -218,7 +218,7 @@ func (d *ViewConvertor) ConvertRecordToView(index int, view *sm.ViewModel, chann
 			shallowVals = s
 		}
 		shallowVals, manyVals, manyPathVals = d.HandleLinkField(record, field, schema, isEmpty, shallowVals, manyVals, manyPathVals)
-
+		fmt.Println("manyVals", manyVals)
 		if isEmpty {
 			vals[field.Name] = nil
 		} else if v, ok := record[field.Name]; ok {
@@ -462,6 +462,7 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 								manyVals[field.Name] = utils.Results{}
 							}
 							for _, r := range res {
+								fmt.Println("MANY", manyVals[field.Name], utils.GetString(r, "name"))
 								manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
 							}
 						}

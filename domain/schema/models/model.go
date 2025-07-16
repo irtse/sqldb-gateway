@@ -111,7 +111,6 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 		if sch, err := GetSchemaByID(field.GetLink()); err == nil {
 			for _, f := range sch.Fields {
 				if f.GetLink() > 0 && t.GetID() != f.GetLink() {
-					fmt.Println("TESQD", f.GetLink(), t.GetID(), "(SELECT db"+t.Name+"_id FROM "+sch.Name+" WHERE "+db.MakeSqlItem("", f.Type, "", f.Name, search, operator)+" )")
 					return "id", "(SELECT db" + t.Name + "_id FROM " + sch.Name + " WHERE " + db.MakeSqlItem("", f.Type, "", f.Name, search, operator) + " )", "IN", "manytomany", "", err
 				}
 			}
