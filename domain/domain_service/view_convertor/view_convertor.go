@@ -466,6 +466,7 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 							}
 						}
 					}
+					fmt.Println(f.Name, f.GetLink(), schema.GetID(), schema.Name)
 					if f.GetLink() == schema.GetID() {
 						continue
 					}
