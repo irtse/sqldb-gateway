@@ -150,7 +150,6 @@ func (d *FilterService) RestrictionBySchema(tableName string, restr []string, do
 	if strings.Trim(connector.FormatSQLRestrictionWhereByMap("", restriction, false), " ") != "" {
 		restr = append(restr, strings.Trim(connector.FormatSQLRestrictionWhereByMap("", restriction, false), " "))
 	}
-	fmt.Println("LINE2", restr)
 	return restr
 }
 
