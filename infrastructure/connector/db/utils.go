@@ -183,6 +183,10 @@ func MakeSqlItem(alterRestr string, typ string, foreignName string, key string, 
 	if strings.Contains(sql, "NULL") {
 		operator = "IS "
 	}
+	if strings.Contains(or, "SELECT") {
+		alterRestr += key + " " + operator + " " + sql
+		return alterRestr
+	}
 	if foreignName != "" {
 		if strings.Contains(sql, "%") {
 			alterRestr += key + " IN (SELECT id FROM " + foreignName + " WHERE LOWER(name::text) LIKE LOWER(" + sql + ") OR LOWER(id::text) LIKE LOWER(" + sql + "))"
