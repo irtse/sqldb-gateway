@@ -468,23 +468,23 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 						}
 						continue
 					}
-					fmt.Println(f.Name, f.GetLink(), schema.Name)
-					if f.GetLink() == schema.GetID() {
-						continue
-					}
-					if sch, err := scheme.GetSchemaByID(f.GetLink()); err == nil && sch.HasField("name") {
-						if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name, map[string]interface{}{
-							utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(l.Name, map[string]interface{}{
-								ds.RootID(schema.Name): record[utils.SpecialIDParam],
-							}, false, f.Name),
-						}, false); err == nil {
-							if _, ok := manyVals[field.Name]; !ok {
-								manyVals[field.Name] = utils.Results{}
-							}
-							for _, r := range res {
-								fmt.Println("MANY N", field.Name, f.GetLink(), schema.Name, sch.Name, l.Name, manyVals[field.Name], utils.GetString(r, "name"))
-								manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
-							}
+				}
+				fmt.Println(f.Name, f.GetLink(), schema.Name)
+				if f.GetLink() == schema.GetID() {
+					continue
+				}
+				if sch, err := scheme.GetSchemaByID(f.GetLink()); err == nil && sch.HasField("name") {
+					if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name, map[string]interface{}{
+						utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(l.Name, map[string]interface{}{
+							ds.RootID(schema.Name): record[utils.SpecialIDParam],
+						}, false, f.Name),
+					}, false); err == nil {
+						if _, ok := manyVals[field.Name]; !ok {
+							manyVals[field.Name] = utils.Results{}
+						}
+						for _, r := range res {
+							fmt.Println("MANY N", field.Name, f.GetLink(), schema.Name, sch.Name, l.Name, manyVals[field.Name], utils.GetString(r, "name"))
+							manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
 						}
 					}
 				}
