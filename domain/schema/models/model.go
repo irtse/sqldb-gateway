@@ -118,7 +118,7 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 			if key != "" {
 				for _, f := range sch.Fields {
 					if f.GetLink() > 0 && t.GetID() != f.GetLink() {
-						return "id", "(SELECT " + key + " FROM " + sch.Name + " WHERE " + db.MakeSqlItem("", field.Type, foreign.Name, f.Name, search, operator) + " )", "IN", "manytomany", "", err
+						return "id", "(SELECT " + key + " FROM " + sch.Name + " WHERE " + db.MakeSqlItem("", field.Type, "", f.Name, search, operator) + " )", "IN", "manytomany", "", err
 					}
 				}
 			}
@@ -137,7 +137,7 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 				}
 				if key != "" {
 					if subKey, search, operator, _, _, err := sch.GetTypeAndLinkForField(subKey, search, operator, onUpload); err == nil {
-						return "id", "(SELECT  " + key + " FROM " + sch.Name + " WHERE " + db.MakeSqlItem("", field.Type, foreign.Name, strings.Split(subKey, ".")[0], search, operator) + ")", "IN", "onetomany", "", err
+						return "id", "(SELECT  " + key + " FROM " + sch.Name + " WHERE " + db.MakeSqlItem("", field.Type, "", strings.Split(subKey, ".")[0], search, operator) + ")", "IN", "onetomany", "", err
 					}
 				}
 			}
