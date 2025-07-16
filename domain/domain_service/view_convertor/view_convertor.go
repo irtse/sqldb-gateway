@@ -477,6 +477,7 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 								manyVals[field.Name] = utils.Results{}
 							}
 							for _, r := range res {
+								fmt.Println("MANY N", manyVals[field.Name], utils.GetString(r, "name"))
 								manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
 							}
 						}
