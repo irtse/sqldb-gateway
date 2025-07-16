@@ -93,9 +93,7 @@ func GetSchemaByID(id int64) (SchemaModel, error) {
 
 func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator string, onUpload func(string, string)) (string, string, string, string, string, error) {
 	field, err := t.GetField(strings.Split(name, ".")[0])
-	fmt.Println(name, field.Name, err)
 	if err != nil {
-		fmt.Println("qsdqcqsc", t.Name, name, search, operator, "", "", err)
 		return name, search, operator, "", "", err
 	}
 	if strings.Contains(field.Type, "upload") {
@@ -106,7 +104,6 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 	}
 	foreign, err := GetSchemaByID(field.GetLink())
 	if err != nil {
-		fmt.Println("zoom", t.Name, name, search, operator, "", nil)
 		return name, search, operator, field.Type, "", nil
 	}
 	if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(MANYTOMANY.String())) {
@@ -129,7 +126,6 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 		}
 		return name, search, operator, field.Type, foreign.Name, errors.New("can't filter one to many on this " + name + " field with value " + search)
 	}
-	fmt.Println(name, search, operator, field.Type, foreign.Name)
 	return name, search, operator, field.Type, foreign.Name, nil
 }
 

@@ -34,6 +34,9 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 	}
 
 	res, err := db.QueryAssociativeArray(q)
+	if name == "article" {
+		fmt.Println(q, len(res), err)
+	}
 	return res, err
 }
 
