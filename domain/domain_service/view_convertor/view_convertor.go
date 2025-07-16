@@ -486,8 +486,8 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 											"db" + l.Name + "_id": d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(l.Name, map[string]interface{}{
 												ds.RootID(schema.Name): record[utils.SpecialIDParam],
 												"!name":                nil,
-											}, false, ff.Name),
-										}, false, "id")}, false); err == nil {
+											}, false, "id"),
+										}, false, ff.Name)}, false); err == nil {
 										for _, r := range res {
 											fmt.Println("MANY3", manyVals[field.Name], utils.GetString(r, "name"))
 											manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
