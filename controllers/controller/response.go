@@ -173,9 +173,9 @@ func (t *AbstractController) mapping(col string, colsCmd string, cmd string, map
 			continue
 		}
 		label := key
-		if scheme, ok := schema[key]; ok {
+		/*if scheme, ok := schema[key]; ok {
 			label = strings.Replace(utils.ToString(utils.ToMap(scheme)["label"]), "_", " ", -1)
-		}
+		}*/
 		if mapKey, ok := mapping[key]; ok && mapKey != "" {
 			label = mapKey
 		}
@@ -191,9 +191,9 @@ func (t *AbstractController) mapping(col string, colsCmd string, cmd string, map
 				continue
 			}
 			label := key
-			if scheme, ok := schema[key]; ok {
+			/*if scheme, ok := schema[key]; ok {
 				label = strings.Replace(utils.ToString(utils.ToMap(scheme)["label"]), "_", " ", -1)
-			}
+			}*/
 			if mapKey, ok := mapping[key]; ok && mapKey != "" {
 				label = mapKey
 			}
