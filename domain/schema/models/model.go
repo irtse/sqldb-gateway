@@ -110,7 +110,7 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 		if sch, err := GetSchemaByID(field.GetLink()); err == nil {
 			for _, f := range sch.Fields {
 				if f.GetLink() > 0 && t.GetID() != f.GetLink() {
-					return field.Name, "(SELECT id FROM " + sch.Name + " WHERE " + f.Name + " " + operator + " " + search + " )", "IN", "manytomany", "", err
+					return "id", "(SELECT db" + t.Name + "_id FROM " + sch.Name + " WHERE " + f.Name + " " + operator + " " + search + " )", "IN", "manytomany", "", err
 				}
 			}
 		}
@@ -120,7 +120,7 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 			subKey := strings.Join(strings.Split(name, ".")[1:], ".")
 			if sch, err := GetSchemaByID(field.GetLink()); err == nil {
 				if subKey, search, operator, _, _, err := sch.GetTypeAndLinkForField(subKey, search, operator, onUpload); err == nil {
-					return field.Name, "(SELECT id FROM " + sch.Name + " WHERE " + strings.Split(subKey, ".")[0] + " " + operator + " " + search + ")", "IN", "onetomany", "", err
+					return "id", "(SELECT  db" + t.Name + "_id FROM " + sch.Name + " WHERE " + strings.Split(subKey, ".")[0] + " " + operator + " " + search + ")", "IN", "onetomany", "", err
 				}
 			}
 		}
