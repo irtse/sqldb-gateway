@@ -469,14 +469,36 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 						continue
 					}
 				}
-				fmt.Println(f.Name, f.GetLink(), schema.Name)
 				if f.GetLink() == schema.GetID() || f.GetLink() == 0 {
 					continue
 				}
 				if sch, err := scheme.GetSchemaByID(f.GetLink()); err == nil && sch.HasField("name") {
+					if strings.Contains(strings.ToLower(f.Type), "many") {
+						if sch2, err := scheme.GetSchemaByID(f.GetLink()); err == nil {
+							for _, ff := range sch2.Fields {
+								if ff.GetLink() == 0 || ff.GetLink() == f.GetLink() || ff.GetLink() == schema.GetID() {
+									continue
+								}
+								if sch3, err := scheme.GetSchemaByID(f.GetLink()); err == nil && sch.HasField("name") {
+									if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch3.Name, map[string]interface{}{
+										utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(l.Name, map[string]interface{}{
+											ds.RootID(schema.Name): record[utils.SpecialIDParam],
+											"!name":                nil,
+										}, false, ff.Name),
+									}, false); err == nil {
+										for _, r := range res {
+											fmt.Println("MANY3", manyVals[field.Name], utils.GetString(r, "name"))
+											manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
+										}
+									}
+								}
+							}
+						}
+					}
 					if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name, map[string]interface{}{
 						utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(l.Name, map[string]interface{}{
 							ds.RootID(schema.Name): record[utils.SpecialIDParam],
+							"!name":                nil,
 						}, false, f.Name),
 					}, false); err == nil {
 						if _, ok := manyVals[field.Name]; !ok {
