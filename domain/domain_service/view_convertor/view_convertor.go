@@ -483,7 +483,7 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 								if sch3, err := scheme.GetSchemaByID(ff.GetLink()); err == nil && sch.HasField("name") {
 									if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch3.Name, map[string]interface{}{
 										utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(sch.Name, map[string]interface{}{
-											"db" + sch.Name + "_id": d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(l.Name, map[string]interface{}{
+											"db" + l.Name + "_id": d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(l.Name, map[string]interface{}{
 												ds.RootID(schema.Name): record[utils.SpecialIDParam],
 												"!name":                nil,
 											}, false, ff.Name),
