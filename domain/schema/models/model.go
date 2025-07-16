@@ -111,7 +111,7 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 		if sch, err := GetSchemaByID(field.GetLink()); err == nil {
 			var key = ""
 			for _, f := range sch.Fields {
-				fmt.Println("manytomany2", sch.Name, key, t.Name, f.Name)
+				fmt.Println("manytomany2", sch.Name, key, t.GetID(), f.GetLink(), f.Name)
 				if f.GetLink() > 0 && t.GetID() == f.GetLink() {
 					key = f.Name
 				}
