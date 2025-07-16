@@ -450,7 +450,7 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 		for _, f := range l.Fields {
 			fmt.Println(f.Name)
 			if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(sm.ONETOMANY.String())) {
-				if !strings.Contains(f.Name, schema.Name) && f.GetLink() > 0 {
+				if strings.Contains(f.Name, schema.Name) && f.GetLink() > 0 {
 					manyPathVals[field.Name] = utils.BuildPath(
 						link, utils.ReservedParam,
 						f.Name+"="+record.GetString(utils.SpecialIDParam))
