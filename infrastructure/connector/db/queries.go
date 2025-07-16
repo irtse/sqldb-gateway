@@ -34,9 +34,6 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 	}
 
 	res, err := db.QueryAssociativeArray(q)
-	if name == "article" {
-		fmt.Println(q, len(res), err)
-	}
 	return res, err
 }
 
@@ -230,7 +227,6 @@ func (db *Database) QueryAssociativeArray(query string) ([]map[string]interface{
 	rows, err := db.Conn.Query(query)
 	if err != nil {
 		debug.PrintStack()
-		fmt.Println(query, err)
 		return nil, err
 	}
 	defer rows.Close()
