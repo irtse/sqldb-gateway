@@ -52,6 +52,7 @@ func (s *FilterService) Write(record utils.Record, tableName string) {
 			field[ds.FilterDBField] = record[utils.SpecialIDParam]
 			f, err := schema.GetField(utils.ToString(field["name"]))
 			delete(field, "name")
+			delete(field, utils.SpecialIDParam)
 			if err == nil {
 				field[ds.SchemaFieldDBField] = f.ID
 			}
