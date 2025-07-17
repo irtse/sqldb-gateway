@@ -112,6 +112,10 @@ func (s *FilterService) TransformToGenericView(results utils.Results, tableName 
 						Operator:  utils.ToString(field["operator"]),
 						Dir:       utils.ToString(field["dir"]),
 					}
+					if field["name"] != nil {
+						model.Name = utils.ToString(field["name"])
+						model.Label = utils.ToString(field["name"])
+					}
 					if width, err := strconv.ParseFloat(utils.ToString(field["width"]), 64); err == nil {
 						model.Width = width
 					}
