@@ -36,8 +36,8 @@ func (s *TaskService) TransformToGenericView(results utils.Results, tableName st
 				res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(r[0], utils.SpecialIDParam))
 			}
 		} else {
-			if sch, err := schema.GetSchema(ds.DBTask.Name); err == nil {
-				res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(results[0], utils.SpecialIDParam))
+			if sch, err := schema.GetSchema(ds.DBRequest.Name); err == nil {
+				res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(results[0], ds.RequestDBField))
 			}
 		}
 	} // inner_redirection is the way to redirect any closure... to next data or data
@@ -185,9 +185,9 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		s.Domain.UpdateSuperCall(utils.GetRowTargetParameters(ds.DBRequest.Name, newRecRequest[utils.SpecialIDParam]).RootRaw(), newRecRequest)
 
 		for _, scheme := range schemes {
-			if current_index != newRecRequest.GetFloat("current_index") {
+			if current_index != newRecRequest.GetFloat("current_index") && current_index != (newRecRequest.GetFloat("current_index")-1) {
 				HandleHierarchicalVerification(s.Domain, requests[0], res)
-			} else {
+			} else if current_index == newRecRequest.GetFloat("current_index") {
 				PrepareAndCreateTask(scheme, requests[0], res, s.Domain, true)
 			}
 		}
