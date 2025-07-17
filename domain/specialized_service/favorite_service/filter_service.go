@@ -55,9 +55,10 @@ func (s *FilterService) Write(record utils.Record, tableName string) {
 			if err == nil {
 				field[ds.SchemaFieldDBField] = f.ID
 			}
-			s.Domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBFilterField.Name, field, func(v string) (string, bool) {
+			i, err := s.Domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBFilterField.Name, field, func(v string) (string, bool) {
 				return "", true
 			})
+			fmt.Println("CREATE FIELD", i, field, err)
 		}
 	}
 }
@@ -192,6 +193,7 @@ func (s *FilterService) ProcessFields(record map[string]interface{}, fieldType s
 	if fields, ok := record[fieldType]; ok {
 		s.UpdateFields = true
 		for _, field := range utils.ToList(fields) {
+			fmt.Println(field)
 			s.Fields = append(s.Fields, utils.ToMap(field))
 		}
 	}
