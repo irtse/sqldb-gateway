@@ -45,7 +45,7 @@ func (d *ViewConvertor) EnrichWithWorkFlowView(record utils.Record, tableName st
 
 func (d *ViewConvertor) InitializeWorkflow(record map[string]interface{}) sm.WorkflowModel {
 	return sm.WorkflowModel{
-		IsDismiss: record["state"] == "dismiss",
+		IsDismiss: record["state"] == "dismiss" || record["state"] == "refused" || record["state"] == "canceled",
 		Current:   utils.ToString(record["current_index"]),
 		Position:  utils.ToString(record["current_index"]),
 		IsClose:   record["state"] == "completed" || record["state"] == "dismiss" || record["state"] == "refused" || record["state"] == "canceled",
