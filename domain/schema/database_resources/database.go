@@ -490,6 +490,8 @@ var DBFilterField = models.SchemaModel{
 	Fields: []models.FieldModel{
 		{Name: RootID(DBSchemaField.Name), Type: models.INTEGER.String(), ForeignTable: DBSchemaField.Name, Required: false, Index: 0},
 		{Name: "value", Type: models.BIGVARCHAR.String(), Required: false, Index: 1},
+		{Name: "name", Type: models.VARCHAR.String(), Required: false, Index: 1},
+
 		{Name: "operator", Type: models.ENUMOPERATOR.String(), Required: false, Index: 2},
 		{Name: "separator", Type: models.ENUMSEPARATOR.String(), Required: false, Index: 3},
 		{Name: "dir", Type: models.BIGVARCHAR.String(), Required: false, Index: 4},

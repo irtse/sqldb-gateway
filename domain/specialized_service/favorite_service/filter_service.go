@@ -41,7 +41,6 @@ func (s *FilterService) SpecializedCreateRow(record map[string]interface{}, tabl
 }
 
 func (s *FilterService) Write(record utils.Record, tableName string) {
-	fmt.Println("ZOOOOOOM", record)
 	if s.UpdateFields {
 		s.Domain.GetDb().ClearQueryFilter().DeleteQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
 			ds.FilterDBField: record[utils.SpecialIDParam],
@@ -147,7 +146,6 @@ func (s *FilterService) GenerateQueryFilter(tableName string, innerestr ...strin
 }
 
 func (s *FilterService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
-
 	record["hidden"] = false
 	s.UpdateFields = false
 	method := s.Domain.GetMethod()
