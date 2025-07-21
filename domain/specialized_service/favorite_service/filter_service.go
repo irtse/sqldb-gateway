@@ -147,7 +147,6 @@ func (s *FilterService) GenerateQueryFilter(tableName string, innerestr ...strin
 }
 
 func (s *FilterService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
-	fmt.Println("Record TTT", tablename, record)
 
 	record["hidden"] = false
 	s.UpdateFields = false
@@ -168,9 +167,7 @@ func (s *FilterService) VerifyDataIntegrity(record map[string]interface{}, table
 	if method == utils.UPDATE {
 		delete(record, "name")
 	}
-	fmt.Println("Record", tablename, record)
 	s.ProcessSelection(record)
-	fmt.Println("Record 2", tablename, record)
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
 
