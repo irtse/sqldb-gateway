@@ -147,13 +147,13 @@ func (s *FilterService) GenerateQueryFilter(tableName string, innerestr ...strin
 }
 
 func (s *FilterService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
+	fmt.Println("Record TTT", tablename, record)
+
 	record["hidden"] = false
 	s.UpdateFields = false
 	method := s.Domain.GetMethod()
-
 	if method != utils.DELETE {
 		if err := s.ProcessLink(record); err != nil {
-			fmt.Println("Record", tablename, record, err)
 			return record, err, false
 		}
 		s.ProcessName(record)
