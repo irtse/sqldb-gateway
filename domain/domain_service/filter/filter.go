@@ -173,7 +173,12 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 				}, false, ds.DestTableDBField),
 		}, true)+")")
 	} else {
-		restr = append(restr, "is_draft=false")
+		if s.Domain.IsOwn(true, false, s.Domain.GetMethod()) {
+			newRestr["is_draft"] = false
+		} else {
+			restr = append(restr, "is_draft=false")
+		}
+
 	}
 	isUser := false
 	isUser = schema.HasField(ds.UserDBField) || s.Domain.GetTable() == ds.DBUser.Name
