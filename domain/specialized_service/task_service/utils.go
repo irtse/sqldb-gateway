@@ -63,7 +63,7 @@ func CreateNewDataFromTask(schema sm.SchemaModel, newTask utils.Record, record u
 	r := utils.Record{"is_draft": true}
 	if schema.HasField("name") {
 		if schema, err := schserv.GetSchemaByID(utils.GetInt(record, ds.SchemaDBField)); err == nil {
-			if res, err := domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
+			if res, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
 				utils.SpecialIDParam: record[ds.DestTableDBField],
 			}, false); err == nil && len(res) > 0 {
 				r[sm.NAMEKEY] = utils.GetString(res[0], "name")
@@ -142,7 +142,7 @@ func createTaskAndNotify(task map[string]interface{}, request map[string]interfa
 func notify(task utils.Record, i int64, domain utils.DomainITF) {
 	if schema, err := schserv.GetSchema(ds.DBTask.Name); err == nil {
 		name := utils.GetString(task, "name")
-		if res, err := domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
+		if res, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
 			utils.SpecialIDParam: i,
 		}, false); err == nil && len(res) > 0 {
 			name += " <" + utils.GetString(res[0], "name") + ">"
@@ -156,7 +156,7 @@ func notify(task utils.Record, i int64, domain utils.DomainITF) {
 		}
 		notif["link_id"] = schema.ID
 		if schema, err := schserv.GetSchemaByID(utils.GetInt(task, ds.SchemaDBField)); err == nil {
-			if res, err := domain.GetDb().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
+			if res, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(schema.Name, map[string]interface{}{
 				utils.SpecialIDParam: task[ds.DestTableDBField],
 			}, false); err == nil && len(res) > 0 {
 				notif[sm.NAMEKEY] = utils.GetString(res[0], "name")

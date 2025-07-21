@@ -153,6 +153,7 @@ func (s *FilterService) VerifyDataIntegrity(record map[string]interface{}, table
 
 	if method != utils.DELETE {
 		if err := s.ProcessLink(record); err != nil {
+			fmt.Println("Record", tablename, record, err)
 			return record, err, false
 		}
 		s.ProcessName(record)
@@ -174,7 +175,7 @@ func (s *FilterService) VerifyDataIntegrity(record map[string]interface{}, table
 }
 
 func (s *FilterService) ProcessLink(record map[string]interface{}) error {
-	if link, ok := record["link"]; ok {
+	if link, ok := record["link"]; ok && link != nil && link != "" {
 		schema, err := schserv.GetSchema(utils.ToString(link))
 		delete(record, "link")
 		if err != nil {

@@ -94,9 +94,9 @@ func GetFilterFields(schema *sm.SchemaModel, results []utils.Record, domain util
 
 	}
 	field := []map[string]interface{}{}
-	if res, err := domain.GetDb().SelectQueryWithRestriction(ds.DBFilterField.Name, m, false); err == nil {
+	if res, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, m, false); err == nil {
 		for _, r := range res {
-			if rr, err := domain.GetDb().SelectQueryWithRestriction(ds.DBSchemaField.Name, map[string]interface{}{
+			if rr, err := domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBSchemaField.Name, map[string]interface{}{
 				utils.SpecialIDParam: r[ds.SchemaFieldDBField],
 			}, false); err == nil && len(rr) > 0 {
 				rr[0]["force_not_readonly"] = r["force_not_readonly"]

@@ -45,7 +45,7 @@ func (s *AbstractSpecializedService) TransformToGenericView(results utils.Result
 			}
 		}
 		if s.Domain.GetIsDraftToPublished() && len(results) == 1 {
-			if rr, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+			if rr, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
 				ds.RequestDBField: s.Domain.GetDb().BuildSelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 					ds.DestTableDBField: results[0][utils.SpecialIDParam],
 					ds.SchemaDBField:    scheme.ID,

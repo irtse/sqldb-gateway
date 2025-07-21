@@ -24,7 +24,7 @@ func (s *DelegationService) VerifyDataIntegrity(record map[string]interface{}, t
 	delete(record, ds.DestTableDBField)
 
 	record[ds.UserDBField] = s.Domain.GetUserID() // affected create_by
-	if res, err := s.Domain.GetDb().SelectQueryWithRestriction(ds.DBDelegation.Name, record, false); err == nil && len(res) > 0 {
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDelegation.Name, record, false); err == nil && len(res) > 0 {
 		return map[string]interface{}{}, errors.New("can't add a delegated to an already delegated user"), false
 	}
 

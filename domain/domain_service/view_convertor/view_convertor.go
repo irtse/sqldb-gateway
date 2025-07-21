@@ -534,7 +534,7 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 			// on veut former une requête comme suit : SELECT * FROM dbuser WHERE id IN (SELECT dbuser_id FROM demo_authors WHERE dbdemo_id = ?)
 			// HERE IS REGULARY MALFORMED REQUEST FOR AUTHORS
 			// SELECT * FROM article_authors WHERE id IN (SELECT id FROM article_affiliation_authors WHERE dbarticle_id=197 AND dbarticle_authors_id IS NOT NULL) pq: column "dbarticle_authors_id" does not exist
-			if res, err := d.Domain.GetDb().SelectQueryWithRestriction(lid.Name, map[string]interface{}{
+			if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(lid.Name, map[string]interface{}{
 				utils.SpecialIDParam: d.Domain.GetDb().BuildSelectQueryWithRestriction(link, map[string]interface{}{
 					"!" + ds.RootID(lid.Name): nil,
 					ds.RootID(schema.Name):    record.GetString(utils.SpecialIDParam),
