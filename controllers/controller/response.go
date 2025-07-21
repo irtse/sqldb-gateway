@@ -2,7 +2,6 @@ package controller
 
 import (
 	"encoding/csv"
-	"fmt"
 	"net/http"
 	"net/url"
 	"sqldb-ws/domain/utils"
@@ -64,7 +63,6 @@ func (t *AbstractController) Response(resp utils.Results, err error, format stri
 }
 
 func (t *AbstractController) download(d utils.DomainITF, col string, colsCmd string, cmd string, format string, name string, mapping map[string]string, resp utils.Results, error error) {
-	fmt.Println(resp)
 	cols, lastLine, results := t.mapping(col, colsCmd, cmd, mapping, resp) // mapping
 	t.Ctx.ResponseWriter.Header().Set("Content-Type", "text/"+format)
 	t.Ctx.ResponseWriter.Header().Set("Content-Disposition", "attachment; filename="+name+"_"+strings.Replace(time.Now().Format(time.RFC3339), " ", "_", -1)+"."+format)

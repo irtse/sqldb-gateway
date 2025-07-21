@@ -142,6 +142,7 @@ func (s *FilterService) GenerateQueryFilter(tableName string, innerestr ...strin
 		innerestr = append(innerestr, "dashboard_restricted=false") // add dashboard_restricted filter if not present AD
 	}
 	innerestr = append(innerestr, "hidden=false") // add dashboard_restricted filter if not present AD
+	fmt.Println("ZOOOOOOM")
 	fmt.Println(filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...))
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }
@@ -201,7 +202,6 @@ func (s *FilterService) ProcessFields(record map[string]interface{}, fieldType s
 	if fields, ok := record[fieldType]; ok {
 		s.UpdateFields = true
 		for _, field := range utils.ToList(fields) {
-			fmt.Println(field)
 			s.Fields = append(s.Fields, utils.ToMap(field))
 		}
 	}

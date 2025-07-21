@@ -50,7 +50,6 @@ func (v *ViewConvertor) TransformToView(results utils.Results, tableName string,
 
 func (v *ViewConvertor) transformFullView(results utils.Results, schema *sm.SchemaModel, isWorkflow bool, params utils.Params) utils.Results {
 	schemes, id, order, _, addAction, _ := v.GetViewFields(schema.Name, false, results)
-	fmt.Println("ORDER", order)
 	commentBody := map[string]interface{}{}
 	if len(results) == 1 {
 		commentBody = map[string]interface{}{
@@ -147,7 +146,6 @@ func (v *ViewConvertor) transformShallowedView(results utils.Results, tableName 
 		}
 	}
 	scheme, id, order, _, addAction, _ := v.GetViewFields(t, false, utils.Results{})
-	fmt.Println("ORDER SCHAL", order)
 	for _, record := range results {
 		if _, ok := record["is_draft"]; ok && record.GetBool("is_draft") && !v.Domain.IsOwn(false, false, utils.SELECT) {
 			continue
@@ -450,7 +448,6 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 	if !d.Domain.IsShallowed() {
 		l, _ := scheme.GetSchemaByID(field.GetLink())
 		for _, f := range l.Fields {
-			fmt.Println(f.Name)
 			if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(sm.ONETOMANY.String())) {
 				if strings.Contains(f.Name, schema.Name) && f.GetLink() > 0 {
 					manyPathVals[field.Name] = utils.BuildPath(
@@ -464,7 +461,6 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 								manyVals[field.Name] = utils.Results{}
 							}
 							for _, r := range res {
-								fmt.Println("MANY", manyVals[field.Name], utils.GetString(r, "name"))
 								manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
 							}
 						}
@@ -478,7 +474,6 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 					if strings.Contains(strings.ToLower(f.Type), "many") {
 						if sch2, err := scheme.GetSchemaByID(f.GetLink()); err == nil {
 							for _, ff := range sch2.Fields {
-								fmt.Println(ff.Name, sch.Name, l.Name, ff.Name, f.Name, ff.GetLink(), f.GetLink())
 								if ff.GetLink() < 0 || ff.GetLink() == f.GetLink() || ff.GetLink() == schema.GetID() {
 									continue
 								}
@@ -512,7 +507,6 @@ func (d *ViewConvertor) HandleManyField(record utils.Record, field sm.FieldModel
 							manyVals[field.Name] = utils.Results{}
 						}
 						for _, r := range res {
-							fmt.Println("MANY N", field.Name, f.GetLink(), schema.Name, sch.Name, l.Name, manyVals[field.Name], utils.GetString(r, "name"))
 							manyVals[field.Name] = append(manyVals[field.Name], utils.Record{"name": utils.GetString(r, "name")})
 						}
 					}
