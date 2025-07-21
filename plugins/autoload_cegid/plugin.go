@@ -15,6 +15,10 @@ import (
 )
 
 func Autoload() []sm.SchemaModel {
+	ds.OWNPERMISSIONEXCEPTION = append(ds.OWNPERMISSIONEXCEPTION, []string{
+		models.CoCFR.Name, models.ProjectFR.Name, models.Axis.Name,
+		models.ProofreadingStatus.Name, models.MajorConference.Name,
+		models.PublicationStatusFR.Name}...)
 	ds.PERMISSIONEXCEPTION = append(ds.PERMISSIONEXCEPTION, []string{
 		models.CoCFR.Name, models.ProjectFR.Name, models.Axis.Name,
 		models.ProofreadingStatus.Name, models.MajorConference.Name,
