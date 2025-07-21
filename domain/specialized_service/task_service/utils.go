@@ -1,6 +1,7 @@
 package task_service
 
 import (
+	"fmt"
 	schserv "sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	sm "sqldb-ws/domain/schema/models"
@@ -107,6 +108,7 @@ func CreateNewDataFromTask(schema sm.SchemaModel, newTask utils.Record, record u
 
 func PrepareAndCreateTask(scheme utils.Record, request map[string]interface{}, record map[string]interface{}, domain utils.DomainITF, fromTask bool) map[string]interface{} {
 	newTask := ConstructNotificationTask(scheme, request, domain)
+	fmt.Println("NEWTASK", newTask)
 	delete(newTask, utils.SpecialIDParam)
 	if utils.GetString(newTask, ds.SchemaDBField) == utils.GetString(request, ds.SchemaDBField) {
 		newTask[ds.SchemaDBField] = request[ds.SchemaDBField]
@@ -129,6 +131,7 @@ func createTaskAndNotify(task map[string]interface{}, request map[string]interfa
 	i, err := domain.GetDb().CreateQuery(ds.DBTask.Name, task, func(s string) (string, bool) {
 		return "", true
 	})
+	fmt.Println("NEWTASK !", i, err)
 	if err != nil {
 		return
 	}

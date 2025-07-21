@@ -87,7 +87,7 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 				ds.EmailSendedDBField: record[utils.SpecialIDParam],
 			})
 		} else if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
-			"name": to,
+			"name": connector.Quote(to),
 		}, false); err == nil && len(res) > 0 {
 			for _, r := range res {
 				s.Domain.CreateSuperCall(utils.AllParams(ds.DBEmailSendedUser.Name).RootRaw(), map[string]interface{}{

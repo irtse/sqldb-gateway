@@ -1,6 +1,7 @@
 package task_service
 
 import (
+	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/view_convertor"
 	"sqldb-ws/domain/schema"
@@ -18,12 +19,15 @@ func (s *WorkflowService) Entity() utils.SpecializedServiceInfo { return ds.DBWo
 
 func (s *WorkflowService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
 	res := utils.Results{}
+	fmt.Println("WF RES", len(results))
 	for _, rec := range results { // filter by allowed schemas
 		schema, err := schema.GetSchemaByID(utils.ToInt64(rec[SchemaDBField]))
+		fmt.Println("WF RES", rec[SchemaDBField], schema.ID, schema.Name, err, len(results))
 		if err == nil && s.Domain.VerifyAuth(schema.Name, "", "", utils.CREATE) {
 			res = append(res, rec)
 		}
 	}
+	fmt.Println("WF RES 2", len(res))
 	rr := view_convertor.NewViewConvertor(s.Domain).TransformToView(res, tableName, true, s.Domain.GetParams().Copy())
 	if _, ok := s.Domain.GetParams().Get(utils.SpecialIDParam); ok && len(results) == 1 && len(rr) == 1 {
 		r := results[0]
