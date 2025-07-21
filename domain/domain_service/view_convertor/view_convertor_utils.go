@@ -23,6 +23,7 @@ func CompareOrder(schema *sm.SchemaModel, order []string, schemes map[string]int
 			}
 		}
 	}
+	fmt.Println(newOrder, order)
 	if len(newOrder) == 0 {
 		return order, schemes
 	}
