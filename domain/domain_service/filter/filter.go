@@ -173,7 +173,7 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 				}, false, ds.DestTableDBField),
 		}, true)+")")
 	} else {
-		if slices.Contains(ds.OWNPERMISSIONEXCEPTION, schema.Name) {
+		if slices.Contains(ds.OWNPERMISSIONEXCEPTION, schema.Name) || ds.DBUser.Name == schema.Name {
 			newRestr["is_draft"] = false
 		} else {
 			restr = append(restr, "is_draft=false")
