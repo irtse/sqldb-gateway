@@ -142,6 +142,7 @@ func (s *FilterService) GenerateQueryFilter(tableName string, innerestr ...strin
 		innerestr = append(innerestr, "dashboard_restricted=false") // add dashboard_restricted filter if not present AD
 	}
 	innerestr = append(innerestr, "hidden=false") // add dashboard_restricted filter if not present AD
+	fmt.Println(filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...))
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }
 
@@ -253,13 +254,13 @@ func (s *FilterService) RecursiveHandleEntityFilterNaming(label string, index in
 }
 
 func (s *FilterService) ProcessSelection(record map[string]interface{}) {
-	if sel, ok := record["is_selected"]; ok && utils.Compare(sel, true) { // TODO
+	/*if sel, ok := record["is_selected"]; ok && utils.Compare(sel, true) { // TODO
 		s.Domain.GetDb().UpdateQuery(ds.DBFilter.Name, utils.Record{
 			"is_selected": false,
 		}, map[string]interface{}{
 			ds.FilterDBField: record[ds.FilterDBField],
 		}, true)
-	}
+	}*/
 	delete(record, "filter_fields")
 	delete(record, "view_fields")
 }

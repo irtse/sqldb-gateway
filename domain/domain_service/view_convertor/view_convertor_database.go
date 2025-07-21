@@ -54,13 +54,11 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 	l := sync.Mutex{}
 	for _, scheme := range schema.Fields {
 		if !d.Domain.IsSuperAdmin() && !d.Domain.VerifyAuth(tableName, scheme.Name, scheme.Level, utils.SELECT) {
-			fmt.Println("THERE2", scheme.Name)
 			continue
 		}
 		l.Lock()
 		if cols, ok := d.Domain.GetParams().Get(utils.RootColumnsParam); ok && cols != "" && !strings.Contains(cols, scheme.Name) {
 			l.Unlock()
-			fmt.Println("THERE", scheme.Name)
 			continue
 		}
 		shallowField := sm.ViewFieldModel{
