@@ -94,26 +94,22 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 			m["hidden"] = scheme.Hidden
 			schemes[scheme.Name] = m
 		}
-		if !scheme.Hidden {
-			keysOrdered = append(keysOrdered, scheme.Name)
-		} else {
-			ids := []string{}
-			for _, r := range results {
-				ids = append(ids, utils.GetString(r, utils.SpecialIDParam))
-			}
-			if len(ids) > 0 && strings.Trim(strings.Join(ids, ""), " ") != "" {
-				// exception when a task is active with workflow schema with filter and its id
-				if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
-					ds.SchemaFieldDBField: scheme.ID,
-					ds.FilterDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
-						utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-							ds.SchemaDBField:    schema.ID,
-							ds.DestTableDBField: ids,
-						}, false, ds.WorkflowSchemaDBField),
-					}, false, "view_"+ds.FilterDBField),
-				}, false); err == nil && len(res) > 0 {
-					keysOrdered = append(keysOrdered, scheme.Name)
-				}
+		ids := []string{}
+		for _, r := range results {
+			ids = append(ids, utils.GetString(r, utils.SpecialIDParam))
+		}
+		if len(ids) > 0 && strings.Trim(strings.Join(ids, ""), " ") != "" {
+			// exception when a task is active with workflow schema with filter and its id
+			if res, err := d.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
+				ds.SchemaFieldDBField: scheme.ID,
+				ds.FilterDBField: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+					utils.SpecialIDParam: d.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+						ds.SchemaDBField:    schema.ID,
+						ds.DestTableDBField: ids,
+					}, false, ds.WorkflowSchemaDBField),
+				}, false, "view_"+ds.FilterDBField),
+			}, false); err == nil && len(res) > 0 {
+				keysOrdered = append(keysOrdered, scheme.Name)
 			}
 		}
 	}
