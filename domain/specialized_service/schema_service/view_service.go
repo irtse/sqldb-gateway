@@ -261,7 +261,7 @@ func (s *ViewService) fetchData(params utils.Params, sqlFilter string, rec utils
 	if !s.Domain.GetEmpty() {
 		s.Domain.GetDb().ClearQueryFilter()
 		datas, _ = s.Domain.Call(params.RootRaw(), utils.Record{}, utils.SELECT, []interface{}{sqlFilter}...)
-		fmt.Println("DATAS", len(datas))
+		fmt.Println("DATAS", len(datas), sqlFilter)
 	}
 	return datas, rec
 }
