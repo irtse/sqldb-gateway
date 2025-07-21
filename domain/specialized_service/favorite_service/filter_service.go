@@ -41,6 +41,7 @@ func (s *FilterService) SpecializedCreateRow(record map[string]interface{}, tabl
 }
 
 func (s *FilterService) Write(record utils.Record, tableName string) {
+	fmt.Println("ZOOOOOOM", record)
 	if s.UpdateFields {
 		s.Domain.GetDb().ClearQueryFilter().DeleteQueryWithRestriction(ds.DBFilterField.Name, map[string]interface{}{
 			ds.FilterDBField: record[utils.SpecialIDParam],
@@ -142,8 +143,6 @@ func (s *FilterService) GenerateQueryFilter(tableName string, innerestr ...strin
 		innerestr = append(innerestr, "dashboard_restricted=false") // add dashboard_restricted filter if not present AD
 	}
 	innerestr = append(innerestr, "hidden=false") // add dashboard_restricted filter if not present AD
-	fmt.Println("ZOOOOOOM")
-	fmt.Println(filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...))
 	return filter.NewFilterService(s.Domain).GetQueryFilter(tableName, s.Domain.GetParams().Copy(), innerestr...)
 }
 
