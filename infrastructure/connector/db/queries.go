@@ -34,9 +34,6 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 	}
 
 	res, err := db.QueryAssociativeArray(q)
-	if name == "project" {
-		fmt.Println(q, err)
-	}
 	return res, err
 }
 
