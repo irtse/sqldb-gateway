@@ -172,6 +172,8 @@ func (s *FilterService) RestrictionByEntityUser(schema sm.SchemaModel, restr []s
 					"d.write":                  true,
 				}, false, ds.DestTableDBField),
 		}, true)+")")
+	} else if s.Domain.IsShallowed() {
+		newRestr["is_draft"] = false
 	} else {
 		restr = append(restr, "is_draft=false")
 	}
