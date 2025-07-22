@@ -112,6 +112,19 @@ func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]inte
 func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]interface{}, record map[string]interface{}) {
 	sche, err := sch.GetSchema(s.Domain.GetTable())
 	if err == nil {
+		for _, rec := range res {
+			for _, field := range sche.Fields {
+				if sch2, err := sch.GetSchemaByID(field.GetLink()); err == nil && strings.Contains(strings.ToUpper(field.Type), "MANY") {
+					if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch2.Name, map[string]interface{}{
+						ds.RootID(s.Domain.GetTable()): rec[utils.SpecialIDParam],
+					}, false); err == nil {
+						for _, r := range res {
+							s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(sch2.Name, utils.GetString(r, utils.SpecialIDParam)).RootRaw())
+						}
+					}
+				}
+			}
+		}
 		for schemaName, mm := range s.ManyToMany {
 			field, err := sche.GetField(schemaName)
 			if err != nil {
@@ -153,18 +166,6 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 			}
 		}
 		for _, rec := range res {
-			for _, field := range sche.Fields {
-				if sch2, err := sch.GetSchemaByID(field.GetLink()); err == nil && strings.Contains(strings.ToUpper(field.Type), "MANY") {
-					if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch2.Name, map[string]interface{}{
-						ds.RootID(s.Domain.GetTable()): rec[utils.SpecialIDParam],
-					}, false); err == nil {
-						for _, r := range res {
-							s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(sch2.Name, utils.GetString(r, utils.SpecialIDParam)).RootRaw())
-						}
-					}
-				}
-			}
-
 			triggers.NewTrigger(s.Domain).Trigger(&sche, rec, utils.UPDATE)
 			if s.Domain.GetTable() == ds.DBRequest.Name || s.Domain.GetTable() == ds.DBTask.Name {
 				continue

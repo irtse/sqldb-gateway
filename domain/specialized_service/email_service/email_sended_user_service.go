@@ -69,5 +69,6 @@ func (s *EmailSendedUserService) VerifyDataIntegrity(record map[string]interface
 	}, false); err == nil && len(res) > 0 {
 		return record, errors.New("already send"), false
 	}
+	fmt.Println("SEND TO", record)
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
