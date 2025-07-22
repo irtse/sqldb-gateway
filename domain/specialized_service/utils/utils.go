@@ -122,7 +122,7 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 				fmt.Println(s.Domain.GetDb().DeleteQueryWithRestriction(ff.Name, map[string]interface{}{
 					ds.RootID(s.Domain.GetTable()): record[utils.SpecialIDParam],
 				}, false))
-				fmt.Println(mm)
+				fmt.Println(mm, record[utils.SpecialIDParam])
 				for _, m := range mm {
 					if ff.HasField(ds.RootID(ff.Name)) {
 						if m[utils.SpecialIDParam] != nil {
