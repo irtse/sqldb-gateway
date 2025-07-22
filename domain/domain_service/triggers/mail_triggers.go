@@ -91,7 +91,6 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 			return mailings
 		}
 	}
-	fmt.Println("ToUSERS", toUsers)
 	mailSchema, err := schema.GetSchema(ds.DBEmailTemplate.Name)
 	if err != nil {
 		return mailings
@@ -215,7 +214,6 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 			}
 		}
 	}
-	fmt.Println("mailings", mailings)
 	return mailings
 }
 
