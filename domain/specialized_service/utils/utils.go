@@ -119,7 +119,7 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 					if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch2.Name, map[string]interface{}{
 						ds.RootID(s.Domain.GetTable()): rec[utils.SpecialIDParam],
 					}, false); err == nil {
-						fmt.Println(ds.RootID(s.Domain.GetTable()), rec[utils.SpecialIDParam], err)
+						fmt.Println(sch2.Name, ds.RootID(s.Domain.GetTable()), rec[utils.SpecialIDParam], err)
 						for _, r := range res {
 							del, err := s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(sch2.Name, utils.GetString(r, utils.SpecialIDParam)).RootRaw())
 							fmt.Println(del, err)
