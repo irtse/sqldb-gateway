@@ -94,7 +94,6 @@ func (d *ViewConvertor) GetViewFields(tableName string, noRecursive bool, result
 			m["hidden"] = scheme.Hidden
 			schemes[scheme.Name] = m
 		}
-		fmt.Println(scheme.Name, scheme.Hidden)
 		if !scheme.Hidden {
 			keysOrdered = append(keysOrdered, scheme.Name)
 		} else {

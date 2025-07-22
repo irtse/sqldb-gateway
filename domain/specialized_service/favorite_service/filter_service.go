@@ -55,10 +55,9 @@ func (s *FilterService) Write(record utils.Record, tableName string) {
 			if err == nil {
 				field[ds.SchemaFieldDBField] = f.ID
 			}
-			i, err := s.Domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBFilterField.Name, field, func(v string) (string, bool) {
+			s.Domain.GetDb().ClearQueryFilter().CreateQuery(ds.DBFilterField.Name, field, func(v string) (string, bool) {
 				return "", true
 			})
-			fmt.Println("CREATE FIELD", i, field, err)
 		}
 	}
 }
