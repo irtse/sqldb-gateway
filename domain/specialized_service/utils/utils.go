@@ -112,7 +112,46 @@ func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]inte
 func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]interface{}, record map[string]interface{}) {
 	sche, err := sch.GetSchema(s.Domain.GetTable())
 	if err == nil {
-
+		for schemaName, mm := range s.ManyToMany {
+			field, err := sche.GetField(schemaName)
+			if err != nil {
+				continue
+			}
+			if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
+				for _, m := range mm {
+					if ff.HasField(ds.RootID(ff.Name)) {
+						if m[utils.SpecialIDParam] != nil {
+							m[ds.RootID(ff.Name)] = m[utils.SpecialIDParam]
+						}
+						delete(m, utils.SpecialIDParam)
+					} else {
+						for _, fff := range ff.Fields {
+							if !strings.Contains(fff.Name, ff.Name) && fff.GetLink() > 0 {
+								if m[utils.SpecialIDParam] != nil {
+									m[fff.Name] = m[utils.SpecialIDParam]
+								}
+								delete(m, utils.SpecialIDParam)
+								break
+							}
+						}
+					}
+					m[ds.RootID(s.Domain.GetTable())] = record[utils.SpecialIDParam]
+					s.Domain.CreateSuperCall(utils.AllParams(ff.Name).RootRaw(), m)
+				}
+			}
+		}
+		for schemaName, om := range s.OneToMany {
+			field, err := sche.GetField(schemaName)
+			if err != nil {
+				continue
+			}
+			if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
+				for _, m := range om {
+					m[ds.RootID(s.Domain.GetTable())] = record[utils.SpecialIDParam]
+					s.Domain.CreateSuperCall(utils.AllParams(ff.Name).RootRaw(), m)
+				}
+			}
+		}
 		for _, rec := range res {
 			for _, field := range sche.Fields {
 				if sch2, err := sch.GetSchemaByID(field.GetLink()); err == nil && strings.Contains(strings.ToUpper(field.Type), "MANY") {
@@ -125,46 +164,7 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 					}
 				}
 			}
-			for schemaName, mm := range s.ManyToMany {
-				field, err := sche.GetField(schemaName)
-				if err != nil {
-					continue
-				}
-				if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
-					for _, m := range mm {
-						if ff.HasField(ds.RootID(ff.Name)) {
-							if m[utils.SpecialIDParam] != nil {
-								m[ds.RootID(ff.Name)] = m[utils.SpecialIDParam]
-							}
-							delete(m, utils.SpecialIDParam)
-						} else {
-							for _, fff := range ff.Fields {
-								if !strings.Contains(fff.Name, ff.Name) && fff.GetLink() > 0 {
-									if m[utils.SpecialIDParam] != nil {
-										m[fff.Name] = m[utils.SpecialIDParam]
-									}
-									delete(m, utils.SpecialIDParam)
-									break
-								}
-							}
-						}
-						m[ds.RootID(s.Domain.GetTable())] = record[utils.SpecialIDParam]
-						s.Domain.CreateSuperCall(utils.AllParams(ff.Name).RootRaw(), m)
-					}
-				}
-			}
-			for schemaName, om := range s.OneToMany {
-				field, err := sche.GetField(schemaName)
-				if err != nil {
-					continue
-				}
-				if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
-					for _, m := range om {
-						m[ds.RootID(s.Domain.GetTable())] = record[utils.SpecialIDParam]
-						s.Domain.CreateSuperCall(utils.AllParams(ff.Name).RootRaw(), m)
-					}
-				}
-			}
+
 			triggers.NewTrigger(s.Domain).Trigger(&sche, rec, utils.UPDATE)
 			if s.Domain.GetTable() == ds.DBRequest.Name || s.Domain.GetTable() == ds.DBTask.Name {
 				continue
