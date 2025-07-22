@@ -120,6 +120,9 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 				continue
 			}
 			if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
+				s.Domain.GetDb().DeleteQueryWithRestriction(ff.Name, map[string]interface{}{
+					ds.RootID(s.Domain.GetTable()): record[utils.SpecialIDParam],
+				}, false)
 				for _, m := range mm {
 					if ff.HasField(ds.RootID(ff.Name)) {
 						if m[utils.SpecialIDParam] != nil {
@@ -139,7 +142,7 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 					}
 					m[ds.RootID(s.Domain.GetTable())] = record[utils.SpecialIDParam]
 					delete(m, utils.SpecialIDParam)
-					s.Domain.GetDb().DeleteQueryWithRestriction(ff.Name, m, false)
+
 					s.Domain.CreateSuperCall(utils.AllParams(ff.Name).RootRaw(), m)
 				}
 			}
@@ -151,10 +154,12 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 				continue
 			}
 			if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
+				s.Domain.GetDb().DeleteQueryWithRestriction(ff.Name, map[string]interface{}{
+					ds.RootID(s.Domain.GetTable()): record[utils.SpecialIDParam],
+				}, false)
 				for _, m := range om {
 					m[ds.RootID(s.Domain.GetTable())] = record[utils.SpecialIDParam]
 					delete(m, utils.SpecialIDParam)
-					s.Domain.GetDb().DeleteQueryWithRestriction(ff.Name, m, false)
 					s.Domain.CreateSuperCall(utils.AllParams(ff.Name).RootRaw(), m)
 				}
 			}
