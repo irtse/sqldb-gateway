@@ -17,6 +17,7 @@ type EmailSendedUserService struct {
 func (s *EmailSendedUserService) Entity() utils.SpecializedServiceInfo { return ds.DBEmailSendedUser }
 
 func (s *EmailSendedUserService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
+	fmt.Println("SENDED TO", record)
 	isValid := false
 	emailTo := ""
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
