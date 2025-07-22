@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"fmt"
+	"slices"
 	"sqldb-ws/domain/schema"
 	ds "sqldb-ws/domain/schema/database_resources"
 	"sqldb-ws/domain/schema/models"
@@ -118,7 +119,9 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 					ds.SchemaDBField:    destSchema.ID,
 				}, false); err == nil {
 					for _, r := range res {
-						userIDS = append(userIDS, utils.GetString(r, ds.UserDBField))
+						if !slices.Contains(userIDS, utils.GetString(r, ds.UserDBField)) {
+							userIDS = append(userIDS, utils.GetString(r, ds.UserDBField))
+						}
 					}
 				}
 			} else if userDest["from_"+ds.SchemaDBField] != nil {
@@ -169,16 +172,19 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 							if err == nil {
 								continue
 							}
-							userIDS = append(userIDS, utils.GetString(u, ff.Name))
+							if !slices.Contains(userIDS, utils.GetString(u, ff.Name)) {
+								userIDS = append(userIDS, utils.GetString(u, ff.Name))
+							}
 						} else {
-							userIDS = append(userIDS, ds.UserDBField)
+							if !slices.Contains(userIDS, utils.GetString(u, ds.UserDBField)) {
+								userIDS = append(userIDS, utils.GetString(u, ds.UserDBField))
+							}
 						}
 					}
 				}
 			}
 		}
 	}
-	fmt.Println("userIDS", userIDS)
 	if len(userIDS) > 0 {
 		if usto, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 			utils.SpecialIDParam: userIDS,

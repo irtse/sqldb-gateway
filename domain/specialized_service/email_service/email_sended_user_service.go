@@ -7,6 +7,7 @@ import (
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
 	conn "sqldb-ws/infrastructure/connector"
+	db "sqldb-ws/infrastructure/connector/db"
 )
 
 // DONE - ~ 200 LINES - PARTIALLY TESTED
@@ -65,7 +66,7 @@ func (s *EmailSendedUserService) VerifyDataIntegrity(record map[string]interface
 		ds.EmailSendedDBField: record[ds.EmailSendedDBField],
 		utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEmailSendedUser.Name, map[string]interface{}{
 			ds.UserDBField: record[ds.UserDBField],
-			"name":         record["name"],
+			"name":         db.Quote(utils.GetString(record, "name")),
 		}, true, utils.SpecialIDParam),
 	}, false); err == nil && len(res) > 0 {
 		return record, errors.New("already send"), false
