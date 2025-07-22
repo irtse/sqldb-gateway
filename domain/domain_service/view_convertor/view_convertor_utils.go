@@ -75,13 +75,19 @@ func GetFilterFields(schema *sm.SchemaModel, results []utils.Record, domain util
 			}, true, ds.WorkflowSchemaDBField),
 		}, false, "view_"+ds.FilterDBField)
 		if len(results) == 1 {
-			m[ds.FilterDBField+"_101"] = domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
-				utils.SpecialIDParam: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
-					ds.SchemaDBField:    schema.ID,
-					ds.DestTableDBField: results[0][utils.SpecialIDParam],
-					"is_close":          false,
-				}, false, ds.WorkflowSchemaDBField),
-			}, false, "view_"+ds.FilterDBField)
+			if utils.GetBool(results[0], "is_draft") {
+				m[ds.FilterDBField+"_100"] = domain.GetDb().BuildSelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
+					ds.SchemaDBField: schema.ID,
+				}, false, "view_"+ds.FilterDBField)
+			} else {
+				m[ds.FilterDBField+"_101"] = domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
+					utils.SpecialIDParam: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
+						ds.SchemaDBField:    schema.ID,
+						ds.DestTableDBField: results[0][utils.SpecialIDParam],
+						"is_close":          false,
+					}, false, ds.WorkflowSchemaDBField),
+				}, false, "view_"+ds.FilterDBField)
+			}
 		} else {
 			m[ds.FilterDBField+"_101"] = domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBWorkflowSchema.Name, map[string]interface{}{
 				utils.SpecialIDParam: domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBTask.Name, map[string]interface{}{
