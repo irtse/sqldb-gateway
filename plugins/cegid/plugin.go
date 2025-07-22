@@ -224,7 +224,7 @@ func ImportUserHierachy() {
 				if strings.Contains(strings.ToLower(header), "compétence") && data[i] != "" {
 					cocName = data[i]
 					if !slices.Contains([]string{"CIAC", "CIAA", "CIAS", "CSEC", "CSOM", "CSIS", "CMCP", "CMMP", "CMSA", "CEHT", "CEHF"}, strings.ToUpper(cocName)) {
-						cocName = "other competence center"
+						cocName = "autre centre de compétence"
 					}
 					if !slices.Contains(insideCoc, cocName) {
 						insideCoc = append(insideCoc, cocName)
