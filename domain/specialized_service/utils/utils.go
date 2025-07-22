@@ -126,7 +126,7 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 								map[string]interface{}{
 									utils.SpecialIDParam: r[utils.SpecialIDParam],
 								}, false)
-							fmt.Println("DEL", err)
+							fmt.Println("DEL", r[utils.SpecialIDParam], err)
 						}
 					}
 				}
