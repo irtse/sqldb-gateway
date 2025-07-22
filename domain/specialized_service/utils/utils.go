@@ -225,6 +225,7 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 					}
 
 				} else if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(sm.MANYTOMANY.String())) && record[field.Name] != nil {
+					fmt.Println(s.ManyToMany, field.Name, record[field.Name])
 					if s.ManyToMany[field.Name] == nil {
 						s.ManyToMany[field.Name] = []map[string]interface{}{}
 					}

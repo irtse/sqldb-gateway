@@ -1,6 +1,7 @@
 package email_service
 
 import (
+	"fmt"
 	ds "sqldb-ws/domain/schema/database_resources"
 	servutils "sqldb-ws/domain/specialized_service/utils"
 	"sqldb-ws/domain/utils"
@@ -23,6 +24,7 @@ func NewEmailSendedService() utils.SpecializedServiceITF {
 func (s *EmailSendedService) Entity() utils.SpecializedServiceInfo { return ds.DBEmailSended }
 
 func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{}, tableName string) {
+	fmt.Println("SpecializedCreateRow", record)
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailTemplate.Name, map[string]interface{}{
 		utils.SpecialIDParam:  record[ds.EmailTemplateDBField],
 		"is_response_valid":   false,
@@ -106,11 +108,7 @@ func (s *EmailSendedService) SpecializedCreateRow(record map[string]interface{},
 }
 
 func (s *EmailSendedService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
-	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
-		"code": connector.Quote(utils.GetString(record, "code")),
-	}, true); err == nil && len(res) > 0 {
-		record["code"] = uuid.New()
-	}
+	fmt.Println("VerifyDataIntegrity", record)
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSended.Name, map[string]interface{}{
 		"code": connector.Quote(utils.GetString(record, "code")),
 	}, true); err == nil && len(res) > 0 {
