@@ -112,7 +112,16 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 			for _, f := range sch.Fields {
 				if f.GetLink() > 0 && t.GetID() != f.GetLink() {
 					fmt.Println("manytomany", sch.Name, " : ", f.Name, search, operator, f.Type, "(SELECT db"+t.Name+"_id FROM "+sch.Name+" WHERE "+db.MakeSqlItem("", f.Type, "", f.Name, search, operator)+" )")
-					return "id", "(SELECT db" + t.Name + "_id FROM " + sch.Name + " WHERE " + db.MakeSqlItem("", f.Type, "", f.Name, search, operator) + " )", "IN", "manytomany", "", err
+					var k *FieldModel
+					for _, fld := range t.Fields {
+						if sch.GetID() == fld.GetLink() {
+							k = &fld
+							break
+						}
+					}
+					if k != nil {
+						return k.Name, "(SELECT db" + t.Name + "_id FROM " + sch.Name + " WHERE " + db.MakeSqlItem("", f.Type, "", f.Name, search, operator) + " )", "IN", "manytomany", "", err
+					}
 				}
 			}
 		}
@@ -130,11 +139,15 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 				if key != "" {
 					if subKey, search, operator, typ, _, err := sch.GetTypeAndLinkForField(subKey, search, operator, onUpload); err == nil {
 						fmt.Println("onetomany", sch.Name, " : ", subKey, search, operator, typ, "(SELECT  "+key+" FROM "+sch.Name+" WHERE "+db.MakeSqlItem("", typ, "", strings.Split(subKey, ".")[0], search, operator)+")")
-						for _, f := range sch.Fields {
-							if f.Name == strings.Split(subKey, ".")[0] {
-								fmt.Println("onetomany", sch.Name, " : ", f.Name, search, operator, f.Type, "(SELECT  "+key+" FROM "+sch.Name+" WHERE "+db.MakeSqlItem("", f.Type, "", strings.Split(subKey, ".")[0], search, operator)+")")
-								return "id", "(SELECT  " + key + " FROM " + sch.Name + " WHERE " + db.MakeSqlItem("", f.Type, "", strings.Split(subKey, ".")[0], search, operator) + ")", "IN", "onetomany", "", err
+						var k *FieldModel
+						for _, fld := range t.Fields {
+							if sch.GetID() == fld.GetLink() {
+								k = &fld
+								break
 							}
+						}
+						if k != nil {
+							return k.Name, "(SELECT  " + key + " FROM " + sch.Name + " WHERE " + db.MakeSqlItem("", typ, "", strings.Split(subKey, ".")[0], search, operator) + ")", "IN", "onetomany", "", err
 						}
 					}
 				}
