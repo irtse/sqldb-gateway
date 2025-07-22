@@ -61,5 +61,14 @@ func (s *EmailSendedUserService) VerifyDataIntegrity(record map[string]interface
 	if utils.GetString(record, "name") == "" && utils.GetString(record, ds.UserDBField) == "" {
 		return record, errors.New("no email to send to"), false
 	}
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBEmailSendedUser.Name, map[string]interface{}{
+		ds.EmailSendedDBField: record[ds.EmailSendedDBField],
+		utils.SpecialIDParam: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBEmailSendedUser.Name, map[string]interface{}{
+			ds.UserDBField: record[ds.UserDBField],
+			"name":         record["name"],
+		}, true, utils.SpecialIDParam),
+	}, false); err == nil && len(res) > 0 {
+		return record, errors.New("already send"), false
+	}
 	return s.AbstractSpecializedService.VerifyDataIntegrity(record, tablename)
 }
