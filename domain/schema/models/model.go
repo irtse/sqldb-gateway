@@ -128,7 +128,8 @@ func (t SchemaModel) GetTypeAndLinkForField(name string, search string, operator
 					}
 				}
 				if key != "" {
-					if subKey, search, operator, _, _, err := sch.GetTypeAndLinkForField(subKey, search, operator, onUpload); err == nil {
+					if subKey, search, operator, typ, _, err := sch.GetTypeAndLinkForField(subKey, search, operator, onUpload); err == nil {
+						fmt.Println("onetomany", sch.Name, " : ", subKey, search, operator, typ, "(SELECT  "+key+" FROM "+sch.Name+" WHERE "+db.MakeSqlItem("", typ, "", strings.Split(subKey, ".")[0], search, operator)+")")
 						for _, f := range sch.Fields {
 							if f.Name == strings.Split(subKey, ".")[0] {
 								fmt.Println("onetomany", sch.Name, " : ", f.Name, search, operator, f.Type, "(SELECT  "+key+" FROM "+sch.Name+" WHERE "+db.MakeSqlItem("", f.Type, "", strings.Split(subKey, ".")[0], search, operator)+")")
