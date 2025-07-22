@@ -113,26 +113,6 @@ func (s *AbstractSpecializedService) SpecializedCreateRow(record map[string]inte
 func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]interface{}, record map[string]interface{}) {
 	sche, err := sch.GetSchema(s.Domain.GetTable())
 	if err == nil {
-		for _, rec := range res {
-			for _, field := range sche.Fields {
-				if sch2, err := sch.GetSchemaByID(field.GetLink()); err == nil && strings.Contains(strings.ToUpper(field.Type), "MANY") {
-					if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch2.Name, map[string]interface{}{
-						ds.RootID(s.Domain.GetTable()): rec[utils.SpecialIDParam],
-					}, false); err == nil {
-						fmt.Println(sch2.Name, ds.RootID(s.Domain.GetTable()), rec[utils.SpecialIDParam], err)
-						for _, r := range res {
-							err := s.Domain.GetDb().ClearQueryFilter().DeleteQueryWithRestriction(
-								sch2.Name,
-								map[string]interface{}{
-									utils.SpecialIDParam: r[utils.SpecialIDParam],
-								}, false)
-							fmt.Println("DEL", r[utils.SpecialIDParam], err)
-						}
-					}
-				}
-			}
-		}
-
 		for schemaName, mm := range s.ManyToMany {
 			fmt.Println("test", schemaName, mm)
 			field, err := sche.GetField(schemaName)
@@ -158,6 +138,8 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 						}
 					}
 					m[ds.RootID(s.Domain.GetTable())] = record[utils.SpecialIDParam]
+					delete(m, utils.SpecialIDParam)
+					s.Domain.GetDb().DeleteQueryWithRestriction(ff.Name, m, false)
 					s.Domain.CreateSuperCall(utils.AllParams(ff.Name).RootRaw(), m)
 				}
 			}
@@ -171,6 +153,8 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 			if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
 				for _, m := range om {
 					m[ds.RootID(s.Domain.GetTable())] = record[utils.SpecialIDParam]
+					delete(m, utils.SpecialIDParam)
+					s.Domain.GetDb().DeleteQueryWithRestriction(ff.Name, m, false)
 					s.Domain.CreateSuperCall(utils.AllParams(ff.Name).RootRaw(), m)
 				}
 			}
