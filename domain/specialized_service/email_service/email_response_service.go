@@ -18,6 +18,14 @@ type EmailResponseService struct {
 	servutils.AbstractSpecializedService
 }
 
+func NewEmailResponseService() utils.SpecializedServiceITF {
+	return &EmailResponseService{AbstractSpecializedService: servutils.AbstractSpecializedService{
+		ManyToMany: map[string][]map[string]interface{}{},
+		OneToMany:  map[string][]map[string]interface{}{},
+	},
+	}
+}
+
 func (s *EmailResponseService) Entity() utils.SpecializedServiceInfo { return ds.DBEmailResponse }
 
 func (s *EmailResponseService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {

@@ -11,28 +11,28 @@ import (
 )
 
 // export all specialized services available per domain
-var SERVICES = []utils.SpecializedServiceITF{
-	&schema.SchemaService{},
-	&schema.SchemaFields{},
-	&schema.ViewService{},
-	&task.RequestService{},
-	&task.TaskService{},
-	&task.WorkflowService{},
-	&favorite.FilterService{},
+var SERVICES = []func() utils.SpecializedServiceITF{
+	schema.NewSchemaService,
+	schema.NewSchemaFieldsService,
+	schema.NewViewService,
+	task.NewWorkflowService,
+	task.NewTaskService,
+	task.NewRequestService,
+	favorite.NewFilterService,
 	//&favorite.DashboardService{},
-	&user.DelegationService{},
-	&user.ShareService{},
-	&user.UserService{},
-	&email_service.EmailResponseService{},
-	&email_service.EmailSendedService{},
-	&email_service.EmailSendedUserService{},
+	user.NewDelegationService,
+	user.NewShareService,
+	user.NewUserService,
+	email_service.NewEmailResponseService,
+	email_service.NewEmailSendedService,
+	email_service.NewEmailSendedUserService,
 }
 
 // funct to get specialized service depending on table reached
 func SpecializedService(name string) utils.SpecializedServiceITF {
 	for _, service := range SERVICES {
-		if service.Entity().GetName() == name {
-			return service
+		if service().Entity().GetName() == name {
+			return service()
 		}
 	}
 	return &CustomService{}

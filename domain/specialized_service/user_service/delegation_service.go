@@ -14,6 +14,14 @@ type DelegationService struct {
 	DestID   string
 }
 
+func NewDelegationService() utils.SpecializedServiceITF {
+	return &DelegationService{AbstractSpecializedService: servutils.AbstractSpecializedService{
+		ManyToMany: map[string][]map[string]interface{}{},
+		OneToMany:  map[string][]map[string]interface{}{},
+	},
+	}
+}
+
 func (s *DelegationService) Entity() utils.SpecializedServiceInfo { return ds.DBDelegation }
 
 func (s *DelegationService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {

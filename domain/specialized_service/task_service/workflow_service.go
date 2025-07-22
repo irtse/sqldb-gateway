@@ -14,6 +14,14 @@ type WorkflowService struct {
 	servutils.AbstractSpecializedService
 }
 
+func NewWorkflowService() utils.SpecializedServiceITF {
+	return &WorkflowService{AbstractSpecializedService: servutils.AbstractSpecializedService{
+		ManyToMany: map[string][]map[string]interface{}{},
+		OneToMany:  map[string][]map[string]interface{}{},
+	},
+	}
+}
+
 func (s *WorkflowService) Entity() utils.SpecializedServiceInfo { return ds.DBWorkflow }
 
 func (s *WorkflowService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {

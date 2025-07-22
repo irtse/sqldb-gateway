@@ -17,6 +17,14 @@ type TaskService struct {
 	Redirect bool
 }
 
+func NewTaskService() utils.SpecializedServiceITF {
+	return &TaskService{AbstractSpecializedService: servutils.AbstractSpecializedService{
+		ManyToMany: map[string][]map[string]interface{}{},
+		OneToMany:  map[string][]map[string]interface{}{},
+	},
+	}
+}
+
 func (s *TaskService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {
 	// TODO: here send back my passive task...
 	res := view_convertor.NewViewConvertor(s.Domain).TransformToView(results, tableName, true, s.Domain.GetParams().Copy())

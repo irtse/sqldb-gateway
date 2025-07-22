@@ -13,6 +13,14 @@ type UserService struct {
 	servutils.AbstractSpecializedService
 }
 
+func NewUserService() utils.SpecializedServiceITF {
+	return &UserService{AbstractSpecializedService: servutils.AbstractSpecializedService{
+		ManyToMany: map[string][]map[string]interface{}{},
+		OneToMany:  map[string][]map[string]interface{}{},
+	},
+	}
+}
+
 func (s *UserService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
 	record["name"] = strings.ToLower(utils.GetString(record, "name"))
 	record["email"] = strings.ToLower(utils.GetString(record, "email"))

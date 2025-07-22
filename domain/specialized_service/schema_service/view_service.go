@@ -23,6 +23,15 @@ type ViewService struct {
 	servutils.AbstractSpecializedService
 }
 
+func NewViewService() utils.SpecializedServiceITF {
+	return &ViewService{
+		AbstractSpecializedService: servutils.AbstractSpecializedService{
+			ManyToMany: map[string][]map[string]interface{}{},
+			OneToMany:  map[string][]map[string]interface{}{},
+		},
+	}
+}
+
 func (s *ViewService) Entity() utils.SpecializedServiceInfo { return ds.DBView }
 
 func (s *ViewService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {

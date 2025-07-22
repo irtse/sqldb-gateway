@@ -71,7 +71,7 @@ func Autoload() []sm.SchemaModel {
 		models.DemoFR.Name, models.InternshipFR.Name, models.ThesisFR.Name, models.HDRFR.Name,
 		models.PosterFR.Name, models.PresentationFR.Name, models.ConferenceFR.Name,
 	}...)
-	service.SERVICES = append(service.SERVICES, []utils.SpecializedServiceITF{&PublicationService{}, &PosterService{}, &ConferenceService{}, &PresentationService{}}...)
+	service.SERVICES = append(service.SERVICES, []func() utils.SpecializedServiceITF{NewPublicationService, NewPosterService, NewConferenceService, NewPresentationService}...)
 	return []sm.SchemaModel{models.CoCFR, models.ProjectFR, models.Axis, models.MajorConference,
 		models.OtherPublicationFR, models.DemoFR, models.InternshipFR, models.ThesisFR, models.HDRFR,
 		models.PosterFR, models.PresentationFR, models.ConferenceFR,
@@ -104,6 +104,14 @@ type PublicationService struct {
 	servutils.AbstractSpecializedService
 }
 
+func NewPublicationService() utils.SpecializedServiceITF {
+	return &PublicationService{AbstractSpecializedService: servutils.AbstractSpecializedService{
+		ManyToMany: map[string][]map[string]interface{}{},
+		OneToMany:  map[string][]map[string]interface{}{},
+	},
+	}
+}
+
 func (s *PublicationService) Entity() utils.SpecializedServiceInfo { return models.OtherPublicationFR }
 
 func (s *PublicationService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
@@ -131,6 +139,14 @@ func (s *PublicationService) GenerateQueryFilter(tableName string, innerestr ...
 
 type PosterService struct {
 	servutils.AbstractSpecializedService
+}
+
+func NewPosterService() utils.SpecializedServiceITF {
+	return &PosterService{AbstractSpecializedService: servutils.AbstractSpecializedService{
+		ManyToMany: map[string][]map[string]interface{}{},
+		OneToMany:  map[string][]map[string]interface{}{},
+	},
+	}
 }
 
 func (s *PosterService) Entity() utils.SpecializedServiceInfo { return models.PosterFR }
@@ -162,6 +178,14 @@ type PresentationService struct {
 	servutils.AbstractSpecializedService
 }
 
+func NewPresentationService() utils.SpecializedServiceITF {
+	return &PresentationService{AbstractSpecializedService: servutils.AbstractSpecializedService{
+		ManyToMany: map[string][]map[string]interface{}{},
+		OneToMany:  map[string][]map[string]interface{}{},
+	},
+	}
+}
+
 func (s *PresentationService) Entity() utils.SpecializedServiceInfo { return models.PresentationFR }
 
 func (s *PresentationService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
@@ -189,6 +213,14 @@ func (s *PresentationService) GenerateQueryFilter(tableName string, innerestr ..
 
 type ConferenceService struct {
 	servutils.AbstractSpecializedService
+}
+
+func NewConferenceService() utils.SpecializedServiceITF {
+	return &ConferenceService{AbstractSpecializedService: servutils.AbstractSpecializedService{
+		ManyToMany: map[string][]map[string]interface{}{},
+		OneToMany:  map[string][]map[string]interface{}{},
+	},
+	}
 }
 
 func (s *ConferenceService) Entity() utils.SpecializedServiceInfo { return models.ConferenceFR }

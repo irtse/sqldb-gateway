@@ -22,6 +22,14 @@ type FilterService struct {
 	UpdateFields bool
 }
 
+func NewFilterService() utils.SpecializedServiceITF {
+	return &FilterService{AbstractSpecializedService: servutils.AbstractSpecializedService{
+		ManyToMany: map[string][]map[string]interface{}{},
+		OneToMany:  map[string][]map[string]interface{}{},
+	},
+	}
+}
+
 func (s *FilterService) Entity() utils.SpecializedServiceInfo { return ds.DBFilter }
 func (s *FilterService) SpecializedDeleteRow(results []map[string]interface{}, tableName string) {
 	for _, record := range results {

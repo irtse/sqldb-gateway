@@ -17,6 +17,16 @@ type SchemaService struct {
 	Fields []interface{}
 }
 
+func NewSchemaService() utils.SpecializedServiceITF {
+	return &SchemaService{SpecializedService: servutils.SpecializedService{
+		AbstractSpecializedService: servutils.AbstractSpecializedService{
+			ManyToMany: map[string][]map[string]interface{}{},
+			OneToMany:  map[string][]map[string]interface{}{},
+		},
+	},
+	}
+}
+
 // DONE - UNDER 100 LINES - NOT TESTED
 func (s *SchemaService) Entity() utils.SpecializedServiceInfo { return ds.DBSchema }
 

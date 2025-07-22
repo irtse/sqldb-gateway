@@ -17,6 +17,16 @@ var MissingField = map[string][]utils.Record{}
 // DONE - UNDER 100 LINES - NOT TESTED
 type SchemaFields struct{ servutils.SpecializedService }
 
+func NewSchemaFieldsService() utils.SpecializedServiceITF {
+	return &SchemaFields{SpecializedService: servutils.SpecializedService{
+		AbstractSpecializedService: servutils.AbstractSpecializedService{
+			ManyToMany: map[string][]map[string]interface{}{},
+			OneToMany:  map[string][]map[string]interface{}{},
+		},
+	},
+	}
+}
+
 func (s *SchemaFields) Entity() utils.SpecializedServiceInfo { return ds.DBSchemaField }
 
 func (s *SchemaFields) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {
