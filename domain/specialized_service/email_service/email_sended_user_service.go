@@ -16,7 +16,7 @@ type EmailSendedUserService struct {
 }
 
 func NewEmailSendedUserService() utils.SpecializedServiceITF {
-	return &EmailResponseService{}
+	return &EmailSendedUserService{}
 }
 
 func (s *EmailSendedUserService) Entity() utils.SpecializedServiceInfo { return ds.DBEmailSendedUser }
