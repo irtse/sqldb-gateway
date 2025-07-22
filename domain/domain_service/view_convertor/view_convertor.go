@@ -292,7 +292,7 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 		return []map[string]interface{}{}
 	}
 	key := "on_create"
-	if s.Domain.GetMethod() == utils.UPDATE || (s.Domain.GetMethod() == utils.SELECT && !s.Domain.GetEmpty()) {
+	if s.Domain.GetMethod() == utils.UPDATE || (s.Domain.GetMethod() == utils.SELECT && !s.Domain.GetEmpty() && !utils.GetBool(results[0], "is_draft")) {
 		key = "on_update"
 	}
 	if consents, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBConsent.Name, map[string]interface{}{

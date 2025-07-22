@@ -89,7 +89,7 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 			}
 			typ := models.ViewFieldModel{
 				Label:    "type",
-				Type:     "enum__" + schema.Label,
+				Type:     "enum__" + strings.ReplaceAll(schema.Label, "_", ""),
 				Index:    2,
 				Readonly: true,
 				Active:   true,
@@ -98,7 +98,7 @@ func (s *ViewService) TransformToGenericView(results utils.Results, tableName st
 				newSchema["type"] = typ
 			} else {
 				typ = utils.ToMap(res[0]["schema"])["type"].(models.ViewFieldModel)
-				typ.Type += "_" + schema.Name
+				typ.Type += "_" + strings.ReplaceAll(schema.Name, "_", "")
 				newSchema["type"] = typ
 			}
 			res[0]["schema"] = newSchema

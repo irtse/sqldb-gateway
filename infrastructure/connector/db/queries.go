@@ -34,7 +34,7 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 	}
 
 	res, err := db.QueryAssociativeArray(q)
-	if strings.Contains(q, "authors") {
+	if strings.Contains(q, "authors") || strings.Contains(q, "presentation") {
 		fmt.Println(q, err)
 	}
 	return res, err
