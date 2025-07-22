@@ -120,7 +120,8 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 						ds.RootID(s.Domain.GetTable()): rec[utils.SpecialIDParam],
 					}, false); err == nil {
 						for _, r := range res {
-							s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(sch2.Name, utils.GetString(r, utils.SpecialIDParam)).RootRaw())
+							del, err := s.Domain.DeleteSuperCall(utils.GetRowTargetParameters(sch2.Name, utils.GetString(r, utils.SpecialIDParam)).RootRaw())
+							fmt.Println(del, err)
 						}
 					}
 				}
