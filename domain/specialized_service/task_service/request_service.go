@@ -18,11 +18,7 @@ type RequestService struct {
 }
 
 func NewRequestService() utils.SpecializedServiceITF {
-	return &RequestService{AbstractSpecializedService: servutils.AbstractSpecializedService{
-		ManyToMany: map[string][]map[string]interface{}{},
-		OneToMany:  map[string][]map[string]interface{}{},
-	},
-	}
+	return &RequestService{}
 }
 
 func (s *RequestService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {

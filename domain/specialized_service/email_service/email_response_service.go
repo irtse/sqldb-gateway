@@ -19,11 +19,7 @@ type EmailResponseService struct {
 }
 
 func NewEmailResponseService() utils.SpecializedServiceITF {
-	return &EmailResponseService{AbstractSpecializedService: servutils.AbstractSpecializedService{
-		ManyToMany: map[string][]map[string]interface{}{},
-		OneToMany:  map[string][]map[string]interface{}{},
-	},
-	}
+	return &EmailResponseService{}
 }
 
 func (s *EmailResponseService) Entity() utils.SpecializedServiceInfo { return ds.DBEmailResponse }

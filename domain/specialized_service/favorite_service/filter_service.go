@@ -23,11 +23,7 @@ type FilterService struct {
 }
 
 func NewFilterService() utils.SpecializedServiceITF {
-	return &FilterService{AbstractSpecializedService: servutils.AbstractSpecializedService{
-		ManyToMany: map[string][]map[string]interface{}{},
-		OneToMany:  map[string][]map[string]interface{}{},
-	},
-	}
+	return &FilterService{}
 }
 
 func (s *FilterService) Entity() utils.SpecializedServiceInfo { return ds.DBFilter }

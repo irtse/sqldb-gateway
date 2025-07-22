@@ -18,13 +18,7 @@ type SchemaService struct {
 }
 
 func NewSchemaService() utils.SpecializedServiceITF {
-	return &SchemaService{SpecializedService: servutils.SpecializedService{
-		AbstractSpecializedService: servutils.AbstractSpecializedService{
-			ManyToMany: map[string][]map[string]interface{}{},
-			OneToMany:  map[string][]map[string]interface{}{},
-		},
-	},
-	}
+	return &SchemaService{}
 }
 
 // DONE - UNDER 100 LINES - NOT TESTED

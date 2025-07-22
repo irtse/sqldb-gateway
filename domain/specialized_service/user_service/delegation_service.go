@@ -15,11 +15,7 @@ type DelegationService struct {
 }
 
 func NewDelegationService() utils.SpecializedServiceITF {
-	return &DelegationService{AbstractSpecializedService: servutils.AbstractSpecializedService{
-		ManyToMany: map[string][]map[string]interface{}{},
-		OneToMany:  map[string][]map[string]interface{}{},
-	},
-	}
+	return &DelegationService{}
 }
 
 func (s *DelegationService) Entity() utils.SpecializedServiceInfo { return ds.DBDelegation }

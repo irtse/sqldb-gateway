@@ -126,6 +126,7 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 				}
 			}
 		}
+
 		for schemaName, mm := range s.ManyToMany {
 			fmt.Println("test", schemaName, mm)
 			field, err := sche.GetField(schemaName)

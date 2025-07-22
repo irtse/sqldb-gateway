@@ -14,11 +14,7 @@ type UserService struct {
 }
 
 func NewUserService() utils.SpecializedServiceITF {
-	return &UserService{AbstractSpecializedService: servutils.AbstractSpecializedService{
-		ManyToMany: map[string][]map[string]interface{}{},
-		OneToMany:  map[string][]map[string]interface{}{},
-	},
-	}
+	return &UserService{}
 }
 
 func (s *UserService) VerifyDataIntegrity(record map[string]interface{}, tablename string) (map[string]interface{}, error, bool) {

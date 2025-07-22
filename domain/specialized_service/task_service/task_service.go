@@ -18,11 +18,7 @@ type TaskService struct {
 }
 
 func NewTaskService() utils.SpecializedServiceITF {
-	return &TaskService{AbstractSpecializedService: servutils.AbstractSpecializedService{
-		ManyToMany: map[string][]map[string]interface{}{},
-		OneToMany:  map[string][]map[string]interface{}{},
-	},
-	}
+	return &TaskService{}
 }
 
 func (s *TaskService) TransformToGenericView(results utils.Results, tableName string, dest_id ...string) utils.Results {

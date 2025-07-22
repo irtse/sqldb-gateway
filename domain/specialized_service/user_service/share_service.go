@@ -17,11 +17,7 @@ type ShareService struct {
 }
 
 func NewShareService() utils.SpecializedServiceITF {
-	return &ShareService{AbstractSpecializedService: servutils.AbstractSpecializedService{
-		ManyToMany: map[string][]map[string]interface{}{},
-		OneToMany:  map[string][]map[string]interface{}{},
-	},
-	}
+	return &ShareService{}
 }
 
 func (s *ShareService) SpecializedCreateRow(record map[string]interface{}, tableName string) {

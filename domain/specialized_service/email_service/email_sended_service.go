@@ -17,11 +17,7 @@ type EmailSendedService struct {
 }
 
 func NewEmailSendedService() utils.SpecializedServiceITF {
-	return &EmailResponseService{AbstractSpecializedService: servutils.AbstractSpecializedService{
-		ManyToMany: map[string][]map[string]interface{}{},
-		OneToMany:  map[string][]map[string]interface{}{},
-	},
-	}
+	return &EmailResponseService{}
 }
 
 func (s *EmailSendedService) Entity() utils.SpecializedServiceInfo { return ds.DBEmailSended }
