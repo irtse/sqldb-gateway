@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/triggers"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -126,6 +127,7 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 			}
 		}
 		for schemaName, mm := range s.ManyToMany {
+			fmt.Println("test", schemaName, mm)
 			field, err := sche.GetField(schemaName)
 			if err != nil {
 				continue
@@ -154,6 +156,7 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 			}
 		}
 		for schemaName, om := range s.OneToMany {
+			fmt.Println("one to test", schemaName, om)
 			field, err := sche.GetField(schemaName)
 			if err != nil {
 				continue

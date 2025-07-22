@@ -41,7 +41,7 @@ func (s *TaskService) TransformToGenericView(results utils.Results, tableName st
 			}
 		}
 	} else {
-		if sch, err := schema.GetSchema(ds.DBTask.Name); err == nil {
+		if sch, err := schema.GetSchema(ds.DBTask.Name); err == nil && len(results) > 0 {
 			res[0]["inner_redirection"] = utils.BuildPath(sch.ID, utils.GetString(results[0], utils.SpecialIDParam))
 		}
 	} // inner_redirection is the way to redirect any closure... to next data or data
