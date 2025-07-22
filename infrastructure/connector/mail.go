@@ -166,14 +166,12 @@ func SendMail(from string, to string, mail utils.Record, isValidButton bool) err
 		auth := smtp.PlainAuth("", from, pwd, smtpHost)
 		err = smtp.SendMail(smtpHost+":"+smtpPort, auth, from,
 			[]string{
-				from,
 				to,
 			}, body.Bytes())
 	} else {
 		fmt.Println(smtpHost+":"+smtpPort, from, to, string(body.Bytes()))
 		err = smtp.SendMail(smtpHost+":"+smtpPort, nil, from,
 			[]string{
-				from,
 				to,
 			}, body.Bytes())
 	}
