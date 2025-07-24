@@ -19,15 +19,9 @@ func (d *ViewConvertor) EnrichWithWorkFlowView(record utils.Record, tableName st
 	case ds.DBWorkflow.Name:
 		id = record.GetString(utils.SpecialIDParam)
 	case ds.DBRequest.Name:
-		if t := d.FetchRecord(ds.DBRequest.Name, map[string]interface{}{
-			ds.WorkflowDBField: record.GetInt(ds.WorkflowDBField),
-		}); len(t) > 0 {
-			id = utils.ToString(t[0][ds.WorkflowDBField])
-			requestID = utils.ToString(t[0][utils.SpecialIDParam])
-			workflow = d.InitializeWorkflow(t[0])
-		} else {
-			return nil
-		}
+		id = utils.ToString(record[ds.WorkflowDBField])
+		requestID = utils.ToString(record[utils.SpecialIDParam])
+		workflow = d.InitializeWorkflow(record)
 	case ds.DBTask.Name:
 		if workflow, id, requestID, nexts = d.handleTaskWorkflow(record); id == "" {
 			return nil
