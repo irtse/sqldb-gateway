@@ -38,6 +38,10 @@ func (t *TriggerService) GetViewMailTriggers(record utils.Record, fromSchema *sm
 			}
 		}
 		for _, m := range mails {
+			if utils.GetBool(m, "force_file_attached") {
+				utils.ToMap(s["file_attached"])["required"] = true
+			}
+			delete(m, "force_file_attached")
 			bodies = append(bodies, sm.ManualTriggerModel{
 				Name:        triggerName,
 				Description: triggerDesc,
@@ -152,6 +156,7 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 					t.getFileAttached(toSchema, record),
 					signature,
 				); err == nil {
+					m["force_file_attached"] = mail["force_file_attached"]
 					mailings = append(mailings, m)
 				}
 			} else {
@@ -169,6 +174,7 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 					"",
 					signature,
 				); err == nil {
+					m["force_file_attached"] = mail["force_file_attached"]
 					mailings = append(mailings, m)
 				}
 			}
@@ -192,6 +198,7 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 					t.getFileAttached(toSchema, record),
 					signature,
 				); err == nil {
+					m["force_file_attached"] = mail["force_file_attached"]
 					mailings = append(mailings, m)
 				}
 			} else {
@@ -209,6 +216,7 @@ func (t *TriggerService) TriggerManualMail(mode string, record utils.Record, fro
 					"",
 					signature,
 				); err == nil {
+					m["force_file_attached"] = mail["force_file_attached"]
 					mailings = append(mailings, m)
 				}
 			}

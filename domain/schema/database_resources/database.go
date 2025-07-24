@@ -132,6 +132,8 @@ var DBEmailTemplate = models.SchemaModel{
 		{Name: "to_map_" + RootID(DBSchema.Name), Type: models.INTEGER.String(), ForeignTable: DBSchema.Name, Required: true, Readonly: true, Label: "template attached", Index: 4},
 		{Name: "redirected_on", Type: models.VARCHAR.String(), Required: false, Index: 5},
 		{Name: "generate_task", Type: models.BOOLEAN.String(), Required: false, Index: 6},
+		{Name: "force_file_attached", Type: models.BOOLEAN.String(), Required: false, Index: 6},
+
 		{Name: "is_response_valid", Type: models.BOOLEAN.String(), Required: false, Index: 6},
 		{Name: "is_response_refused", Type: models.BOOLEAN.String(), Required: false, Index: 6},
 
