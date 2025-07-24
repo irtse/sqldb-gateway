@@ -170,10 +170,12 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 			if s.Domain.GetTable() == ds.DBRequest.Name || s.Domain.GetTable() == ds.DBTask.Name {
 				continue
 			}
+			fmt.Println("HEY FOUND REQ", rec[utils.SpecialIDParam], sche.ID)
 			if reqs, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 				ds.DestTableDBField: rec[utils.SpecialIDParam],
 				ds.SchemaDBField:    sche.ID,
 			}, false); err == nil && len(reqs) == 0 {
+				fmt.Println("HEY", len(reqs))
 				if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
 					ds.SchemaDBField: sche.ID,
 				}, false); err == nil && len(res) > 0 {
