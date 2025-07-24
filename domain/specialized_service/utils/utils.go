@@ -307,6 +307,7 @@ func (s *SpecializedService) TransformToGenericView(results utils.Results, table
 				ds.RequestDBField: s.Domain.GetDb().ClearQueryFilter().BuildSelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 					ds.DestTableDBField: results[0][utils.SpecialIDParam],
 					ds.SchemaDBField:    scheme.ID,
+					"is_close":          false,
 				}, false, utils.SpecialIDParam),
 			}, false); err == nil && len(rr) > 0 {
 				if ss, err := sch.GetSchema(ds.DBTask.Name); err == nil {

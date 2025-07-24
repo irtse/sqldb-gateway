@@ -48,7 +48,7 @@ func (d *ViewConvertor) InitializeWorkflow(record map[string]interface{}) sm.Wor
 		IsDismiss: record["state"] == "dismiss" || record["state"] == "refused" || record["state"] == "canceled",
 		Current:   utils.ToString(record["current_index"]),
 		Position:  utils.ToString(record["current_index"]),
-		IsClose:   record["state"] == "completed" || record["state"] == "dismiss" || record["state"] == "refused" || record["state"] == "canceled",
+		IsClose:   utils.GetBool(record, "is_close"),
 	}
 }
 
