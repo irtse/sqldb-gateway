@@ -291,6 +291,13 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 	if !s.Domain.GetEmpty() && len(results) != 1 {
 		return []map[string]interface{}{}
 	}
+	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
+		"is_close":          true,
+		ds.SchemaDBField:    schemaID,
+		ds.DestTableDBField: results[0][utils.SpecialIDParam],
+	}, false); err != nil && len(res) > 0 {
+		return []map[string]interface{}{}
+	}
 	key := "on_create"
 	if s.Domain.GetMethod() == utils.UPDATE || (s.Domain.GetMethod() == utils.SELECT && !s.Domain.GetEmpty() && !utils.GetBool(results[0], "is_draft")) {
 		key = "on_update"
