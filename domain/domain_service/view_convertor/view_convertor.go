@@ -297,6 +297,7 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 		ds.SchemaDBField:    schemaID,
 		ds.DestTableDBField: results[0][utils.SpecialIDParam],
 	}, false); err != nil && len(res) > 0 {
+		fmt.Println("qdqsdqsd", res)
 		return []map[string]interface{}{}
 	}
 	key := "on_create"
