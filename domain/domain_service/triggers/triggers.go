@@ -136,10 +136,12 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 					key = ds.UserDBField
 					v = t.Domain.GetUserID()
 				} else if userDest["from_"+ds.SchemaFieldDBField] == nil {
+					fmt.Println("CCCC 3", key, v)
 					continue
 				} else {
 					f, err := sch.GetFieldByID(utils.GetInt(userDest, "from_"+ds.SchemaFieldDBField))
 					if err == nil {
+						fmt.Println("CCCC 4", key, err)
 						continue
 					}
 					key = f.Name
@@ -162,6 +164,7 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 					}
 				}
 				if v == "" {
+					fmt.Println("CCCC 2", key, v)
 					continue
 				}
 				fmt.Println("CCCC", key, v)
