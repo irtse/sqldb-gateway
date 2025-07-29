@@ -111,7 +111,6 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 		ds.TriggerDBField: triggerID,
 	}, false); err == nil {
 		for _, userDest := range res {
-			fmt.Println(userDest)
 			if utils.GetBool(userDest, "is_own") && userDest["from_"+ds.SchemaDBField] == nil {
 				// wait no... should send to creator
 				if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
@@ -137,12 +136,10 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 					key = ds.UserDBField
 					v = t.Domain.GetUserID()
 				} else if userDest["from_"+ds.SchemaFieldDBField] == nil {
-					fmt.Println("CCCC 3", key, v)
 					continue
 				} else {
 					f, err := sch.GetFieldByID(utils.GetInt(userDest, "from_"+ds.SchemaFieldDBField))
 					if err != nil {
-						fmt.Println("CCCC 4", key, err)
 						continue
 					}
 					key = f.Name
@@ -165,10 +162,8 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 					}
 				}
 				if v == "" {
-					fmt.Println("CCCC 2", key, v)
 					continue
 				}
-				fmt.Println("CCCC", key, v)
 				if usr, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name, map[string]interface{}{
 					key: v,
 				}, false); err == nil {
