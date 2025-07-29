@@ -248,7 +248,7 @@ func (t *TriggerService) getLinkLabel(toSchema sm.SchemaModel, record utils.Reco
 				key = "name"
 				v = db.Quote(utils.ToString(v))
 			}
-			if v == "" {
+			if v == "" || v == "''" {
 				continue
 			}
 			// there is a link... soooo do something
