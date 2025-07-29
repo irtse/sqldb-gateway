@@ -291,6 +291,7 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 	if !s.Domain.GetEmpty() && len(results) != 1 {
 		return []map[string]interface{}{}
 	}
+	fmt.Println(schemaID, results[0][utils.SpecialIDParam])
 	if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 		"is_close":          true,
 		ds.SchemaDBField:    schemaID,
