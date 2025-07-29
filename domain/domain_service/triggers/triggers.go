@@ -128,7 +128,7 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 				}
 			} else if userDest["from_"+ds.SchemaDBField] != nil {
 				sch, err := schema.GetSchemaByID(utils.GetInt(userDest, "from_"+ds.SchemaDBField))
-				if err == nil {
+				if err != nil {
 					continue
 				}
 				key := "id"
@@ -141,7 +141,7 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 					continue
 				} else {
 					f, err := sch.GetFieldByID(utils.GetInt(userDest, "from_"+ds.SchemaFieldDBField))
-					if err == nil {
+					if err != nil {
 						fmt.Println("CCCC 4", key, err)
 						continue
 					}
@@ -175,7 +175,7 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 					for _, u := range usr {
 						if userDest["from_compare_"+ds.SchemaFieldDBField] != nil {
 							ff, err := sch.GetFieldByID(utils.GetInt(userDest, "from_compare_"+ds.SchemaFieldDBField))
-							if err == nil {
+							if err != nil {
 								continue
 							}
 							if !slices.Contains(userIDS, utils.GetString(u, ff.Name)) {
