@@ -116,7 +116,9 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 				if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
 					ds.DestTableDBField: dest[utils.SpecialIDParam],
 					ds.SchemaDBField:    destSchema.ID,
+					"write":             true,
 				}, false); err == nil {
+					fmt.Println("is_own", res, dest[utils.SpecialIDParam], destSchema.ID)
 					for _, r := range res {
 						if !slices.Contains(userIDS, utils.GetString(r, ds.UserDBField)) {
 							userIDS = append(userIDS, utils.GetString(r, ds.UserDBField))
