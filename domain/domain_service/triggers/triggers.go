@@ -164,6 +164,7 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 				if v == "" {
 					continue
 				}
+				fmt.Println("CCCC", key, v)
 				if usr, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(sch.Name, map[string]interface{}{
 					key: v,
 				}, false); err == nil {
