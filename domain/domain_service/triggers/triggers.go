@@ -187,6 +187,7 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 		}
 	}
 	if len(userIDS) > 0 {
+		fmt.Println("userIDS", userIDS)
 		if usto, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBUser.Name, map[string]interface{}{
 			utils.SpecialIDParam: userIDS,
 		}, false); err == nil {
