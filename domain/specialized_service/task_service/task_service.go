@@ -106,6 +106,9 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		if _, ok := res["is_draft"]; ok && utils.GetBool(res, "is_draft") {
 			continue
 		}
+		if !CheckStateIsEnded(res["state"]) {
+			continue
+		}
 		requests, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 			utils.SpecialIDParam: utils.GetInt(res, RequestDBField),
 		}, false)
