@@ -111,6 +111,7 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		if !CheckStateIsEnded(res["state"]) {
 			continue
 		}
+		fmt.Println("TEST", res)
 		requests, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 			utils.SpecialIDParam: utils.GetInt(res, RequestDBField),
 		}, false)

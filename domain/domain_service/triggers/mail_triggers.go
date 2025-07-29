@@ -8,6 +8,8 @@ import (
 	sm "sqldb-ws/domain/schema/models"
 	"sqldb-ws/domain/utils"
 	"sqldb-ws/infrastructure/connector"
+	db "sqldb-ws/infrastructure/connector/db"
+	"strconv"
 	"strings"
 )
 
@@ -240,9 +242,15 @@ func (t *TriggerService) getFileAttached(toSchema sm.SchemaModel, record utils.R
 func (t *TriggerService) getLinkLabel(toSchema sm.SchemaModel, record utils.Record) utils.Record {
 	for _, field := range toSchema.Fields {
 		if linkScheme, err := sm.GetSchemaByID(field.GetLink()); err == nil {
+			key := utils.SpecialIDParam
+			v := record[field.Name]
+			if i, err := strconv.Atoi(utils.GetString(record, field.Name)); i == 0 || err == nil {
+				key = "name"
+				v = db.Quote(utils.ToString(v))
+			}
 			// there is a link... soooo do something
 			if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(linkScheme.Name, map[string]interface{}{
-				utils.SpecialIDParam: record[field.Name],
+				key: v,
 			}, false); err == nil && len(res) > 0 {
 				item := res[0]
 				if utils.GetString(item, "label") != "" {
