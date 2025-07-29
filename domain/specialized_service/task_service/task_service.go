@@ -2,7 +2,6 @@ package task_service
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -107,11 +106,9 @@ func (s *TaskService) Write(results []map[string]interface{}, record map[string]
 		if _, ok := res["is_draft"]; ok && utils.GetBool(res, "is_draft") {
 			continue
 		}
-		fmt.Println(res["state"], CheckStateIsEnded(res["state"]))
 		if !CheckStateIsEnded(res["state"]) {
 			continue
 		}
-		fmt.Println("TEST", res)
 		requests, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 			utils.SpecialIDParam: utils.GetInt(res, RequestDBField),
 		}, false)

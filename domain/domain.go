@@ -184,7 +184,7 @@ func (d *SpecializedDomain) GetRowResults(
 			continue
 		}
 		if record["is_draft"] != nil && !utils.GetBool(record, "is_draft") && d.Method == utils.UPDATE {
-			if rr, err := d.GetDb().SelectQueryWithRestriction(d.TableName, map[string]interface{}{
+			if rr, err := d.GetDb().ClearQueryFilter().SelectQueryWithRestriction(d.TableName, map[string]interface{}{
 				utils.SpecialIDParam: id,
 				"is_draft":           true,
 			}, false); err == nil && len(rr) > 0 {

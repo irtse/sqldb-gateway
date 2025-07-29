@@ -296,7 +296,6 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 		ds.SchemaDBField:    schemaID,
 		ds.DestTableDBField: results[0][utils.SpecialIDParam],
 	}, false); err != nil && len(res) > 0 {
-		fmt.Println("qdqsdqsd", res)
 		return []map[string]interface{}{}
 	}
 	key := "on_create"
@@ -309,7 +308,6 @@ func (s *ViewConvertor) getConsent(schemaID string, results utils.Results) []map
 			key: true,
 		}, true, utils.SpecialIDParam),
 	}, false); err == nil {
-		fmt.Println("consents", consents, err)
 		if len(results) > 0 {
 			for _, c := range consents {
 				if consentsResp, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(

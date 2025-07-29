@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"fmt"
 	"sqldb-ws/domain/domain_service/filter"
 	"sqldb-ws/domain/domain_service/triggers"
 	"sqldb-ws/domain/domain_service/view_convertor"
@@ -119,10 +118,6 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 				continue
 			}
 			if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
-				fmt.Println(s.Domain.GetDb().ClearQueryFilter().DeleteQueryWithRestriction(ff.Name, map[string]interface{}{
-					ds.RootID(s.Domain.GetTable()): record[utils.SpecialIDParam],
-				}, false))
-				fmt.Println(mm, record[utils.SpecialIDParam])
 				for _, m := range mm {
 					if ff.HasField(ds.RootID(ff.Name)) {
 						if m[utils.SpecialIDParam] != nil {
@@ -148,16 +143,11 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 			}
 		}
 		for schemaName, om := range s.OneToMany {
-			fmt.Println("one to test", schemaName, om)
 			field, err := sche.GetField(schemaName)
 			if err != nil {
 				continue
 			}
 			if ff, err := schema.GetSchemaByID(field.GetLink()); err == nil {
-				fmt.Println(om)
-				fmt.Println(s.Domain.GetDb().ClearQueryFilter().DeleteQueryWithRestriction(ff.Name, map[string]interface{}{
-					ds.RootID(s.Domain.GetTable()): record[utils.SpecialIDParam],
-				}, false))
 				for _, m := range om {
 					m[ds.RootID(s.Domain.GetTable())] = record[utils.SpecialIDParam]
 					delete(m, utils.SpecialIDParam)
@@ -170,20 +160,13 @@ func (s *AbstractSpecializedService) SpecializedUpdateRow(res []map[string]inter
 			if s.Domain.GetTable() == ds.DBRequest.Name || s.Domain.GetTable() == ds.DBTask.Name {
 				continue
 			}
-			fmt.Println("HEY FOUND REQ", rec[utils.SpecialIDParam], sche.ID)
 			if reqs, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBRequest.Name, map[string]interface{}{
 				ds.DestTableDBField: rec[utils.SpecialIDParam],
 				ds.SchemaDBField:    sche.ID,
 			}, false); err == nil && len(reqs) == 0 {
-				fmt.Println("HEY", len(reqs))
 				if res, err := s.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBWorkflow.Name, map[string]interface{}{
 					ds.SchemaDBField: sche.ID,
 				}, false); err == nil && len(res) > 0 {
-					fmt.Println(map[string]interface{}{
-						ds.WorkflowDBField:  res[0][utils.SpecialIDParam],
-						ds.DestTableDBField: rec[utils.SpecialIDParam],
-						ds.SchemaDBField:    sche.ID,
-					})
 					s.Domain.CreateSuperCall(utils.AllParams(ds.DBRequest.Name).RootRaw(), map[string]interface{}{
 						ds.WorkflowDBField:  res[0][utils.SpecialIDParam],
 						ds.DestTableDBField: rec[utils.SpecialIDParam],
@@ -228,7 +211,6 @@ func (s *AbstractSpecializedService) VerifyDataIntegrity(record map[string]inter
 					}
 
 				} else if strings.Contains(strings.ToUpper(field.Type), strings.ToUpper(sm.MANYTOMANY.String())) && record[field.Name] != nil {
-					fmt.Println(s.ManyToMany, field.Name, record[field.Name])
 					if s.ManyToMany[field.Name] == nil {
 						s.ManyToMany[field.Name] = []map[string]interface{}{}
 					}
