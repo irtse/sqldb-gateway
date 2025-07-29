@@ -111,6 +111,7 @@ func (t *TriggerService) handleOverrideEmailTo(record, dest map[string]interface
 		ds.TriggerDBField: triggerID,
 	}, false); err == nil {
 		for _, userDest := range res {
+			fmt.Println(userDest)
 			if utils.GetBool(userDest, "is_own") && userDest["from_"+ds.SchemaDBField] == nil {
 				// wait no... should send to creator
 				if res, err := t.Domain.GetDb().ClearQueryFilter().SelectQueryWithRestriction(ds.DBDataAccess.Name, map[string]interface{}{
