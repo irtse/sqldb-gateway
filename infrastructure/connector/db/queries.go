@@ -35,8 +35,10 @@ func (db *Database) SelectQueryWithRestriction(name string, restrictions interfa
 		name = name + " as main "
 		q = db.BuildSelectQueryWithRestriction(name, restrictions, isOr)
 	}
-
 	res, err := db.QueryAssociativeArray(q)
+	if name == "dbrequest" {
+		fmt.Println(q, res, err)
+	}
 	return res, err
 }
 
