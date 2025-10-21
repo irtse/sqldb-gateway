@@ -7,109 +7,19 @@ import (
 
 func init() {
 
-    beego.GlobalControllerRouter["sqldb-ws/controllers:AuthController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:AuthController"],
-        beego.ControllerComments{
-            Method: "Login",
-            Router: `/login`,
-            AllowHTTPMethods: []string{"post"},
-            MethodParams: param.Make(),
-            Filters: nil,
-            Params: nil})
-
-    beego.GlobalControllerRouter["sqldb-ws/controllers:AuthController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:AuthController"],
-        beego.ControllerComments{
-            Method: "Logout",
-            Router: `/logout`,
-            AllowHTTPMethods: []string{"get"},
-            MethodParams: param.Make(),
-            Filters: nil,
-            Params: nil})
-
-    beego.GlobalControllerRouter["sqldb-ws/controllers:AuthController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:AuthController"],
-        beego.ControllerComments{
-            Method: "Refresh",
-            Router: `/logout`,
-            AllowHTTPMethods: []string{"get"},
-            MethodParams: param.Make(),
-            Filters: nil,
-            Params: nil})
-
-    beego.GlobalControllerRouter["sqldb-ws/controllers:ExternalResponseController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:ExternalResponseController"],
-        beego.ControllerComments{
-            Method: "Post",
-            Router: `/:code`,
-            AllowHTTPMethods: []string{"get"},
-            MethodParams: param.Make(),
-            Filters: nil,
-            Params: nil})
-
-    beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"],
-        beego.ControllerComments{
-            Method: "Post",
-            Router: `/:table`,
-            AllowHTTPMethods: []string{"post"},
-            MethodParams: param.Make(),
-            Filters: nil,
-            Params: nil})
-
-    beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"],
-        beego.ControllerComments{
-            Method: "Put",
-            Router: `/:table`,
-            AllowHTTPMethods: []string{"put"},
-            MethodParams: param.Make(),
-            Filters: nil,
-            Params: nil})
-
-    beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"],
-        beego.ControllerComments{
-            Method: "Delete",
-            Router: `/:table`,
-            AllowHTTPMethods: []string{"delete"},
-            MethodParams: param.Make(),
-            Filters: nil,
-            Params: nil})
-
-    beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"],
+    beego.GlobalControllerRouter["sqldb-gateway/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-gateway/controllers:GenericController"],
         beego.ControllerComments{
             Method: "Get",
-            Router: `/:table`,
-            AllowHTTPMethods: []string{"get"},
-            MethodParams: param.Make(),
-            Filters: nil,
-            Params: nil})
-
-    beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"],
-        beego.ControllerComments{
-            Method: "Math",
-            Router: `/:table/:function`,
-            AllowHTTPMethods: []string{"get"},
-            MethodParams: param.Make(),
-            Filters: nil,
-            Params: nil})
-
-    beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:GenericController"],
-        beego.ControllerComments{
-            Method: "Import",
-            Router: `/:table/import`,
-            AllowHTTPMethods: []string{"post"},
-            MethodParams: param.Make(),
-            Filters: nil,
-            Params: nil})
-
-    beego.GlobalControllerRouter["sqldb-ws/controllers:MainController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:MainController"],
-        beego.ControllerComments{
-            Method: "Main",
             Router: `/`,
             AllowHTTPMethods: []string{"get"},
             MethodParams: param.Make(),
             Filters: nil,
             Params: nil})
 
-    beego.GlobalControllerRouter["sqldb-ws/controllers:MainController"] = append(beego.GlobalControllerRouter["sqldb-ws/controllers:MainController"],
+    beego.GlobalControllerRouter["sqldb-gateway/controllers:GenericController"] = append(beego.GlobalControllerRouter["sqldb-gateway/controllers:GenericController"],
         beego.ControllerComments{
-            Method: "Download",
-            Router: `/download/:path`,
+            Method: "GetOK",
+            Router: `/:code`,
             AllowHTTPMethods: []string{"get"},
             MethodParams: param.Make(),
             Filters: nil,

@@ -1,127 +1,112 @@
 package controllers
 
 import (
-	"net/http"
+	"context"
+	"log"
 	"os"
-	"sqldb-ws/controllers/controller"
-	ds "sqldb-ws/domain/schema/database_resources"
-	"sqldb-ws/domain/utils"
-	connector "sqldb-ws/infrastructure/connector/db"
 	"strings"
+	"time"
+
+	beego "github.com/beego/beego/v2/server/web"
+	"github.com/redis/go-redis/v9"
 )
 
-type MainController struct{ controller.AbstractController }
-
 // Operations about table
-type GenericController struct{ controller.AbstractController }
-
-// @Title /
-// @Description Main call
-// @Param	body		body 	Credential	true		"Credentials"
-// @Success 200 {string} success !
-// @Failure 403 user does not exist
-// @router / [get]
-func (l *MainController) Main() {
-	connector.COUNTREQUEST = 0
-	// Main is the default root of the API, it gives back all your allowed shallowed view
-	l.ParamsOverload = utils.AllParams(ds.DBView.Name).RootShallow().Enrich(
-		map[string]interface{}{
-			"indexable": true,
-		}).Values
-	l.SafeCall(utils.SELECT)
-}
-
-// @Title /
-// @Description Download call
-// @Param	path		path 	string	true		"Name of the table"
-// @Success 200 {string} success !
-// @Failure 403 user does not exist
-// @router /download/:path [get]
-func (l *MainController) Download() {
-	// Get the filename from the query string
-	filePath := l.GetString(":path")
-	if !strings.Contains(filePath, "/mnt/files/") {
-		filePath = "/mnt/files/" + filePath
-	}
-	// Open the file
-	file, err := os.Open(filePath)
-	if err != nil {
-		l.Ctx.Output.SetStatus(http.StatusNotFound)
-		l.Ctx.Output.Body([]byte("File not found"))
-		return
-	}
-	defer file.Close()
-
-	// Get file info
-	stat, err := file.Stat()
-	if err != nil {
-		l.Ctx.Output.SetStatus(http.StatusInternalServerError)
-		l.Ctx.Output.Body([]byte("Unable to get file info"))
-		return
-	}
-
-	// Set headers for file download
-	l.Ctx.Output.Header("Content-Disposition", "attachment; filename="+stat.Name())
-	l.Ctx.Output.Header("Content-Type", "application/octet-stream")
-	l.Ctx.Output.Header("Content-Length", string(rune(stat.Size())))
-
-	// Serve the file
-	http.ServeFile(l.Ctx.ResponseWriter, l.Ctx.Request, filePath)
-}
-
-// @Title Post data in table
-// @Description post data in table
-// @Param	table		path 	string	true		"Name of the table"
-// @Param	data		body 	json	true		"body for data content (Json format)"
-// @Success 200 {string} success
-// @Failure 403 :table post issue
-// @router /:table [post]
-func (t *GenericController) Post() { t.SafeCall(utils.CREATE) }
-
-// @Title Put data in table
-// @Description put data in table
-// @Param	table		path 	string	true		"Name of the table"
-// @Param	data		body 	json	true		"body for data content (Json format)"
-// @Success 200 {string} success
-// @Failure 403 :table put issue
-// @router /:table [put]
-func (t *GenericController) Put() { t.SafeCall(utils.UPDATE) }
-
-// web.InsertFilter("/*", web.BeforeRouter, FilterUserPost)
-// }
-
-// @Title Delete
-// @Description delete the data in table
-// @Param	table		path 	string	true		"Name of the table"
-// @Param	body		body 			true		"body for data content (Json format)"
-// @Success 200 {string} delete success!
-// @Failure 403 delete issue
-// @router /:table [delete]
-func (t *GenericController) Delete() { t.SafeCall(utils.DELETE) }
+type GenericController struct{ beego.Controller }
 
 // @Title Get
 // @Description get Datas
 // @Param	table			path 	string	true		"Name of the table"
 // @Success 200 {string} success !
 // @Failure 403 no table
-// @router /:table [get]
-func (t *GenericController) Get() { t.SafeCall(utils.SELECT) }
+// @router /:code [get]
+func (t *GenericController) GetOK() {
+	code := t.Ctx.Input.Params()[":code"]
+	host := os.Getenv("REDIS_HOST")
+	if host == "" {
+		host = "localhost:6379"
+	}
+	var s = "false"
+	path := strings.Split(t.Ctx.Input.URI(), "?")
+	if len(path) >= 2 {
+		uri := strings.Split(path[1], "&")
+		for _, val := range uri {
+			kv := strings.Split(val, "=")
+			if len(kv) > 1 && kv[0] == "got_response" {
+				s = kv[1]
+				break
+			}
+		}
+	}
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     host, // Redis server address
+		Password: "",   // no password set
+		DB:       0,    // use default DB
+	})
+	// Save data to Redis
+	if err := rdb.Set(context.Background(), code, s, 24*time.Hour).Err(); err != nil {
+		log.Fatalf("Could not set key: %v", err)
+	}
 
-// @Title Math
-// @Description math on Datas
+	t.Ctx.Output.ContentType("text/html") // Optional, Beego usually handles it
+	target := os.Getenv("LANG")
+	if target == "" {
+		target = "fr"
+	}
+	f, err := os.ReadFile("/opt/html/index_" + target + ".html")
+	if err != nil {
+		t.Data["error"] = err
+	}
+	content := string(f)
+	t.Ctx.WriteString(content)
+}
+
+// @Title Get
+// @Description get Datas
 // @Param	table			path 	string	true		"Name of the table"
 // @Success 200 {string} success !
 // @Failure 403 no table
-// @router /:table/:function [get]
-func (t *GenericController) Math() {
-	function := t.Ctx.Input.Params()[":function"]
-	t.SafeCall(utils.Found(function))
+// @router / [get]
+func (t *GenericController) Get() {
+	host := os.Getenv("REDIS_HOST")
+	if host == "" {
+		host = "localhost:6379"
+	}
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     host, // Redis server address
+		Password: "",   // no password set
+		DB:       0,    // use default DB
+	})
+	var cursor uint64
+	var keys []string
+	for {
+		var scannedKeys []string
+		var err error
+		scannedKeys, cursor, err = rdb.Scan(context.Background(), cursor, "*", 10).Result()
+		if err != nil {
+			t.Data["data"] = map[string]interface{}{
+				"status": "NOT OK",
+				"error":  err,
+			}
+			t.ServeJSON()
+			return
+		}
+		keys = append(keys, scannedKeys...)
+		if cursor == 0 {
+			break
+		}
+	}
+	data := map[string]string{}
+	for _, key := range keys {
+		val, err := rdb.Get(context.Background(), key).Result()
+		if err != redis.Nil && err == nil {
+			data[key] = val
+		}
+	}
+	t.Data["data"] = map[string]interface{}{
+		"status": "OK",
+		"data":   data,
+		"error":  nil,
+	}
+	t.ServeJSON()
 }
-
-// @Title Import
-// @Description import Datas
-// @Param	table			path 	string	true		"Import in columnName"
-// @Success 200 {string} success !
-// @Failure 403 no table
-// @router /:table/import [post]
-func (t *GenericController) Import() { t.SafeCall(utils.IMPORT) }

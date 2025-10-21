@@ -8,18 +8,14 @@
 package routers
 
 import (
-	"sqldb-ws/controllers"
-	"sqldb-ws/domain/utils"
+	"sqldb-gateway/controllers"
 
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/beego/beego/v2/server/web/context"
 )
 
 var namespaceV1 = map[string]beego.ControllerInterface{
-	"main":            &controllers.MainController{},
-	"auth":            &controllers.AuthController{},
-	"response":        &controllers.ExternalResponseController{},
-	utils.MAIN_PREFIX: &controllers.GenericController{},
+	"response": &controllers.GenericController{},
 }
 
 func init() {

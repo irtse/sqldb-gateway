@@ -20,7 +20,32 @@
   "version": "1.0.0"
  },
  "paths": {
-  "/auth/login": {
+  "": {
+   "get": {
+    "description": "Main Datas\n\u003cbr\u003e",
+    "operationId": "MainController.Main",
+    "parameters": [
+     {
+      "description": "Authorization Token HEADER ",
+      "in": "header",
+      "name": "Authorization",
+      "type": "string"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "{string} success !"
+     },
+     "403": {
+      "description": "no table"
+     }
+    },
+    "tags": [
+     ""
+    ]
+   }
+  },
+  "/login": {
    "post": {
     "description": "Login Datas\n\u003cbr\u003e",
     "operationId": "AuthController.Login",
@@ -50,11 +75,11 @@
      }
     },
     "tags": [
-     "auth"
+     ""
     ]
    }
   },
-  "/auth/logout": {
+  "/logout": {
    "get": {
     "description": "Logout Datas\n\u003cbr\u003e",
     "operationId": "AuthController.Logout",
@@ -75,11 +100,11 @@
      }
     },
     "tags": [
-     "auth"
+     ""
     ]
    }
   },
-  "/auth/refresh": {
+  "/refresh": {
    "get": {
     "description": "Refresh Datas\n\u003cbr\u003e",
     "operationId": "AuthController.Refresh",
@@ -100,11 +125,11 @@
      }
     },
     "tags": [
-     "auth"
+     ""
     ]
    }
   },
-  "/generic/{table}": {
+  "/response/{table}": {
    "delete": {
     "description": "Delete Datas\n\u003cbr\u003e",
     "operationId": "GenericController.Delete",
@@ -114,126 +139,6 @@
       "in": "path",
       "name": "table",
       "required": true,
-      "type": "string"
-     },
-     {
-      "description": "needed on a rows level request (value=all for post/put method or a get/delete all)",
-      "in": "query",
-      "name": "rows",
-      "type": "string"
-     },
-     {
-      "description": "needed on a columns level request (POST/PUT/DELETE with no rows query params) will set up a view on row level (show only expected columns)",
-      "in": "query",
-      "name": "columns",
-      "type": "string"
-     },
-     {
-      "description": "sets up a sql order in query (don't even try to inject you little joker)",
-      "in": "query",
-      "name": "orderby",
-      "type": "string"
-     },
-     {
-      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
-      "in": "query",
-      "name": "dir",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of limit",
-      "in": "query",
-      "name": "limit",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of offset",
-      "in": "query",
-      "name": "offset",
-      "type": "string"
-     },
-     {
-      "description": "activate a lightest response (name only)",
-      "in": "query",
-      "name": "shallow",
-      "type": "string"
-     },
-     {
-      "description": "set 'enable' to activate a response without the main response format",
-      "in": "query",
-      "name": "rawview",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of export",
-      "in": "query",
-      "name": "export",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of filename",
-      "in": "query",
-      "name": "filename",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of filter_status",
-      "in": "query",
-      "name": "filter_status",
-      "type": "string"
-     },
-     {
-      "description": "set a filter command line compose as (key~value(+|))",
-      "in": "query",
-      "name": "filter_line",
-      "type": "string"
-     },
-     {
-      "description": "set filter identifier to activate a specific restrictive filter in db",
-      "in": "query",
-      "name": "filter",
-      "type": "string"
-     },
-     {
-      "description": "set view filter identifier to activate a specific view filter in db",
-      "in": "query",
-      "name": "view_filter",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of super",
-      "in": "query",
-      "name": "super",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of command_row",
-      "in": "query",
-      "name": "command_row",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of id",
-      "in": "query",
-      "name": "id",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of group_by",
-      "in": "query",
-      "name": "group_by",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of scope",
-      "in": "query",
-      "name": "scope",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of dest_id",
-      "in": "query",
-      "name": "dest_id",
       "type": "string"
      },
      {
@@ -252,7 +157,7 @@
      }
     },
     "tags": [
-     "generic"
+     "response"
     ]
    },
    "get": {
@@ -267,126 +172,6 @@
       "type": "string"
      },
      {
-      "description": "needed on a rows level request (value=all for post/put method or a get/delete all)",
-      "in": "query",
-      "name": "rows",
-      "type": "string"
-     },
-     {
-      "description": "needed on a columns level request (POST/PUT/DELETE with no rows query params) will set up a view on row level (show only expected columns)",
-      "in": "query",
-      "name": "columns",
-      "type": "string"
-     },
-     {
-      "description": "sets up a sql order in query (don't even try to inject you little joker)",
-      "in": "query",
-      "name": "orderby",
-      "type": "string"
-     },
-     {
-      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
-      "in": "query",
-      "name": "dir",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of limit",
-      "in": "query",
-      "name": "limit",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of offset",
-      "in": "query",
-      "name": "offset",
-      "type": "string"
-     },
-     {
-      "description": "activate a lightest response (name only)",
-      "in": "query",
-      "name": "shallow",
-      "type": "string"
-     },
-     {
-      "description": "set 'enable' to activate a response without the main response format",
-      "in": "query",
-      "name": "rawview",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of export",
-      "in": "query",
-      "name": "export",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of filename",
-      "in": "query",
-      "name": "filename",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of filter_status",
-      "in": "query",
-      "name": "filter_status",
-      "type": "string"
-     },
-     {
-      "description": "set a filter command line compose as (key~value(+|))",
-      "in": "query",
-      "name": "filter_line",
-      "type": "string"
-     },
-     {
-      "description": "set filter identifier to activate a specific restrictive filter in db",
-      "in": "query",
-      "name": "filter",
-      "type": "string"
-     },
-     {
-      "description": "set view filter identifier to activate a specific view filter in db",
-      "in": "query",
-      "name": "view_filter",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of super",
-      "in": "query",
-      "name": "super",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of command_row",
-      "in": "query",
-      "name": "command_row",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of id",
-      "in": "query",
-      "name": "id",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of group_by",
-      "in": "query",
-      "name": "group_by",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of scope",
-      "in": "query",
-      "name": "scope",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of dest_id",
-      "in": "query",
-      "name": "dest_id",
-      "type": "string"
-     },
-     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -402,7 +187,7 @@
      }
     },
     "tags": [
-     "generic"
+     "response"
     ]
    },
    "post": {
@@ -417,126 +202,6 @@
       "type": "string"
      },
      {
-      "description": "needed on a rows level request (value=all for post/put method or a get/delete all)",
-      "in": "query",
-      "name": "rows",
-      "type": "string"
-     },
-     {
-      "description": "needed on a columns level request (POST/PUT/DELETE with no rows query params) will set up a view on row level (show only expected columns)",
-      "in": "query",
-      "name": "columns",
-      "type": "string"
-     },
-     {
-      "description": "sets up a sql order in query (don't even try to inject you little joker)",
-      "in": "query",
-      "name": "orderby",
-      "type": "string"
-     },
-     {
-      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
-      "in": "query",
-      "name": "dir",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of limit",
-      "in": "query",
-      "name": "limit",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of offset",
-      "in": "query",
-      "name": "offset",
-      "type": "string"
-     },
-     {
-      "description": "activate a lightest response (name only)",
-      "in": "query",
-      "name": "shallow",
-      "type": "string"
-     },
-     {
-      "description": "set 'enable' to activate a response without the main response format",
-      "in": "query",
-      "name": "rawview",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of export",
-      "in": "query",
-      "name": "export",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of filename",
-      "in": "query",
-      "name": "filename",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of filter_status",
-      "in": "query",
-      "name": "filter_status",
-      "type": "string"
-     },
-     {
-      "description": "set a filter command line compose as (key~value(+|))",
-      "in": "query",
-      "name": "filter_line",
-      "type": "string"
-     },
-     {
-      "description": "set filter identifier to activate a specific restrictive filter in db",
-      "in": "query",
-      "name": "filter",
-      "type": "string"
-     },
-     {
-      "description": "set view filter identifier to activate a specific view filter in db",
-      "in": "query",
-      "name": "view_filter",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of super",
-      "in": "query",
-      "name": "super",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of command_row",
-      "in": "query",
-      "name": "command_row",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of id",
-      "in": "query",
-      "name": "id",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of group_by",
-      "in": "query",
-      "name": "group_by",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of scope",
-      "in": "query",
-      "name": "scope",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of dest_id",
-      "in": "query",
-      "name": "dest_id",
-      "type": "string"
-     },
-     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -561,7 +226,7 @@
      }
     },
     "tags": [
-     "generic"
+     "response"
     ]
    },
    "put": {
@@ -576,126 +241,6 @@
       "type": "string"
      },
      {
-      "description": "needed on a rows level request (value=all for post/put method or a get/delete all)",
-      "in": "query",
-      "name": "rows",
-      "type": "string"
-     },
-     {
-      "description": "needed on a columns level request (POST/PUT/DELETE with no rows query params) will set up a view on row level (show only expected columns)",
-      "in": "query",
-      "name": "columns",
-      "type": "string"
-     },
-     {
-      "description": "sets up a sql order in query (don't even try to inject you little joker)",
-      "in": "query",
-      "name": "orderby",
-      "type": "string"
-     },
-     {
-      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
-      "in": "query",
-      "name": "dir",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of limit",
-      "in": "query",
-      "name": "limit",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of offset",
-      "in": "query",
-      "name": "offset",
-      "type": "string"
-     },
-     {
-      "description": "activate a lightest response (name only)",
-      "in": "query",
-      "name": "shallow",
-      "type": "string"
-     },
-     {
-      "description": "set 'enable' to activate a response without the main response format",
-      "in": "query",
-      "name": "rawview",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of export",
-      "in": "query",
-      "name": "export",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of filename",
-      "in": "query",
-      "name": "filename",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of filter_status",
-      "in": "query",
-      "name": "filter_status",
-      "type": "string"
-     },
-     {
-      "description": "set a filter command line compose as (key~value(+|))",
-      "in": "query",
-      "name": "filter_line",
-      "type": "string"
-     },
-     {
-      "description": "set filter identifier to activate a specific restrictive filter in db",
-      "in": "query",
-      "name": "filter",
-      "type": "string"
-     },
-     {
-      "description": "set view filter identifier to activate a specific view filter in db",
-      "in": "query",
-      "name": "view_filter",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of super",
-      "in": "query",
-      "name": "super",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of command_row",
-      "in": "query",
-      "name": "command_row",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of id",
-      "in": "query",
-      "name": "id",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of group_by",
-      "in": "query",
-      "name": "group_by",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of scope",
-      "in": "query",
-      "name": "scope",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of dest_id",
-      "in": "query",
-      "name": "dest_id",
-      "type": "string"
-     },
-     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -720,11 +265,11 @@
      }
     },
     "tags": [
-     "generic"
+     "response"
     ]
    }
   },
-  "/generic/{table}/{function}": {
+  "/response/{table}/{function}": {
    "get": {
     "description": "Math Datas\n\u003cbr\u003e",
     "operationId": "GenericController.Math",
@@ -744,126 +289,6 @@
       "type": "string"
      },
      {
-      "description": "needed on a rows level request (value=all for post/put method or a get/delete all)",
-      "in": "query",
-      "name": "rows",
-      "type": "string"
-     },
-     {
-      "description": "needed on a columns level request (POST/PUT/DELETE with no rows query params) will set up a view on row level (show only expected columns)",
-      "in": "query",
-      "name": "columns",
-      "type": "string"
-     },
-     {
-      "description": "sets up a sql order in query (don't even try to inject you little joker)",
-      "in": "query",
-      "name": "orderby",
-      "type": "string"
-     },
-     {
-      "description": "sets up a sql direction in query (ex.ASC|DESC) (don't even try to inject you little joker)",
-      "in": "query",
-      "name": "dir",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of limit",
-      "in": "query",
-      "name": "limit",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of offset",
-      "in": "query",
-      "name": "offset",
-      "type": "string"
-     },
-     {
-      "description": "activate a lightest response (name only)",
-      "in": "query",
-      "name": "shallow",
-      "type": "string"
-     },
-     {
-      "description": "set 'enable' to activate a response without the main response format",
-      "in": "query",
-      "name": "rawview",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of export",
-      "in": "query",
-      "name": "export",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of filename",
-      "in": "query",
-      "name": "filename",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of filter_status",
-      "in": "query",
-      "name": "filter_status",
-      "type": "string"
-     },
-     {
-      "description": "set a filter command line compose as (key~value(+|))",
-      "in": "query",
-      "name": "filter_line",
-      "type": "string"
-     },
-     {
-      "description": "set filter identifier to activate a specific restrictive filter in db",
-      "in": "query",
-      "name": "filter",
-      "type": "string"
-     },
-     {
-      "description": "set view filter identifier to activate a specific view filter in db",
-      "in": "query",
-      "name": "view_filter",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of super",
-      "in": "query",
-      "name": "super",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of command_row",
-      "in": "query",
-      "name": "command_row",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of id",
-      "in": "query",
-      "name": "id",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of group_by",
-      "in": "query",
-      "name": "group_by",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of scope",
-      "in": "query",
-      "name": "scope",
-      "type": "string"
-     },
-     {
-      "description": "(Optionnal) Value of dest_id",
-      "in": "query",
-      "name": "dest_id",
-      "type": "string"
-     },
-     {
       "description": "Authorization Token HEADER ",
       "in": "header",
       "name": "Authorization",
@@ -879,32 +304,7 @@
      }
     },
     "tags": [
-     "generic"
-    ]
-   }
-  },
-  "/main": {
-   "get": {
-    "description": "Main Datas\n\u003cbr\u003e",
-    "operationId": "MainController.Main",
-    "parameters": [
-     {
-      "description": "Authorization Token HEADER ",
-      "in": "header",
-      "name": "Authorization",
-      "type": "string"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "{string} success !"
-     },
-     "403": {
-      "description": "no table"
-     }
-    },
-    "tags": [
-     "main"
+     "response"
     ]
    }
   }

@@ -6,7 +6,6 @@ import (
 	"os"
 	"reflect"
 	"slices"
-	utils "sqldb-ws/domain/utils"
 	"strings"
 
 	beego "github.com/beego/beego/v2/server/web"
@@ -48,9 +47,6 @@ func (d *Docs) generateDocsOnRun() map[string]interface{} {
 			controller := strings.Split(key, ":")
 			parameters := []string{}
 			queries := []string{}
-			if strings.Contains(strings.ToLower(key), "generic") {
-				queries = append(queries, utils.RootParams...)
-			}
 			paths := strings.Split(entry.Router, "/")
 			tag := ""
 			for route, obj := range namespaceV1 {
@@ -96,9 +92,6 @@ func (d *Docs) generateDocsOnRun() map[string]interface{} {
 						"name":        query,
 						"description": "(Optionnal) Value of " + query,
 						"type":        "string",
-					}
-					if desc, ok := utils.RootParamsDesc[query]; ok {
-						sets["description"] = desc
 					}
 					pars = append(pars, sets)
 				}
