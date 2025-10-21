@@ -49,7 +49,7 @@ func (t *GenericController) GetOK() {
 	}
 	t.Ctx.Output.ContentType("text/html") // Optional, Beego usually handles it
 	target := os.Getenv("LANG")
-	fmt.Println("racac", target)
+	fmt.Println("racac", target, s, code)
 
 	if target == "" {
 		target = "fr"
