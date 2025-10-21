@@ -33,9 +33,6 @@ services:
       - sqldb
     ports: 
       - 8080:8080
-    volumes:
-      - ./files:/mnt/files
-      - ./html:/opt/html
     labels:
         - "traefik.enable=true"
         - "traefik.http.routers.sqldb.entrypoints=web"
@@ -44,3 +41,7 @@ services:
 networks:
   sqldb:
     external: true
+
+volumes:
+  redis-data:
+    driver: local
