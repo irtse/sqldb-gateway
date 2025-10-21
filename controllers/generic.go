@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -45,11 +45,12 @@ func (t *GenericController) GetOK() {
 	})
 	// Save data to Redis
 	if err := rdb.Set(context.Background(), code, s, 24*time.Hour).Err(); err != nil {
-		log.Fatalf("Could not set key: %v", err)
+		fmt.Println("Could not set key: %v", err)
 	}
-
 	t.Ctx.Output.ContentType("text/html") // Optional, Beego usually handles it
 	target := os.Getenv("LANG")
+	fmt.Println("racac", target)
+
 	if target == "" {
 		target = "fr"
 	}
