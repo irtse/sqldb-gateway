@@ -26,8 +26,10 @@ func (t *GenericController) GetOK() {
 	if host == "" {
 		host = "localhost:6379"
 	}
+	fmt.Println("racac", host, code)
 	var s = "false"
 	path := strings.Split(t.Ctx.Input.URI(), "?")
+	fmt.Println("racac1", path)
 	if len(path) >= 2 {
 		uri := strings.Split(path[1], "&")
 		for _, val := range uri {
@@ -38,6 +40,7 @@ func (t *GenericController) GetOK() {
 			}
 		}
 	}
+	fmt.Println("racac4", path)
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     host, // Redis server address
 		Password: "",   // no password set
@@ -49,7 +52,7 @@ func (t *GenericController) GetOK() {
 	}
 	t.Ctx.Output.ContentType("text/html") // Optional, Beego usually handles it
 	target := os.Getenv("LANG")
-	fmt.Println("racac", target, s, code)
+	fmt.Println("racac2", target, s, code)
 
 	if target == "" {
 		target = "fr"
