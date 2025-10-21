@@ -40,7 +40,6 @@ services:
         - "traefik.http.services.sqldb.loadbalancer.server.port=8080"
 networks:
   sqldb:
-    name:
     external: true
 
 volumes:
