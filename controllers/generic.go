@@ -49,6 +49,12 @@ func (t *GenericController) GetOK() {
 	// Save data to Redis
 	if err := rdb.Set(context.Background(), code, s, 24*time.Hour).Err(); err != nil {
 		fmt.Println("Could not set key: %v", err)
+		t.Data["data"] = map[string]interface{}{
+			"status": "NOT OK",
+			"error":  err,
+		}
+		t.ServeJSON()
+		return
 	}
 	t.Ctx.Output.ContentType("text/html") // Optional, Beego usually handles it
 	target := os.Getenv("LANG")
