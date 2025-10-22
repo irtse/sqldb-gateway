@@ -11,6 +11,26 @@ services:
     volumes:
       - redis-data:/data
     command: ["redis-server", "--appendonly", "yes"]
+  traefik:
+    image: traefik:v2.10.4
+    container_name: traefik
+    restart: unless-stopped
+    networks:
+      - sqldb
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - 8081:8080 # Expose Traefik on port 8000    
+    volumes:
+      - ./html:/opt/html
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.sqldb.entrypoints=web"
+        - "traefik.http.routers.sqldb.rule=PathPrefix(`/v1`)"
+        - "traefik.http.services.sqldb.loadbalancer.server.port=8080"
   sqldb-gateway:
     image: irtse/sqldb-gateway:latest
     restart: always
@@ -20,7 +40,7 @@ services:
     networks:
       - sqldb
     ports: 
-      - 8080:80
+      - 80:80
 networks:
   sqldb:
     external: true
