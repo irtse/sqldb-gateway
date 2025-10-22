@@ -27,13 +27,25 @@
 					color: #333;
 					font-size: 1.2em;
 				}
+				.input-box {
+					width: 100%;
+					padding: 10px;
+					margin-top: 20px;
+					font-size: 1em;
+					border: 1px solid #ccc;
+					border-radius: 6px;
+					box-sizing: border-box;
+				}
 				.button {
 					margin-top: 20px;
 					padding: 10px 20px;
 					background-color: #4CAF50;
 					color: white;
 					text-decoration: none;
+					border: none;
 					border-radius: 6px;
+					font-size: 1em;
+					cursor: pointer;
 					transition: background-color 0.3s ease;
 				}
 				.button:hover {
@@ -45,7 +57,16 @@
 			<div class="card">
 				<h1>Merci beaucoup pour votre réponse !</h1>
 				<p>Nous apprécions votre retour et votre temps.</p>
+				<input type="text" id="messageInput" class="input-box" placeholder="Votre message ici...">
+				<button class="button" onclick="sendMessage()">Envoyer</button>
 			</div>
+			<script>
+				function sendMessage() {
+					const message = encodeURIComponent(document.getElementById('messageInput').value);
+					const url = `https://opps.irt-saintexupery.com/v1/response/<code>/message?message=${message}`;
+					window.location.href = url;
+				}
+			</script>
 		</body>
 		</html>
 		
