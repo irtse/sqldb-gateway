@@ -161,7 +161,7 @@ func (t *GenericController) Get() {
 		fmt.Println(key, val, err)
 		if err == nil {
 			data[key] = val
-			err := rdb.Del(context.Background(), "mykey").Err()
+			err := rdb.Del(context.Background(), key).Err()
 			if err != nil {
 				fmt.Println(err)
 			}
