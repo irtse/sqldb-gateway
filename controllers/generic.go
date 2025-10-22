@@ -24,7 +24,7 @@ func (t *GenericController) GetOK() {
 	code := t.Ctx.Input.Params()[":code"]
 	host := os.Getenv("REDIS_HOST")
 	if host == "" {
-		host = "localhost:6379"
+		host = "redis-server:6379"
 	}
 	fmt.Println("racac", host, code)
 	var s = "false"
@@ -42,7 +42,9 @@ func (t *GenericController) GetOK() {
 	}
 	fmt.Println("racac4", path)
 	rdb := redis.NewClient(&redis.Options{
-		Addr: host, // Redis server address
+		Addr:     host, // Redis server address
+		Password: "",   // no password set
+		DB:       0,    // use default DB
 	})
 	// Save data to Redis
 	if err := rdb.Set(context.Background(), code, s, 24*time.Hour).Err(); err != nil {
@@ -72,10 +74,12 @@ func (t *GenericController) GetOK() {
 func (t *GenericController) Get() {
 	host := os.Getenv("REDIS_HOST")
 	if host == "" {
-		host = "localhost:6379"
+		host = "redis-server:6379"
 	}
 	rdb := redis.NewClient(&redis.Options{
-		Addr: host, // Redis server address
+		Addr:     host, // Redis server address
+		Password: "",   // no password set
+		DB:       0,    // use default DB
 	})
 	var cursor uint64
 	var keys []string
