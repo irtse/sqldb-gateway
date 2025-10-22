@@ -49,7 +49,7 @@ func (t *GenericController) GetMessage() {
 	// Save data to Redis
 	if err := rdb.Set(context.Background(), code+"_str", s, 24*time.Hour).Err(); err != nil {
 		fmt.Println("Could not set key: %v", err)
-		t.Data["data"] = map[string]interface{}{
+		t.Data["json"] = map[string]interface{}{
 			"status": "NOT OK",
 			"error":  err,
 		}
@@ -105,7 +105,7 @@ func (t *GenericController) GetOK() {
 	// Save data to Redis
 	if err := rdb.Set(context.Background(), code, s, 25*time.Hour).Err(); err != nil {
 		fmt.Println("Could not set key: %v", err)
-		t.Data["data"] = map[string]interface{}{
+		t.Data["json"] = map[string]interface{}{
 			"status": "NOT OK",
 			"error":  err,
 		}
@@ -147,7 +147,7 @@ func (t *GenericController) Get() {
 	var keys []string
 	keys, err := rdb.Keys(context.Background(), "*").Result()
 	if err != nil {
-		t.Data["data"] = map[string]interface{}{
+		t.Data["json"] = map[string]interface{}{
 			"status": "NOT OK",
 			"error":  err,
 		}
@@ -164,7 +164,7 @@ func (t *GenericController) Get() {
 			data[key] = val
 		}
 	}
-	t.Data["data"] = map[string]interface{}{
+	t.Data["json"] = map[string]interface{}{
 		"status": "OK",
 		"data":   data,
 		"error":  nil,
