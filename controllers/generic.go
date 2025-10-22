@@ -74,12 +74,10 @@ func (t *GenericController) GetOK() {
 func (t *GenericController) Get() {
 	host := os.Getenv("REDIS_HOST")
 	if host == "" {
-		host = "localhost:6379"
+		host = "redis-server:6379"
 	}
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     host, // Redis server address
-		Password: "",   // no password set
-		DB:       0,    // use default DB
+		Addr: host, // Redis server address
 	})
 	var cursor uint64
 	var keys []string
