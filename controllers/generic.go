@@ -160,8 +160,11 @@ func (t *GenericController) Get() {
 		val, err := rdb.Get(context.Background(), key).Result()
 		fmt.Println(key, val, err)
 		if err == nil {
-
 			data[key] = val
+			err := rdb.Del(context.Background(), "mykey").Err()
+			if err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
 	t.Data["json"] = map[string]interface{}{
