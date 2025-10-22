@@ -24,7 +24,6 @@ services:
     ports:
       - 80:80
     volumes:
-      - ./html:/opt/html
       - /var/run/docker.sock:/var/run/docker.sock
     
   sqldb-gateway:
@@ -36,7 +35,9 @@ services:
     networks:
       - sqldb
     ports: 
-      - 8081:8080 # Expose Traefik on port 8000    
+      - 8081:8080 
+    volumes:
+      - ./html:/opt/html # Expose Traefik on port 8000    
     labels:
         - "traefik.enable=true"
         - "traefik.http.routers.sqldb.entrypoints=web"

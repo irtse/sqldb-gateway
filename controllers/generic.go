@@ -68,6 +68,8 @@ func (t *GenericController) GetOK() {
 		t.Data["error"] = err
 	}
 	content := string(f)
+	fmt.Println("CONTENT", content)
+
 	t.Ctx.WriteString(content)
 }
 
