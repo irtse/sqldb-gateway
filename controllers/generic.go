@@ -144,29 +144,23 @@ func (t *GenericController) Get() {
 		Password: "",   // no password set
 		DB:       0,    // use default DB
 	})
-	var cursor uint64
 	var keys []string
-	for {
-		var scannedKeys []string
-		var err error
-		scannedKeys, cursor, err = rdb.Scan(context.Background(), cursor, "*", 10).Result()
-		if err != nil {
-			t.Data["data"] = map[string]interface{}{
-				"status": "NOT OK",
-				"error":  err,
-			}
-			t.ServeJSON()
-			return
+	keys, err := rdb.Keys(context.Background(), "*").Result()
+	if err != nil {
+		t.Data["data"] = map[string]interface{}{
+			"status": "NOT OK",
+			"error":  err,
 		}
-		keys = append(keys, scannedKeys...)
-		if cursor == 0 {
-			break
-		}
+		t.ServeJSON()
+		return
 	}
+	fmt.Println("KEYZ", keys)
 	data := map[string]string{}
 	for _, key := range keys {
 		val, err := rdb.Get(context.Background(), key).Result()
-		if err != redis.Nil && err == nil {
+		fmt.Println(key, val, err)
+		if err == nil {
+
 			data[key] = val
 		}
 	}
