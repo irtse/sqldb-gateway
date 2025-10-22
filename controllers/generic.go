@@ -24,7 +24,7 @@ func (t *GenericController) GetOK() {
 	code := t.Ctx.Input.Params()[":code"]
 	host := os.Getenv("REDIS_HOST")
 	if host == "" {
-		host = "localhost:6379"
+		host = "redis-server:6379"
 	}
 	fmt.Println("racac", host, code)
 	var s = "false"
