@@ -30,7 +30,7 @@ func (t *GenericController) GetMessage() {
 	var mess = ""
 	var ok = "false"
 	path := strings.Split(t.Ctx.Input.URI(), "?")
-	fmt.Println("racac1", path)
+	fmt.Println("message", path)
 	if len(path) >= 2 {
 		uri := strings.Split(path[1], "&")
 		for _, val := range uri {
@@ -97,10 +97,8 @@ func (t *GenericController) GetOK() {
 	if host == "" {
 		host = "redis-server:6379"
 	}
-	fmt.Println("racac", host, code)
 	var s = "false"
 	path := strings.Split(t.Ctx.Input.URI(), "?")
-	fmt.Println("racac1", path)
 	if len(path) >= 2 {
 		uri := strings.Split(path[1], "&")
 		for _, val := range uri {
