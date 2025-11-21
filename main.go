@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	_ "sqldb-gateway/routers"
 
 	beego "github.com/beego/beego/v2/server/web"
@@ -22,7 +21,6 @@ func main() {
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 	}
 	beego.SetStaticPath("/", "web")
-	fmt.Printf("%s\n", "Service in "+os.Getenv("AUTH_MODE")+" mode")
 	fmt.Printf("%s\n", "Running server...")
 	beego.Run()
 }
