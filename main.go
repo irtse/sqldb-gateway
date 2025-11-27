@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	_ "sqldb-gateway/routers"
 
 	beego "github.com/beego/beego/v2/server/web"
@@ -20,6 +21,7 @@ func main() {
 		beego.BConfig.WebConfig.DirectoryIndex = true
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 	}
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	beego.SetStaticPath("/static", "static")
 	beego.SetStaticPath("/", "web")
 	fmt.Printf("%s\n", "Running server...")
