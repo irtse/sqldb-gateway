@@ -63,7 +63,7 @@
 			<script>
 				function sendMessage() {
 					const message = encodeURIComponent(document.getElementById('messageInput').value);
-					const url = `https://opps.irt-saintexupery.com/v1/response/<code>/message?got_response=true&message=${message}`;
+					const url = `<host>/v1/response/<code>/message?got_response=true&message=${message}`;
 					window.location.href = url;
 				}
 			</script>

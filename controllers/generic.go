@@ -114,6 +114,10 @@ func (t *GenericController) GetOK() {
 		Password: "",   // no password set
 		DB:       0,    // use default DB
 	})
+	gateway_host := os.Getenv("HOST")
+	if gateway_host == "" {
+		gateway_host = "https://opps.irt-saintexupery.com"
+	}
 	target := os.Getenv("LANG")
 	t.Ctx.Output.ContentType("text/html") // Optional, Beego usually handles it
 	if val, err := rdb.Get(context.Background(), code+"_block").Result(); err == nil && val != "" {
@@ -125,6 +129,7 @@ func (t *GenericController) GetOK() {
 			t.Data["error"] = err
 		}
 		content := string(f)
+		content = strings.ReplaceAll(content, "<host>", gateway_host)
 		content = strings.ReplaceAll(content, "<code>", code)
 
 		t.Ctx.WriteString(content)
@@ -139,6 +144,7 @@ func (t *GenericController) GetOK() {
 		t.Data["error"] = err
 	}
 	content := string(f)
+	content = strings.ReplaceAll(content, "<host>", gateway_host)
 	content = strings.ReplaceAll(content, "<code>", code)
 
 	t.Ctx.WriteString(content)

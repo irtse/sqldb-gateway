@@ -18,6 +18,7 @@ func main() {
 	fmt.Printf("%s\n", title)
 	if beego.BConfig.RunMode == "dev" {
 		beego.BConfig.WebConfig.DirectoryIndex = true
+		beego.BConfig.WebConfig.StaticDir["/img"] = "static"
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 	}
 	beego.SetStaticPath("/", "web")
