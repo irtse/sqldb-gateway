@@ -120,7 +120,7 @@ func (t *GenericController) GetOK() {
 	}
 	target := os.Getenv("LANG")
 	t.Ctx.Output.ContentType("text/html") // Optional, Beego usually handles it
-	if val, err := rdb.Get(context.Background(), code+"_block").Result(); err != nil || val != "" {
+	if val, err := rdb.Get(context.Background(), code+"_block").Result(); err == nil && val != "" {
 		if target == "" {
 			target = "fr"
 		}
