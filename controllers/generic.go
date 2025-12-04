@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -185,7 +186,8 @@ func (t *GenericController) Get() {
 		val, err := rdb.Get(context.Background(), key).Result()
 		fmt.Println(key, val, err)
 		if err == nil {
-			data[key] = val
+			decoded, _ := url.QueryUnescape(val)
+			data[key] = decoded
 			err := rdb.Del(context.Background(), key).Err()
 			if err != nil {
 				fmt.Println(err)
