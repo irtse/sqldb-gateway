@@ -188,10 +188,14 @@ func (t *GenericController) Get() {
 		if err == nil {
 			decoded, _ := url.QueryUnescape(val)
 			data[key] = decoded
-			err := rdb.Del(context.Background(), key).Err()
-			if err != nil {
-				fmt.Println(err)
-			}
+			go func() {
+				time.Sleep(time.Second * 30)
+				err := rdb.Del(context.Background(), key).Err()
+				if err != nil {
+					fmt.Println(err)
+				}
+			}()
+
 		}
 	}
 	fmt.Println("SENDBACK", data)
