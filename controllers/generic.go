@@ -199,7 +199,7 @@ func (t *GenericController) Get() {
 		}
 	}
 	fmt.Println("SENDBACK", data)
-	t.Data["JSON"] = map[string]interface{}{
+	t.Data["json"] = map[string]interface{}{
 		"status": "OK",
 		"data":   data,
 		"error":  nil,
