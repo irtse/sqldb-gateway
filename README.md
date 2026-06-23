@@ -60,3 +60,5 @@ password : admin
   "login": "root",
   "password": "admin"
 }
+
+GATEWAY IS FOR DMZ RESPONSE HOLDING.
